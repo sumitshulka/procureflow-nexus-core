@@ -47,17 +47,33 @@ const ProtectedRoute = ({ requiredRoles }: ProtectedRouteProps) => {
       );
     }
     
-    // Fix: Make sure we convert both sides to lowercase for comparison
-    const hasRequiredRole = requiredRoles.some(requiredRole => 
-      userData.roles.some(userRole => 
-        userRole.toLowerCase() === requiredRole.toString().toLowerCase()
-      )
-    );
+    // Fix: Improve role matching logic by properly normalizing and comparing
+    let hasRequiredRole = false;
     
-    console.log("Has required role:", hasRequiredRole);
+    // Log each role comparison for debugging
+    for (const requiredRole of requiredRoles) {
+      const requiredRoleLower = requiredRole.toString().toLowerCase();
+      console.log(`Checking required role: ${requiredRoleLower}`);
+      
+      for (const userRole of userData.roles) {
+        const userRoleLower = userRole.toLowerCase();
+        console.log(`Comparing with user role: ${userRoleLower}`);
+        
+        if (userRoleLower === requiredRoleLower) {
+          console.log(`Match found: ${userRoleLower} === ${requiredRoleLower}`);
+          hasRequiredRole = true;
+          break;
+        }
+      }
+      
+      if (hasRequiredRole) break;
+    }
+    
+    console.log("Final role check result:", hasRequiredRole);
 
     if (!hasRequiredRole) {
       // Redirect to unauthorized page with the required roles information
+      console.log("Access denied - user does not have any of the required roles");
       return (
         <Navigate 
           to="/unauthorized" 
