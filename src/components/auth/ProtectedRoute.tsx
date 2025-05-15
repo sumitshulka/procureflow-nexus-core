@@ -47,9 +47,10 @@ const ProtectedRoute = ({ requiredRoles }: ProtectedRouteProps) => {
       );
     }
     
-    const hasRequiredRole = requiredRoles.some((role) => 
+    // Fix: Make sure we convert both sides to lowercase for comparison
+    const hasRequiredRole = requiredRoles.some(requiredRole => 
       userData.roles.some(userRole => 
-        userRole.toLowerCase() === role.toLowerCase()
+        userRole.toLowerCase() === requiredRole.toString().toLowerCase()
       )
     );
     
