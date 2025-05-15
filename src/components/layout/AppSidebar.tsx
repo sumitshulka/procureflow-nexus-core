@@ -30,7 +30,9 @@ import {
 } from "@/components/ui/sidebar";
 
 const AppSidebar: React.FC = () => {
-  const { collapsed } = useSidebar();
+  // Using `state` instead of `collapsed` based on SidebarContext definition
+  const { state } = useSidebar();
+  const collapsed = state === "collapsed";
   const location = useLocation();
   const currentPath = location.pathname;
 
@@ -97,7 +99,7 @@ const AppSidebar: React.FC = () => {
   return (
     <Sidebar
       className={`border-r ${collapsed ? "w-16" : "w-64"}`}
-      collapsible
+      collapsible="icon" // Changed from boolean 'true' to the string literal "icon"
     >
       <SidebarTrigger className="m-2 self-end" />
       <SidebarContent>
