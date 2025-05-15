@@ -29,6 +29,13 @@ const ProtectedRoute = ({ requiredRoles }: ProtectedRouteProps) => {
     return <Navigate to="/login" replace />;
   }
 
+  // If the user has 'admin' role, always grant access regardless of required roles
+  if (userData?.roles && userData.roles.some(role => 
+    role.toLowerCase() === 'admin' || role.toLowerCase() === UserRole.ADMIN.toLowerCase())) {
+    console.log("User has ADMIN role - granting access to all routes");
+    return <Outlet />;
+  }
+
   // If specific roles are required, check if user has at least one of them
   if (Array.isArray(requiredRoles) && requiredRoles.length > 0) {
     console.log("Checking user roles:", userData?.roles);
@@ -40,22 +47,27 @@ const ProtectedRoute = ({ requiredRoles }: ProtectedRouteProps) => {
         <Navigate 
           to="/unauthorized" 
           replace 
-          state={{ requiredRoles: requiredRoles }}
+          state={{ requiredRoles }} // Pass as object, not string
         />
       );
     }
 
-    // Convert all roles to lowercase for case-insensitive comparison
-    const userRolesLower = userData.roles.map(role => role.toLowerCase());
-    const requiredRolesLower = requiredRoles.map(role => role.toLowerCase());
+    // Convert all role strings to lowercase for case-insensitive comparison
+    const userRolesLower = userData.roles.map(role => String(role).toLowerCase());
+    const requiredRolesLower = requiredRoles.map(role => String(role).toLowerCase());
 
     console.log("Normalized user roles:", userRolesLower);
     console.log("Normalized required roles:", requiredRolesLower);
 
-    // Check if user has any of the required roles
-    const hasRequiredRole = userRolesLower.some(userRole =>
-      requiredRolesLower.includes(userRole)
-    );
+    // Check if user has any of the required roles using explicit loop for better debugging
+    let hasRequiredRole = false;
+    for (const userRole of userRolesLower) {
+      if (requiredRolesLower.includes(userRole)) {
+        console.log(`Required role match found: ${userRole}`);
+        hasRequiredRole = true;
+        break;
+      }
+    }
 
     console.log("Has required role:", hasRequiredRole);
 
@@ -65,7 +77,7 @@ const ProtectedRoute = ({ requiredRoles }: ProtectedRouteProps) => {
         <Navigate 
           to="/unauthorized" 
           replace 
-          state={{ requiredRoles: requiredRoles }}
+          state={{ requiredRoles }} // Pass as object, not string
         />
       );
     }
@@ -77,4 +89,3 @@ const ProtectedRoute = ({ requiredRoles }: ProtectedRouteProps) => {
 };
 
 export default ProtectedRoute;
-

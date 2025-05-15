@@ -13,7 +13,8 @@ const UnauthorizedPage = () => {
   const location = useLocation();
   const { userData, user } = useAuth();
 
-  const requiredRoles = location.state?.requiredRoles as UserRole[] || [];
+  // Access requiredRoles from state properly, ensuring it's an array
+  const requiredRoles = (location.state?.requiredRoles || []) as UserRole[];
   
   const debugRoles = async () => {
     try {
@@ -46,6 +47,7 @@ const UnauthorizedPage = () => {
         duration: 10000,
       });
       
+      console.log("Location state:", location.state);
       console.log("Direct DB roles:", data);
       console.log("Required roles:", requiredRoles);
     } catch (error: any) {
@@ -130,4 +132,3 @@ const UnauthorizedPage = () => {
 };
 
 export default UnauthorizedPage;
-
