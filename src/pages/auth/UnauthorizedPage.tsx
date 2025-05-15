@@ -6,16 +6,15 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/components/ui/use-toast";
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { UserRole } from "@/types";
 
 const UnauthorizedPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { userData, user } = useAuth();
 
-  // Get required roles from state, if available
-  const requiredRoles = location.state?.requiredRoles || [];
+  const requiredRoles = location.state?.requiredRoles as UserRole[] || [];
   
-  // Debug function to fetch and display raw roles directly from Supabase
   const debugRoles = async () => {
     try {
       if (!user) return;
@@ -27,14 +26,13 @@ const UnauthorizedPage = () => {
         
       if (error) throw error;
       
-      // Display all information about the role check
       toast({
         title: "Role Check Debug Information",
         description: (
           <div className="space-y-2 text-sm">
             <p><strong>User ID:</strong> {user?.id}</p>
             <p><strong>Email:</strong> {user?.email}</p>
-            <p><strong>Required Roles (from state):</strong> {Array.isArray(requiredRoles) && requiredRoles.length > 0 
+            <p><strong>Required Roles:</strong> {Array.isArray(requiredRoles) && requiredRoles.length > 0 
               ? requiredRoles.join(", ") 
               : "None"}</p>
             <p><strong>User Roles (from context):</strong> {userData?.roles?.length > 0 
@@ -49,7 +47,7 @@ const UnauthorizedPage = () => {
       });
       
       console.log("Direct DB roles:", data);
-      console.log("Required roles from state:", requiredRoles);
+      console.log("Required roles:", requiredRoles);
     } catch (error: any) {
       console.error("Error fetching roles:", error);
       toast({
@@ -61,12 +59,11 @@ const UnauthorizedPage = () => {
   };
   
   useEffect(() => {
-    // Log detailed info when component mounts
-    console.log("User data in UnauthorizedPage:", userData);
-    console.log("Required roles:", requiredRoles);
-    console.log("User email:", user?.email);
-    console.log("Location state:", location.state);
-  }, [userData, requiredRoles, user, location.state]);
+    console.log("Component mounted with state:", location.state);
+    console.log("Required roles from state:", requiredRoles);
+    console.log("User data:", userData);
+    console.log("User roles:", userData?.roles);
+  }, [location.state, requiredRoles, userData]);
   
   return (
     <div className="flex flex-col items-center justify-center min-h-screen text-center p-4">
@@ -86,7 +83,7 @@ const UnauthorizedPage = () => {
                 ))}
               </ul>
               
-              <p className="text-sm font-medium text-gray-700 mt-3">Your roles from context:</p>
+              <p className="text-sm font-medium text-gray-700 mt-3">Your roles:</p>
               <ul className="list-disc list-inside text-sm text-gray-600 mt-1">
                 {userData?.roles?.length ? (
                   userData.roles.map((role: string, index: number) => (
@@ -133,3 +130,4 @@ const UnauthorizedPage = () => {
 };
 
 export default UnauthorizedPage;
+

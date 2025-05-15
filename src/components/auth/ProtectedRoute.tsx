@@ -13,9 +13,8 @@ const ProtectedRoute = ({ requiredRoles }: ProtectedRouteProps) => {
 
   console.log("ProtectedRoute check for path:", location.pathname);
   console.log("User data in ProtectedRoute:", userData);
-  console.log("Required roles:", requiredRoles);
+  console.log("Required roles for route:", requiredRoles);
   
-  // If auth is loading, show nothing
   if (isLoading) {
     return (
       <div className="h-screen flex items-center justify-center">
@@ -31,12 +30,11 @@ const ProtectedRoute = ({ requiredRoles }: ProtectedRouteProps) => {
   }
 
   // If specific roles are required, check if user has at least one of them
-  if (requiredRoles && requiredRoles.length > 0) {
+  if (Array.isArray(requiredRoles) && requiredRoles.length > 0) {
     console.log("Checking user roles:", userData?.roles);
     console.log("Against required roles:", requiredRoles);
     
-    // If userData is null or roles array is empty, user has no roles
-    if (!userData || !userData.roles || userData.roles.length === 0) {
+    if (!userData?.roles || userData.roles.length === 0) {
       console.log("No roles found for user, access denied");
       return (
         <Navigate 
@@ -46,35 +44,23 @@ const ProtectedRoute = ({ requiredRoles }: ProtectedRouteProps) => {
         />
       );
     }
-    
-    // Fix: Improve role matching logic by properly normalizing and comparing
-    let hasRequiredRole = false;
-    
-    // Log each role comparison for debugging
-    for (const requiredRole of requiredRoles) {
-      const requiredRoleLower = requiredRole.toString().toLowerCase();
-      console.log(`Checking required role: ${requiredRoleLower}`);
-      
-      for (const userRole of userData.roles) {
-        const userRoleLower = userRole.toLowerCase();
-        console.log(`Comparing with user role: ${userRoleLower}`);
-        
-        if (userRoleLower === requiredRoleLower) {
-          console.log(`Match found: ${userRoleLower} === ${requiredRoleLower}`);
-          hasRequiredRole = true;
-          break;
-        }
-      }
-      
-      if (hasRequiredRole) break;
-    }
-    
-    console.log("Final role check result:", hasRequiredRole);
+
+    // Convert all roles to lowercase for case-insensitive comparison
+    const userRolesLower = userData.roles.map(role => role.toLowerCase());
+    const requiredRolesLower = requiredRoles.map(role => role.toLowerCase());
+
+    console.log("Normalized user roles:", userRolesLower);
+    console.log("Normalized required roles:", requiredRolesLower);
+
+    // Check if user has any of the required roles
+    const hasRequiredRole = userRolesLower.some(userRole =>
+      requiredRolesLower.includes(userRole)
+    );
+
+    console.log("Has required role:", hasRequiredRole);
 
     if (!hasRequiredRole) {
-      // Redirect to unauthorized page with the required roles information
       console.log("Access denied - user does not have any of the required roles");
-      console.log("Passing required roles to state:", requiredRoles);
       return (
         <Navigate 
           to="/unauthorized" 
@@ -85,9 +71,10 @@ const ProtectedRoute = ({ requiredRoles }: ProtectedRouteProps) => {
     }
   }
 
-  // If authenticated and has required role, render the outlet
+  // If authenticated and has required role (or no roles required), render the outlet
   console.log("Access granted to path:", location.pathname);
   return <Outlet />;
 };
 
 export default ProtectedRoute;
+
