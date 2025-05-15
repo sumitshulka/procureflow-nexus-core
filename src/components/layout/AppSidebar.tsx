@@ -100,13 +100,13 @@ const AppSidebar: React.FC = () => {
   return (
     <Sidebar
       className={`border-r ${collapsed ? "w-16" : "w-64"}`}
-      collapsible="icon" // Changed from boolean 'true' to the string literal "icon"
+      collapsible="icon"
     >
       <SidebarTrigger className="m-2 self-end" />
       <SidebarContent>
         <ScrollArea className="h-[calc(100vh-4rem)]">
           <SidebarGroup>
-            <SidebarGroupLabel className={`${collapsed && "sr-only"}`}>
+            <SidebarGroupLabel className={`${collapsed && "sr-only"} pt-2`}>
               Main Navigation
             </SidebarGroupLabel>
             <SidebarGroupContent>
