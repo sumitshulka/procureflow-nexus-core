@@ -1,6 +1,6 @@
 
 import React from "react";
-import { Bell, Menu, Search, Settings, User } from "lucide-react";
+import { Bell, Menu, Search, Settings, User, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -10,11 +10,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  SidebarTrigger,
-} from "@/components/ui/sidebar";
+import { SidebarTrigger } from "@/components/ui/sidebar";
+import { useAuth } from "@/contexts/AuthContext";
 
 const AppHeader: React.FC = () => {
+  const { userData, logout } = useAuth();
+
   return (
     <header className="sticky top-0 z-20 h-16 flex items-center justify-between border-b bg-white px-4">
       <div className="flex items-center gap-3">
@@ -93,18 +94,29 @@ const AppHeader: React.FC = () => {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-              <div className="flex h-full w-full items-center justify-center rounded-full bg-muted">
-                <User className="h-4 w-4" />
-              </div>
+              {userData?.avatarUrl ? (
+                <img
+                  src={userData.avatarUrl}
+                  alt="User avatar"
+                  className="w-full h-full rounded-full object-cover"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center rounded-full bg-muted">
+                  <User className="h-4 w-4" />
+                </div>
+              )}
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuLabel>My Account</DropdownMenuLabel>
+            <DropdownMenuLabel>{userData?.fullName || "My Account"}</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem>Profile</DropdownMenuItem>
             <DropdownMenuItem>Activity Log</DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>Log Out</DropdownMenuItem>
+            <DropdownMenuItem onClick={logout} className="cursor-pointer text-destructive">
+              <LogOut className="mr-2 h-4 w-4" />
+              Log Out
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
