@@ -8,6 +8,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import AppLayout from "./layouts/AppLayout";
 import Dashboard from "./pages/Dashboard";
 import ProductCatalog from "./pages/ProductCatalog";
+import AddProduct from "./pages/AddProduct";
 import ProcurementRequests from "./pages/ProcurementRequests";
 import LoginPage from "./pages/LoginPage";
 import NotFound from "./pages/NotFound";
@@ -25,6 +26,7 @@ const App = () => (
           <Route element={<AppLayout />}>
             <Route path="/" element={<Dashboard />} />
             <Route path="/catalog" element={<ProductCatalog />} />
+            <Route path="/add-product" element={<AddProduct />} />
             <Route path="/requests" element={<ProcurementRequests />} />
             {/* Additional routes will be added for other modules */}
           </Route>
