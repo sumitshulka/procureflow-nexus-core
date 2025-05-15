@@ -52,6 +52,7 @@ interface Product {
   name: string;
   description: string;
   category: {
+    id: string;
     name: string;
   } | null;
   classification: string;
@@ -81,25 +82,33 @@ const ProductCatalog = () => {
 
   // Fetch products from Supabase
   const fetchProducts = async (): Promise<Product[]> => {
-    const { data, error } = await supabase
-      .from("products")
-      .select(`
-        id, 
-        name, 
-        description, 
-        classification,
-        current_price,
-        tags,
-        category:category_id(id, name),
-        unit:unit_id(id, name, abbreviation)
-      `)
-      .order('name', { ascending: true });
+    console.log("Fetching products");
+    try {
+      const { data, error } = await supabase
+        .from("products")
+        .select(`
+          id, 
+          name, 
+          description, 
+          classification,
+          current_price,
+          tags,
+          category:category_id(id, name),
+          unit:unit_id(id, name, abbreviation)
+        `)
+        .order('name', { ascending: true });
 
-    if (error) {
-      throw new Error(error.message);
+      if (error) {
+        console.error("Error fetching products:", error);
+        throw new Error(error.message);
+      }
+      
+      console.log("Products fetched:", data);
+      return data || [];
+    } catch (err) {
+      console.error("Exception fetching products:", err);
+      throw err;
     }
-    
-    return data || [];
   };
 
   const { 
@@ -113,17 +122,33 @@ const ProductCatalog = () => {
   });
 
   // Fetch categories for the filter
-  const { data: categories = [] } = useQuery({
-    queryKey: ["categories"],
-    queryFn: async () => {
+  const fetchCategories = async (): Promise<Category[]> => {
+    console.log("Fetching categories");
+    try {
       const { data, error } = await supabase
         .from("categories")
-        .select("*")
+        .select("id, name")
         .order("name", { ascending: true });
   
-      if (error) throw new Error(error.message);
+      if (error) {
+        console.error("Error fetching categories:", error);
+        throw new Error(error.message);
+      }
+
+      console.log("Categories fetched:", data);
       return data || [];
-    },
+    } catch (err) {
+      console.error("Exception fetching categories:", err);
+      throw err;
+    }
+  };
+
+  const { 
+    data: categories = [],
+    isLoading: isCategoriesLoading
+  } = useQuery({
+    queryKey: ["categories"],
+    queryFn: fetchCategories,
   });
 
   // Get all unique tags from products
@@ -138,7 +163,7 @@ const ProductCatalog = () => {
       searchTerm === "" ||
       product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (product.description?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
       (product.category?.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
       (product.tags || []).some((tag) => tag.toLowerCase().includes(searchTerm.toLowerCase()));
     
@@ -354,29 +379,36 @@ const ProductCatalog = () => {
                 <AccordionItem value="category">
                   <AccordionTrigger>Category</AccordionTrigger>
                   <AccordionContent>
-                    <Select
-                      value={filterCategory}
-                      onValueChange={(value) => setFilterCategory(value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="">All Categories</SelectItem>
-                        {categories && categories.map((category: Category) => (
-                          <SelectItem key={category.id} value={category.name}>
-                            {category.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    {isCategoriesLoading ? (
+                      <div className="flex items-center justify-center p-4">
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        <span>Loading categories...</span>
+                      </div>
+                    ) : (
+                      <Select
+                        value={filterCategory}
+                        onValueChange={(value) => setFilterCategory(value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">All Categories</SelectItem>
+                          {Array.isArray(categories) && categories.map((category) => (
+                            <SelectItem key={category.id} value={category.name}>
+                              {category.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
                   </AccordionContent>
                 </AccordionItem>
                 <AccordionItem value="tags">
                   <AccordionTrigger>Tags</AccordionTrigger>
                   <AccordionContent>
                     <div className="flex flex-wrap gap-2 pt-2">
-                      {allTags.length > 0 ? (
+                      {Array.isArray(allTags) && allTags.length > 0 ? (
                         allTags.map((tag) => (
                           <Badge
                             key={tag}
