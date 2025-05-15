@@ -22,55 +22,57 @@ import { UserRole } from "./types";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
+const App = () => {
+  return (
+    <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <AuthProvider>
-          <Routes>
-            {/* Public routes */}
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/signup" element={<SignupPage />} />
-            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-            <Route path="/update-password" element={<UpdatePasswordPage />} />
-            <Route path="/unauthorized" element={<UnauthorizedPage />} />
-            
-            {/* Protected routes */}
-            <Route element={<ProtectedRoute />}>
-              <Route element={<AppLayout />}>
-                <Route path="/" element={<Dashboard />} />
-                
-                {/* Catalog routes - accessible by specific roles */}
-                <Route 
-                  element={
-                    <ProtectedRoute 
-                      requiredRoles={[
-                        UserRole.ADMIN, 
-                        UserRole.PROCUREMENT_OFFICER, 
-                        UserRole.INVENTORY_MANAGER
-                      ]} 
-                    />
-                  }
-                >
-                  <Route path="/catalog" element={<ProductCatalog />} />
-                  <Route path="/add-product" element={<AddProduct />} />
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <AuthProvider>
+            <Routes>
+              {/* Public routes */}
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/signup" element={<SignupPage />} />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+              <Route path="/update-password" element={<UpdatePasswordPage />} />
+              <Route path="/unauthorized" element={<UnauthorizedPage />} />
+              
+              {/* Protected routes */}
+              <Route element={<ProtectedRoute />}>
+                <Route element={<AppLayout />}>
+                  <Route path="/" element={<Dashboard />} />
+                  
+                  {/* Catalog routes - accessible by specific roles */}
+                  <Route 
+                    element={
+                      <ProtectedRoute 
+                        requiredRoles={[
+                          UserRole.ADMIN, 
+                          UserRole.PROCUREMENT_OFFICER, 
+                          UserRole.INVENTORY_MANAGER
+                        ]} 
+                      />
+                    }
+                  >
+                    <Route path="/catalog" element={<ProductCatalog />} />
+                    <Route path="/add-product" element={<AddProduct />} />
+                  </Route>
+                  
+                  {/* Procurement requests - accessible by all authenticated users */}
+                  <Route path="/requests" element={<ProcurementRequests />} />
+                  
+                  {/* Additional protected routes will be added here */}
                 </Route>
-                
-                {/* Procurement requests - accessible by all authenticated users */}
-                <Route path="/requests" element={<ProcurementRequests />} />
-                
-                {/* Additional protected routes will be added here */}
               </Route>
-            </Route>
-            
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </AuthProvider>
+              
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </AuthProvider>
+        </TooltipProvider>
       </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+    </QueryClientProvider>
+  );
+};
 
 export default App;
