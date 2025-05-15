@@ -27,7 +27,9 @@ const ProtectedRoute = ({ requiredRoles }: ProtectedRouteProps) => {
   // If specific roles are required, check if user has at least one of them
   if (requiredRoles && requiredRoles.length > 0) {
     const hasRequiredRole = requiredRoles.some((role) => 
-      userData?.roles.includes(role)
+      userData?.roles.some(userRole => 
+        userRole.toLowerCase() === role.toLowerCase()
+      )
     );
 
     if (!hasRequiredRole) {
