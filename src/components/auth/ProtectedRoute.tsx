@@ -42,7 +42,7 @@ const ProtectedRoute = ({ requiredRoles }: ProtectedRouteProps) => {
         <Navigate 
           to="/unauthorized" 
           replace 
-          state={{ requiredRoles }}
+          state={{ requiredRoles: requiredRoles }}
         />
       );
     }
@@ -74,11 +74,12 @@ const ProtectedRoute = ({ requiredRoles }: ProtectedRouteProps) => {
     if (!hasRequiredRole) {
       // Redirect to unauthorized page with the required roles information
       console.log("Access denied - user does not have any of the required roles");
+      console.log("Passing required roles to state:", requiredRoles);
       return (
         <Navigate 
           to="/unauthorized" 
           replace 
-          state={{ requiredRoles }}
+          state={{ requiredRoles: requiredRoles }}
         />
       );
     }

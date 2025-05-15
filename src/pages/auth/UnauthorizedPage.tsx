@@ -34,13 +34,13 @@ const UnauthorizedPage = () => {
           <div className="space-y-2 text-sm">
             <p><strong>User ID:</strong> {user?.id}</p>
             <p><strong>Email:</strong> {user?.email}</p>
-            <p><strong>Required Roles (from state):</strong> {requiredRoles.length > 0 
+            <p><strong>Required Roles (from state):</strong> {Array.isArray(requiredRoles) && requiredRoles.length > 0 
               ? requiredRoles.join(", ") 
               : "None"}</p>
             <p><strong>User Roles (from context):</strong> {userData?.roles?.length > 0 
               ? userData.roles.join(", ") 
               : "None"}</p>
-            <p><strong>User Roles (direct from DB):</strong> {data.length > 0 
+            <p><strong>User Roles (direct from DB):</strong> {data?.length > 0 
               ? data.map(r => r.role).join(", ") 
               : "None"}</p>
           </div>
@@ -49,6 +49,7 @@ const UnauthorizedPage = () => {
       });
       
       console.log("Direct DB roles:", data);
+      console.log("Required roles from state:", requiredRoles);
     } catch (error: any) {
       console.error("Error fetching roles:", error);
       toast({
@@ -64,7 +65,8 @@ const UnauthorizedPage = () => {
     console.log("User data in UnauthorizedPage:", userData);
     console.log("Required roles:", requiredRoles);
     console.log("User email:", user?.email);
-  }, [userData, requiredRoles, user]);
+    console.log("Location state:", location.state);
+  }, [userData, requiredRoles, user, location.state]);
   
   return (
     <div className="flex flex-col items-center justify-center min-h-screen text-center p-4">
@@ -75,7 +77,7 @@ const UnauthorizedPage = () => {
             You don't have permission to access this page.
           </p>
           
-          {requiredRoles.length > 0 ? (
+          {Array.isArray(requiredRoles) && requiredRoles.length > 0 ? (
             <div className="mt-4 p-4 bg-gray-50 rounded-lg border text-left">
               <p className="text-sm font-medium text-gray-700">Required roles:</p>
               <ul className="list-disc list-inside text-sm text-gray-600 mt-1">
