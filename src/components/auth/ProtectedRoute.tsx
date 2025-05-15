@@ -33,8 +33,14 @@ const ProtectedRoute = ({ requiredRoles }: ProtectedRouteProps) => {
     );
 
     if (!hasRequiredRole) {
-      // Redirect to unauthorized page or dashboard
-      return <Navigate to="/unauthorized" replace />;
+      // Redirect to unauthorized page with the required roles information
+      return (
+        <Navigate 
+          to="/unauthorized" 
+          replace 
+          state={{ requiredRoles }}
+        />
+      );
     }
   }
 
