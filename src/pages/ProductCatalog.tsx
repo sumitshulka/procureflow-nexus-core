@@ -71,6 +71,7 @@ const ProductCatalog = () => {
   const [filterClassification, setFilterClassification] = useState<string>("");
   const [filterPriceRange, setFilterPriceRange] = useState<[number, number]>([0, 2000]);
   const [filterTags, setFilterTags] = useState<string[]>([]);
+  const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
 
   // Fetch products from Supabase
   const fetchProducts = async (): Promise<Product[]> => {
@@ -132,13 +133,13 @@ const ProductCatalog = () => {
       product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.category?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (product.tags || []).some((tag) => tag.includes(searchTerm.toLowerCase()));
+      (product.category?.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (product.tags || []).some((tag) => tag.toLowerCase().includes(searchTerm.toLowerCase()));
     
     // Category filter
     const matchesCategory = 
       filterCategory === "" || 
-      product.category?.name === filterCategory;
+      (product.category?.name === filterCategory);
     
     // Classification filter
     const matchesClassification = 
@@ -174,6 +175,11 @@ const ProductCatalog = () => {
     } else {
       setFilterTags([...filterTags, tag]);
     }
+  };
+
+  // Apply filters and close sheet
+  const applyFilters = () => {
+    setIsFilterSheetOpen(false);
   };
 
   // Show error if data fetching fails
@@ -221,7 +227,7 @@ const ProductCatalog = () => {
       id: "price",
       header: "Current Price",
       cell: (row: any) =>
-        row.current_price 
+        row.current_price != null 
           ? new Intl.NumberFormat("en-US", {
               style: "currency",
               currency: "USD",
@@ -288,7 +294,7 @@ const ProductCatalog = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <Sheet>
+        <Sheet open={isFilterSheetOpen} onOpenChange={setIsFilterSheetOpen}>
           <SheetTrigger asChild>
             <Button variant="outline" className="flex items-center gap-2 md:w-auto">
               <Filter className="h-4 w-4" />
@@ -348,7 +354,7 @@ const ProductCatalog = () => {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="">All Categories</SelectItem>
-                        {categories.map((category) => (
+                        {categories.map((category: any) => (
                           <SelectItem key={category.id} value={category.name}>
                             {category.name}
                           </SelectItem>
@@ -384,7 +390,7 @@ const ProductCatalog = () => {
                 <Button variant="outline" size="sm" onClick={clearFilters}>
                   Clear Filters
                 </Button>
-                <Button size="sm">Apply Filters</Button>
+                <Button size="sm" onClick={applyFilters}>Apply Filters</Button>
               </div>
             </div>
           </SheetContent>
@@ -411,7 +417,7 @@ const ProductCatalog = () => {
                       <div>
                         <CardTitle className="text-lg">{product.name}</CardTitle>
                         <CardDescription className="text-xs mt-1">
-                          {product.id} · {product.category?.name}
+                          {product.id} · {product.category?.name || "No Category"}
                         </CardDescription>
                       </div>
                       <div className="flex flex-col items-end gap-1">
@@ -428,7 +434,7 @@ const ProductCatalog = () => {
                     </p>
                     <div className="mt-3 flex items-center justify-between">
                       <p className="font-medium text-lg">
-                        {product.current_price !== null ? 
+                        {product.current_price != null ? 
                           new Intl.NumberFormat("en-US", {
                             style: "currency",
                             currency: "USD",

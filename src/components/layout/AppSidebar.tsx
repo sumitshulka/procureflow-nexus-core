@@ -106,7 +106,7 @@ const AppSidebar: React.FC = () => {
       <SidebarContent>
         <ScrollArea className="h-[calc(100vh-4rem)]">
           <SidebarGroup>
-            <SidebarGroupLabel className={`${collapsed && "sr-only"} pt-4 pb-2 px-2`}>
+            <SidebarGroupLabel className={`${collapsed && "sr-only"} pt-6 pb-2 px-2`}>
               Main Navigation
             </SidebarGroupLabel>
             <SidebarGroupContent>
