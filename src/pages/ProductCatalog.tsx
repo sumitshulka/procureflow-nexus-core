@@ -143,6 +143,7 @@ const ProductCatalog = () => {
     }
   };
 
+  // In Tanstack React Query v5, error handling is done through meta
   const { 
     data: categories = [],
     isLoading: isCategoriesLoading,
@@ -150,13 +151,15 @@ const ProductCatalog = () => {
   } = useQuery({
     queryKey: ["categories"],
     queryFn: fetchCategories,
-    onError: (error) => {
-      console.error("Categories query error:", error);
-      toast({
-        title: "Failed to load categories",
-        description: "Categories could not be loaded. Please try again.",
-        variant: "destructive",
-      });
+    meta: {
+      onError: (error: Error) => {
+        console.error("Categories query error:", error);
+        toast({
+          title: "Failed to load categories",
+          description: "Categories could not be loaded. Please try again.",
+          variant: "destructive",
+        });
+      }
     }
   });
 
@@ -234,6 +237,17 @@ const ProductCatalog = () => {
       });
     }
   }, [productsError]);
+
+  // Show error for categories fetching if there's an issue
+  useEffect(() => {
+    if (categoriesError) {
+      toast({
+        title: "Failed to load categories",
+        description: "Categories could not be loaded. Please try again.",
+        variant: "destructive",
+      });
+    }
+  }, [categoriesError]);
 
   // Table columns configuration for table view
   const productColumns = [
