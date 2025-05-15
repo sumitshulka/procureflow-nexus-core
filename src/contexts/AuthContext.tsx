@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -71,6 +70,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const fetchUserData = async (userId: string) => {
     try {
+      console.log("Fetching user data for:", userId);
+      
       // Fetch user profile
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
@@ -87,14 +88,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         .eq("user_id", userId);
 
       if (rolesError) throw rolesError;
+      
+      console.log("Roles retrieved from DB:", rolesData);
 
-      setUserData({
+      const userData = {
         id: userId,
         email: user?.email || "",
         fullName: profileData?.full_name,
         avatarUrl: profileData?.avatar_url,
         roles: rolesData.map(r => r.role as UserRole),
-      });
+      };
+      
+      console.log("Setting userData to:", userData);
+      setUserData(userData);
+      
+      // Verify admin role specifically for debugging
+      if (userData.roles.includes(UserRole.ADMIN)) {
+        console.log("User has ADMIN role!");
+      }
     } catch (error) {
       console.error("Error fetching user data:", error);
       toast({

@@ -3,14 +3,55 @@ import { Button } from "@/components/ui/button";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "@/components/ui/use-toast";
+import { useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 const UnauthorizedPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { userData } = useAuth();
+  const { userData, user } = useAuth();
 
   // Get required roles from state, if available
   const requiredRoles = location.state?.requiredRoles || [];
+  
+  // Debug function to fetch and display raw roles directly from Supabase
+  const debugRoles = async () => {
+    try {
+      if (!user) return;
+      
+      const { data, error } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id);
+        
+      if (error) throw error;
+      
+      toast({
+        title: "User Roles (Direct from Database)",
+        description: data.length > 0 
+          ? data.map(r => r.role).join(", ") 
+          : "No roles found in database",
+        duration: 5000,
+      });
+      
+      console.log("Direct DB roles:", data);
+    } catch (error: any) {
+      console.error("Error fetching roles:", error);
+      toast({
+        title: "Error fetching roles",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+  
+  useEffect(() => {
+    // Log detailed info when component mounts
+    console.log("User data in UnauthorizedPage:", userData);
+    console.log("Required roles:", requiredRoles);
+    console.log("User email:", user?.email);
+  }, [userData, requiredRoles, user]);
   
   return (
     <div className="flex flex-col items-center justify-center min-h-screen text-center p-4">
@@ -30,7 +71,7 @@ const UnauthorizedPage = () => {
                 ))}
               </ul>
               
-              <p className="text-sm font-medium text-gray-700 mt-3">Your roles:</p>
+              <p className="text-sm font-medium text-gray-700 mt-3">Your roles from context:</p>
               <ul className="list-disc list-inside text-sm text-gray-600 mt-1">
                 {userData?.roles?.length ? (
                   userData.roles.map((role: string, index: number) => (
@@ -40,6 +81,15 @@ const UnauthorizedPage = () => {
                   <li>No roles assigned</li>
                 )}
               </ul>
+
+              <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded">
+                <p className="text-xs text-yellow-800">
+                  User ID: {user?.id || "Not logged in"}
+                </p>
+                <p className="text-xs text-yellow-800">
+                  Email: {user?.email || "No email"}
+                </p>
+              </div>
             </div>
           ) : (
             <p className="text-sm text-gray-400 mt-2">
@@ -57,6 +107,9 @@ const UnauthorizedPage = () => {
             <Link to="/">
               Return to Dashboard
             </Link>
+          </Button>
+          <Button variant="secondary" onClick={debugRoles}>
+            Debug Roles
           </Button>
         </div>
       </div>
