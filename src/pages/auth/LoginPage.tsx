@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "@/components/ui/use-toast";
 
 const LoginPage = () => {
   const { login, isLoading } = useAuth();
@@ -24,9 +25,13 @@ const LoginPage = () => {
     remember: false,
   });
 
+  const [loginError, setLoginError] = useState<string | null>(null);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setCredentials((prev) => ({ ...prev, [name]: value }));
+    // Clear error when user types
+    if (loginError) setLoginError(null);
   };
 
   const handleCheckboxChange = (checked: boolean) => {
@@ -35,7 +40,20 @@ const LoginPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await login(credentials.email, credentials.password);
+    setLoginError(null);
+    
+    try {
+      await login(credentials.email, credentials.password);
+    } catch (error: any) {
+      // This shouldn't normally execute as errors are handled in the login function
+      // But adding as an extra safeguard
+      setLoginError(error?.message || "An error occurred during login");
+      toast({
+        title: "Login Error",
+        description: error?.message || "An error occurred during login",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -59,6 +77,11 @@ const LoginPage = () => {
           </CardHeader>
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-4">
+              {loginError && (
+                <div className="bg-destructive/10 text-destructive p-3 rounded-md text-sm">
+                  {loginError}
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input

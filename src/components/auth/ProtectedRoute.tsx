@@ -12,8 +12,6 @@ const ProtectedRoute = ({ requiredRoles }: ProtectedRouteProps) => {
   const location = useLocation();
 
   console.log("ProtectedRoute check for path:", location.pathname);
-  console.log("User data in ProtectedRoute:", userData);
-  console.log("Required roles for route:", requiredRoles);
   
   if (isLoading) {
     return (
@@ -29,9 +27,16 @@ const ProtectedRoute = ({ requiredRoles }: ProtectedRouteProps) => {
     return <Navigate to="/login" replace />;
   }
 
+  // Log user data for debugging
+  console.log("User data in ProtectedRoute:", userData);
+  console.log("Required roles for route:", requiredRoles);
+  
   // If the user has 'admin' role, always grant access regardless of required roles
-  if (userData?.roles && userData.roles.some(role => 
-    role.toLowerCase() === 'admin' || role.toLowerCase() === UserRole.ADMIN.toLowerCase())) {
+  if (userData?.roles && Array.isArray(userData.roles) && userData.roles.some(role => 
+    typeof role === 'string' && (
+      role.toLowerCase() === 'admin' || 
+      role.toLowerCase() === UserRole.ADMIN.toLowerCase()
+    ))) {
     console.log("User has ADMIN role - granting access to all routes");
     return <Outlet />;
   }
@@ -39,15 +44,14 @@ const ProtectedRoute = ({ requiredRoles }: ProtectedRouteProps) => {
   // If specific roles are required, check if user has at least one of them
   if (Array.isArray(requiredRoles) && requiredRoles.length > 0) {
     console.log("Checking user roles:", userData?.roles);
-    console.log("Against required roles:", requiredRoles);
     
-    if (!userData?.roles || userData.roles.length === 0) {
+    if (!userData?.roles || !Array.isArray(userData.roles) || userData.roles.length === 0) {
       console.log("No roles found for user, access denied");
       return (
         <Navigate 
           to="/unauthorized" 
           replace 
-          state={{ requiredRoles }} // Pass as object, not string
+          state={{ requiredRoles }}
         />
       );
     }
@@ -56,20 +60,10 @@ const ProtectedRoute = ({ requiredRoles }: ProtectedRouteProps) => {
     const userRolesLower = userData.roles.map(role => String(role).toLowerCase());
     const requiredRolesLower = requiredRoles.map(role => String(role).toLowerCase());
 
-    console.log("Normalized user roles:", userRolesLower);
-    console.log("Normalized required roles:", requiredRolesLower);
-
-    // Check if user has any of the required roles using explicit loop for better debugging
-    let hasRequiredRole = false;
-    for (const userRole of userRolesLower) {
-      if (requiredRolesLower.includes(userRole)) {
-        console.log(`Required role match found: ${userRole}`);
-        hasRequiredRole = true;
-        break;
-      }
-    }
-
-    console.log("Has required role:", hasRequiredRole);
+    // Check if user has any of the required roles
+    const hasRequiredRole = userRolesLower.some(userRole => 
+      requiredRolesLower.includes(userRole)
+    );
 
     if (!hasRequiredRole) {
       console.log("Access denied - user does not have any of the required roles");
@@ -77,7 +71,7 @@ const ProtectedRoute = ({ requiredRoles }: ProtectedRouteProps) => {
         <Navigate 
           to="/unauthorized" 
           replace 
-          state={{ requiredRoles }} // Pass as object, not string
+          state={{ requiredRoles }}
         />
       );
     }
