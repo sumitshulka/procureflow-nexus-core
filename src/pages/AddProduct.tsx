@@ -1,10 +1,12 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "@/hooks/use-toast";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 import PageHeader from "@/components/common/PageHeader";
 import {
@@ -27,26 +29,69 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { X } from "lucide-react";
+import { X, Loader2 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 // Product form validation schema
 const productSchema = z.object({
   name: z.string().min(3, "Product name must be at least 3 characters"),
   description: z.string().min(10, "Description must be at least 10 characters"),
-  category: z.string().min(1, "Category is required"),
+  category_id: z.string().min(1, "Category is required"),
   classification: z.enum(["goods", "services"], {
     required_error: "Classification is required",
   }),
-  unit: z.string().min(1, "Unit is required"),
+  unit_id: z.string().min(1, "Unit is required"),
   currentPrice: z.string().refine((val) => !isNaN(Number(val)) && Number(val) > 0, {
     message: "Price must be a positive number",
   }),
 });
 
+// Fetch categories from Supabase
+const fetchCategories = async () => {
+  const { data, error } = await supabase
+    .from("categories")
+    .select("*")
+    .order("name", { ascending: true });
+
+  if (error) throw new Error(error.message);
+  return data;
+};
+
+// Fetch units from Supabase
+const fetchUnits = async () => {
+  const { data, error } = await supabase
+    .from("units")
+    .select("*")
+    .order("name", { ascending: true });
+
+  if (error) throw new Error(error.message);
+  return data;
+};
+
 const AddProduct = () => {
   const navigate = useNavigate();
   const [tags, setTags] = useState<string[]>([]);
   const [currentTag, setCurrentTag] = useState("");
+  const { user } = useAuth();
+
+  // Fetch categories and units
+  const { 
+    data: categories, 
+    isLoading: isLoadingCategories, 
+    error: categoriesError 
+  } = useQuery({
+    queryKey: ["categories"],
+    queryFn: fetchCategories,
+  });
+
+  const { 
+    data: units, 
+    isLoading: isLoadingUnits, 
+    error: unitsError 
+  } = useQuery({
+    queryKey: ["units"],
+    queryFn: fetchUnits,
+  });
 
   // Form setup
   const form = useForm<z.infer<typeof productSchema>>({
@@ -54,10 +99,45 @@ const AddProduct = () => {
     defaultValues: {
       name: "",
       description: "",
-      category: "",
+      category_id: "",
       classification: "goods",
-      unit: "",
+      unit_id: "",
       currentPrice: "",
+    },
+  });
+
+  // Create product mutation
+  const createProduct = useMutation({
+    mutationFn: async (values: z.infer<typeof productSchema> & { tags: string[] }) => {
+      const { error } = await supabase
+        .from("products")
+        .insert({
+          name: values.name,
+          description: values.description,
+          category_id: values.category_id,
+          classification: values.classification,
+          unit_id: values.unit_id,
+          current_price: parseFloat(values.currentPrice),
+          tags: values.tags,
+          created_by: user?.id,
+        });
+
+      if (error) throw new Error(error.message);
+      return true;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Product created",
+        description: "The product has been successfully created",
+      });
+      navigate("/catalog");
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error creating product",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -85,18 +165,27 @@ const AddProduct = () => {
 
   // Form submission
   const onSubmit = async (values: z.infer<typeof productSchema>) => {
-    // Here we would typically send data to the database
-    // For now, just show a success message
-    console.log({ ...values, tags });
-    
-    toast({
-      title: "Product created",
-      description: "The product has been successfully created",
-    });
-    
-    // Navigate back to catalog
-    navigate("/catalog");
+    createProduct.mutate({ ...values, tags });
   };
+
+  // Show error messages if data fetching fails
+  useEffect(() => {
+    if (categoriesError) {
+      toast({
+        title: "Failed to load categories",
+        description: "Please try again later",
+        variant: "destructive",
+      });
+    }
+
+    if (unitsError) {
+      toast({
+        title: "Failed to load units",
+        description: "Please try again later",
+        variant: "destructive",
+      });
+    }
+  }, [categoriesError, unitsError]);
 
   return (
     <div className="page-container">
@@ -108,7 +197,17 @@ const AddProduct = () => {
             <Button variant="outline" onClick={() => navigate("/catalog")}>
               Cancel
             </Button>
-            <Button onClick={form.handleSubmit(onSubmit)}>Save Product</Button>
+            <Button 
+              onClick={form.handleSubmit(onSubmit)}
+              disabled={createProduct.isPending}
+            >
+              {createProduct.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : "Save Product"}
+            </Button>
           </div>
         }
       />
@@ -136,13 +235,41 @@ const AddProduct = () => {
 
               <FormField
                 control={form.control}
-                name="category"
+                name="category_id"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Category</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g. Furniture, IT Equipment" {...field} />
-                    </FormControl>
+                    <Select 
+                      onValueChange={field.onChange} 
+                      defaultValue={field.value}
+                      disabled={isLoadingCategories}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a category" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {isLoadingCategories ? (
+                          <SelectItem value="loading" disabled>
+                            <span className="flex items-center">
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Loading categories...
+                            </span>
+                          </SelectItem>
+                        ) : categories && categories.length > 0 ? (
+                          categories.map((category) => (
+                            <SelectItem key={category.id} value={category.id}>
+                              {category.name}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="none" disabled>
+                            No categories found
+                          </SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -203,13 +330,41 @@ const AddProduct = () => {
 
               <FormField
                 control={form.control}
-                name="unit"
+                name="unit_id"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Unit</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g. Each, Box, Hour" {...field} />
-                    </FormControl>
+                    <Select 
+                      onValueChange={field.onChange} 
+                      defaultValue={field.value}
+                      disabled={isLoadingUnits}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a unit" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {isLoadingUnits ? (
+                          <SelectItem value="loading" disabled>
+                            <span className="flex items-center">
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Loading units...
+                            </span>
+                          </SelectItem>
+                        ) : units && units.length > 0 ? (
+                          units.map((unit) => (
+                            <SelectItem key={unit.id} value={unit.id}>
+                              {unit.name} {unit.abbreviation ? `(${unit.abbreviation})` : ''}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="none" disabled>
+                            No units found
+                          </SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
                     <FormDescription>
                       Unit of measurement
                     </FormDescription>

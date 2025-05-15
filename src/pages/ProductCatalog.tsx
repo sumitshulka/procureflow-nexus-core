@@ -1,10 +1,14 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import PageHeader from "@/components/common/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import DataTable from "@/components/common/DataTable";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "@/hooks/use-toast";
 import {
   Card,
   CardContent,
@@ -13,7 +17,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Plus, Search, Tag, Filter } from "lucide-react";
+import { Plus, Search, Tag, Filter, Loader2 } from "lucide-react";
 import {
   Tabs,
   TabsContent,
@@ -42,6 +46,23 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 
+// Type for products from Supabase
+interface Product {
+  id: string;
+  name: string;
+  description: string;
+  category: {
+    name: string;
+  };
+  classification: string;
+  unit: {
+    name: string;
+    abbreviation?: string;
+  };
+  current_price: number;
+  tags: string[];
+}
+
 const ProductCatalog = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
@@ -51,141 +72,92 @@ const ProductCatalog = () => {
   const [filterPriceRange, setFilterPriceRange] = useState<[number, number]>([0, 2000]);
   const [filterTags, setFilterTags] = useState<string[]>([]);
 
-  // Mock product data
-  const products = [
-    {
-      id: "PRD-001",
-      name: "Executive Office Chair",
-      description:
-        "Ergonomic high-back office chair with adjustable lumbar support and armrests",
-      category: "Furniture",
-      classification: "goods",
-      unit: "Each",
-      currentPrice: 349.99,
-      vendorCount: 3,
-      tags: ["office", "furniture", "ergonomic"],
-    },
-    {
-      id: "PRD-002",
-      name: "Laptop Computer - 15.6\"",
-      description:
-        "Business laptop with Intel i7, 16GB RAM, 512GB SSD, Windows 11 Pro",
-      category: "IT Equipment",
-      classification: "goods",
-      unit: "Each",
-      currentPrice: 1299.99,
-      vendorCount: 5,
-      tags: ["electronics", "computer", "laptop"],
-    },
-    {
-      id: "PRD-003",
-      name: "A4 Copy Paper - 80gsm",
-      description: "Premium quality A4 white copy paper, 500 sheets per ream",
-      category: "Office Supplies",
-      classification: "goods",
-      unit: "Ream",
-      currentPrice: 5.49,
-      vendorCount: 8,
-      tags: ["paper", "supplies", "printing"],
-    },
-    {
-      id: "PRD-004",
-      name: "Wireless Mouse",
-      description: "Ergonomic wireless mouse with adjustable DPI, USB receiver",
-      category: "IT Accessories",
-      classification: "goods",
-      unit: "Each",
-      currentPrice: 24.99,
-      vendorCount: 6,
-      tags: ["electronics", "accessory", "mouse"],
-    },
-    {
-      id: "PRD-005",
-      name: "Whiteboard - 120x90cm",
-      description:
-        "Magnetic whiteboard with aluminium frame, wall mountable, includes marker set",
-      category: "Office Equipment",
-      classification: "goods",
-      unit: "Each",
-      currentPrice: 89.99,
-      vendorCount: 4,
-      tags: ["office", "equipment", "presentation"],
-    },
-    {
-      id: "PRD-006",
-      name: "External Hard Drive - 2TB",
-      description: "Portable USB 3.0 external hard drive with 2TB storage",
-      category: "IT Storage",
-      classification: "goods",
-      unit: "Each",
-      currentPrice: 79.99,
-      vendorCount: 7,
-      tags: ["electronics", "storage", "backup"],
-    },
-    {
-      id: "PRD-007",
-      name: "IT Support - Basic",
-      description: "Basic IT support package including helpdesk and remote assistance",
-      category: "IT Services",
-      classification: "services",
-      unit: "Hour",
-      currentPrice: 75.00,
-      vendorCount: 4,
-      tags: ["support", "it", "service"],
-    },
-    {
-      id: "PRD-008",
-      name: "Office Cleaning",
-      description: "Professional office cleaning service, includes vacuuming and dusting",
-      category: "Facility Management",
-      classification: "services",
-      unit: "Session",
-      currentPrice: 120.00,
-      vendorCount: 3,
-      tags: ["cleaning", "facility", "maintenance"],
-    },
-  ];
+  // Fetch products from Supabase
+  const fetchProducts = async (): Promise<Product[]> => {
+    const { data, error } = await supabase
+      .from("products")
+      .select(`
+        id, 
+        name, 
+        description, 
+        classification,
+        current_price,
+        tags,
+        category:category_id(id, name),
+        unit:unit_id(id, name, abbreviation)
+      `)
+      .order('name', { ascending: true });
 
-  // Unique categories and tags for filters
-  const categories = [...new Set(products.map(product => product.category))];
-  const allTags = [...new Set(products.flatMap(product => product.tags))];
+    if (error) {
+      throw new Error(error.message);
+    }
+    
+    return data || [];
+  };
+
+  const { 
+    data: products = [], 
+    isLoading, 
+    error,
+    refetch
+  } = useQuery({
+    queryKey: ["products"],
+    queryFn: fetchProducts,
+  });
+
+  // Fetch categories for the filter
+  const { data: categories = [] } = useQuery({
+    queryKey: ["categories"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("categories")
+        .select("*")
+        .order("name", { ascending: true });
+  
+      if (error) throw new Error(error.message);
+      return data || [];
+    },
+  });
+
+  // Get all unique tags from products
+  const allTags = Array.from(
+    new Set(products.flatMap((product) => product.tags || []))
+  );
 
   // Filter products based on search and filter criteria
-  const filteredProducts = products.filter(
-    (product) => {
-      // Search term filter
-      const matchesSearchTerm = 
-        searchTerm === "" ||
-        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.tags.some((tag) => tag.includes(searchTerm.toLowerCase()));
-      
-      // Category filter
-      const matchesCategory = 
-        filterCategory === "" || 
-        product.category === filterCategory;
-      
-      // Classification filter
-      const matchesClassification = 
-        filterClassification === "" || 
-        product.classification === filterClassification;
-      
-      // Price range filter
-      const matchesPriceRange = 
-        product.currentPrice >= filterPriceRange[0] && 
-        product.currentPrice <= filterPriceRange[1];
-      
-      // Tags filter
-      const matchesTags = 
-        filterTags.length === 0 || 
-        filterTags.some(tag => product.tags.includes(tag));
-      
-      return matchesSearchTerm && matchesCategory && matchesClassification && 
-             matchesPriceRange && matchesTags;
-    }
-  );
+  const filteredProducts = products.filter((product) => {
+    // Search term filter
+    const matchesSearchTerm = 
+      searchTerm === "" ||
+      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.category?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (product.tags || []).some((tag) => tag.includes(searchTerm.toLowerCase()));
+    
+    // Category filter
+    const matchesCategory = 
+      filterCategory === "" || 
+      product.category?.name === filterCategory;
+    
+    // Classification filter
+    const matchesClassification = 
+      filterClassification === "" || 
+      product.classification === filterClassification;
+    
+    // Price range filter
+    const matchesPriceRange = 
+      product.current_price >= filterPriceRange[0] && 
+      product.current_price <= filterPriceRange[1];
+    
+    // Tags filter
+    const matchesTags = 
+      filterTags.length === 0 || 
+      filterTags.some(tag => (product.tags || []).includes(tag));
+    
+    return matchesSearchTerm && matchesCategory && matchesClassification && 
+           matchesPriceRange && matchesTags;
+  });
 
   // Clear all filters
   const clearFilters = () => {
@@ -203,6 +175,17 @@ const ProductCatalog = () => {
       setFilterTags([...filterTags, tag]);
     }
   };
+
+  // Show error if data fetching fails
+  useEffect(() => {
+    if (error) {
+      toast({
+        title: "Failed to load products",
+        description: "Please try again later",
+        variant: "destructive",
+      });
+    }
+  }, [error]);
 
   const productColumns = [
     {
@@ -227,33 +210,30 @@ const ProductCatalog = () => {
     {
       id: "category",
       header: "Category",
-      cell: (row: any) => row.category,
+      cell: (row: any) => row.category?.name || "N/A",
     },
     {
       id: "unit",
       header: "Unit",
-      cell: (row: any) => row.unit,
+      cell: (row: any) => row.unit?.name || "N/A",
     },
     {
       id: "price",
       header: "Current Price",
       cell: (row: any) =>
-        new Intl.NumberFormat("en-US", {
-          style: "currency",
-          currency: "USD",
-        }).format(row.currentPrice),
-    },
-    {
-      id: "vendors",
-      header: "Vendors",
-      cell: (row: any) => `${row.vendorCount} vendors`,
+        row.current_price 
+          ? new Intl.NumberFormat("en-US", {
+              style: "currency",
+              currency: "USD",
+            }).format(row.current_price)
+          : "N/A",
     },
     {
       id: "tags",
       header: "Tags",
       cell: (row: any) => (
         <div className="flex flex-wrap gap-1">
-          {row.tags.map((tag: string, i: number) => (
+          {(row.tags || []).map((tag: string, i: number) => (
             <Badge variant="outline" key={i} className="text-xs">
               {tag}
             </Badge>
@@ -273,6 +253,17 @@ const ProductCatalog = () => {
       ),
     },
   ];
+
+  if (isLoading) {
+    return (
+      <div className="page-container">
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <span className="ml-2 text-lg">Loading products...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="page-container">
@@ -356,10 +347,10 @@ const ProductCatalog = () => {
                         <SelectValue placeholder="Select a category" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">All Categories</SelectItem>
+                        <SelectItem value="">All Categories</SelectItem>
                         {categories.map((category) => (
-                          <SelectItem key={category} value={category}>
-                            {category}
+                          <SelectItem key={category.id} value={category.name}>
+                            {category.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -380,6 +371,11 @@ const ProductCatalog = () => {
                           {tag}
                         </Badge>
                       ))}
+                      {allTags.length === 0 && (
+                        <p className="text-sm text-muted-foreground">
+                          No tags available
+                        </p>
+                      )}
                     </div>
                   </AccordionContent>
                 </AccordionItem>
@@ -415,14 +411,14 @@ const ProductCatalog = () => {
                       <div>
                         <CardTitle className="text-lg">{product.name}</CardTitle>
                         <CardDescription className="text-xs mt-1">
-                          {product.id} · {product.category}
+                          {product.id} · {product.category?.name}
                         </CardDescription>
                       </div>
                       <div className="flex flex-col items-end gap-1">
                         <Badge variant={product.classification === "goods" ? "default" : "secondary"}>
                           {product.classification === "goods" ? "Goods" : "Services"}
                         </Badge>
-                        <span className="text-xs">{product.unit}</span>
+                        <span className="text-xs">{product.unit?.name}</span>
                       </div>
                     </div>
                   </CardHeader>
@@ -432,28 +428,34 @@ const ProductCatalog = () => {
                     </p>
                     <div className="mt-3 flex items-center justify-between">
                       <p className="font-medium text-lg">
-                        {new Intl.NumberFormat("en-US", {
-                          style: "currency",
-                          currency: "USD",
-                        }).format(product.currentPrice)}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {product.vendorCount} vendors
+                        {product.current_price !== null ? 
+                          new Intl.NumberFormat("en-US", {
+                            style: "currency",
+                            currency: "USD",
+                          }).format(product.current_price) : 
+                          "Price not set"
+                        }
                       </p>
                     </div>
                   </CardContent>
                   <CardFooter className="pt-2">
                     <div className="flex flex-wrap gap-1 items-center">
-                      <Tag className="h-3 w-3 text-muted-foreground" />
-                      {product.tags.map((tag, i) => (
-                        <Badge
-                          variant="outline"
-                          key={i}
-                          className="text-xs px-2 py-0"
-                        >
-                          {tag}
-                        </Badge>
-                      ))}
+                      {product.tags && product.tags.length > 0 ? (
+                        <>
+                          <Tag className="h-3 w-3 text-muted-foreground" />
+                          {product.tags.map((tag, i) => (
+                            <Badge
+                              variant="outline"
+                              key={i}
+                              className="text-xs px-2 py-0"
+                            >
+                              {tag}
+                            </Badge>
+                          ))}
+                        </>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">No tags</span>
+                      )}
                     </div>
                   </CardFooter>
                 </Card>

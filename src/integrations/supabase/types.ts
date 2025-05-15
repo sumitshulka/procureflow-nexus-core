@@ -42,6 +42,93 @@ export type Database = {
         }
         Relationships: []
       }
+      categories: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+        }
+        Relationships: []
+      }
+      products: {
+        Row: {
+          category_id: string
+          classification: string
+          created_at: string | null
+          created_by: string | null
+          current_price: number | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          tags: string[] | null
+          unit_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          category_id: string
+          classification: string
+          created_at?: string | null
+          created_by?: string | null
+          current_price?: number | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          tags?: string[] | null
+          unit_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          category_id?: string
+          classification?: string
+          created_at?: string | null
+          created_by?: string | null
+          current_price?: number | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          tags?: string[] | null
+          unit_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -66,6 +153,33 @@ export type Database = {
           full_name?: string | null
           id?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      units: {
+        Row: {
+          abbreviation: string | null
+          created_at: string | null
+          created_by: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+        }
+        Insert: {
+          abbreviation?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+        }
+        Update: {
+          abbreviation?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
         }
         Relationships: []
       }
