@@ -1,7 +1,6 @@
 
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
@@ -26,50 +25,48 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <AuthProvider>
-            <Routes>
-              {/* Public routes */}
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/signup" element={<SignupPage />} />
-              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-              <Route path="/update-password" element={<UpdatePasswordPage />} />
-              <Route path="/unauthorized" element={<UnauthorizedPage />} />
-              
-              {/* Protected routes */}
-              <Route element={<ProtectedRoute />}>
-                <Route element={<AppLayout />}>
-                  <Route path="/" element={<Dashboard />} />
-                  
-                  {/* Catalog routes - accessible by specific roles */}
-                  <Route 
-                    element={
-                      <ProtectedRoute 
-                        requiredRoles={[
-                          UserRole.ADMIN, 
-                          UserRole.PROCUREMENT_OFFICER, 
-                          UserRole.INVENTORY_MANAGER
-                        ]} 
-                      />
-                    }
-                  >
-                    <Route path="/catalog" element={<ProductCatalog />} />
-                    <Route path="/add-product" element={<AddProduct />} />
-                  </Route>
-                  
-                  {/* Procurement requests - accessible by all authenticated users */}
-                  <Route path="/requests" element={<ProcurementRequests />} />
-                  
-                  {/* Additional protected routes will be added here */}
+        <Toaster />
+        <Sonner />
+        <AuthProvider>
+          <Routes>
+            {/* Public routes */}
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/signup" element={<SignupPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/update-password" element={<UpdatePasswordPage />} />
+            <Route path="/unauthorized" element={<UnauthorizedPage />} />
+            
+            {/* Protected routes */}
+            <Route element={<ProtectedRoute />}>
+              <Route element={<AppLayout />}>
+                <Route path="/" element={<Dashboard />} />
+                
+                {/* Catalog routes - accessible by specific roles */}
+                <Route 
+                  element={
+                    <ProtectedRoute 
+                      requiredRoles={[
+                        UserRole.ADMIN, 
+                        UserRole.PROCUREMENT_OFFICER, 
+                        UserRole.INVENTORY_MANAGER
+                      ]} 
+                    />
+                  }
+                >
+                  <Route path="/catalog" element={<ProductCatalog />} />
+                  <Route path="/add-product" element={<AddProduct />} />
                 </Route>
+                
+                {/* Procurement requests - accessible by all authenticated users */}
+                <Route path="/requests" element={<ProcurementRequests />} />
+                
+                {/* Additional protected routes will be added here */}
               </Route>
-              
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </AuthProvider>
-        </TooltipProvider>
+            </Route>
+            
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </AuthProvider>
       </BrowserRouter>
     </QueryClientProvider>
   );
