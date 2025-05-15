@@ -17,7 +17,7 @@ const AppHeader: React.FC = () => {
   const { userData, logout } = useAuth();
 
   return (
-    <header className="sticky top-0 z-30 h-16 flex items-center justify-between border-b bg-white px-4">
+    <header className="fixed top-0 left-0 right-0 z-40 h-16 flex items-center justify-between border-b bg-white px-4">
       <div className="flex items-center gap-3">
         <SidebarTrigger className="md:hidden">
           <Menu className="h-5 w-5" />

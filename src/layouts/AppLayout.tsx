@@ -9,9 +9,9 @@ const AppLayout = () => {
     <SidebarProvider defaultOpen={true}>
       <div className="min-h-screen flex flex-col w-full">
         <AppHeader />
-        <div className="flex flex-1 overflow-hidden h-[calc(100vh-4rem)]">
+        <div className="flex flex-1 h-[calc(100vh-4rem)] overflow-hidden">
           <AppSidebar />
-          <main className="flex-1 overflow-auto bg-gray-50">
+          <main className="flex-1 overflow-y-auto bg-gray-50">
             <Outlet />
           </main>
         </div>
