@@ -53,14 +53,20 @@ interface Product {
   description: string;
   category: {
     name: string;
-  };
+  } | null;
   classification: string;
   unit: {
     name: string;
     abbreviation?: string;
-  };
-  current_price: number;
+  } | null;
+  current_price: number | null;
   tags: string[];
+}
+
+// Type for categories from Supabase
+interface Category {
+  id: string;
+  name: string;
 }
 
 const ProductCatalog = () => {
@@ -148,8 +154,10 @@ const ProductCatalog = () => {
     
     // Price range filter
     const matchesPriceRange = 
-      product.current_price >= filterPriceRange[0] && 
-      product.current_price <= filterPriceRange[1];
+      product.current_price === null || (
+        product.current_price >= filterPriceRange[0] && 
+        product.current_price <= filterPriceRange[1]
+      );
     
     // Tags filter
     const matchesTags = 
@@ -193,6 +201,7 @@ const ProductCatalog = () => {
     }
   }, [error]);
 
+  // Table columns configuration for table view
   const productColumns = [
     {
       id: "id",
@@ -347,14 +356,14 @@ const ProductCatalog = () => {
                   <AccordionContent>
                     <Select
                       value={filterCategory}
-                      onValueChange={setFilterCategory}
+                      onValueChange={(value) => setFilterCategory(value)}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select a category" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="">All Categories</SelectItem>
-                        {categories.map((category: any) => (
+                        {categories && categories.map((category: Category) => (
                           <SelectItem key={category.id} value={category.name}>
                             {category.name}
                           </SelectItem>
@@ -367,17 +376,18 @@ const ProductCatalog = () => {
                   <AccordionTrigger>Tags</AccordionTrigger>
                   <AccordionContent>
                     <div className="flex flex-wrap gap-2 pt-2">
-                      {allTags.map((tag) => (
-                        <Badge
-                          key={tag}
-                          variant={filterTags.includes(tag) ? "default" : "outline"}
-                          className="cursor-pointer"
-                          onClick={() => toggleTag(tag)}
-                        >
-                          {tag}
-                        </Badge>
-                      ))}
-                      {allTags.length === 0 && (
+                      {allTags.length > 0 ? (
+                        allTags.map((tag) => (
+                          <Badge
+                            key={tag}
+                            variant={filterTags.includes(tag) ? "default" : "outline"}
+                            className="cursor-pointer"
+                            onClick={() => toggleTag(tag)}
+                          >
+                            {tag}
+                          </Badge>
+                        ))
+                      ) : (
                         <p className="text-sm text-muted-foreground">
                           No tags available
                         </p>
@@ -424,13 +434,13 @@ const ProductCatalog = () => {
                         <Badge variant={product.classification === "goods" ? "default" : "secondary"}>
                           {product.classification === "goods" ? "Goods" : "Services"}
                         </Badge>
-                        <span className="text-xs">{product.unit?.name}</span>
+                        <span className="text-xs">{product.unit?.name || "N/A"}</span>
                       </div>
                     </div>
                   </CardHeader>
                   <CardContent className="pb-2">
                     <p className="text-sm text-muted-foreground line-clamp-2">
-                      {product.description}
+                      {product.description || "No description available"}
                     </p>
                     <div className="mt-3 flex items-center justify-between">
                       <p className="font-medium text-lg">
