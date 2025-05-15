@@ -113,9 +113,9 @@ const ProductCatalog = () => {
 
   const { 
     data: products = [], 
-    isLoading, 
-    error,
-    refetch
+    isLoading: isProductsLoading, 
+    error: productsError,
+    refetch: refetchProducts
   } = useQuery({
     queryKey: ["products"],
     queryFn: fetchProducts,
@@ -145,10 +145,19 @@ const ProductCatalog = () => {
 
   const { 
     data: categories = [],
-    isLoading: isCategoriesLoading
+    isLoading: isCategoriesLoading,
+    error: categoriesError
   } = useQuery({
     queryKey: ["categories"],
     queryFn: fetchCategories,
+    onError: (error) => {
+      console.error("Categories query error:", error);
+      toast({
+        title: "Failed to load categories",
+        description: "Categories could not be loaded. Please try again.",
+        variant: "destructive",
+      });
+    }
   });
 
   // Get all unique tags from products
@@ -217,14 +226,14 @@ const ProductCatalog = () => {
 
   // Show error if data fetching fails
   useEffect(() => {
-    if (error) {
+    if (productsError) {
       toast({
         title: "Failed to load products",
         description: "Please try again later",
         variant: "destructive",
       });
     }
-  }, [error]);
+  }, [productsError]);
 
   // Table columns configuration for table view
   const productColumns = [
@@ -294,7 +303,7 @@ const ProductCatalog = () => {
     },
   ];
 
-  if (isLoading) {
+  if (isProductsLoading) {
     return (
       <div className="page-container">
         <div className="flex items-center justify-center h-64">
@@ -383,6 +392,10 @@ const ProductCatalog = () => {
                       <div className="flex items-center justify-center p-4">
                         <Loader2 className="h-4 w-4 animate-spin mr-2" />
                         <span>Loading categories...</span>
+                      </div>
+                    ) : categoriesError ? (
+                      <div className="text-destructive text-sm p-2">
+                        Failed to load categories. Please try again.
                       </div>
                     ) : (
                       <Select
