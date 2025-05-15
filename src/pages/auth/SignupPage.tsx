@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/contexts/AuthContext";
 
 const SignupPage = () => {
@@ -22,6 +23,7 @@ const SignupPage = () => {
     password: "",
     confirmPassword: "",
     fullName: "",
+    makeAdmin: false,
   });
 
   const [passwordError, setPasswordError] = useState("");
@@ -34,6 +36,10 @@ const SignupPage = () => {
     if (name === "password" || name === "confirmPassword") {
       setPasswordError("");
     }
+  };
+  
+  const handleCheckboxChange = (checked: boolean) => {
+    setFormData((prev) => ({ ...prev, makeAdmin: checked }));
   };
 
   const validateForm = () => {
@@ -55,7 +61,7 @@ const SignupPage = () => {
     
     if (!validateForm()) return;
     
-    await signUp(formData.email, formData.password, formData.fullName);
+    await signUp(formData.email, formData.password, formData.fullName, formData.makeAdmin);
   };
 
   return (
@@ -127,6 +133,16 @@ const SignupPage = () => {
                 {passwordError && (
                   <p className="text-sm text-destructive">{passwordError}</p>
                 )}
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="makeAdmin"
+                  checked={formData.makeAdmin}
+                  onCheckedChange={handleCheckboxChange}
+                />
+                <Label htmlFor="makeAdmin" className="text-sm font-normal">
+                  Create as administrator account
+                </Label>
               </div>
             </CardContent>
             <CardFooter>

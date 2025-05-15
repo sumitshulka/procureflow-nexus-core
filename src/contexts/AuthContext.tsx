@@ -20,7 +20,7 @@ interface AuthContextType {
   userData: UserData | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, fullName: string) => Promise<void>;
+  signUp: (email: string, password: string, fullName: string, makeAdmin?: boolean) => Promise<void>;
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   updatePassword: (password: string) => Promise<void>;
@@ -126,10 +126,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const signUp = async (email: string, password: string, fullName: string) => {
+  const signUp = async (email: string, password: string, fullName: string, makeAdmin: boolean = false) => {
     try {
       setIsLoading(true);
-      const { error } = await supabase.auth.signUp({ 
+      
+      // Check if this is the first user signing up
+      const { count, error: countError } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true });
+        
+      if (countError) throw countError;
+      
+      // If no users exist or makeAdmin is true, this user will be an admin
+      const shouldMakeAdmin = makeAdmin || count === 0;
+      
+      // Sign up the user
+      const { data, error } = await supabase.auth.signUp({ 
         email, 
         password,
         options: {
@@ -138,12 +150,31 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           },
         }
       });
+      
       if (error) throw error;
       
-      toast({
-        title: "Account created",
-        description: "Please check your email for the confirmation link.",
-      });
+      // If automatic setup is completed and user is already created
+      if (data.user && shouldMakeAdmin) {
+        // Assign admin role manually
+        const { error: roleError } = await supabase
+          .from('user_roles')
+          .insert({
+            user_id: data.user.id,
+            role: 'admin'
+          });
+          
+        if (roleError) throw roleError;
+        
+        toast({
+          title: "Admin account created",
+          description: "You have been assigned the admin role.",
+        });
+      } else {
+        toast({
+          title: "Account created",
+          description: "Please check your email for the confirmation link.",
+        });
+      }
       
       navigate("/login");
     } catch (error: any) {
