@@ -74,7 +74,7 @@ const requestFormSchema = z.object({
   }).refine(date => date > new Date(), {
     message: "Date needed must be in the future",
   }),
-  priority: z.enum(["low", "medium", "high", "urgent"]),
+  priority: z.enum(["low", "medium", "high", "urgent"]).transform(val => val as RequestPriority),
 });
 
 type RequestFormValues = z.infer<typeof requestFormSchema>;
@@ -94,7 +94,7 @@ const ProcurementRequests = () => {
       title: "",
       description: "",
       department: userData?.department || "",
-      priority: "medium",
+      priority: RequestPriority.MEDIUM,
       date_needed: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Default to one week from now
     },
   });
@@ -110,7 +110,23 @@ const ProcurementRequests = () => {
 
       if (error) throw error;
       
-      setRequests(data || []);
+      if (data) {
+        // Transform the data to match the expected ProcurementRequest type
+        const transformedData: ProcurementRequest[] = data.map(item => ({
+          id: item.id,
+          request_number: item.request_number,
+          title: item.title,
+          requester_id: item.requester_id,
+          department: item.department,
+          date_created: item.date_created,
+          date_needed: item.date_needed,
+          priority: item.priority as RequestPriority,
+          status: item.status as RequestStatus,
+          estimated_value: item.estimated_value,
+          requester_name: item.requester_name
+        }));
+        setRequests(transformedData);
+      }
     } catch (error: any) {
       console.error("Error fetching procurement requests:", error.message);
       toast({
@@ -538,7 +554,7 @@ const ProcurementRequests = () => {
         columns={requestColumns}
         data={filteredRequests}
         emptyMessage="No procurement requests found"
-        isLoading={isLoading}
+        loading={isLoading}
       />
     </div>
   );

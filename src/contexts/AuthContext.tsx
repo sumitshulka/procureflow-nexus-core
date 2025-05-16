@@ -1,5 +1,5 @@
 
-import { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
@@ -12,6 +12,7 @@ interface UserData {
   fullName: string | null;
   avatarUrl: string | null;
   roles: UserRole[];
+  department?: string; // Adding department field
 }
 
 interface AuthContextType {
@@ -118,6 +119,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         email: user?.email || "",
         fullName: profileData?.full_name,
         avatarUrl: profileData?.avatar_url,
+        department: profileData?.department,
         roles: rolesData.map(r => r.role as UserRole),
       };
       

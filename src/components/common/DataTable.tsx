@@ -1,30 +1,34 @@
 
+import React from 'react';
 import {
   Table,
-  TableBody,
-  TableCell,
-  TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+  TableHead,
+  TableBody,
+  TableCell,
+} from '@/components/ui/table';
+import { Skeleton } from '@/components/ui/skeleton';
 
-interface DataTableProps {
+export interface DataTableProps {
   columns: Array<{
     id: string;
     header: string;
-    cell: (item: any) => React.ReactNode;
+    cell: (row: any) => React.ReactNode;
   }>;
-  data: any[];
+  data: Array<any>;
   emptyMessage?: string;
+  loading?: boolean;
 }
 
 const DataTable = ({
   columns,
   data,
-  emptyMessage = "No data available",
+  emptyMessage = 'No data available',
+  loading = false,
 }: DataTableProps) => {
   return (
-    <div className="data-table-container">
+    <div className="border rounded-md">
       <Table>
         <TableHeader>
           <TableRow>
@@ -34,21 +38,31 @@ const DataTable = ({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {data.length === 0 ? (
+          {loading ? (
+            Array.from({ length: 5 }).map((_, index) => (
+              <TableRow key={`loading-${index}`}>
+                {columns.map((column) => (
+                  <TableCell key={`${index}-${column.id}`}>
+                    <Skeleton className="h-5 w-full" />
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))
+          ) : data.length === 0 ? (
             <TableRow>
               <TableCell
                 colSpan={columns.length}
-                className="text-center py-6 text-muted-foreground"
+                className="h-24 text-center text-muted-foreground"
               >
                 {emptyMessage}
               </TableCell>
             </TableRow>
           ) : (
-            data.map((item, i) => (
-              <TableRow key={i}>
+            data.map((row, i) => (
+              <TableRow key={`row-${i}`}>
                 {columns.map((column) => (
                   <TableCell key={`${i}-${column.id}`}>
-                    {column.cell(item)}
+                    {column.cell(row)}
                   </TableCell>
                 ))}
               </TableRow>
