@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PageHeader from "@/components/common/PageHeader";
 import UsersList from "@/components/user-management/UsersList";
@@ -15,6 +15,11 @@ const UserManagement = () => {
   const handleTabChange = (value: string) => {
     navigate(`/users#${value}`, { replace: true });
   };
+
+  // Log which tab is active for debugging
+  useEffect(() => {
+    console.log("Current active tab in UserManagement:", defaultTab);
+  }, [defaultTab]);
 
   return (
     <div className="page-container">

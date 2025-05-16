@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PageHeader from "@/components/common/PageHeader";
 import MasterDataManagement from "@/components/settings/MasterDataManagement";
@@ -7,9 +7,32 @@ import OrganizationSettings from "@/components/settings/OrganizationSettings";
 import UserManagement from "@/components/settings/UserManagement";
 import EmailSettings from "@/components/settings/EmailSettings";
 import IntegrationSettings from "@/components/settings/IntegrationSettings";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const Settings = () => {
-  const [activeTab, setActiveTab] = useState("master-data");
+  const location = useLocation();
+  const navigate = useNavigate();
+  const hashValue = location.hash ? location.hash.replace('#', '') : 'master-data';
+  const [activeTab, setActiveTab] = useState(hashValue);
+
+  // Update the URL when tab changes
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    navigate(`/settings#${value}`, { replace: true });
+  };
+
+  // Log active tab for debugging
+  useEffect(() => {
+    console.log("Current active tab in Settings:", activeTab);
+  }, [activeTab]);
+
+  // Update the tab if the URL hash changes
+  useEffect(() => {
+    if (location.hash) {
+      const tab = location.hash.replace('#', '');
+      setActiveTab(tab);
+    }
+  }, [location.hash]);
 
   return (
     <div className="page-container">
@@ -20,8 +43,8 @@ const Settings = () => {
       
       <div className="bg-white rounded-lg border shadow-sm">
         <Tabs 
-          defaultValue="master-data" 
-          onValueChange={setActiveTab}
+          value={activeTab}
+          onValueChange={handleTabChange}
           className="w-full"
         >
           <div className="border-b">

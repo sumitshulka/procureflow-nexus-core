@@ -4,7 +4,6 @@ import { NavLink, useLocation } from "react-router-dom";
 import {
   Archive,
   BookText,
-  Box,
   ClipboardCheck,
   CreditCard,
   FileText,
@@ -31,9 +30,18 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from "@/contexts/AuthContext";
 import { UserRole } from "@/types";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+
+interface SystemModule {
+  id: string;
+  name: string;
+  url: string;
+  icon: React.ElementType;
+  adminOnly?: boolean;
+}
 
 const AppSidebar: React.FC = () => {
-  // Using `state` instead of `collapsed` based on SidebarContext definition
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
@@ -49,66 +57,92 @@ const AppSidebar: React.FC = () => {
   // Check if user has admin role
   const isAdmin = userData?.roles?.includes(UserRole.ADMIN);
 
-  const mainItems = [
-    { title: "Dashboard", url: "/", icon: Home },
+  // Define our standard menu items
+  const standardMenuItems: SystemModule[] = [
+    { id: "dashboard", name: "Dashboard", url: "/", icon: Home },
     {
-      title: "User Management",
+      id: "user_management",
+      name: "User Management",
       url: "/users",
       icon: Users,
       adminOnly: true,
     },
     {
-      title: "Product Catalog",
+      id: "catalog",
+      name: "Product Catalog",
       url: "/catalog",
       icon: ListFilter,
     },
     {
-      title: "Procurement Requests",
+      id: "requests",
+      name: "Procurement Requests",
       url: "/requests",
       icon: ShoppingCart,
     },
     {
-      title: "Inventory",
+      id: "inventory",
+      name: "Inventory",
       url: "/inventory",
       icon: Warehouse,
     },
     {
-      title: "Vendor Management",
+      id: "vendors",
+      name: "Vendor Management",
       url: "/vendors",
       icon: BookText,
     },
     {
-      title: "RFP Management",
+      id: "rfps",
+      name: "RFP Management",
       url: "/rfps",
       icon: FileText,
     },
     {
-      title: "Purchase Orders",
+      id: "purchase_orders",
+      name: "Purchase Orders",
       url: "/purchase-orders",
       icon: ClipboardCheck,
     },
     {
-      title: "Invoices & Payments",
+      id: "invoices",
+      name: "Invoices & Payments",
       url: "/invoices",
       icon: CreditCard,
     },
     {
-      title: "Reports",
+      id: "reports",
+      name: "Reports",
       url: "/reports",
       icon: Archive,
     },
     // Only show settings for admin users
     ...(isAdmin ? [
       {
-        title: "Settings",
+        id: "settings",
+        name: "Settings",
         url: "/settings",
         icon: Settings,
       }
     ] : []),
   ];
 
-  // Filter items based on admin status
-  const filteredItems = mainItems.filter(item => !item.adminOnly || isAdmin);
+  // Fetch any system modules from the database
+  const { data: systemModules = [] } = useQuery({
+    queryKey: ["system_modules"],
+    queryFn: async () => {
+      // This would be used to fetch dynamic modules if needed
+      // Currently using the standard menu items above
+      return [] as SystemModule[];
+    },
+    enabled: false, // We're not using this query for now, but it's here for future expansion
+  });
+
+  // Combine standard menu items with system modules
+  // For now, just use standard menu items
+  const allMenuItems = [...standardMenuItems];
+
+  // Filter items based on admin status and permissions
+  const filteredItems = allMenuItems.filter(item => !item.adminOnly || isAdmin);
 
   return (
     <Sidebar
@@ -125,7 +159,7 @@ const AppSidebar: React.FC = () => {
             <SidebarGroupContent>
               <SidebarMenu>
                 {filteredItems.map((item) => (
-                  <SidebarMenuItem key={item.title}>
+                  <SidebarMenuItem key={item.id}>
                     <SidebarMenuButton asChild>
                       <NavLink
                         to={item.url}
@@ -133,7 +167,7 @@ const AppSidebar: React.FC = () => {
                         className={getNavCls}
                       >
                         <item.icon className="mr-2 h-4 w-4" />
-                        {!collapsed && <span>{item.title}</span>}
+                        {!collapsed && <span>{item.name}</span>}
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

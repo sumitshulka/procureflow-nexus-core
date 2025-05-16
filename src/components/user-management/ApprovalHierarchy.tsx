@@ -105,7 +105,7 @@ const ApprovalHierarchy = () => {
   });
   
   // Fetch approval hierarchies
-  const { data: approvalLevels = [], isLoading, refetch } = useQuery({
+  const { data: approvalLevels = [], isLoading } = useQuery({
     queryKey: ["approval_hierarchies", selectedDepartment],
     queryFn: async () => {
       console.log("Fetching approval hierarchies");
@@ -131,7 +131,7 @@ const ApprovalHierarchy = () => {
 
       console.log("Raw approval hierarchies:", data);
       
-      if (data.length === 0) {
+      if (!data || data.length === 0) {
         return [];
       }
       
