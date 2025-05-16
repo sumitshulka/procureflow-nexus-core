@@ -81,9 +81,18 @@ const CategoriesManager = () => {
   // Create category
   const createCategoryMutation = useMutation({
     mutationFn: async (values: z.infer<typeof categorySchema>) => {
+      // Ensure the name property is always provided and not undefined
+      if (!values.name) {
+        throw new Error("Category name is required");
+      }
+
       const { data, error } = await supabase
         .from('categories')
-        .insert([values])
+        .insert([{
+          name: values.name,
+          description: values.description || null,
+          is_active: values.is_active
+        }])
         .select();
       
       if (error) throw error;
@@ -103,9 +112,18 @@ const CategoriesManager = () => {
   // Update category
   const updateCategoryMutation = useMutation({
     mutationFn: async ({ id, values }: { id: string, values: z.infer<typeof categorySchema> }) => {
+      // Ensure the name property is always provided and not undefined
+      if (!values.name) {
+        throw new Error("Category name is required");
+      }
+      
       const { data, error } = await supabase
         .from('categories')
-        .update(values)
+        .update({
+          name: values.name,
+          description: values.description || null,
+          is_active: values.is_active
+        })
         .eq('id', id)
         .select();
       
@@ -398,6 +416,30 @@ const CategoriesManager = () => {
       </CardContent>
     </Card>
   );
+  
+  function onSubmit(values: z.infer<typeof categorySchema>) {
+    if (currentCategory) {
+      updateCategoryMutation.mutate({ id: currentCategory.id, values });
+    } else {
+      createCategoryMutation.mutate(values);
+    }
+  };
+
+  function handleEdit(category: Category) {
+    setCurrentCategory(category);
+    form.reset({
+      name: category.name,
+      description: category.description || "",
+      is_active: category.is_active,
+    });
+    setIsEditOpen(true);
+  }
+
+  function handleDelete(id: string) {
+    if (confirm("Are you sure you want to delete this category?")) {
+      deleteCategoryMutation.mutate(id);
+    }
+  }
 };
 
 export default CategoriesManager;
