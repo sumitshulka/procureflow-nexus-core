@@ -1,6 +1,7 @@
 
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { Eye, EyeOff, LogIn, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -25,6 +26,7 @@ const LoginPage = () => {
     remember: false,
   });
 
+  const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -45,32 +47,40 @@ const LoginPage = () => {
     try {
       await login(credentials.email, credentials.password);
     } catch (error: any) {
-      // This shouldn't normally execute as errors are handled in the login function
-      // But adding as an extra safeguard
-      setLoginError(error?.message || "An error occurred during login");
+      const errorMessage = error?.message || "An error occurred during login";
+      setLoginError(errorMessage);
       toast({
         title: "Login Error",
-        description: error?.message || "An error occurred during login",
+        description: errorMessage,
         variant: "destructive",
       });
     }
   };
 
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-procurement-50 to-procurement-100 px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold">
+          <h1 className="text-3xl font-bold text-gray-800">
             <span className="text-procurement-600">Procurement</span> Management
           </h1>
-          <p className="text-muted-foreground mt-2">
+          <p className="text-gray-600 mt-2">
             Sign in to access your procurement dashboard
           </p>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Sign In</CardTitle>
+        <Card className="shadow-lg border-0">
+          <CardHeader className="space-y-1">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-2xl">Sign In</CardTitle>
+              <div className="h-10 w-10 rounded-full bg-procurement-100 flex items-center justify-center">
+                <LogIn className="h-5 w-5 text-procurement-600" />
+              </div>
+            </div>
             <CardDescription>
               Enter your credentials to access your account
             </CardDescription>
@@ -83,7 +93,7 @@ const LoginPage = () => {
                 </div>
               )}
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email" className="text-sm font-medium">Email</Label>
                 <Input
                   id="email"
                   name="email"
@@ -91,55 +101,75 @@ const LoginPage = () => {
                   placeholder="your.email@company.com"
                   value={credentials.email}
                   onChange={handleChange}
+                  className="h-11"
                   required
                 />
               </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="password">Password</Label>
+                  <Label htmlFor="password" className="text-sm font-medium">Password</Label>
                   <Link
                     to="/forgot-password"
-                    className="text-sm text-procurement-600 hover:text-procurement-500"
+                    className="text-xs text-procurement-600 hover:text-procurement-500 hover:underline"
                   >
                     Forgot password?
                   </Link>
                 </div>
-                <Input
-                  id="password"
-                  name="password"
-                  type="password"
-                  value={credentials.password}
-                  onChange={handleChange}
-                  required
-                />
+                <div className="relative">
+                  <Input
+                    id="password"
+                    name="password"
+                    type={showPassword ? "text" : "password"}
+                    value={credentials.password}
+                    onChange={handleChange}
+                    className="h-11 pr-10"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={togglePasswordVisibility}
+                    className="absolute right-3 top-2.5 text-gray-500 hover:text-gray-700"
+                    tabIndex={-1}
+                  >
+                    {showPassword ? 
+                      <EyeOff className="h-5 w-5" /> : 
+                      <Eye className="h-5 w-5" />
+                    }
+                  </button>
+                </div>
               </div>
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="remember"
                   checked={credentials.remember}
                   onCheckedChange={handleCheckboxChange}
+                  className="data-[state=checked]:bg-procurement-600 data-[state=checked]:border-procurement-600"
                 />
-                <Label htmlFor="remember" className="text-sm font-normal">
+                <label 
+                  htmlFor="remember" 
+                  className="text-sm text-gray-600 font-normal cursor-pointer select-none"
+                >
                   Remember me for 30 days
-                </Label>
+                </label>
               </div>
             </CardContent>
             <CardFooter>
               <Button
                 type="submit"
-                className="w-full bg-procurement-600 hover:bg-procurement-700"
+                className="w-full h-11 bg-procurement-600 hover:bg-procurement-700 transition-all duration-300 group"
                 disabled={isLoading}
               >
-                {isLoading ? "Signing In..." : "Sign In"}
+                <span className="mr-1">{isLoading ? "Signing In..." : "Sign In"}</span>
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </Button>
             </CardFooter>
           </form>
         </Card>
 
         <div className="text-center mt-6">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-gray-600">
             Don't have an account?{" "}
-            <Link to="/signup" className="text-procurement-600 hover:text-procurement-500">
+            <Link to="/signup" className="text-procurement-600 hover:text-procurement-500 hover:underline">
               Create an account
             </Link>
           </p>
