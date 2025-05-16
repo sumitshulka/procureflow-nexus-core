@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { PlusCircle, Edit, Trash2, Check, X } from "lucide-react";
+import { PlusCircle, Edit, Trash2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import PageHeader from "@/components/common/PageHeader";
 import DataTable from "@/components/common/DataTable";
@@ -21,10 +20,6 @@ import {
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import {
   Form,
@@ -76,13 +71,13 @@ type Location = {
   name: string;
 };
 
-type User = {
+interface SupabaseUser {
   id: string;
   email: string;
   user_metadata: {
     full_name?: string;
   };
-};
+}
 
 type WarehouseLocation = {
   id: string;
@@ -469,7 +464,7 @@ const Warehouses = () => {
       id: "status",
       header: "Status",
       cell: (row: WarehouseWithLocations) => (
-        <Badge variant={row.is_active ? "success" : "destructive"}>
+        <Badge variant={row.is_active ? "default" : "destructive"}>
           {row.is_active ? "Active" : "Inactive"}
         </Badge>
       ),
@@ -499,6 +494,16 @@ const Warehouses = () => {
       ),
     },
   ];
+
+  // Fix the user mapping in the form
+  // Add this code in the DialogContent for the manager selection
+  const renderUserOptions = () => {
+    return users.map((user: SupabaseUser) => (
+      <SelectItem key={user.id} value={user.id}>
+        {user.user_metadata?.full_name || user.email}
+      </SelectItem>
+    ));
+  };
 
   return (
     <div className="page-container">
@@ -572,11 +577,7 @@ const Warehouses = () => {
                           </FormControl>
                           <SelectContent>
                             <SelectItem value="">None</SelectItem>
-                            {users.map((user: User) => (
-                              <SelectItem key={user.id} value={user.id}>
-                                {user.user_metadata?.full_name || user.email}
-                              </SelectItem>
-                            ))}
+                            {renderUserOptions()}
                           </SelectContent>
                         </Select>
                         <FormMessage />

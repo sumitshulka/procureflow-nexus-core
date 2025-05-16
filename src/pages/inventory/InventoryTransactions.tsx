@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,10 +8,6 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import {
   Dialog,
@@ -45,10 +40,10 @@ interface InventoryTransaction {
   };
   source_warehouse?: {
     name: string;
-  };
+  } | null;
   target_warehouse?: {
     name: string;
-  };
+  } | null;
   user: {
     email: string;
   };
@@ -60,7 +55,7 @@ const InventoryTransactions = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<string>("check_in");
 
-  // Fetch inventory transactions
+  // Fetch inventory transactions - Fixed the type casting issue
   const { data: transactions = [], isLoading } = useQuery({
     queryKey: ["inventory_transactions"],
     queryFn: async () => {
@@ -84,7 +79,14 @@ const InventoryTransactions = () => {
         throw error;
       }
 
-      return data as InventoryTransaction[];
+      // Fixed: Explicitly transform the data to match our expected type
+      const transformedData = data.map(item => ({
+        ...item,
+        source_warehouse: item.source_warehouse || null,
+        target_warehouse: item.target_warehouse || null
+      })) as InventoryTransaction[];
+      
+      return transformedData;
     },
   });
 

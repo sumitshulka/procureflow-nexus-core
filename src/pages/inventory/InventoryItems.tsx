@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -90,11 +89,11 @@ const InventoryItems = () => {
       }
       
       if (stockStatusFilter === "low") {
-        query = query.lt("quantity", supabase.rpc("greatest", { x: "reorder_level", y: 1 }));
+        query = query.lt("quantity", query.or(`reorder_level.gt.0,1`)); // Use equivalent logic without rpc
       } else if (stockStatusFilter === "out") {
         query = query.eq("quantity", 0);
       } else if (stockStatusFilter === "normal") {
-        query = query.gte("quantity", supabase.rpc("greatest", { x: "reorder_level", y: 1 }));
+        query = query.gte("quantity", query.or(`reorder_level.gt.0,1`)); // Use equivalent logic without rpc
       }
       
       if (searchQuery) {
