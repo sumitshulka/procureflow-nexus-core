@@ -143,7 +143,7 @@ const ProductCatalog = () => {
     }
   };
 
-  // In Tanstack React Query v5, error handling is done through meta
+  // Fixed the useQuery to use proper error handling
   const { 
     data: categories = [],
     isLoading: isCategoriesLoading,
@@ -412,22 +412,27 @@ const ProductCatalog = () => {
                         Failed to load categories. Please try again.
                       </div>
                     ) : (
-                      <Select
-                        value={filterCategory}
-                        onValueChange={(value) => setFilterCategory(value)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="">All Categories</SelectItem>
-                          {Array.isArray(categories) && categories.map((category) => (
-                            <SelectItem key={category.id} value={category.name}>
+                      <div className="space-y-2">
+                        <Button 
+                          variant={filterCategory === "" ? "default" : "outline"}
+                          onClick={() => setFilterCategory("")}
+                          className="w-full justify-start mb-2"
+                        >
+                          All Categories
+                        </Button>
+                        <div className="grid grid-cols-1 gap-2">
+                          {categories.map((category) => (
+                            <Button 
+                              key={category.id} 
+                              variant={filterCategory === category.name ? "default" : "outline"}
+                              onClick={() => setFilterCategory(category.name)}
+                              className="w-full justify-start"
+                            >
                               {category.name}
-                            </SelectItem>
+                            </Button>
                           ))}
-                        </SelectContent>
-                      </Select>
+                        </div>
+                      </div>
                     )}
                   </AccordionContent>
                 </AccordionItem>
