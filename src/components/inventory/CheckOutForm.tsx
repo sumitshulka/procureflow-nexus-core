@@ -103,21 +103,27 @@ const CheckOutForm = ({ onSuccess }: { onSuccess: () => void }) => {
         }
         
         // Filter out any items where source_warehouse has an error
-        // First cast to unknown, then to our expected type after filtering
         const rawData = data || [];
-        const validRequests = rawData
-          .filter(item => {
-            // Check if source_warehouse exists and doesn't have an error property
-            return item.source_warehouse && 
-              typeof item.source_warehouse === 'object' && 
-              !('error' in item.source_warehouse);
-          })
-          .map(item => ({
-            ...item,
-            source_warehouse: item.source_warehouse as { name: string } | null
-          }));
         
-        return validRequests as PendingCheckoutRequest[];
+        // First filter our data and cast properly
+        const validRequests: PendingCheckoutRequest[] = [];
+        
+        for (const item of rawData) {
+          // Skip items with error in source_warehouse
+          if (!item.source_warehouse || 
+              typeof item.source_warehouse !== 'object' ||
+              'error' in item.source_warehouse) {
+            continue;
+          }
+          
+          // Add item to valid requests with proper typing
+          validRequests.push({
+            ...item,
+            source_warehouse: item.source_warehouse as { name: string }
+          });
+        }
+        
+        return validRequests;
       } catch (error) {
         console.error("Error fetching pending requests:", error);
         return [] as PendingCheckoutRequest[];
