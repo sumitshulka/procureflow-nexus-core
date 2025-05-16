@@ -18,7 +18,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/components/ui/use-toast";
 
 const LoginPage = () => {
-  const { login, isLoading, user } = useAuth();
+  const { login, isLoading, user, session } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -36,11 +36,12 @@ const LoginPage = () => {
 
   // Redirect if user is already logged in
   useEffect(() => {
-    if (user) {
+    console.log("LoginPage: checking authentication", { user, session, from });
+    if (user && session) {
       console.log("User already authenticated, redirecting to:", from);
       navigate(from, { replace: true });
     }
-  }, [user, navigate, from]);
+  }, [user, session, navigate, from]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -60,6 +61,7 @@ const LoginPage = () => {
     try {
       await login(credentials.email, credentials.password);
       // Don't navigate here - the useEffect will handle it once user state updates
+      console.log("Login successful, waiting for auth state to update");
     } catch (error: any) {
       const errorMessage = error?.message || "An error occurred during login";
       setLoginError(errorMessage);
@@ -77,6 +79,15 @@ const LoginPage = () => {
 
   // If already loading auth state, show loading indicator
   if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-procurement-600"></div>
+      </div>
+    );
+  }
+
+  // If already authenticated, we'll be redirected by the useEffect, but show loading in the meantime
+  if (user && session) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-procurement-600"></div>

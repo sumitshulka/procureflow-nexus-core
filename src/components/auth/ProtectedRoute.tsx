@@ -14,6 +14,7 @@ const ProtectedRoute = ({ requiredRoles }: ProtectedRouteProps) => {
   console.log("ProtectedRoute check for path:", location.pathname);
   
   if (isLoading) {
+    console.log("Auth is loading, showing spinner");
     return (
       <div className="h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-procurement-600"></div>
