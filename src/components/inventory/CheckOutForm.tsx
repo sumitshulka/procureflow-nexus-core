@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -117,10 +116,10 @@ const CheckOutForm = ({ onSuccess }: { onSuccess: () => void }) => {
           }
           
           // Add item to valid requests with proper typing
-          // Use a non-null assertion here as we've already checked it's not null above
           validRequests.push({
             ...item,
-            source_warehouse: item.source_warehouse as { name: string }
+            // Cast to the correct type - we've already verified it's not null above
+            source_warehouse: item.source_warehouse ? { name: item.source_warehouse.name } : null
           });
         }
         
