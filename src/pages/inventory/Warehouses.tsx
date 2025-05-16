@@ -71,6 +71,7 @@ type Location = {
   name: string;
 };
 
+// Define the SupabaseUser type
 interface SupabaseUser {
   id: string;
   email: string;

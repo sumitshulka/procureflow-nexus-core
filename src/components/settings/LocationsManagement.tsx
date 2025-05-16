@@ -99,9 +99,20 @@ const LocationsManagement = () => {
         throw new Error("Name is required");
       }
       
+      // Fix: Create a properly typed object with the required name field
+      const locationData = {
+        name: values.name, // This ensures name is required
+        address: values.address || null,
+        city: values.city || null,
+        state: values.state || null,
+        postal_code: values.postal_code || null,
+        country: values.country || null,
+        is_active: values.is_active
+      };
+      
       const { data, error } = await supabase
         .from("locations")
-        .insert([values])
+        .insert([locationData])
         .select();
       
       if (error) throw error;

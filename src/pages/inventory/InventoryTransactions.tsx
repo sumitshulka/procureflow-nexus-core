@@ -1,48 +1,37 @@
-
 import React, { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import DataTable from "@/components/common/DataTable";
+import { format } from "date-fns";
 import { useToast } from "@/components/ui/use-toast";
 import PageHeader from "@/components/common/PageHeader";
-import DataTable from "@/components/common/DataTable";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-} from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { 
+  CheckInForm, 
+  CheckOutForm, 
+  TransferForm 
+} from "@/components/inventory";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import CheckInForm from "@/components/inventory/CheckInForm";
-import CheckOutForm from "@/components/inventory/CheckOutForm";
-import TransferForm from "@/components/inventory/TransferForm";
-import { format } from "date-fns";
+import { PlusCircle, ArrowDownToLine, ArrowUpFromLine, MoveHorizontal, FileBarChart } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface InventoryTransaction {
   id: string;
-  type: "check_in" | "check_out" | "transfer" | "adjustment";
+  type: string;
   product_id: string;
   source_warehouse_id: string | null;
   target_warehouse_id: string | null;
   quantity: number;
-  reference: string | null;
-  notes: string | null;
+  reference: string;
   transaction_date: string;
+  notes: string | null;
   user_id: string;
   product: {
     name: string;
   };
-  source_warehouse?: {
+  source_warehouse: {
     name: string;
   } | null;
-  target_warehouse?: {
+  target_warehouse: {
     name: string;
   } | null;
   user: {
@@ -50,23 +39,24 @@ interface InventoryTransaction {
   };
 }
 
+// Define a raw transaction data type to handle possible error states from Supabase queries
 interface RawTransactionData {
   id: string;
-  type: "check_in" | "check_out" | "transfer" | "adjustment";
+  type: string;
   product_id: string;
   source_warehouse_id: string | null;
   target_warehouse_id: string | null;
   quantity: number;
-  reference: string | null;
-  notes: string | null;
+  reference: string;
   transaction_date: string;
+  notes: string | null;
   user_id: string;
   product: {
     name: string;
   };
-  source_warehouse: any; // Using any here as it could be an error object
-  target_warehouse: any; // Using any here as it could be an error object
-  user: any; // Using any here as it could be an error object
+  source_warehouse: any; // Could be an error object
+  target_warehouse: any; // Could be an error object
+  user: any; // Could be an error object
 }
 
 const InventoryTransactions = () => {
@@ -75,7 +65,7 @@ const InventoryTransactions = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<string>("check_in");
 
-  // Fetch inventory transactions with fixed relationship queries
+  // Fetch inventory transactions with related data
   const { data: transactions = [], isLoading } = useQuery({
     queryKey: ["inventory_transactions"],
     queryFn: async () => {
@@ -89,7 +79,7 @@ const InventoryTransactions = () => {
           user:user_id(email)
         `)
         .order("transaction_date", { ascending: false });
-
+      
       if (error) {
         toast({
           title: "Error",
@@ -99,12 +89,12 @@ const InventoryTransactions = () => {
         throw error;
       }
 
-      // Type cast data as unknown first to bypass TypeScript's strict checks
+      // Cast the data to unknown first to bypass TypeScript's strict checks
       const rawData = data as unknown as RawTransactionData[];
       
       // Transform the raw data to match our expected interface
-      const transformedData = rawData.map(item => {
-        const transformedItem: InventoryTransaction = {
+      const transformedData: InventoryTransaction[] = rawData.map(item => {
+        return {
           ...item,
           source_warehouse: item.source_warehouse_id ? 
             (item.source_warehouse?.error ? { name: "Unknown" } : item.source_warehouse) : 
@@ -114,7 +104,6 @@ const InventoryTransactions = () => {
             null,
           user: item.user?.error ? { email: "Unknown" } : item.user
         };
-        return transformedItem;
       });
       
       return transformedData;
