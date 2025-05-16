@@ -5,8 +5,17 @@ import PageHeader from "@/components/common/PageHeader";
 import UsersList from "@/components/user-management/UsersList";
 import RolesList from "@/components/user-management/RolesList";
 import ApprovalHierarchy from "@/components/user-management/ApprovalHierarchy";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const UserManagement = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const defaultTab = location.hash ? location.hash.replace('#', '') : 'users';
+
+  const handleTabChange = (value: string) => {
+    navigate(`/users#${value}`, { replace: true });
+  };
+
   return (
     <div className="page-container">
       <PageHeader 
@@ -15,7 +24,7 @@ const UserManagement = () => {
       />
       
       <div className="space-y-6">
-        <Tabs defaultValue="users" className="w-full">
+        <Tabs defaultValue={defaultTab} className="w-full" onValueChange={handleTabChange}>
           <TabsList>
             <TabsTrigger value="users">Users</TabsTrigger>
             <TabsTrigger value="roles">Roles</TabsTrigger>

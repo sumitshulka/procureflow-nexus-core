@@ -4,15 +4,13 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Loader2, Plus, MoreHorizontal, Pencil, Trash2, List } from "lucide-react";
+import { Loader2, Plus, Pencil, Trash2 } from "lucide-react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -67,29 +65,41 @@ const ApprovalHierarchy = () => {
       role: "",
     },
   });
+
+  console.log("Rendering ApprovalHierarchy component");
   
   // Fetch departments
-  const { data: departments = [] } = useQuery({
+  const { data: departments = [], isLoading: deptLoading } = useQuery({
     queryKey: ["departments"],
     queryFn: async () => {
+      console.log("Fetching departments");
       const { data, error } = await supabase
         .from("departments")
         .select("id, name, description");
       
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching departments:", error);
+        throw error;
+      }
+      console.log("Departments fetched:", data);
       return data as DepartmentData[];
     },
   });
   
   // Fetch roles
-  const { data: roles = [] } = useQuery({
+  const { data: roles = [], isLoading: rolesLoading } = useQuery({
     queryKey: ["roles"],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      console.log("Fetching roles");
+      const { data, error } = await supabase
         .from("custom_roles")
         .select("id, name");
       
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching roles:", error);
+        throw error;
+      }
+      console.log("Roles fetched:", data);
       return data as RoleData[];
     },
   });
@@ -98,6 +108,7 @@ const ApprovalHierarchy = () => {
   const { data: approvalLevels = [], isLoading, refetch } = useQuery({
     queryKey: ["approval_hierarchies", selectedDepartment],
     queryFn: async () => {
+      console.log("Fetching approval hierarchies");
       let query = supabase
         .from("approval_hierarchies")
         .select(`
@@ -113,15 +124,29 @@ const ApprovalHierarchy = () => {
       
       const { data, error } = await query;
       
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching approval hierarchies:", error);
+        throw error;
+      }
+
+      console.log("Raw approval hierarchies:", data);
+      
+      if (data.length === 0) {
+        return [];
+      }
       
       // Get department names
       const departmentIds = [...new Set(data.map(level => level.department_id))];
-      const { data: deptData } = await supabase
+      const { data: deptData, error: deptError } = await supabase
         .from("departments")
         .select("id, name")
         .in("id", departmentIds);
         
+      if (deptError) {
+        console.error("Error fetching department names:", deptError);
+        throw deptError;
+      }
+
       const deptMap = deptData?.reduce((acc, dept) => {
         acc[dept.id] = dept.name;
         return acc;
@@ -129,31 +154,39 @@ const ApprovalHierarchy = () => {
       
       // Get role names
       const roleIds = [...new Set(data.map(level => level.approver_role))];
-      const { data: roleData } = await (supabase as any)
+      const { data: roleData, error: roleError } = await supabase
         .from("custom_roles")
         .select("id, name")
         .in("id", roleIds);
         
+      if (roleError) {
+        console.error("Error fetching role names:", roleError);
+        throw roleError;
+      }
+
       const roleMap = roleData?.reduce((acc, role) => {
         acc[role.id] = role.name;
         return acc;
       }, {} as Record<string, string>) || {};
       
-      return data.map(level => ({
+      const formattedData = data.map(level => ({
         id: level.id,
         departmentId: level.department_id,
         departmentName: deptMap[level.department_id] || "Unknown",
         level: level.approver_level,
         roleId: level.approver_role,
         roleName: roleMap[level.approver_role] || "Unknown",
-      })) as ApprovalLevel[];
+      }));
+
+      console.log("Formatted approval hierarchies:", formattedData);
+      return formattedData as ApprovalLevel[];
     },
-    enabled: true,
   });
   
   // Add new approval level mutation
   const addApprovalMutation = useMutation({
     mutationFn: async (values: z.infer<typeof approvalSchema>) => {
+      console.log("Adding approval level:", values);
       const { error } = await supabase
         .from("approval_hierarchies")
         .insert({
@@ -162,7 +195,10 @@ const ApprovalHierarchy = () => {
           approver_role: values.role,
         });
         
-      if (error) throw error;
+      if (error) {
+        console.error("Error adding approval level:", error);
+        throw error;
+      }
       
       return values;
     },
@@ -187,6 +223,7 @@ const ApprovalHierarchy = () => {
   // Update approval level mutation
   const updateApprovalMutation = useMutation({
     mutationFn: async (values: { id: string, data: any }) => {
+      console.log("Updating approval level:", values);
       const { error } = await supabase
         .from("approval_hierarchies")
         .update({
@@ -195,7 +232,10 @@ const ApprovalHierarchy = () => {
         })
         .eq("id", values.id);
         
-      if (error) throw error;
+      if (error) {
+        console.error("Error updating approval level:", error);
+        throw error;
+      }
       
       return values;
     },
@@ -220,12 +260,16 @@ const ApprovalHierarchy = () => {
   // Delete approval level mutation
   const deleteApprovalMutation = useMutation({
     mutationFn: async (id: string) => {
+      console.log("Deleting approval level:", id);
       const { error } = await supabase
         .from("approval_hierarchies")
         .delete()
         .eq("id", id);
         
-      if (error) throw error;
+      if (error) {
+        console.error("Error deleting approval level:", error);
+        throw error;
+      }
       
       return id;
     },
@@ -276,6 +320,21 @@ const ApprovalHierarchy = () => {
       deleteApprovalMutation.mutate(id);
     }
   };
+
+  if (deptLoading || rolesLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Approval Hierarchy</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
   
   return (
     <Card>
