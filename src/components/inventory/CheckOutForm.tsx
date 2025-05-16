@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -102,7 +101,6 @@ const CheckOutForm = ({ onSuccess }: { onSuccess: () => void }) => {
           throw error;
         }
         
-        // Type assertion without recursive types
         return (data || []) as PendingCheckoutRequest[];
       } catch (error) {
         console.error("Error fetching pending requests:", error);

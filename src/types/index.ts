@@ -1,4 +1,3 @@
-
 // User Types
 export interface User {
   id: string;
@@ -266,15 +265,16 @@ export interface InventoryTransaction {
   date: string;
   userId: string;
   comments?: string;
-  // Add the missing fields required by the code
-  approval_status?: string;
-  request_id?: string;
+  // Database field names
   product_id?: string;
   source_warehouse_id?: string;
   target_warehouse_id?: string;
   transaction_date?: string;
-  notes?: string;
   user_id?: string;
+  request_id?: string;
+  approval_status?: string;
+  notes?: string;
+  // Related data
   product?: {
     name: string;
   };
@@ -287,25 +287,6 @@ export interface InventoryTransaction {
   user?: {
     email: string;
   };
-}
-
-export interface GoodsReceiptNote {
-  id: string;
-  poId: string;
-  receivedBy: string;
-  receivedDate: string;
-  items: GRNItem[];
-  status: "pending" | "completed" | "disputed";
-  comments?: string;
-}
-
-export interface GRNItem {
-  id: string;
-  poItemId: string;
-  quantityReceived: number;
-  quantityAccepted: number;
-  quantityRejected: number;
-  reasonForRejection?: string;
 }
 
 // Invoice & Payment Types

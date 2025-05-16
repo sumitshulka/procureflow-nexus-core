@@ -203,11 +203,13 @@ export type Database = {
       }
       inventory_transactions: {
         Row: {
+          approval_status: string | null
           id: string
           notes: string | null
           product_id: string
           quantity: number
           reference: string | null
+          request_id: string | null
           source_warehouse_id: string | null
           target_warehouse_id: string | null
           transaction_date: string | null
@@ -215,11 +217,13 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          approval_status?: string | null
           id?: string
           notes?: string | null
           product_id: string
           quantity: number
           reference?: string | null
+          request_id?: string | null
           source_warehouse_id?: string | null
           target_warehouse_id?: string | null
           transaction_date?: string | null
@@ -227,11 +231,13 @@ export type Database = {
           user_id: string
         }
         Update: {
+          approval_status?: string | null
           id?: string
           notes?: string | null
           product_id?: string
           quantity?: number
           reference?: string | null
+          request_id?: string | null
           source_warehouse_id?: string | null
           target_warehouse_id?: string | null
           transaction_date?: string | null

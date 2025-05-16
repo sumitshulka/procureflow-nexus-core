@@ -23,20 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { InventoryTransaction } from "@/types";
 
 interface EnhancedInventoryTransaction extends InventoryTransaction {
-  approval_status?: string;
-  request_id?: string;
-  product: {
-    name: string;
-  };
-  source_warehouse: {
-    name: string;
-  } | null;
-  target_warehouse: {
-    name: string;
-  } | null;
-  user?: {
-    email: string;
-  };
+  // These fields should already exist in the InventoryTransaction interface
 }
 
 const InventoryTransactions = () => {
@@ -75,8 +62,7 @@ const InventoryTransactions = () => {
       const userIds = [...new Set(data.map(item => item.user_id))];
       
       if (userIds.length === 0) {
-        // Type cast to match our interface
-        return data as unknown as EnhancedInventoryTransaction[];
+        return data as unknown as InventoryTransaction[];
       }
       
       // Fetch all relevant user data in a single query
@@ -87,8 +73,7 @@ const InventoryTransactions = () => {
 
       if (userError) {
         console.error("Error fetching user data:", userError);
-        // Return data even if user fetch fails, with type cast
-        return data as unknown as EnhancedInventoryTransaction[];
+        return data as unknown as InventoryTransaction[];
       }
       
       // Create a user map for quick lookups
@@ -106,7 +91,7 @@ const InventoryTransactions = () => {
       }));
       
       // Type cast to match our interface
-      return enhancedData as unknown as EnhancedInventoryTransaction[];
+      return enhancedData as unknown as InventoryTransaction[];
     },
   });
 
