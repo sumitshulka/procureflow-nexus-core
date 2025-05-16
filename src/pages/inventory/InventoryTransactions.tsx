@@ -45,6 +45,9 @@ interface InventoryTransaction {
   target_warehouse: {
     name: string;
   } | null;
+  user?: {  // Make user property optional to avoid TypeScript errors
+    email: string;
+  };
 }
 
 const InventoryTransactions = () => {
@@ -80,14 +83,20 @@ const InventoryTransactions = () => {
       // Create a set of unique user IDs to fetch
       const userIds = [...new Set(data.map(item => item.user_id))];
       
-      // Fetch all relevant user emails in a single query
+      if (userIds.length === 0) {
+        return data;
+      }
+      
+      // Fetch all relevant user data in a single query
       const { data: userData, error: userError } = await supabase
         .from("profiles")
-        .select("id, full_name, email")
+        .select("id, full_name")  // Remove email if it doesn't exist
         .in("id", userIds);
 
       if (userError) {
         console.error("Error fetching user data:", userError);
+        // Return data even if user fetch fails
+        return data;
       }
       
       // Create a user map for quick lookups
@@ -100,7 +109,7 @@ const InventoryTransactions = () => {
       return data.map(transaction => ({
         ...transaction,
         user: {
-          email: userMap[transaction.user_id]?.email || "Unknown User"
+          email: userMap[transaction.user_id]?.full_name || "Unknown User" // Use full_name instead of email
         }
       }));
     },
