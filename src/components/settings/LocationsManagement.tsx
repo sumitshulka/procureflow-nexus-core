@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -95,9 +96,10 @@ const LocationsManagement = () => {
   // Create location mutation
   const createLocation = useMutation({
     mutationFn: async (values: Omit<LocationFormValues, "id">) => {
+      // Fixed: Pass the values directly, not as an array
       const { data, error } = await supabase
         .from("locations")
-        .insert([values]) // Fixed: Insert takes an array of values
+        .insert(values)
         .select();
       
       if (error) throw error;

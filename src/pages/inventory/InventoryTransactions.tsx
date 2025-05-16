@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -49,13 +50,34 @@ interface InventoryTransaction {
   };
 }
 
+interface RawTransactionData {
+  id: string;
+  type: "check_in" | "check_out" | "transfer" | "adjustment";
+  product_id: string;
+  source_warehouse_id: string | null;
+  target_warehouse_id: string | null;
+  quantity: number;
+  reference: string | null;
+  notes: string | null;
+  transaction_date: string;
+  user_id: string;
+  product: {
+    name: string;
+  };
+  source_warehouse: any;
+  target_warehouse: any;
+  user: {
+    email: string;
+  };
+}
+
 const InventoryTransactions = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<string>("check_in");
 
-  // Fetch inventory transactions - Fixed the type casting issue
+  // Fetch inventory transactions with fixed relationship queries
   const { data: transactions = [], isLoading } = useQuery({
     queryKey: ["inventory_transactions"],
     queryFn: async () => {
@@ -79,12 +101,19 @@ const InventoryTransactions = () => {
         throw error;
       }
 
-      // Fixed: Explicitly transform the data to match our expected type
-      const transformedData = data.map(item => ({
-        ...item,
-        source_warehouse: item.source_warehouse || null,
-        target_warehouse: item.target_warehouse || null
-      })) as InventoryTransaction[];
+      // Transform the raw data to match our expected interface
+      const transformedData = (data as RawTransactionData[]).map(item => {
+        const transformedItem: InventoryTransaction = {
+          ...item,
+          source_warehouse: item.source_warehouse_id ? 
+            (item.source_warehouse?.error ? { name: "Unknown" } : item.source_warehouse) : 
+            null,
+          target_warehouse: item.target_warehouse_id ? 
+            (item.target_warehouse?.error ? { name: "Unknown" } : item.target_warehouse) : 
+            null
+        };
+        return transformedItem;
+      });
       
       return transformedData;
     },

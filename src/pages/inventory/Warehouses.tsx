@@ -239,7 +239,7 @@ const Warehouses = () => {
         return [];
       }
       
-      return data?.users || [];
+      return data?.users as SupabaseUser[] || [];
     },
     retry: false, // Don't retry as this might fail if not an admin
   });
@@ -496,7 +496,6 @@ const Warehouses = () => {
   ];
 
   // Fix the user mapping in the form
-  // Add this code in the DialogContent for the manager selection
   const renderUserOptions = () => {
     return users.map((user: SupabaseUser) => (
       <SelectItem key={user.id} value={user.id}>

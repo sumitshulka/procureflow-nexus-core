@@ -89,11 +89,11 @@ const InventoryItems = () => {
       }
       
       if (stockStatusFilter === "low") {
-        query = query.lt("quantity", query.or(`reorder_level.gt.0,1`)); // Use equivalent logic without rpc
+        query = query.lt("quantity", query.eq("reorder_level", 0).is("reorder_level", null) ? 1 : query.select("reorder_level"));
       } else if (stockStatusFilter === "out") {
         query = query.eq("quantity", 0);
       } else if (stockStatusFilter === "normal") {
-        query = query.gte("quantity", query.or(`reorder_level.gt.0,1`)); // Use equivalent logic without rpc
+        query = query.gte("quantity", query.eq("reorder_level", 0).is("reorder_level", null) ? 1 : query.select("reorder_level"));
       }
       
       if (searchQuery) {
