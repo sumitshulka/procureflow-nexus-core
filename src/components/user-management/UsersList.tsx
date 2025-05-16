@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -507,6 +508,7 @@ const UsersList = () => {
           </DialogContent>
         </Dialog>
 
+        {/* Edit Dialog */}
         <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
           <DialogContent className="max-w-md">
             <DialogHeader>
@@ -563,7 +565,7 @@ const UsersList = () => {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Department</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value || "_none"}>
+                        <Select onValueChange={field.onChange} value={field.value || "_none_dept"}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select department" />
