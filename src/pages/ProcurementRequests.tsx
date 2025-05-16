@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import PageHeader from "@/components/common/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -16,7 +15,7 @@ import { Filter, Plus, Search } from "lucide-react";
 
 const ProcurementRequests = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
 
   // Mock procurement request data
   const procurementRequests = [
@@ -85,7 +84,7 @@ const ProcurementRequests = () => {
       request.requester.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus =
-      statusFilter === "" || request.status === statusFilter;
+      statusFilter === "all" || request.status === statusFilter;
     
     return matchesSearch && matchesStatus;
   });
@@ -263,7 +262,7 @@ const ProcurementRequests = () => {
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Statuses</SelectItem>
+              <SelectItem value="all">All Statuses</SelectItem>
               <SelectItem value="draft">Draft</SelectItem>
               <SelectItem value="submitted">Submitted</SelectItem>
               <SelectItem value="in_review">In Review</SelectItem>
