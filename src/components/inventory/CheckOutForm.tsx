@@ -1,3 +1,4 @@
+
 import React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -111,20 +112,28 @@ const CheckOutForm = ({ onSuccess }: { onSuccess: () => void }) => {
           // We need to handle source_warehouse being possibly null from the start
           const sourceWarehouse = item.source_warehouse;
           
-          // If source_warehouse exists and has a name property
-          if (sourceWarehouse && 
-              typeof sourceWarehouse === 'object' && 
-              'name' in sourceWarehouse && 
-              sourceWarehouse.name) {
-            
-            validRequests.push({
-              ...item,
-              source_warehouse: {
-                name: String(sourceWarehouse.name)
-              }
-            });
+          // First check if sourceWarehouse exists at all
+          if (sourceWarehouse) {
+            // Then check if it's an object with a name property
+            if (typeof sourceWarehouse === 'object' && 
+                'name' in sourceWarehouse && 
+                sourceWarehouse.name) {
+              
+              validRequests.push({
+                ...item,
+                source_warehouse: {
+                  name: String(sourceWarehouse.name)
+                }
+              });
+            } else {
+              // If there's no valid name property
+              validRequests.push({
+                ...item,
+                source_warehouse: null
+              });
+            }
           } else {
-            // If source_warehouse is null or doesn't have a name property
+            // If sourceWarehouse is null or undefined
             validRequests.push({
               ...item,
               source_warehouse: null
