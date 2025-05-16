@@ -14,6 +14,7 @@ import { Loader2, Plus, Pencil, Check, X } from "lucide-react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Json } from "@/integrations/supabase/types";
 
 // Role schema for form validation
 const roleSchema = z.object({
@@ -84,10 +85,14 @@ const RolesList = () => {
   const { data: roles = [], isLoading, error } = useQuery({
     queryKey: ["custom_roles"],
     queryFn: async () => {
+      // Using type assertion to tell TypeScript this is valid
       const { data, error } = await supabase
         .from("custom_roles")
         .select("*")
-        .order("created_at", { ascending: false }) as { data: CustomRole[] | null, error: any };
+        .order("created_at", { ascending: false }) as unknown as { 
+          data: CustomRole[] | null, 
+          error: any 
+        };
         
       if (error) throw error;
       return data || [];
@@ -104,10 +109,14 @@ const RolesList = () => {
   
   // Fetch permissions for a specific role
   const fetchRolePermissions = async (roleId: string) => {
+    // Using type assertion for the role_permissions table
     const { data, error } = await supabase
       .from("role_permissions")
       .select("*")
-      .eq("role_id", roleId) as { data: RolePermission[] | null, error: any };
+      .eq("role_id", roleId) as unknown as { 
+        data: RolePermission[] | null, 
+        error: any 
+      };
       
     if (error) {
       console.error("Error fetching role permissions:", error);
@@ -135,6 +144,7 @@ const RolesList = () => {
   // Create role mutation
   const createRoleMutation = useMutation({
     mutationFn: async (values: z.infer<typeof roleSchema>) => {
+      // Using type assertion for the custom_roles table
       const { data, error } = await supabase
         .from("custom_roles")
         .insert({
@@ -142,7 +152,10 @@ const RolesList = () => {
           description: values.description || null,
         })
         .select()
-        .single() as { data: CustomRole | null, error: any };
+        .single() as unknown as { 
+          data: CustomRole | null, 
+          error: any 
+        };
         
       if (error) throw error;
       return data;
@@ -174,13 +187,14 @@ const RolesList = () => {
   // Update role mutation
   const updateRoleMutation = useMutation({
     mutationFn: async ({ id, values }: { id: string; values: z.infer<typeof roleSchema> }) => {
+      // Using type assertion for the custom_roles table
       const { error } = await supabase
         .from("custom_roles")
         .update({
           name: values.name,
           description: values.description || null,
         })
-        .eq("id", id);
+        .eq("id", id) as unknown as { error: any };
         
       if (error) throw error;
     },
@@ -212,24 +226,24 @@ const RolesList = () => {
       isActive: boolean;
     }) => {
       if (isActive) {
-        // Add permission
+        // Add permission - using type assertion for role_permissions
         const { error } = await supabase
           .from("role_permissions")
           .insert({
             role_id: roleId,
             module_id: moduleId,
             permission,
-          });
+          } as any) as unknown as { error: any };
           
         if (error) throw error;
       } else {
-        // Remove permission
+        // Remove permission - using type assertion for role_permissions
         const { error } = await supabase
           .from("role_permissions")
           .delete()
           .eq("role_id", roleId)
           .eq("module_id", moduleId)
-          .eq("permission", permission);
+          .eq("permission", permission) as unknown as { error: any };
           
         if (error) throw error;
       }
