@@ -110,13 +110,14 @@ const CheckOutForm = ({ onSuccess }: { onSuccess: () => void }) => {
         
         for (const item of rawData) {
           // Skip items where source_warehouse has an error or is missing
-          if (!item.source_warehouse || 
-              typeof item.source_warehouse !== 'object') {
+          if (!item.source_warehouse) {
             continue;
           }
           
           // Safely check if name property exists before accessing it
-          if ('name' in item.source_warehouse && item.source_warehouse.name) {
+          if (typeof item.source_warehouse === 'object' && 
+              item.source_warehouse !== null && 
+              'name' in item.source_warehouse) {
             validRequests.push({
               ...item,
               source_warehouse: {
