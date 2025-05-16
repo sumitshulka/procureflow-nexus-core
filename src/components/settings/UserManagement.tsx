@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -280,7 +281,7 @@ const UserManagement = () => {
                               <SelectContent>
                                 {Object.values(UserRole).map((role) => (
                                   <SelectItem key={role} value={role || "_default_role"}>
-                                    {role.replace('_', ' ').charAt(0).toUpperCase() + role.replace('_', ' ').slice(1).toLowerCase()}
+                                    {(role || "Default Role").replace('_', ' ').charAt(0).toUpperCase() + (role || "").replace('_', ' ').slice(1).toLowerCase()}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
@@ -505,7 +506,7 @@ const RoleManagement = () => {
               <TableRow>
                 <TableHead className="w-[200px]">Module / Role</TableHead>
                 {roles.map(role => (
-                  <TableHead key={role}>{role.replace('_', ' ')}</TableHead>
+                  <TableHead key={role}>{(role || "Unknown").replace('_', ' ')}</TableHead>
                 ))}
               </TableRow>
             </TableHeader>
@@ -528,7 +529,7 @@ const RoleManagement = () => {
                             variant="ghost"
                             size="sm"
                             className="w-8 h-8 p-0"
-                            onClick={() => togglePermission(role, module.id, permission.id)}
+                            onClick={() => togglePermission(role || "unknown_role", module.id, permission.id)}
                           >
                             {rolePermissions[role]?.[module.id]?.includes(permission.id) ? (
                               <CheckCircle className="h-5 w-5 text-green-500" />
