@@ -1,3 +1,4 @@
+
 import React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -42,7 +43,7 @@ interface PendingCheckoutRequest {
   };
   source_warehouse: {
     name: string;
-  };
+  } | null;
 }
 
 // Define the form schema for the approval form
@@ -101,7 +102,14 @@ const CheckOutForm = ({ onSuccess }: { onSuccess: () => void }) => {
           throw error;
         }
         
-        return (data || []) as PendingCheckoutRequest[];
+        // Filter out any items where source_warehouse has an error
+        const validRequests = (data || []).filter(item => 
+          item.source_warehouse && 
+          typeof item.source_warehouse !== 'string' && 
+          !('error' in item.source_warehouse)
+        );
+        
+        return validRequests as PendingCheckoutRequest[];
       } catch (error) {
         console.error("Error fetching pending requests:", error);
         return [] as PendingCheckoutRequest[];
@@ -231,7 +239,7 @@ const CheckOutForm = ({ onSuccess }: { onSuccess: () => void }) => {
                   <SelectContent>
                     {pendingRequests.map((request) => (
                       <SelectItem key={request.id} value={request.id}>
-                        {request.product.name} - {request.quantity} units from {request.source_warehouse.name}
+                        {request.product.name} - {request.quantity} units from {request.source_warehouse?.name || 'Unknown location'}
                         {request.request_id ? ` (${request.request_id})` : ''}
                       </SelectItem>
                     ))}
