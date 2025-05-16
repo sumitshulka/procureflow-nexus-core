@@ -55,6 +55,7 @@ const AppSidebar: React.FC = () => {
       title: "User Management",
       url: "/users",
       icon: Users,
+      adminOnly: true,
     },
     {
       title: "Product Catalog",
@@ -106,6 +107,9 @@ const AppSidebar: React.FC = () => {
     ] : []),
   ];
 
+  // Filter items based on admin status
+  const filteredItems = mainItems.filter(item => !item.adminOnly || isAdmin);
+
   return (
     <Sidebar
       className={`border-r ${collapsed ? "w-16" : "w-64"}`}
@@ -120,7 +124,7 @@ const AppSidebar: React.FC = () => {
             </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {mainItems.map((item) => (
+                {filteredItems.map((item) => (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild>
                       <NavLink
