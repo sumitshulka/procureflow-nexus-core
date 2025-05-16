@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -420,18 +419,22 @@ const UsersList = () => {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Department</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value || undefined}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select department" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {departments.map((dept) => (
-                              <SelectItem key={dept.id} value={dept.id}>
-                                {dept.name}
-                              </SelectItem>
-                            ))}
+                            {departments.length > 0 ? (
+                              departments.map((dept) => (
+                                <SelectItem key={dept.id} value={dept.id || "_none"}>
+                                  {dept.name}
+                                </SelectItem>
+                              ))
+                            ) : (
+                              <SelectItem value="_no_departments">No departments available</SelectItem>
+                            )}
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -560,18 +563,22 @@ const UsersList = () => {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Department</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value || undefined}>
+                        <Select onValueChange={field.onChange} value={field.value || "_none"}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select department" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {departments.map((dept) => (
-                              <SelectItem key={dept.id} value={dept.id}>
-                                {dept.name}
-                              </SelectItem>
-                            ))}
+                            {departments.length > 0 ? (
+                              departments.map((dept) => (
+                                <SelectItem key={dept.id} value={dept.id || "_none"}>
+                                  {dept.name}
+                                </SelectItem>
+                              ))
+                            ) : (
+                              <SelectItem value="_no_departments">No departments available</SelectItem>
+                            )}
                           </SelectContent>
                         </Select>
                         <FormMessage />

@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -337,7 +336,7 @@ const RoleWizard = () => {
               <div className="space-y-6">
                 {selectedModulesList.map((module) => (
                   <div key={module.id} className="border rounded-md p-4">
-                    <h4 className="font-medium mb-3">{module.name}</h4>
+                    <h4 className="font-medium mb-3">{module.name || "Unnamed Module"}</h4>
                     <div className="grid grid-cols-2 gap-3">
                       {availablePermissions.map(permission => (
                         <div key={`${module.id}-${permission}`} className="flex items-center space-x-2">
@@ -350,7 +349,7 @@ const RoleWizard = () => {
                             htmlFor={`perm-${module.id}-${permission}`}
                             className="text-sm capitalize cursor-pointer"
                           >
-                            {permission}
+                            {permission || "Unknown"}
                           </label>
                         </div>
                       ))}
