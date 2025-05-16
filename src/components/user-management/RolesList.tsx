@@ -85,14 +85,11 @@ const RolesList = () => {
   const { data: roles = [], isLoading, error } = useQuery({
     queryKey: ["custom_roles"],
     queryFn: async () => {
-      // Using type assertion to tell TypeScript this is valid
-      const { data, error } = await supabase
+      // Use any type to bypass TypeScript checking for tables that aren't in the generated types
+      const { data, error } = await (supabase as any)
         .from("custom_roles")
         .select("*")
-        .order("created_at", { ascending: false }) as unknown as { 
-          data: CustomRole[] | null, 
-          error: any 
-        };
+        .order("created_at", { ascending: false });
         
       if (error) throw error;
       return data || [];
@@ -109,14 +106,11 @@ const RolesList = () => {
   
   // Fetch permissions for a specific role
   const fetchRolePermissions = async (roleId: string) => {
-    // Using type assertion for the role_permissions table
-    const { data, error } = await supabase
+    // Use any type to bypass TypeScript checking
+    const { data, error } = await (supabase as any)
       .from("role_permissions")
       .select("*")
-      .eq("role_id", roleId) as unknown as { 
-        data: RolePermission[] | null, 
-        error: any 
-      };
+      .eq("role_id", roleId);
       
     if (error) {
       console.error("Error fetching role permissions:", error);
@@ -127,7 +121,7 @@ const RolesList = () => {
     const permissionsByModule: Record<string, string[]> = {};
     
     if (data) {
-      data.forEach(item => {
+      data.forEach((item: RolePermission) => {
         if (!permissionsByModule[item.module_id]) {
           permissionsByModule[item.module_id] = [];
         }
@@ -144,18 +138,15 @@ const RolesList = () => {
   // Create role mutation
   const createRoleMutation = useMutation({
     mutationFn: async (values: z.infer<typeof roleSchema>) => {
-      // Using type assertion for the custom_roles table
-      const { data, error } = await supabase
+      // Use any type to bypass TypeScript checking
+      const { data, error } = await (supabase as any)
         .from("custom_roles")
         .insert({
           name: values.name,
           description: values.description || null,
         })
         .select()
-        .single() as unknown as { 
-          data: CustomRole | null, 
-          error: any 
-        };
+        .single();
         
       if (error) throw error;
       return data;
@@ -187,14 +178,14 @@ const RolesList = () => {
   // Update role mutation
   const updateRoleMutation = useMutation({
     mutationFn: async ({ id, values }: { id: string; values: z.infer<typeof roleSchema> }) => {
-      // Using type assertion for the custom_roles table
-      const { error } = await supabase
+      // Use any type to bypass TypeScript checking
+      const { error } = await (supabase as any)
         .from("custom_roles")
         .update({
           name: values.name,
           description: values.description || null,
         })
-        .eq("id", id) as unknown as { error: any };
+        .eq("id", id);
         
       if (error) throw error;
     },
@@ -226,24 +217,24 @@ const RolesList = () => {
       isActive: boolean;
     }) => {
       if (isActive) {
-        // Add permission - using type assertion for role_permissions
-        const { error } = await supabase
+        // Add permission - using any type to bypass TypeScript checking
+        const { error } = await (supabase as any)
           .from("role_permissions")
           .insert({
             role_id: roleId,
             module_id: moduleId,
             permission,
-          } as any) as unknown as { error: any };
+          });
           
         if (error) throw error;
       } else {
-        // Remove permission - using type assertion for role_permissions
-        const { error } = await supabase
+        // Remove permission - using any type to bypass TypeScript checking
+        const { error } = await (supabase as any)
           .from("role_permissions")
           .delete()
           .eq("role_id", roleId)
           .eq("module_id", moduleId)
-          .eq("permission", permission) as unknown as { error: any };
+          .eq("permission", permission);
           
         if (error) throw error;
       }
