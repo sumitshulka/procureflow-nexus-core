@@ -156,6 +156,151 @@ export type Database = {
         }
         Relationships: []
       }
+      inventory_items: {
+        Row: {
+          id: string
+          last_updated: string | null
+          minimum_level: number | null
+          product_id: string
+          quantity: number
+          reorder_level: number | null
+          warehouse_id: string
+        }
+        Insert: {
+          id?: string
+          last_updated?: string | null
+          minimum_level?: number | null
+          product_id: string
+          quantity?: number
+          reorder_level?: number | null
+          warehouse_id: string
+        }
+        Update: {
+          id?: string
+          last_updated?: string | null
+          minimum_level?: number | null
+          product_id?: string
+          quantity?: number
+          reorder_level?: number | null
+          warehouse_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_items_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_transactions: {
+        Row: {
+          id: string
+          notes: string | null
+          product_id: string
+          quantity: number
+          reference: string | null
+          source_warehouse_id: string | null
+          target_warehouse_id: string | null
+          transaction_date: string | null
+          type: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          notes?: string | null
+          product_id: string
+          quantity: number
+          reference?: string | null
+          source_warehouse_id?: string | null
+          target_warehouse_id?: string | null
+          transaction_date?: string | null
+          type: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          notes?: string | null
+          product_id?: string
+          quantity?: number
+          reference?: string | null
+          source_warehouse_id?: string | null
+          target_warehouse_id?: string | null
+          transaction_date?: string | null
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_transactions_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_transactions_source_warehouse_id_fkey"
+            columns: ["source_warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_transactions_target_warehouse_id_fkey"
+            columns: ["target_warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      locations: {
+        Row: {
+          address: string | null
+          city: string | null
+          country: string | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          postal_code: string | null
+          state: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          postal_code?: string | null
+          state?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          postal_code?: string | null
+          state?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           category_id: string
@@ -353,6 +498,75 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["user_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      warehouse_locations: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_primary: boolean | null
+          location_id: string
+          warehouse_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_primary?: boolean | null
+          location_id: string
+          warehouse_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_primary?: boolean | null
+          location_id?: string
+          warehouse_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "warehouse_locations_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "warehouse_locations_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      warehouses: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          manager_id: string | null
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          manager_id?: string | null
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          manager_id?: string | null
+          name?: string
+          updated_at?: string | null
         }
         Relationships: []
       }

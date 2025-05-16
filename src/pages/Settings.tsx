@@ -7,6 +7,7 @@ import OrganizationSettings from "@/components/settings/OrganizationSettings";
 import EmailSettings from "@/components/settings/EmailSettings";
 import IntegrationSettings from "@/components/settings/IntegrationSettings";
 import RoleManagement from "@/components/settings/RoleManagement";
+import LocationsManagement from "@/components/settings/LocationsManagement";
 import { useNavigate, useLocation } from "react-router-dom";
 
 const Settings = () => {
@@ -68,6 +69,12 @@ const Settings = () => {
                 Roles
               </TabsTrigger>
               <TabsTrigger 
+                value="locations" 
+                className="data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none border-b-2 border-transparent px-4 py-3 rounded-none"
+              >
+                Locations
+              </TabsTrigger>
+              <TabsTrigger 
                 value="email" 
                 className="data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none border-b-2 border-transparent px-4 py-3 rounded-none"
               >
@@ -92,6 +99,10 @@ const Settings = () => {
           
           <TabsContent value="roles" className="p-6">
             <RoleManagement />
+          </TabsContent>
+          
+          <TabsContent value="locations" className="p-6">
+            <LocationsManagement />
           </TabsContent>
           
           <TabsContent value="email" className="p-6">

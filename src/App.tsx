@@ -19,6 +19,13 @@ import ForgotPasswordPage from "./pages/auth/ForgotPasswordPage";
 import UpdatePasswordPage from "./pages/auth/UpdatePasswordPage";
 import UnauthorizedPage from "./pages/auth/UnauthorizedPage";
 import NotFound from "./pages/NotFound";
+
+// Inventory pages
+import InventoryIndex from "./pages/inventory/InventoryIndex";
+import InventoryItems from "./pages/inventory/InventoryItems";
+import Warehouses from "./pages/inventory/Warehouses";
+import InventoryTransactions from "./pages/inventory/InventoryTransactions";
+
 import { UserRole } from "./types";
 
 const queryClient = new QueryClient({
@@ -68,6 +75,24 @@ const App = () => {
                 
                 {/* Procurement requests - accessible by all authenticated users */}
                 <Route path="/requests" element={<ProcurementRequests />} />
+                
+                {/* Inventory routes - accessible by admin and inventory managers */}
+                <Route 
+                  element={
+                    <ProtectedRoute 
+                      requiredRoles={[
+                        UserRole.ADMIN, 
+                        UserRole.INVENTORY_MANAGER
+                      ]} 
+                    />
+                  }
+                >
+                  <Route path="/inventory" element={<InventoryIndex />}>
+                    <Route index element={<InventoryItems />} />
+                    <Route path="warehouses" element={<Warehouses />} />
+                    <Route path="transactions" element={<InventoryTransactions />} />
+                  </Route>
+                </Route>
                 
                 {/* User Management - accessible by admins */}
                 <Route 
