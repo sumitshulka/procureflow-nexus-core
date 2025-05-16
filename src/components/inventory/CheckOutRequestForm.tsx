@@ -174,6 +174,10 @@ const CheckOutRequestForm = ({ onSuccess }: CheckOutRequestFormProps) => {
       if (transactionError) throw transactionError;
 
       // Success! Call the onSuccess callback
+      toast({
+        title: "Success",
+        description: "Checkout request submitted successfully",
+      });
       onSuccess();
     } catch (error) {
       console.error("Error creating checkout request:", error);

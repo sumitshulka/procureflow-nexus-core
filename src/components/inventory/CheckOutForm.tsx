@@ -27,6 +27,23 @@ import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Loader2, AlertTriangle } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 
+interface PendingCheckoutRequest {
+  id: string;
+  product_id: string;
+  source_warehouse_id: string;
+  quantity: number;
+  reference: string | null;
+  request_id: string | null;
+  transaction_date: string;
+  notes: string | null;
+  product: {
+    name: string;
+  };
+  source_warehouse: {
+    name: string;
+  };
+}
+
 // Define the form schema for the approval form
 const approvalFormSchema = z.object({
   transaction_id: z.string({
@@ -43,7 +60,7 @@ const CheckOutForm = ({ onSuccess }) => {
   const { toast } = useToast();
 
   // Initialize form
-  const form = useForm({
+  const form = useForm<ApprovalFormValues>({
     resolver: zodResolver(approvalFormSchema),
     defaultValues: {
       notes: "",
@@ -64,6 +81,7 @@ const CheckOutForm = ({ onSuccess }) => {
           reference,
           request_id,
           transaction_date,
+          notes,
           product:product_id(name),
           source_warehouse:source_warehouse_id(name)
         `)
@@ -79,7 +97,7 @@ const CheckOutForm = ({ onSuccess }) => {
         });
         throw error;
       }
-      return data || [];
+      return data || [] as PendingCheckoutRequest[];
     },
   });
 
@@ -91,6 +109,10 @@ const CheckOutForm = ({ onSuccess }) => {
 
       const userId = userData.user.id;
       const selectedRequest = pendingRequests.find(req => req.id === data.transaction_id);
+      
+      if (!selectedRequest) {
+        throw new Error("Selected request not found");
+      }
 
       // Update the transaction approval status
       const { error: updateError } = await supabase

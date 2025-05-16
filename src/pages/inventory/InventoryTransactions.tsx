@@ -8,6 +8,7 @@ import { useToast } from "@/components/ui/use-toast";
 import PageHeader from "@/components/common/PageHeader";
 import CheckInForm from "@/components/inventory/CheckInForm";
 import CheckOutForm from "@/components/inventory/CheckOutForm";
+import CheckOutRequestForm from "@/components/inventory/CheckOutRequestForm";
 import TransferForm from "@/components/inventory/TransferForm";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
