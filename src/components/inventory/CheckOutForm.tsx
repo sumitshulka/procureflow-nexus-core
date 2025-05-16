@@ -1,3 +1,4 @@
+
 import React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -108,19 +109,27 @@ const CheckOutForm = ({ onSuccess }: { onSuccess: () => void }) => {
         const validRequests: PendingCheckoutRequest[] = [];
         
         for (const item of rawData) {
-          // Skip items with error in source_warehouse
+          // Skip items where source_warehouse has an error or is missing
           if (!item.source_warehouse || 
-              typeof item.source_warehouse !== 'object' ||
-              'error' in item.source_warehouse) {
+              typeof item.source_warehouse !== 'object') {
             continue;
           }
           
-          // Add item to valid requests with proper typing
-          validRequests.push({
-            ...item,
-            // Cast to the correct type - we've already verified it's not null above
-            source_warehouse: item.source_warehouse ? { name: item.source_warehouse.name } : null
-          });
+          // Make sure source_warehouse has a name property before adding to valid requests
+          if ('name' in item.source_warehouse) {
+            validRequests.push({
+              ...item,
+              source_warehouse: {
+                name: String(item.source_warehouse.name)
+              }
+            });
+          } else {
+            // If there's no name property, set source_warehouse to null
+            validRequests.push({
+              ...item,
+              source_warehouse: null
+            });
+          }
         }
         
         return validRequests;
