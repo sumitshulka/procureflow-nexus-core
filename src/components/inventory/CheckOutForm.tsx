@@ -109,20 +109,24 @@ const CheckOutForm = ({ onSuccess }: { onSuccess: () => void }) => {
         const validRequests: PendingCheckoutRequest[] = [];
         
         for (const item of rawData) {
-          // Skip items where source_warehouse has an error or is missing
+          // Skip items where source_warehouse is missing
           if (!item.source_warehouse) {
             continue;
           }
           
           // Safely check if name property exists before accessing it
+          // Using type assertion after the check to satisfy TypeScript
           if (typeof item.source_warehouse === 'object' && 
               item.source_warehouse !== null && 
               'name' in item.source_warehouse) {
+            // Create a safely typed version of source_warehouse
+            const safeWarehouse = {
+              name: String(item.source_warehouse.name)
+            };
+            
             validRequests.push({
               ...item,
-              source_warehouse: {
-                name: String(item.source_warehouse.name)
-              }
+              source_warehouse: safeWarehouse
             });
           } else {
             // If there's no name property, set source_warehouse to null
