@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -109,27 +108,23 @@ const CheckOutForm = ({ onSuccess }: { onSuccess: () => void }) => {
         const validRequests: PendingCheckoutRequest[] = [];
         
         for (const item of rawData) {
-          // Skip items where source_warehouse is missing
-          if (!item.source_warehouse) {
-            continue;
-          }
+          // We need to handle source_warehouse being possibly null from the start
+          const sourceWarehouse = item.source_warehouse;
           
-          // Safely check if name property exists before accessing it
-          // Using type assertion after the check to satisfy TypeScript
-          if (typeof item.source_warehouse === 'object' && 
-              item.source_warehouse !== null && 
-              'name' in item.source_warehouse) {
-            // Create a safely typed version of source_warehouse
-            const safeWarehouse = {
-              name: String(item.source_warehouse.name)
-            };
+          // If source_warehouse exists and has a name property
+          if (sourceWarehouse && 
+              typeof sourceWarehouse === 'object' && 
+              'name' in sourceWarehouse && 
+              sourceWarehouse.name) {
             
             validRequests.push({
               ...item,
-              source_warehouse: safeWarehouse
+              source_warehouse: {
+                name: String(sourceWarehouse.name)
+              }
             });
           } else {
-            // If there's no name property, set source_warehouse to null
+            // If source_warehouse is null or doesn't have a name property
             validRequests.push({
               ...item,
               source_warehouse: null
