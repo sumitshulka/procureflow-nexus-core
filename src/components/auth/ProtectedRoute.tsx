@@ -26,8 +26,12 @@ const ProtectedRoute = ({ requiredRoles }: ProtectedRouteProps) => {
   if (!user) {
     console.log("User not authenticated, redirecting to login");
     // Save the current path to redirect back after login
+    sessionStorage.setItem('redirectPath', location.pathname);
     return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
+
+  // Clear any redirect path that might have been saved
+  sessionStorage.removeItem('redirectPath');
 
   // Log user data for debugging
   console.log("User data in ProtectedRoute:", userData);

@@ -4,9 +4,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PageHeader from "@/components/common/PageHeader";
 import MasterDataManagement from "@/components/settings/MasterDataManagement";
 import OrganizationSettings from "@/components/settings/OrganizationSettings";
-import UserManagement from "@/components/settings/UserManagement";
 import EmailSettings from "@/components/settings/EmailSettings";
 import IntegrationSettings from "@/components/settings/IntegrationSettings";
+import RoleManagement from "@/components/settings/RoleManagement";
 import { useNavigate, useLocation } from "react-router-dom";
 
 const Settings = () => {
@@ -62,10 +62,10 @@ const Settings = () => {
                 Organization
               </TabsTrigger>
               <TabsTrigger 
-                value="users" 
+                value="roles" 
                 className="data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none border-b-2 border-transparent px-4 py-3 rounded-none"
               >
-                User Management
+                Roles
               </TabsTrigger>
               <TabsTrigger 
                 value="email" 
@@ -90,8 +90,8 @@ const Settings = () => {
             <OrganizationSettings />
           </TabsContent>
           
-          <TabsContent value="users" className="p-6">
-            <UserManagement />
+          <TabsContent value="roles" className="p-6">
+            <RoleManagement />
           </TabsContent>
           
           <TabsContent value="email" className="p-6">

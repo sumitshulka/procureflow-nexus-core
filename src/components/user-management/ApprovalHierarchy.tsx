@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -14,6 +14,7 @@ import { Loader2, Plus, Pencil, Trash2 } from "lucide-react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface DepartmentData {
   id: string;
@@ -48,6 +49,7 @@ const ApprovalHierarchy = () => {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [currentLevel, setCurrentLevel] = useState<ApprovalLevel | null>(null);
   const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   
   const form = useForm({
     resolver: zodResolver(approvalSchema),
@@ -69,7 +71,7 @@ const ApprovalHierarchy = () => {
   console.log("Rendering ApprovalHierarchy component");
   
   // Fetch departments
-  const { data: departments = [], isLoading: deptLoading } = useQuery({
+  const { data: departments = [], isLoading: deptLoading, error: deptError } = useQuery({
     queryKey: ["departments"],
     queryFn: async () => {
       console.log("Fetching departments");
@@ -79,6 +81,7 @@ const ApprovalHierarchy = () => {
       
       if (error) {
         console.error("Error fetching departments:", error);
+        setError("Failed to load departments. Please try again later.");
         throw error;
       }
       console.log("Departments fetched:", data);
@@ -87,8 +90,8 @@ const ApprovalHierarchy = () => {
   });
   
   // Fetch roles
-  const { data: roles = [], isLoading: rolesLoading } = useQuery({
-    queryKey: ["roles"],
+  const { data: roles = [], isLoading: rolesLoading, error: rolesError } = useQuery({
+    queryKey: ["custom_roles"],
     queryFn: async () => {
       console.log("Fetching roles");
       const { data, error } = await supabase
@@ -97,6 +100,7 @@ const ApprovalHierarchy = () => {
       
       if (error) {
         console.error("Error fetching roles:", error);
+        setError("Failed to load roles. Please try again later.");
         throw error;
       }
       console.log("Roles fetched:", data);
@@ -105,84 +109,102 @@ const ApprovalHierarchy = () => {
   });
   
   // Fetch approval hierarchies
-  const { data: approvalLevels = [], isLoading } = useQuery({
+  const { 
+    data: approvalLevels = [], 
+    isLoading, 
+    error: approvalError
+  } = useQuery({
     queryKey: ["approval_hierarchies", selectedDepartment],
     queryFn: async () => {
       console.log("Fetching approval hierarchies");
-      let query = supabase
-        .from("approval_hierarchies")
-        .select(`
-          id, 
-          department_id,
-          approver_level,
-          approver_role
-        `);
+      try {
+        let query = supabase
+          .from("approval_hierarchies")
+          .select(`
+            id, 
+            department_id,
+            approver_level,
+            approver_role
+          `);
+          
+        if (selectedDepartment) {
+          query = query.eq('department_id', selectedDepartment);
+        }
         
-      if (selectedDepartment) {
-        query = query.eq('department_id', selectedDepartment);
-      }
-      
-      const { data, error } = await query;
-      
-      if (error) {
-        console.error("Error fetching approval hierarchies:", error);
-        throw error;
-      }
+        const { data, error } = await query;
+        
+        if (error) {
+          console.error("Error fetching approval hierarchies:", error);
+          setError("Failed to load approval hierarchies. Please try again later.");
+          throw error;
+        }
 
-      console.log("Raw approval hierarchies:", data);
-      
-      if (!data || data.length === 0) {
+        console.log("Raw approval hierarchies:", data);
+        
+        if (!data || data.length === 0) {
+          return [];
+        }
+        
+        // Get department names
+        const departmentIds = [...new Set(data.map(level => level.department_id))];
+        const { data: deptData, error: deptError } = await supabase
+          .from("departments")
+          .select("id, name")
+          .in("id", departmentIds);
+          
+        if (deptError) {
+          console.error("Error fetching department names:", deptError);
+          setError("Failed to load department information. Please try again later.");
+          throw deptError;
+        }
+
+        const deptMap = deptData?.reduce((acc, dept) => {
+          acc[dept.id] = dept.name;
+          return acc;
+        }, {} as Record<string, string>) || {};
+        
+        // Get role names
+        const roleIds = [...new Set(data.map(level => level.approver_role))];
+        const { data: roleData, error: roleError } = await supabase
+          .from("custom_roles")
+          .select("id, name")
+          .in("id", roleIds);
+          
+        if (roleError) {
+          console.error("Error fetching role names:", roleError);
+          setError("Failed to load role information. Please try again later.");
+          throw roleError;
+        }
+
+        const roleMap = roleData?.reduce((acc, role) => {
+          acc[role.id] = role.name;
+          return acc;
+        }, {} as Record<string, string>) || {};
+        
+        const formattedData = data.map(level => ({
+          id: level.id,
+          departmentId: level.department_id,
+          departmentName: deptMap[level.department_id] || "Unknown",
+          level: level.approver_level,
+          roleId: level.approver_role,
+          roleName: roleMap[level.approver_role] || "Unknown",
+        }));
+
+        console.log("Formatted approval hierarchies:", formattedData);
+        return formattedData as ApprovalLevel[];
+      } catch (err) {
+        console.error("Error in approval hierarchies query:", err);
+        setError("An unexpected error occurred. Please try again later.");
         return [];
       }
-      
-      // Get department names
-      const departmentIds = [...new Set(data.map(level => level.department_id))];
-      const { data: deptData, error: deptError } = await supabase
-        .from("departments")
-        .select("id, name")
-        .in("id", departmentIds);
-        
-      if (deptError) {
-        console.error("Error fetching department names:", deptError);
-        throw deptError;
-      }
-
-      const deptMap = deptData?.reduce((acc, dept) => {
-        acc[dept.id] = dept.name;
-        return acc;
-      }, {} as Record<string, string>) || {};
-      
-      // Get role names
-      const roleIds = [...new Set(data.map(level => level.approver_role))];
-      const { data: roleData, error: roleError } = await supabase
-        .from("custom_roles")
-        .select("id, name")
-        .in("id", roleIds);
-        
-      if (roleError) {
-        console.error("Error fetching role names:", roleError);
-        throw roleError;
-      }
-
-      const roleMap = roleData?.reduce((acc, role) => {
-        acc[role.id] = role.name;
-        return acc;
-      }, {} as Record<string, string>) || {};
-      
-      const formattedData = data.map(level => ({
-        id: level.id,
-        departmentId: level.department_id,
-        departmentName: deptMap[level.department_id] || "Unknown",
-        level: level.approver_level,
-        roleId: level.approver_role,
-        roleName: roleMap[level.approver_role] || "Unknown",
-      }));
-
-      console.log("Formatted approval hierarchies:", formattedData);
-      return formattedData as ApprovalLevel[];
     },
   });
   
+  useEffect(() => {
+    // Reset error when dependencies change
+    setError(null);
+  }, [selectedDepartment]);
+
   // Add new approval level mutation
   const addApprovalMutation = useMutation({
     mutationFn: async (values: z.infer<typeof approvalSchema>) => {
@@ -321,6 +343,7 @@ const ApprovalHierarchy = () => {
     }
   };
 
+  // Show loading state
   if (deptLoading || rolesLoading) {
     return (
       <Card>
@@ -331,6 +354,24 @@ const ApprovalHierarchy = () => {
           <div className="flex justify-center py-8">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Show error state
+  if (error || deptError || rolesError || approvalError) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Approval Hierarchy</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Alert variant="destructive">
+            <AlertDescription>
+              {error || "Failed to load data. Please try again later."}
+            </AlertDescription>
+          </Alert>
         </CardContent>
       </Card>
     );
