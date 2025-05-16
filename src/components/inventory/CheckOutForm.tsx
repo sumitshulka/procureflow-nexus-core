@@ -58,7 +58,7 @@ const approvalFormSchema = z.object({
 type ApprovalFormValues = z.infer<typeof approvalFormSchema>;
 
 // This component is now for approving checkout requests, not creating them
-const CheckOutForm = ({ onSuccess }) => {
+const CheckOutForm = ({ onSuccess }: { onSuccess: () => void }) => {
   const { toast } = useToast();
 
   // Initialize form
@@ -102,11 +102,9 @@ const CheckOutForm = ({ onSuccess }) => {
           throw error;
         }
         
-        // Return empty array if no data to avoid type errors
-        return (data || []) as PendingCheckoutRequest[];
+        return data as PendingCheckoutRequest[] || [];
       } catch (error) {
         console.error("Error fetching pending requests:", error);
-        // Return empty array on error to maintain type safety
         return [] as PendingCheckoutRequest[];
       }
     },

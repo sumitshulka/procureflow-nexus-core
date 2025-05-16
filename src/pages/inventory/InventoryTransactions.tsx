@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,10 +5,12 @@ import DataTable from "@/components/common/DataTable";
 import { format } from "date-fns";
 import { useToast } from "@/components/ui/use-toast";
 import PageHeader from "@/components/common/PageHeader";
-import CheckInForm from "@/components/inventory/CheckInForm";
-import CheckOutForm from "@/components/inventory/CheckOutForm";
-import CheckOutRequestForm from "@/components/inventory/CheckOutRequestForm";
-import TransferForm from "@/components/inventory/TransferForm";
+import { 
+  CheckInForm, 
+  CheckOutForm, 
+  CheckOutRequestForm, 
+  TransferForm 
+} from "@/components/inventory";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Card,
@@ -110,7 +111,7 @@ const InventoryTransactions = () => {
         user: {
           email: userMap[transaction.user_id]?.full_name || "Unknown User"
         }
-      }));
+      })) as InventoryTransaction[];
     },
   });
 
