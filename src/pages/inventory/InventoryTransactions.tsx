@@ -64,11 +64,9 @@ interface RawTransactionData {
   product: {
     name: string;
   };
-  source_warehouse: any;
-  target_warehouse: any;
-  user: {
-    email: string;
-  };
+  source_warehouse: any; // Using any here as it could be an error object
+  target_warehouse: any; // Using any here as it could be an error object
+  user: any; // Using any here as it could be an error object
 }
 
 const InventoryTransactions = () => {
@@ -101,8 +99,11 @@ const InventoryTransactions = () => {
         throw error;
       }
 
+      // Type cast data as unknown first to bypass TypeScript's strict checks
+      const rawData = data as unknown as RawTransactionData[];
+      
       // Transform the raw data to match our expected interface
-      const transformedData = (data as RawTransactionData[]).map(item => {
+      const transformedData = rawData.map(item => {
         const transformedItem: InventoryTransaction = {
           ...item,
           source_warehouse: item.source_warehouse_id ? 
@@ -110,7 +111,8 @@ const InventoryTransactions = () => {
             null,
           target_warehouse: item.target_warehouse_id ? 
             (item.target_warehouse?.error ? { name: "Unknown" } : item.target_warehouse) : 
-            null
+            null,
+          user: item.user?.error ? { email: "Unknown" } : item.user
         };
         return transformedItem;
       });

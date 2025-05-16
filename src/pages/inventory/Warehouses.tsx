@@ -155,12 +155,12 @@ const Warehouses = () => {
       // Fetch managers
       const { data: managersData, error: managersError } = await supabase.auth.admin.listUsers();
       
-      let managers: User[] = [];
+      let managers: SupabaseUser[] = [];
       if (managersError) {
         console.error("Failed to fetch managers (this might be expected if not admin):", managersError);
         // Don't throw, just continue with empty managers
       } else if (managersData) {
-        managers = managersData.users as User[];
+        managers = managersData.users as SupabaseUser[];
       }
       
       // Combine data
