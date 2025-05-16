@@ -10,20 +10,14 @@ import CheckInForm from "@/components/inventory/CheckInForm";
 import CheckOutForm from "@/components/inventory/CheckOutForm";
 import TransferForm from "@/components/inventory/TransferForm";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import {
   Card,
   CardContent,
 } from "@/components/ui/card";
-import { PlusCircle } from "lucide-react";
+import { ArrowDownToLine, ArrowUpFromLine, MoveRight, Search, Filter } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface InventoryTransaction {
   id: string;
@@ -36,6 +30,8 @@ interface InventoryTransaction {
   transaction_date: string;
   notes: string | null;
   user_id: string;
+  request_id?: string | null;
+  approval_status?: string | null;
   product: {
     name: string;
   };
@@ -45,7 +41,7 @@ interface InventoryTransaction {
   target_warehouse: {
     name: string;
   } | null;
-  user?: {  // Make user property optional to avoid TypeScript errors
+  user?: {
     email: string;
   };
 }
@@ -53,8 +49,10 @@ interface InventoryTransaction {
 const InventoryTransactions = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [isOpen, setIsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<string>("check_in");
+  const [activeTab, setActiveTab] = useState<string>("transactions");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [typeFilter, setTypeFilter] = useState("");
 
   // Fetch inventory transactions with related data
   const { data: transactions = [], isLoading } = useQuery({
@@ -90,7 +88,7 @@ const InventoryTransactions = () => {
       // Fetch all relevant user data in a single query
       const { data: userData, error: userError } = await supabase
         .from("profiles")
-        .select("id, full_name")  // Remove email if it doesn't exist
+        .select("id, full_name")
         .in("id", userIds);
 
       if (userError) {
@@ -109,10 +107,27 @@ const InventoryTransactions = () => {
       return data.map(transaction => ({
         ...transaction,
         user: {
-          email: userMap[transaction.user_id]?.full_name || "Unknown User" // Use full_name instead of email
+          email: userMap[transaction.user_id]?.full_name || "Unknown User"
         }
       }));
     },
+  });
+
+  // Filter transactions based on search term, type, and status
+  const filteredTransactions = transactions.filter(transaction => {
+    const matchesSearch = !searchTerm || 
+      transaction.product?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      transaction.reference?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesType = !typeFilter || transaction.type === typeFilter;
+    
+    const matchesStatus = !statusFilter || 
+      (statusFilter === 'all') || 
+      (statusFilter === 'approved' && transaction.approval_status === 'approved') ||
+      (statusFilter === 'pending' && transaction.approval_status === 'pending') || 
+      (statusFilter === 'rejected' && transaction.approval_status === 'rejected');
+    
+    return matchesSearch && matchesType && matchesStatus;
   });
 
   // Define table columns
@@ -166,6 +181,29 @@ const InventoryTransactions = () => {
       cell: (row: InventoryTransaction) => <div>{row.reference || "-"}</div>,
     },
     {
+      id: "request",
+      header: "Request ID",
+      cell: (row: InventoryTransaction) => <div>{row.request_id || "-"}</div>,
+    },
+    {
+      id: "status",
+      header: "Status",
+      cell: (row: InventoryTransaction) => {
+        if (row.type !== "check_out" || !row.approval_status) return <div>-</div>;
+        
+        switch (row.approval_status) {
+          case "approved":
+            return <div className="px-2 py-1 rounded-full bg-green-100 text-green-800 text-xs font-medium">Approved</div>;
+          case "pending":
+            return <div className="px-2 py-1 rounded-full bg-yellow-100 text-yellow-800 text-xs font-medium">Pending</div>;
+          case "rejected":
+            return <div className="px-2 py-1 rounded-full bg-red-100 text-red-800 text-xs font-medium">Rejected</div>;
+          default:
+            return <div>-</div>;
+        }
+      },
+    },
+    {
       id: "notes",
       header: "Notes",
       cell: (row: InventoryTransaction) => (
@@ -179,103 +217,146 @@ const InventoryTransactions = () => {
     },
   ];
 
-  // Handle change of tabs
-  const handleTabChange = (value: string) => {
-    setActiveTab(value);
-  };
-
   return (
     <div className="page-container">
       <PageHeader
         title="Inventory Transactions"
         description="Manage inventory check-ins, check-outs, and transfers"
-        actions={
-          <Dialog open={isOpen} onOpenChange={setIsOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                New Transaction
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px]">
-              <DialogHeader>
-                <DialogTitle>New Inventory Transaction</DialogTitle>
-                <DialogDescription>
-                  Record a new inventory movement
-                </DialogDescription>
-              </DialogHeader>
-
-              <Tabs
-                value={activeTab}
-                onValueChange={handleTabChange}
-                className="w-full"
-              >
-                <TabsList className="grid grid-cols-3 mb-4">
-                  <TabsTrigger value="check_in">Check In</TabsTrigger>
-                  <TabsTrigger value="check_out">Check Out</TabsTrigger>
-                  <TabsTrigger value="transfer">Transfer</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="check_in" className="space-y-4">
-                  <CheckInForm
-                    onSuccess={() => {
-                      setIsOpen(false);
-                      queryClient.invalidateQueries({
-                        queryKey: ["inventory_transactions"],
-                      });
-                      queryClient.invalidateQueries({
-                        queryKey: ["inventory_items"],
-                      });
-                    }}
-                  />
-                </TabsContent>
-
-                <TabsContent value="check_out" className="space-y-4">
-                  <CheckOutForm
-                    onSuccess={() => {
-                      setIsOpen(false);
-                      queryClient.invalidateQueries({
-                        queryKey: ["inventory_transactions"],
-                      });
-                      queryClient.invalidateQueries({
-                        queryKey: ["inventory_items"],
-                      });
-                    }}
-                  />
-                </TabsContent>
-
-                <TabsContent value="transfer" className="space-y-4">
-                  <TransferForm
-                    onSuccess={() => {
-                      setIsOpen(false);
-                      queryClient.invalidateQueries({
-                        queryKey: ["inventory_transactions"],
-                      });
-                      queryClient.invalidateQueries({
-                        queryKey: ["inventory_items"],
-                      });
-                    }}
-                  />
-                </TabsContent>
-              </Tabs>
-            </DialogContent>
-          </Dialog>
-        }
       />
 
-      <Card>
-        <CardContent className="pt-6">
-          {isLoading ? (
-            <div className="flex justify-center py-8">Loading transactions...</div>
-          ) : (
-            <DataTable
-              columns={columns}
-              data={transactions}
-              emptyMessage="No inventory transactions found."
-            />
-          )}
-        </CardContent>
-      </Card>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-6">
+        <TabsList className="grid grid-cols-4 w-full">
+          <TabsTrigger value="transactions">All Transactions</TabsTrigger>
+          <TabsTrigger value="check_in">
+            <ArrowDownToLine className="w-4 h-4 mr-2" />
+            Check In
+          </TabsTrigger>
+          <TabsTrigger value="check_out">
+            <ArrowUpFromLine className="w-4 h-4 mr-2" />
+            Check Out
+          </TabsTrigger>
+          <TabsTrigger value="transfer">
+            <MoveRight className="w-4 h-4 mr-2" />
+            Transfer
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="transactions" className="space-y-6">
+          <div className="flex flex-col md:flex-row gap-4 mb-6">
+            <div className="relative flex-1">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by product or reference..."
+                className="pl-8"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <Select value={typeFilter} onValueChange={setTypeFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Filter by type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">All Types</SelectItem>
+                  <SelectItem value="check_in">Check In</SelectItem>
+                  <SelectItem value="check_out">Check Out</SelectItem>
+                  <SelectItem value="transfer">Transfer</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">All Statuses</SelectItem>
+                  <SelectItem value="approved">Approved</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="rejected">Rejected</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <Card>
+            <CardContent className="pt-6">
+              {isLoading ? (
+                <div className="flex justify-center py-8">Loading transactions...</div>
+              ) : (
+                <DataTable
+                  columns={columns}
+                  data={filteredTransactions}
+                  emptyMessage="No inventory transactions found."
+                />
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="check_in">
+          <Card>
+            <CardContent className="pt-6">
+              <CheckInForm
+                onSuccess={() => {
+                  toast({
+                    title: "Success",
+                    description: "Inventory check-in completed successfully",
+                  });
+                  queryClient.invalidateQueries({
+                    queryKey: ["inventory_transactions"],
+                  });
+                  queryClient.invalidateQueries({
+                    queryKey: ["inventory_items"],
+                  });
+                  setActiveTab("transactions");
+                }}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="check_out">
+          <Card>
+            <CardContent className="pt-6">
+              <CheckOutRequestForm
+                onSuccess={() => {
+                  toast({
+                    title: "Success",
+                    description: "Checkout request submitted for approval",
+                  });
+                  queryClient.invalidateQueries({
+                    queryKey: ["inventory_transactions"],
+                  });
+                  setActiveTab("transactions");
+                }}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="transfer">
+          <Card>
+            <CardContent className="pt-6">
+              <TransferForm
+                onSuccess={() => {
+                  toast({
+                    title: "Success",
+                    description: "Inventory transfer completed successfully",
+                  });
+                  queryClient.invalidateQueries({
+                    queryKey: ["inventory_transactions"],
+                  });
+                  queryClient.invalidateQueries({
+                    queryKey: ["inventory_items"],
+                  });
+                  setActiveTab("transactions");
+                }}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

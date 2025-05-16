@@ -1,21 +1,21 @@
 
 import React from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { useAuth } from "@/contexts/AuthContext";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -23,274 +23,240 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { Loader2, AlertTriangle } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 
-// Define the check-out form schema
-const checkOutSchema = z.object({
-  inventory_item_id: z.string().min(1, "Inventory item is required"),
-  quantity: z.string().refine((val) => {
-    const num = parseInt(val, 10);
-    return !isNaN(num) && num > 0;
-  }, "Quantity must be a positive number"),
-  reference: z.string().optional(),
+// Define the form schema for the approval form
+const approvalFormSchema = z.object({
+  transaction_id: z.string({
+    required_error: "Please select a checkout request",
+  }),
+  approval_decision: z.enum(["approved", "rejected"]),
   notes: z.string().optional(),
 });
 
-type CheckOutFormValues = z.infer<typeof checkOutSchema>;
+type ApprovalFormValues = z.infer<typeof approvalFormSchema>;
 
-interface InventoryItem {
-  id: string;
-  product_id: string;
-  warehouse_id: string;
-  quantity: number;
-  product: {
-    name: string;
-  };
-  warehouse: {
-    name: string;
-  };
-  display_name?: string; // For select dropdown
-}
-
-interface CheckOutFormProps {
-  onSuccess: () => void;
-}
-
-const CheckOutForm: React.FC<CheckOutFormProps> = ({ onSuccess }) => {
+// This component is now for approving checkout requests, not creating them
+const CheckOutForm = ({ onSuccess }) => {
   const { toast } = useToast();
-  const { userData } = useAuth();
-  const [maxQuantity, setMaxQuantity] = React.useState<number | null>(null);
-  const [currentInventoryItem, setCurrentInventoryItem] = React.useState<InventoryItem | null>(null);
 
-  // Define form
-  const form = useForm<CheckOutFormValues>({
-    resolver: zodResolver(checkOutSchema),
+  // Initialize form
+  const form = useForm({
+    resolver: zodResolver(approvalFormSchema),
     defaultValues: {
-      inventory_item_id: "",
-      quantity: "",
-      reference: "",
       notes: "",
     },
   });
 
-  // Fetch inventory items with stock
-  const { data: inventoryItems = [], isLoading: isLoadingInventory } = useQuery({
-    queryKey: ["inventory_items_with_stock"],
+  // Fetch pending checkout requests
+  const { data: pendingRequests = [], isLoading: isLoadingRequests } = useQuery({
+    queryKey: ["pending_checkout_requests"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("inventory_items")
+        .from("inventory_transactions")
         .select(`
           id,
           product_id,
-          warehouse_id,
+          source_warehouse_id,
           quantity,
+          reference,
+          request_id,
+          transaction_date,
           product:product_id(name),
-          warehouse:warehouse_id(name)
+          source_warehouse:source_warehouse_id(name)
         `)
-        .gt("quantity", 0)
-        .order("product_id");
-      
+        .eq("type", "check_out")
+        .eq("approval_status", "pending")
+        .order("transaction_date", { ascending: false });
+
       if (error) {
         toast({
           title: "Error",
-          description: "Failed to fetch inventory items",
+          description: "Failed to fetch pending checkout requests",
           variant: "destructive",
         });
         throw error;
       }
-      
-      // Transform data for display
-      const transformedData = data.map((item: InventoryItem) => ({
-        ...item,
-        display_name: `${item.product.name} - ${item.warehouse.name} (${item.quantity} available)`,
-      }));
-      
-      return transformedData as InventoryItem[];
+      return data || [];
     },
   });
 
-  // Watch for inventory_item_id changes to update max quantity
-  React.useEffect(() => {
-    const inventoryItemId = form.watch("inventory_item_id");
-    if (inventoryItemId) {
-      const selectedItem = inventoryItems.find(item => item.id === inventoryItemId);
-      if (selectedItem) {
-        setMaxQuantity(selectedItem.quantity);
-        setCurrentInventoryItem(selectedItem);
-      }
-    } else {
-      setMaxQuantity(null);
-      setCurrentInventoryItem(null);
-    }
-  }, [form.watch("inventory_item_id"), inventoryItems]);
+  const onSubmit = async (data: ApprovalFormValues) => {
+    try {
+      // Get current user
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError) throw userError;
 
-  // Create inventory check-out mutation
-  const checkOutMutation = useMutation({
-    mutationFn: async (values: CheckOutFormValues) => {
-      if (!userData?.id) {
-        throw new Error("User not authenticated");
-      }
-      
-      if (!currentInventoryItem) {
-        throw new Error("No inventory item selected");
-      }
-      
-      const quantity = parseInt(values.quantity, 10);
-      
-      // Validate quantity
-      if (quantity > (maxQuantity || 0)) {
-        throw new Error("Cannot check out more than available quantity");
-      }
-      
-      // Create the inventory transaction
-      const transaction = {
-        type: "check_out",
-        product_id: currentInventoryItem.product_id,
-        source_warehouse_id: currentInventoryItem.warehouse_id,
-        quantity,
-        reference: values.reference || null,
-        notes: values.notes || null,
-        user_id: userData.id,
-      };
-      
-      const { data: transactionData, error: transactionError } = await supabase
-        .from("inventory_transactions")
-        .insert([transaction])
-        .select();
-      
-      if (transactionError) throw transactionError;
+      const userId = userData.user.id;
+      const selectedRequest = pendingRequests.find(req => req.id === data.transaction_id);
 
-      // Update inventory item
+      // Update the transaction approval status
       const { error: updateError } = await supabase
-        .from("inventory_items")
+        .from("inventory_transactions")
         .update({
-          quantity: currentInventoryItem.quantity - quantity,
-          last_updated: new Date().toISOString(),
+          approval_status: data.approval_decision,
+          notes: data.notes ? `${selectedRequest.notes || ''}\n\nApproval note: ${data.notes}` : selectedRequest.notes
         })
-        .eq("id", values.inventory_item_id);
-      
+        .eq("id", data.transaction_id);
+
       if (updateError) throw updateError;
-      
-      return transactionData[0];
-    },
-    onSuccess: () => {
+
+      // If approved, update inventory
+      if (data.approval_decision === "approved") {
+        // Check if we have enough inventory
+        const { data: inventoryData, error: inventoryError } = await supabase
+          .from("inventory_items")
+          .select("quantity")
+          .eq("warehouse_id", selectedRequest.source_warehouse_id)
+          .eq("product_id", selectedRequest.product_id)
+          .single();
+          
+        if (inventoryError) throw inventoryError;
+
+        if (!inventoryData || inventoryData.quantity < selectedRequest.quantity) {
+          toast({
+            title: "Error",
+            description: "Not enough inventory available for this checkout",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        // Update inventory
+        const { error: updateInventoryError } = await supabase
+          .from("inventory_items")
+          .update({
+            quantity: inventoryData.quantity - selectedRequest.quantity,
+            last_updated: new Date().toISOString(),
+          })
+          .eq("warehouse_id", selectedRequest.source_warehouse_id)
+          .eq("product_id", selectedRequest.product_id);
+
+        if (updateInventoryError) throw updateInventoryError;
+      }
+
       toast({
         title: "Success",
-        description: "Inventory check-out recorded successfully",
+        description: `Checkout request ${data.approval_decision}`,
       });
-      form.reset();
       onSuccess();
-    },
-    onError: (error) => {
+    } catch (error) {
+      console.error("Error processing checkout approval:", error);
       toast({
         title: "Error",
-        description: `Failed to record inventory check-out: ${error.message}`,
+        description: "Failed to process checkout approval",
         variant: "destructive",
       });
-    },
-  });
-
-  // Handle form submission
-  const onSubmit = (values: CheckOutFormValues) => {
-    checkOutMutation.mutate(values);
+    }
   };
 
+  if (isLoadingRequests) {
+    return (
+      <div className="flex justify-center py-8">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (pendingRequests.length === 0) {
+    return (
+      <Alert>
+        <AlertTriangle className="h-4 w-4" />
+        <AlertTitle>No pending checkout requests</AlertTitle>
+        <AlertDescription>
+          There are no checkout requests waiting for approval at this time.
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <FormField
-          control={form.control}
-          name="inventory_item_id"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Inventory Item</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value}>
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-lg font-medium">Approve Checkout Requests</h2>
+        <p className="text-sm text-muted-foreground mt-1">
+          Review and approve or reject pending checkout requests.
+        </p>
+      </div>
+
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <FormField
+            control={form.control}
+            name="transaction_id"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Select Checkout Request</FormLabel>
+                <Select
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a checkout request" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {pendingRequests.map((request) => (
+                      <SelectItem key={request.id} value={request.id}>
+                        {request.product.name} - {request.quantity} units from {request.source_warehouse.name}
+                        {request.request_id ? ` (${request.request_id})` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="approval_decision"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Decision</FormLabel>
+                <Select
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select your decision" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="approved">Approve</SelectItem>
+                    <SelectItem value="rejected">Reject</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="notes"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Notes</FormLabel>
                 <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select an inventory item" />
-                  </SelectTrigger>
+                  <Textarea {...field} placeholder="Add any notes about this decision..." />
                 </FormControl>
-                <SelectContent>
-                  {inventoryItems.map((item) => (
-                    <SelectItem key={item.id} value={item.id}>
-                      {item.display_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="quantity"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Quantity</FormLabel>
-              <FormControl>
-                <Input
-                  type="number"
-                  placeholder="Enter quantity"
-                  {...field}
-                  min="1"
-                  max={maxQuantity?.toString()}
-                />
-              </FormControl>
-              {maxQuantity !== null && (
-                <FormDescription>
-                  Maximum available: {maxQuantity}
-                </FormDescription>
-              )}
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="reference"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Reference</FormLabel>
-              <FormControl>
-                <Input
-                  placeholder="Requisition or Reference Number"
-                  {...field}
-                  value={field.value || ""}
-                />
-              </FormControl>
-              <FormDescription>Optional reference information</FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="notes"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Notes</FormLabel>
-              <FormControl>
-                <Textarea
-                  placeholder="Additional notes"
-                  {...field}
-                  value={field.value || ""}
-                />
-              </FormControl>
-              <FormDescription>Optional additional information</FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <div className="flex justify-end gap-2">
-          <Button type="submit" disabled={checkOutMutation.isPending}>
-            {checkOutMutation.isPending ? "Processing..." : "Check Out"}
-          </Button>
-        </div>
-      </form>
-    </Form>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <div className="pt-4 flex justify-end">
+            <Button type="submit">Process Request</Button>
+          </div>
+        </form>
+      </Form>
+    </div>
   );
 };
 
