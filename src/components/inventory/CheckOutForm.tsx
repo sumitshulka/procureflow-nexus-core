@@ -103,11 +103,19 @@ const CheckOutForm = ({ onSuccess }: { onSuccess: () => void }) => {
         }
         
         // Filter out any items where source_warehouse has an error
-        const validRequests = (data || []).filter(item => 
-          item.source_warehouse && 
-          typeof item.source_warehouse !== 'string' && 
-          !('error' in item.source_warehouse)
-        );
+        // First cast to unknown, then to our expected type after filtering
+        const rawData = data || [];
+        const validRequests = rawData
+          .filter(item => {
+            // Check if source_warehouse exists and doesn't have an error property
+            return item.source_warehouse && 
+              typeof item.source_warehouse === 'object' && 
+              !('error' in item.source_warehouse);
+          })
+          .map(item => ({
+            ...item,
+            source_warehouse: item.source_warehouse as { name: string } | null
+          }));
         
         return validRequests as PendingCheckoutRequest[];
       } catch (error) {
