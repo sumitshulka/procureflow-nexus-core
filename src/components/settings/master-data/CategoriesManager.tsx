@@ -416,30 +416,6 @@ const CategoriesManager = () => {
       </CardContent>
     </Card>
   );
-  
-  function onSubmit(values: z.infer<typeof categorySchema>) {
-    if (currentCategory) {
-      updateCategoryMutation.mutate({ id: currentCategory.id, values });
-    } else {
-      createCategoryMutation.mutate(values);
-    }
-  };
-
-  function handleEdit(category: Category) {
-    setCurrentCategory(category);
-    form.reset({
-      name: category.name,
-      description: category.description || "",
-      is_active: category.is_active,
-    });
-    setIsEditOpen(true);
-  }
-
-  function handleDelete(id: string) {
-    if (confirm("Are you sure you want to delete this category?")) {
-      deleteCategoryMutation.mutate(id);
-    }
-  }
 };
 
 export default CategoriesManager;
