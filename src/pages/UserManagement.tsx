@@ -4,6 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PageHeader from "@/components/common/PageHeader";
 import UsersList from "@/components/user-management/UsersList";
 import RolesList from "@/components/user-management/RolesList";
+import ApprovalHierarchy from "@/components/user-management/ApprovalHierarchy";
 
 const UserManagement = () => {
   return (
@@ -18,6 +19,7 @@ const UserManagement = () => {
           <TabsList>
             <TabsTrigger value="users">Users</TabsTrigger>
             <TabsTrigger value="roles">Roles</TabsTrigger>
+            <TabsTrigger value="approval">Approval Hierarchy</TabsTrigger>
           </TabsList>
           
           <TabsContent value="users" className="mt-6">
@@ -26,6 +28,10 @@ const UserManagement = () => {
           
           <TabsContent value="roles" className="mt-6">
             <RolesList />
+          </TabsContent>
+          
+          <TabsContent value="approval" className="mt-6">
+            <ApprovalHierarchy />
           </TabsContent>
         </Tabs>
       </div>

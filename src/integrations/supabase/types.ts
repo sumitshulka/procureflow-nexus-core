@@ -42,6 +42,48 @@ export type Database = {
         }
         Relationships: []
       }
+      approval_hierarchies: {
+        Row: {
+          approver_level: number
+          approver_role: string
+          created_at: string
+          department_id: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          approver_level: number
+          approver_role: string
+          created_at?: string
+          department_id: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          approver_level?: number
+          approver_role?: string
+          created_at?: string
+          department_id?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "approval_hierarchies_approver_role_fkey"
+            columns: ["approver_role"]
+            isOneToOne: false
+            referencedRelation: "custom_roles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "approval_hierarchies_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       categories: {
         Row: {
           created_at: string | null
@@ -87,6 +129,30 @@ export type Database = {
           description?: string | null
           id?: string
           name?: string
+        }
+        Relationships: []
+      }
+      departments: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -155,24 +221,33 @@ export type Database = {
           avatar_url: string | null
           created_at: string
           department: string | null
+          employee_id: string | null
           full_name: string | null
           id: string
+          mobile: string | null
+          status: string | null
           updated_at: string
         }
         Insert: {
           avatar_url?: string | null
           created_at?: string
           department?: string | null
+          employee_id?: string | null
           full_name?: string | null
           id: string
+          mobile?: string | null
+          status?: string | null
           updated_at?: string
         }
         Update: {
           avatar_url?: string | null
           created_at?: string
           department?: string | null
+          employee_id?: string | null
           full_name?: string | null
           id?: string
+          mobile?: string | null
+          status?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -208,6 +283,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      system_modules: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
       }
       units: {
         Row: {

@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -10,70 +10,73 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogC
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescription } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Plus, Pencil, Check, X } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Loader2, Plus, MoreHorizontal, Pencil, Trash2, Settings, ListPlus, Shield } from "lucide-react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Json } from "@/integrations/supabase/types";
 
 // Role schema for form validation
 const roleSchema = z.object({
-  name: z.string().min(3, "Role name must be at least 3 characters"),
+  name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
 });
 
-// Custom role interface
-interface CustomRole {
+// Module schema for form validation
+const moduleSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  description: z.string().optional(),
+});
+
+// Permission types
+const permissionTypes = [
+  { id: "view", name: "View" },
+  { id: "create", name: "Create" },
+  { id: "edit", name: "Edit" },
+  { id: "delete", name: "Delete" },
+  { id: "approve", name: "Approve" },
+  { id: "admin", name: "Full Access" },
+];
+
+interface RoleData {
   id: string;
   name: string;
   description: string | null;
-  created_at: string;
+  createdAt: string;
 }
 
-// Role permission interface
-interface RolePermission {
-  id: string;
-  role_id: string;
-  module_id: string;
-  permission: string;
-  created_at: string;
-}
-
-// Module interface
-interface Module {
+interface ModuleData {
   id: string;
   name: string;
-  description: string;
+  description: string | null;
 }
 
-// Available permissions
-const permissions = [
-  { id: "view", name: "View" },
-  { id: "create", name: "Create" },
-  { id: "modify", name: "Modify" },
-  { id: "delete", name: "Delete" },
-  { id: "full_control", name: "Full Control" },
-];
-
-// Available modules
-const modules = [
-  { id: "dashboard", name: "Dashboard", description: "Main system dashboard" },
-  { id: "users", name: "User Management", description: "Manage system users" },
-  { id: "products", name: "Product Catalog", description: "Manage product catalog" },
-  { id: "procurement", name: "Procurement", description: "Handle procurement requests" },
-  { id: "settings", name: "Settings", description: "System configuration and settings" },
-];
+interface PermissionData {
+  id: string;
+  roleId: string;
+  moduleId: string;
+  permission: string;
+}
 
 const RolesList = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [isEditOpen, setIsEditOpen] = useState(false);
-  const [currentRole, setCurrentRole] = useState<CustomRole | null>(null);
-  const [rolePermissions, setRolePermissions] = useState<Record<string, Record<string, string[]>>>({});
+  const [activeTab, setActiveTab] = useState("roles");
+  const [isRoleCreateOpen, setIsRoleCreateOpen] = useState(false);
+  const [isRoleEditOpen, setIsRoleEditOpen] = useState(false);
+  const [isModuleCreateOpen, setIsModuleCreateOpen] = useState(false);
+  const [isModuleEditOpen, setIsModuleEditOpen] = useState(false);
+  const [isPermissionsOpen, setIsPermissionsOpen] = useState(false);
+  const [currentRole, setCurrentRole] = useState<RoleData | null>(null);
+  const [currentModule, setCurrentModule] = useState<ModuleData | null>(null);
+  const [rolePermissions, setRolePermissions] = useState<Record<string, string[]>>({});
   
-  // Form setup for creating/editing roles
-  const form = useForm({
+  // Forms setup
+  const roleForm = useForm({
     resolver: zodResolver(roleSchema),
     defaultValues: {
       name: "",
@@ -81,90 +84,113 @@ const RolesList = () => {
     },
   });
   
-  // Fetch custom roles
-  const { data: roles = [], isLoading, error } = useQuery({
-    queryKey: ["custom_roles"],
-    queryFn: async () => {
-      // Use any type to bypass TypeScript checking for tables that aren't in the generated types
-      const { data, error } = await (supabase as any)
-        .from("custom_roles")
-        .select("*")
-        .order("created_at", { ascending: false });
-        
-      if (error) throw error;
-      return data || [];
-    }
+  const roleEditForm = useForm({
+    resolver: zodResolver(roleSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+    },
   });
   
-  // Effect to fetch permissions for roles when they are loaded
-  useEffect(() => {
-    // For each role, fetch its permissions
-    roles.forEach(role => {
-      fetchRolePermissions(role.id);
-    });
-  }, [roles]);
+  const moduleForm = useForm({
+    resolver: zodResolver(moduleSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+    },
+  });
+  
+  const moduleEditForm = useForm({
+    resolver: zodResolver(moduleSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+    },
+  });
+  
+  // Fetch roles
+  const { data: roles = [], isLoading: rolesLoading } = useQuery({
+    queryKey: ["roles"],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("custom_roles")
+        .select("*");
+      
+      if (error) throw error;
+      
+      return data.map((role: any) => ({
+        id: role.id,
+        name: role.name,
+        description: role.description,
+        createdAt: role.created_at,
+      }));
+    },
+  });
+  
+  // Fetch modules
+  const { data: modules = [], isLoading: modulesLoading } = useQuery({
+    queryKey: ["modules"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("system_modules")
+        .select("*");
+      
+      if (error) throw error;
+      
+      return data.map(module => ({
+        id: module.id,
+        name: module.name,
+        description: module.description,
+      }));
+    },
+  });
   
   // Fetch permissions for a specific role
   const fetchRolePermissions = async (roleId: string) => {
-    // Use any type to bypass TypeScript checking
     const { data, error } = await (supabase as any)
       .from("role_permissions")
       .select("*")
       .eq("role_id", roleId);
-      
+    
     if (error) {
-      console.error("Error fetching role permissions:", error);
-      return;
+      throw error;
     }
     
     // Group permissions by module
     const permissionsByModule: Record<string, string[]> = {};
     
-    if (data) {
-      data.forEach((item: RolePermission) => {
-        if (!permissionsByModule[item.module_id]) {
-          permissionsByModule[item.module_id] = [];
-        }
-        permissionsByModule[item.module_id].push(item.permission);
-      });
-    }
+    data.forEach((perm: any) => {
+      if (!permissionsByModule[perm.module_id]) {
+        permissionsByModule[perm.module_id] = [];
+      }
+      permissionsByModule[perm.module_id].push(perm.permission);
+    });
     
-    setRolePermissions(prev => ({
-      ...prev,
-      [roleId]: permissionsByModule
-    }));
+    return permissionsByModule;
   };
   
   // Create role mutation
   const createRoleMutation = useMutation({
     mutationFn: async (values: z.infer<typeof roleSchema>) => {
-      // Use any type to bypass TypeScript checking
       const { data, error } = await (supabase as any)
         .from("custom_roles")
         .insert({
           name: values.name,
           description: values.description || null,
         })
-        .select()
-        .single();
-        
+        .select();
+      
       if (error) throw error;
-      return data;
+      return data[0];
     },
-    onSuccess: (data) => {
-      if (data) {
-        queryClient.invalidateQueries({ queryKey: ["custom_roles"] });
-        setRolePermissions(prev => ({
-          ...prev,
-          [data.id]: {}
-        }));
-        toast({
-          title: "Role created",
-          description: "The role has been successfully created.",
-        });
-        setIsCreateOpen(false);
-        form.reset();
-      }
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["roles"] });
+      toast({
+        title: "Role created",
+        description: "The role has been successfully created.",
+      });
+      setIsRoleCreateOpen(false);
+      roleForm.reset();
     },
     onError: (error) => {
       toast({
@@ -177,27 +203,26 @@ const RolesList = () => {
   
   // Update role mutation
   const updateRoleMutation = useMutation({
-    mutationFn: async ({ id, values }: { id: string; values: z.infer<typeof roleSchema> }) => {
-      // Use any type to bypass TypeScript checking
+    mutationFn: async ({ id, data }: { id: string, data: z.infer<typeof roleSchema> }) => {
       const { error } = await (supabase as any)
         .from("custom_roles")
         .update({
-          name: values.name,
-          description: values.description || null,
+          name: data.name,
+          description: data.description || null,
         })
         .eq("id", id);
-        
+      
       if (error) throw error;
+      return { id, data };
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["custom_roles"] });
+      queryClient.invalidateQueries({ queryKey: ["roles"] });
       toast({
         title: "Role updated",
         description: "The role has been successfully updated.",
       });
-      setIsEditOpen(false);
-      setCurrentRole(null);
-      form.reset();
+      setIsRoleEditOpen(false);
+      roleEditForm.reset();
     },
     onError: (error) => {
       toast({
@@ -208,72 +233,163 @@ const RolesList = () => {
     },
   });
   
-  // Update role permissions mutation
-  const updatePermissionsMutation = useMutation({
-    mutationFn: async ({ roleId, moduleId, permission, isActive }: { 
-      roleId: string;
-      moduleId: string;
-      permission: string;
-      isActive: boolean;
-    }) => {
-      if (isActive) {
-        // Add permission - using any type to bypass TypeScript checking
-        const { error } = await (supabase as any)
-          .from("role_permissions")
-          .insert({
-            role_id: roleId,
-            module_id: moduleId,
-            permission,
-          });
-          
-        if (error) throw error;
-      } else {
-        // Remove permission - using any type to bypass TypeScript checking
-        const { error } = await (supabase as any)
-          .from("role_permissions")
-          .delete()
-          .eq("role_id", roleId)
-          .eq("module_id", moduleId)
-          .eq("permission", permission);
-          
-        if (error) throw error;
-      }
+  // Delete role mutation
+  const deleteRoleMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await (supabase as any)
+        .from("custom_roles")
+        .delete()
+        .eq("id", id);
+      
+      if (error) throw error;
+      return id;
     },
-    onSuccess: (_, variables) => {
-      const { roleId, moduleId, permission, isActive } = variables;
-      
-      // Update local state
-      setRolePermissions(prev => {
-        const updatedPermissions = { ...prev };
-        
-        if (!updatedPermissions[roleId]) {
-          updatedPermissions[roleId] = {};
-        }
-        
-        if (!updatedPermissions[roleId][moduleId]) {
-          updatedPermissions[roleId][moduleId] = [];
-        }
-        
-        if (isActive) {
-          // Permission was added
-          if (!updatedPermissions[roleId][moduleId].includes(permission)) {
-            updatedPermissions[roleId][moduleId] = [
-              ...updatedPermissions[roleId][moduleId],
-              permission
-            ];
-          }
-        } else {
-          // Permission was removed
-          updatedPermissions[roleId][moduleId] = updatedPermissions[roleId][moduleId]
-            .filter(p => p !== permission);
-        }
-        
-        return updatedPermissions;
-      });
-      
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["roles"] });
       toast({
-        title: "Permission updated",
-        description: `${isActive ? 'Added' : 'Removed'} ${permission} permission for this role.`,
+        title: "Role deleted",
+        description: "The role has been successfully deleted.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error deleting role",
+        description: error.message || "There was a problem deleting the role.",
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Create module mutation
+  const createModuleMutation = useMutation({
+    mutationFn: async (values: z.infer<typeof moduleSchema>) => {
+      const { data, error } = await supabase
+        .from("system_modules")
+        .insert({
+          name: values.name,
+          description: values.description || null,
+        })
+        .select();
+      
+      if (error) throw error;
+      return data[0];
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["modules"] });
+      toast({
+        title: "Module created",
+        description: "The module has been successfully created.",
+      });
+      setIsModuleCreateOpen(false);
+      moduleForm.reset();
+    },
+    onError: (error) => {
+      toast({
+        title: "Error creating module",
+        description: error.message || "There was a problem creating the module.",
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Update module mutation
+  const updateModuleMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string, data: z.infer<typeof moduleSchema> }) => {
+      const { error } = await supabase
+        .from("system_modules")
+        .update({
+          name: data.name,
+          description: data.description || null,
+        })
+        .eq("id", id);
+      
+      if (error) throw error;
+      return { id, data };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["modules"] });
+      toast({
+        title: "Module updated",
+        description: "The module has been successfully updated.",
+      });
+      setIsModuleEditOpen(false);
+      moduleEditForm.reset();
+    },
+    onError: (error) => {
+      toast({
+        title: "Error updating module",
+        description: error.message || "There was a problem updating the module.",
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Delete module mutation
+  const deleteModuleMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("system_modules")
+        .delete()
+        .eq("id", id);
+      
+      if (error) throw error;
+      return id;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["modules"] });
+      toast({
+        title: "Module deleted",
+        description: "The module has been successfully deleted.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error deleting module",
+        description: error.message || "There was a problem deleting the module.",
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Update permissions mutation
+  const updatePermissionsMutation = useMutation({
+    mutationFn: async ({ 
+      roleId, 
+      moduleId, 
+      permissions 
+    }: { roleId: string; moduleId: string; permissions: string[] }) => {
+      // First, delete existing permissions for this role-module combination
+      const { error: deleteError } = await (supabase as any)
+        .from("role_permissions")
+        .delete()
+        .eq("role_id", roleId)
+        .eq("module_id", moduleId);
+      
+      if (deleteError) throw deleteError;
+      
+      // If no permissions to add, just return
+      if (permissions.length === 0) return { roleId, moduleId, added: 0 };
+      
+      // Then insert the new permissions
+      const permissionObjects = permissions.map(permission => ({
+        role_id: roleId,
+        module_id: moduleId,
+        permission,
+      }));
+      
+      const { error: insertError } = await (supabase as any)
+        .from("role_permissions")
+        .insert(permissionObjects);
+      
+      if (insertError) throw insertError;
+      
+      return { roleId, moduleId, added: permissions.length };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["role_permissions"] });
+      toast({
+        title: "Permissions updated",
+        description: "The role permissions have been successfully updated.",
       });
     },
     onError: (error) => {
@@ -285,281 +401,587 @@ const RolesList = () => {
     },
   });
   
-  // Handle form submission for creating new role
-  const onSubmit = (values: z.infer<typeof roleSchema>) => {
-    if (currentRole) {
-      updateRoleMutation.mutate({ id: currentRole.id, values });
-    } else {
-      createRoleMutation.mutate(values);
-    }
+  // Handle role form submission
+  const onRoleSubmit = (values: z.infer<typeof roleSchema>) => {
+    createRoleMutation.mutate(values);
   };
   
-  // Handle editing role
-  const handleEdit = (role: CustomRole) => {
+  // Handle role edit form submission
+  const onRoleEditSubmit = (values: z.infer<typeof roleSchema>) => {
+    if (!currentRole) return;
+    updateRoleMutation.mutate({ id: currentRole.id, data: values });
+  };
+  
+  // Handle module form submission
+  const onModuleSubmit = (values: z.infer<typeof moduleSchema>) => {
+    createModuleMutation.mutate(values);
+  };
+  
+  // Handle module edit form submission
+  const onModuleEditSubmit = (values: z.infer<typeof moduleSchema>) => {
+    if (!currentModule) return;
+    updateModuleMutation.mutate({ id: currentModule.id, data: values });
+  };
+  
+  // Open edit dialog with role data
+  const handleEditRole = (role: RoleData) => {
     setCurrentRole(role);
-    form.reset({
+    roleEditForm.reset({
       name: role.name,
       description: role.description || "",
     });
-    setIsEditOpen(true);
+    setIsRoleEditOpen(true);
   };
   
-  // Toggle permission for role and module
-  const togglePermission = (roleId: string, moduleId: string, permission: string) => {
-    const isCurrentlyActive = rolePermissions[roleId]?.[moduleId]?.includes(permission) || false;
-    updatePermissionsMutation.mutate({ 
-      roleId, 
-      moduleId, 
-      permission, 
-      isActive: !isCurrentlyActive 
+  // Open edit dialog with module data
+  const handleEditModule = (module: ModuleData) => {
+    setCurrentModule(module);
+    moduleEditForm.reset({
+      name: module.name,
+      description: module.description || "",
+    });
+    setIsModuleEditOpen(true);
+  };
+  
+  // Handle delete role
+  const handleDeleteRole = (id: string) => {
+    if (window.confirm("Are you sure you want to delete this role? Users with this role will be affected.")) {
+      deleteRoleMutation.mutate(id);
+    }
+  };
+  
+  // Handle delete module
+  const handleDeleteModule = (id: string) => {
+    if (window.confirm("Are you sure you want to delete this module? All associated permissions will be removed.")) {
+      deleteModuleMutation.mutate(id);
+    }
+  };
+  
+  // Open permissions dialog
+  const handleManagePermissions = async (role: RoleData) => {
+    setCurrentRole(role);
+    try {
+      const permissions = await fetchRolePermissions(role.id);
+      setRolePermissions(permissions);
+      setIsPermissionsOpen(true);
+    } catch (error: any) {
+      toast({
+        title: "Error loading permissions",
+        description: error.message || "Failed to load role permissions",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  // Toggle permission for a module
+  const togglePermission = (moduleId: string, permission: string) => {
+    setRolePermissions(prevState => {
+      const modulePermissions = [...(prevState[moduleId] || [])];
+      
+      // Check if permission is "admin", which is a special case
+      if (permission === "admin") {
+        // If admin already exists, remove it
+        if (modulePermissions.includes("admin")) {
+          return {
+            ...prevState,
+            [moduleId]: []
+          };
+        } 
+        // If admin doesn't exist, remove all other permissions and add admin
+        else {
+          return {
+            ...prevState,
+            [moduleId]: ["admin"]
+          };
+        }
+      } else {
+        // For non-admin permissions
+        
+        // If admin exists, remove it first as we're adding a specific permission
+        if (modulePermissions.includes("admin")) {
+          const withoutAdmin = modulePermissions.filter(p => p !== "admin");
+          withoutAdmin.push(permission);
+          return {
+            ...prevState,
+            [moduleId]: withoutAdmin
+          };
+        }
+        
+        // Toggle the specific permission
+        const permissionIndex = modulePermissions.indexOf(permission);
+        if (permissionIndex !== -1) {
+          modulePermissions.splice(permissionIndex, 1);
+        } else {
+          modulePermissions.push(permission);
+        }
+        
+        return {
+          ...prevState,
+          [moduleId]: modulePermissions
+        };
+      }
     });
   };
   
-  // Check if role has permission
-  const hasPermission = (roleId: string, moduleId: string, permission: string) => {
-    return rolePermissions[roleId]?.[moduleId]?.includes(permission) || false;
-  };
-
-  return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle>Custom Roles</CardTitle>
-            <CardDescription>
-              Create and manage custom roles with specific permissions.
-            </CardDescription>
-          </div>
-          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-            <DialogTrigger asChild>
-              <Button className="h-9" size="sm">
-                <Plus className="mr-2 h-4 w-4" /> Create Role
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Create New Role</DialogTitle>
-              </DialogHeader>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Role Name</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Enter role name" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="description"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Description</FormLabel>
-                        <FormControl>
-                          <Textarea 
-                            placeholder="Enter role description (optional)" 
-                            {...field} 
-                            value={field.value || ""} 
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <DialogFooter>
-                    <DialogClose asChild>
-                      <Button type="button" variant="outline">Cancel</Button>
-                    </DialogClose>
-                    <Button 
-                      type="submit" 
-                      disabled={createRoleMutation.isPending}
-                    >
-                      {createRoleMutation.isPending && (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      )}
-                      Create Role
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </Form>
-            </DialogContent>
-          </Dialog>
-          
-          <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Edit Role</DialogTitle>
-              </DialogHeader>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Role Name</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Enter role name" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="description"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Description</FormLabel>
-                        <FormControl>
-                          <Textarea 
-                            placeholder="Enter role description (optional)" 
-                            {...field} 
-                            value={field.value || ""} 
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <DialogFooter>
-                    <DialogClose asChild>
-                      <Button type="button" variant="outline">Cancel</Button>
-                    </DialogClose>
-                    <Button 
-                      type="submit" 
-                      disabled={updateRoleMutation.isPending}
-                    >
-                      {updateRoleMutation.isPending && (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      )}
-                      Update Role
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </Form>
-            </DialogContent>
-          </Dialog>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
-          ) : error ? (
-            <div className="bg-destructive/10 text-destructive p-4 rounded-md">
-              Error loading roles. Please try again.
-            </div>
-          ) : (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Created At</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {roles.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">
-                        No custom roles found. Create your first role to get started.
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    roles.map((role) => (
-                      <TableRow key={role.id}>
-                        <TableCell className="font-medium">{role.name}</TableCell>
-                        <TableCell>{role.description || '-'}</TableCell>
-                        <TableCell>
-                          {new Date(role.created_at).toLocaleDateString()}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button 
-                            variant="ghost" 
-                            size="icon"
-                            onClick={() => handleEdit(role)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+  // Save permissions
+  const savePermissions = async () => {
+    if (!currentRole) return;
+    
+    try {
+      // For each module, update permissions
+      const updates = Object.entries(rolePermissions).map(([moduleId, permissions]) => 
+        updatePermissionsMutation.mutate({ 
+          roleId: currentRole.id, 
+          moduleId, 
+          permissions 
+        })
+      );
       
-      {roles.length > 0 && (
+      // Wait for all updates to complete
+      await Promise.all(updates);
+      
+      setIsPermissionsOpen(false);
+    } catch (error) {
+      console.error("Error saving permissions:", error);
+    }
+  };
+  
+  return (
+    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <TabsList>
+        <TabsTrigger value="roles">Roles</TabsTrigger>
+        <TabsTrigger value="modules">Modules</TabsTrigger>
+      </TabsList>
+      
+      <TabsContent value="roles" className="mt-6">
         <Card>
-          <CardHeader>
-            <CardTitle>Role Permissions</CardTitle>
-            <CardDescription>
-              Configure what actions each role can perform in different modules.
-            </CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle>System Roles</CardTitle>
+              <CardDescription>
+                Manage roles and their permissions.
+              </CardDescription>
+            </div>
+            <Dialog open={isRoleCreateOpen} onOpenChange={setIsRoleCreateOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm">
+                  <Plus className="mr-2 h-4 w-4" /> Add Role
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Add New Role</DialogTitle>
+                </DialogHeader>
+                <Form {...roleForm}>
+                  <form onSubmit={roleForm.handleSubmit(onRoleSubmit)} className="space-y-4">
+                    <FormField
+                      control={roleForm.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Role name" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={roleForm.control}
+                      name="description"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Description</FormLabel>
+                          <FormControl>
+                            <Textarea placeholder="Role description" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <DialogFooter>
+                      <DialogClose asChild>
+                        <Button type="button" variant="outline">Cancel</Button>
+                      </DialogClose>
+                      <Button 
+                        type="submit" 
+                        disabled={createRoleMutation.isPending}
+                      >
+                        {createRoleMutation.isPending && (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        )}
+                        Create Role
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </Form>
+              </DialogContent>
+            </Dialog>
+
+            <Dialog open={isRoleEditOpen} onOpenChange={setIsRoleEditOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Edit Role</DialogTitle>
+                </DialogHeader>
+                <Form {...roleEditForm}>
+                  <form onSubmit={roleEditForm.handleSubmit(onRoleEditSubmit)} className="space-y-4">
+                    <FormField
+                      control={roleEditForm.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Role name" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={roleEditForm.control}
+                      name="description"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Description</FormLabel>
+                          <FormControl>
+                            <Textarea placeholder="Role description" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <DialogFooter>
+                      <DialogClose asChild>
+                        <Button type="button" variant="outline">Cancel</Button>
+                      </DialogClose>
+                      <Button 
+                        type="submit" 
+                        disabled={updateRoleMutation.isPending}
+                      >
+                        {updateRoleMutation.isPending && (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        )}
+                        Update Role
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </Form>
+              </DialogContent>
+            </Dialog>
           </CardHeader>
           <CardContent>
-            {roles.map((role) => (
-              <div key={role.id} className="mb-8">
-                <h3 className="text-lg font-semibold mb-4">{role.name}</h3>
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
+            {rolesLoading ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead className="hidden md:table-cell">Description</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {roles.length === 0 ? (
                       <TableRow>
-                        <TableHead className="w-[200px]">Module</TableHead>
-                        {permissions.map(permission => (
-                          <TableHead key={permission.id}>{permission.name}</TableHead>
-                        ))}
+                        <TableCell colSpan={3} className="text-center py-6 text-muted-foreground">
+                          No roles found. Create your first role to get started.
+                        </TableCell>
                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {modules.map(module => (
-                        <TableRow key={`${role.id}-${module.id}`}>
-                          <TableCell className="font-medium">
-                            {module.name}
-                          </TableCell>
-                          {permissions.map(permission => (
-                            <TableCell key={`${role.id}-${module.id}-${permission.id}`}>
+                    ) : (
+                      roles.map((role) => (
+                        <TableRow key={role.id}>
+                          <TableCell className="font-medium">{role.name}</TableCell>
+                          <TableCell className="hidden md:table-cell">{role.description || "-"}</TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
                               <Button
                                 variant="ghost"
-                                size="sm"
-                                className="w-8 h-8 p-0"
-                                onClick={() => togglePermission(role.id, module.id, permission.id)}
+                                size="icon"
+                                onClick={() => handleManagePermissions(role)}
                               >
-                                {hasPermission(role.id, module.id, permission.id) ? (
-                                  <Check className="h-5 w-5 text-green-500" />
-                                ) : (
-                                  <X className="h-5 w-5 text-muted-foreground/40" />
-                                )}
+                                <Shield className="h-4 w-4" />
                               </Button>
-                            </TableCell>
-                          ))}
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleEditRole(role)}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDeleteRole(role.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
               </div>
-            ))}
+            )}
+
+            {/* Permissions Dialog */}
+            <Dialog open={isPermissionsOpen} onOpenChange={setIsPermissionsOpen}>
+              <DialogContent className="max-w-3xl">
+                <DialogHeader>
+                  <DialogTitle>
+                    Manage Permissions: {currentRole?.name}
+                  </DialogTitle>
+                </DialogHeader>
+                
+                <div className="max-h-[60vh] overflow-y-auto">
+                  {modules.length === 0 ? (
+                    <div className="text-center py-6 text-muted-foreground">
+                      No modules found. Add modules first to configure permissions.
+                    </div>
+                  ) : (
+                    <Accordion type="multiple" className="w-full">
+                      {modules.map((module) => (
+                        <AccordionItem key={module.id} value={module.id}>
+                          <AccordionTrigger className="px-4">
+                            <div className="flex items-center justify-between w-full">
+                              <span>{module.name}</span>
+                              {rolePermissions[module.id]?.length > 0 && (
+                                <Badge variant="secondary" className="ml-2">
+                                  {rolePermissions[module.id]?.includes("admin") 
+                                    ? "Full Access" 
+                                    : `${rolePermissions[module.id]?.length} permissions`}
+                                </Badge>
+                              )}
+                            </div>
+                          </AccordionTrigger>
+                          <AccordionContent className="px-4 pt-2">
+                            <div className="grid grid-cols-2 gap-4">
+                              {permissionTypes.map((permType) => (
+                                <div key={permType.id} className="flex items-center space-x-2">
+                                  <Checkbox 
+                                    id={`${module.id}-${permType.id}`}
+                                    checked={(rolePermissions[module.id] || []).includes(permType.id)}
+                                    onCheckedChange={() => togglePermission(module.id, permType.id)}
+                                  />
+                                  <label
+                                    htmlFor={`${module.id}-${permType.id}`}
+                                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                  >
+                                    {permType.name}
+                                  </label>
+                                </div>
+                              ))}
+                            </div>
+                          </AccordionContent>
+                        </AccordionItem>
+                      ))}
+                    </Accordion>
+                  )}
+                </div>
+                
+                <DialogFooter>
+                  <DialogClose asChild>
+                    <Button type="button" variant="outline">Cancel</Button>
+                  </DialogClose>
+                  <Button onClick={savePermissions}>
+                    Save Permissions
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </CardContent>
         </Card>
-      )}
-    </div>
+      </TabsContent>
+      
+      <TabsContent value="modules" className="mt-6">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle>System Modules</CardTitle>
+              <CardDescription>
+                Manage system modules for permission control.
+              </CardDescription>
+            </div>
+            <Dialog open={isModuleCreateOpen} onOpenChange={setIsModuleCreateOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm">
+                  <Plus className="mr-2 h-4 w-4" /> Add Module
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Add New Module</DialogTitle>
+                </DialogHeader>
+                <Form {...moduleForm}>
+                  <form onSubmit={moduleForm.handleSubmit(onModuleSubmit)} className="space-y-4">
+                    <FormField
+                      control={moduleForm.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Module name" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={moduleForm.control}
+                      name="description"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Description</FormLabel>
+                          <FormControl>
+                            <Textarea placeholder="Module description" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <DialogFooter>
+                      <DialogClose asChild>
+                        <Button type="button" variant="outline">Cancel</Button>
+                      </DialogClose>
+                      <Button 
+                        type="submit" 
+                        disabled={createModuleMutation.isPending}
+                      >
+                        {createModuleMutation.isPending && (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        )}
+                        Create Module
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </Form>
+              </DialogContent>
+            </Dialog>
+
+            <Dialog open={isModuleEditOpen} onOpenChange={setIsModuleEditOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Edit Module</DialogTitle>
+                </DialogHeader>
+                <Form {...moduleEditForm}>
+                  <form onSubmit={moduleEditForm.handleSubmit(onModuleEditSubmit)} className="space-y-4">
+                    <FormField
+                      control={moduleEditForm.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Module name" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={moduleEditForm.control}
+                      name="description"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Description</FormLabel>
+                          <FormControl>
+                            <Textarea placeholder="Module description" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <DialogFooter>
+                      <DialogClose asChild>
+                        <Button type="button" variant="outline">Cancel</Button>
+                      </DialogClose>
+                      <Button 
+                        type="submit" 
+                        disabled={updateModuleMutation.isPending}
+                      >
+                        {updateModuleMutation.isPending && (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        )}
+                        Update Module
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </Form>
+              </DialogContent>
+            </Dialog>
+          </CardHeader>
+          <CardContent>
+            {modulesLoading ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {modules.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={3} className="text-center py-6 text-muted-foreground">
+                          No modules found. Create your first module to get started.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      modules.map((module) => (
+                        <TableRow key={module.id}>
+                          <TableCell className="font-medium">{module.name}</TableCell>
+                          <TableCell>{module.description || "-"}</TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleEditModule(module)}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDeleteModule(module.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </TabsContent>
+    </Tabs>
   );
 };
 

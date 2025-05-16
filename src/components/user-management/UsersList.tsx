@@ -13,7 +13,7 @@ import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage, FormDes
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Loader2, Plus, MoreHorizontal, Pencil } from "lucide-react";
+import { Loader2, Plus, MoreHorizontal, Pencil, UserCircle } from "lucide-react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -23,6 +23,9 @@ const userSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
   fullName: z.string().min(1, "Full name is required"),
   password: z.string().min(8, "Password must be at least 8 characters"),
+  employeeId: z.string().optional(),
+  mobile: z.string().optional(),
+  department: z.string().optional(),
   role: z.string().min(1, "Role is required"),
 });
 
@@ -31,8 +34,19 @@ interface UserData {
   id: string;
   email: string;
   fullName: string | null;
+  employeeId: string | null;
+  mobile: string | null;
+  department: string | null;
+  departmentName: string | null;
+  status: string | null;
   roles: string[];
   createdAt: string;
+}
+
+// Interface for department data
+interface DepartmentData {
+  id: string;
+  name: string;
 }
 
 const UsersList = () => {
@@ -40,6 +54,8 @@ const UsersList = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState<UserData | null>(null);
   
   // Form setup for creating new users
   const form = useForm({
@@ -48,23 +64,87 @@ const UsersList = () => {
       email: "",
       fullName: "",
       password: "",
+      employeeId: "",
+      mobile: "",
+      department: "",
       role: UserRole.REQUESTER,
     },
   });
   
-  // Fetch users with their roles
+  // Form setup for editing users
+  const editForm = useForm({
+    resolver: zodResolver(
+      z.object({
+        fullName: z.string().min(1, "Full name is required"),
+        employeeId: z.string().optional(),
+        mobile: z.string().optional(),
+        department: z.string().optional(),
+        status: z.string().optional(),
+      })
+    ),
+    defaultValues: {
+      fullName: "",
+      employeeId: "",
+      mobile: "",
+      department: "",
+      status: "active",
+    },
+  });
+  
+  // Fetch departments
+  const { data: departments = [] } = useQuery({
+    queryKey: ["departments"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("departments")
+        .select("id, name");
+      
+      if (error) throw error;
+      return data as DepartmentData[];
+    },
+  });
+  
+  // Fetch users with their roles and department info
   const { data: users = [], isLoading, error } = useQuery({
     queryKey: ["users"],
     queryFn: async () => {
-      // Get all users
+      // Get all users with their profile data
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
-        .select("id, full_name, created_at");
+        .select(`
+          id, 
+          full_name, 
+          employee_id,
+          mobile,
+          department,
+          status,
+          created_at
+        `);
         
       if (profilesError) throw profilesError;
       
-      // Get user emails from auth.users - this needs to be done in an edge function
-      // For now we'll just mock it by extracting from user roles
+      // Get department names
+      const departmentIds = profiles
+        .filter(profile => profile.department)
+        .map(profile => profile.department);
+        
+      let departmentMap: Record<string, string> = {};
+      
+      if (departmentIds.length > 0) {
+        const { data: deptData } = await supabase
+          .from("departments")
+          .select("id, name")
+          .in("id", departmentIds);
+          
+        if (deptData) {
+          departmentMap = deptData.reduce((acc, dept) => {
+            acc[dept.id] = dept.name;
+            return acc;
+          }, {} as Record<string, string>);
+        }
+      }
+      
+      // Get user roles
       const { data: userRoles, error: rolesError } = await supabase
         .from("user_roles")
         .select("user_id, role");
@@ -87,6 +167,11 @@ const UsersList = () => {
           id: profile.id,
           email: `user-${profile.id.substring(0, 8)}@example.com`, // Placeholder since we can't access auth.users
           fullName: profile.full_name,
+          employeeId: profile.employee_id,
+          mobile: profile.mobile,
+          department: profile.department,
+          departmentName: profile.department ? departmentMap[profile.department] : null,
+          status: profile.status,
           roles: userRoles,
           createdAt: profile.created_at,
         };
@@ -99,7 +184,6 @@ const UsersList = () => {
     mutationFn: async (values: z.infer<typeof userSchema>) => {
       // In a real app, creating users would be done through an edge function
       // Since we cannot modify the auth schema directly from client code
-      // Here's the code that would typically be in an edge function:
       
       const { data, error: signUpError } = await supabase.auth.signUp({
         email: values.email,
@@ -114,8 +198,22 @@ const UsersList = () => {
       if (signUpError) throw signUpError;
       
       // Wait for the trigger to create the profile
-      // Then assign the selected role
+      // Then update the profile with additional data
       if (data.user) {
+        // Update profile with additional fields
+        const { error: profileError } = await supabase
+          .from("profiles")
+          .update({
+            full_name: values.fullName,
+            employee_id: values.employeeId || null,
+            mobile: values.mobile || null,
+            department: values.department || null,
+          })
+          .eq("id", data.user.id);
+          
+        if (profileError) throw profileError;
+        
+        // Assign the selected role
         const { error: roleError } = await supabase
           .from("user_roles")
           .insert({
@@ -145,10 +243,69 @@ const UsersList = () => {
       });
     },
   });
+
+  // Update user mutation
+  const updateUserMutation = useMutation({
+    mutationFn: async (values: { id: string, data: any }) => {
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          full_name: values.data.fullName,
+          employee_id: values.data.employeeId || null,
+          mobile: values.data.mobile || null,
+          department: values.data.department || null,
+          status: values.data.status || "active"
+        })
+        .eq("id", values.id);
+        
+      if (error) throw error;
+      
+      return values;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      toast({
+        title: "User updated",
+        description: "The user has been successfully updated.",
+      });
+      setIsEditOpen(false);
+      editForm.reset();
+    },
+    onError: (error) => {
+      toast({
+        title: "Error updating user",
+        description: error.message || "There was a problem updating the user.",
+        variant: "destructive",
+      });
+    },
+  });
   
-  // Handle form submission
+  // Handle form submission for new user
   const onSubmit = (values: z.infer<typeof userSchema>) => {
     createUserMutation.mutate(values);
+  };
+  
+  // Handle form submission for editing user
+  const onEditSubmit = (values: any) => {
+    if (!currentUser) return;
+    
+    updateUserMutation.mutate({
+      id: currentUser.id,
+      data: values
+    });
+  };
+  
+  // Open edit dialog with user data
+  const handleEditUser = (userData: UserData) => {
+    setCurrentUser(userData);
+    editForm.reset({
+      fullName: userData.fullName || "",
+      employeeId: userData.employeeId || "",
+      mobile: userData.mobile || "",
+      department: userData.department || "",
+      status: userData.status || "active"
+    });
+    setIsEditOpen(true);
   };
   
   // Add role to user
@@ -194,7 +351,7 @@ const UsersList = () => {
               <Plus className="mr-2 h-4 w-4" /> Add User
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>Add New User</DialogTitle>
             </DialogHeader>
@@ -227,6 +384,61 @@ const UsersList = () => {
                     </FormItem>
                   )}
                 />
+                
+                <FormField
+                  control={form.control}
+                  name="employeeId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Employee ID</FormLabel>
+                      <FormControl>
+                        <Input placeholder="EMP-001" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="mobile"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Mobile</FormLabel>
+                        <FormControl>
+                          <Input placeholder="+1234567890" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="department"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Department</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select department" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {departments.map((dept) => (
+                              <SelectItem key={dept.id} value={dept.id}>
+                                {dept.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
                 
                 <FormField
                   control={form.control}
@@ -291,6 +503,128 @@ const UsersList = () => {
             </Form>
           </DialogContent>
         </Dialog>
+
+        <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Edit User</DialogTitle>
+            </DialogHeader>
+            <Form {...editForm}>
+              <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-4">
+                <FormField
+                  control={editForm.control}
+                  name="fullName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Full Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="John Doe" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={editForm.control}
+                  name="employeeId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Employee ID</FormLabel>
+                      <FormControl>
+                        <Input placeholder="EMP-001" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={editForm.control}
+                    name="mobile"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Mobile</FormLabel>
+                        <FormControl>
+                          <Input placeholder="+1234567890" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={editForm.control}
+                    name="department"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Department</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || undefined}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select department" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {departments.map((dept) => (
+                              <SelectItem key={dept.id} value={dept.id}>
+                                {dept.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
+                <FormField
+                  control={editForm.control}
+                  name="status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Status</FormLabel>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        value={field.value || "active"}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select status" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="active">Active</SelectItem>
+                          <SelectItem value="inactive">Inactive</SelectItem>
+                          <SelectItem value="pending">Pending</SelectItem>
+                          <SelectItem value="suspended">Suspended</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <DialogFooter>
+                  <DialogClose asChild>
+                    <Button type="button" variant="outline">Cancel</Button>
+                  </DialogClose>
+                  <Button 
+                    type="submit" 
+                    disabled={updateUserMutation.isPending}
+                  >
+                    {updateUserMutation.isPending && (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    )}
+                    Update User
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -302,29 +636,43 @@ const UsersList = () => {
             Error loading users. Please try again.
           </div>
         ) : (
-          <div className="rounded-md border">
+          <div className="rounded-md border overflow-hidden">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
+                  <TableHead>Employee ID</TableHead>
+                  <TableHead>Department</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead>Roles</TableHead>
-                  <TableHead>Created At</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {users.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-6 text-muted-foreground">
+                    <TableCell colSpan={7} className="text-center py-6 text-muted-foreground">
                       No users found. Create your first user to get started.
                     </TableCell>
                   </TableRow>
                 ) : (
                   users.map((userData) => (
                     <TableRow key={userData.id}>
-                      <TableCell>{userData.fullName || '-'}</TableCell>
+                      <TableCell className="font-medium">{userData.fullName || '-'}</TableCell>
                       <TableCell>{userData.email}</TableCell>
+                      <TableCell>{userData.employeeId || '-'}</TableCell>
+                      <TableCell>{userData.departmentName || '-'}</TableCell>
+                      <TableCell>
+                        <span className={`px-2 py-1 rounded-full text-xs ${
+                          userData.status === 'active' ? 'bg-green-100 text-green-800' :
+                          userData.status === 'inactive' ? 'bg-gray-100 text-gray-800' :
+                          userData.status === 'suspended' ? 'bg-red-100 text-red-800' :
+                          'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {userData.status || 'Active'}
+                        </span>
+                      </TableCell>
                       <TableCell>
                         <div className="flex flex-wrap gap-1">
                           {userData.roles.map((role, idx) => (
@@ -334,9 +682,6 @@ const UsersList = () => {
                           ))}
                         </div>
                       </TableCell>
-                      <TableCell>
-                        {new Date(userData.createdAt).toLocaleDateString()}
-                      </TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -345,7 +690,7 @@ const UsersList = () => {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleEditUser(userData)}>
                               <Pencil className="w-4 h-4 mr-2" /> Edit User
                             </DropdownMenuItem>
                             <DropdownMenuItem 
