@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -109,36 +108,27 @@ const CheckOutForm = ({ onSuccess }: { onSuccess: () => void }) => {
         const validRequests: PendingCheckoutRequest[] = [];
         
         for (const item of rawData) {
-          // We need to handle source_warehouse being possibly null from the start
-          const sourceWarehouse = item.source_warehouse;
+          // Safely handle null and undefined by using a default empty object
+          const sourceObj = item.source_warehouse || {};
           
-          // First check if sourceWarehouse exists at all
-          if (sourceWarehouse) {
-            // Then check if it's an object with a name property
-            if (typeof sourceWarehouse === 'object' && 
-                'name' in sourceWarehouse && 
-                sourceWarehouse.name) {
-              
-              validRequests.push({
-                ...item,
-                source_warehouse: {
-                  name: String(sourceWarehouse.name)
-                }
-              });
-            } else {
-              // If there's no valid name property
-              validRequests.push({
-                ...item,
-                source_warehouse: null
-              });
-            }
-          } else {
-            // If sourceWarehouse is null or undefined
-            validRequests.push({
-              ...item,
-              source_warehouse: null
-            });
+          // First determine if we have a proper object with a name
+          let warehouseName: string | null = null;
+          
+          // Only try to access properties if we have a non-null object
+          if (
+            typeof sourceObj === 'object' && 
+            sourceObj !== null &&
+            'name' in sourceObj && 
+            typeof sourceObj.name === 'string'
+          ) {
+            warehouseName = sourceObj.name;
           }
+          
+          // Push to valid requests with properly formatted data
+          validRequests.push({
+            ...item,
+            source_warehouse: warehouseName ? { name: warehouseName } : null
+          });
         }
         
         return validRequests;
