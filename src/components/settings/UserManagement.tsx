@@ -5,19 +5,27 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { UserRole } from "@/types";
-import {
-  Card, CardContent, CardHeader, CardTitle, CardDescription,
-  Table, TableHeader, TableRow, TableHead, TableBody, TableCell,
-  Button, Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose,
-  Form, FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescription,
-  Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
-} from "@/components/ui";
+
+// Import UI components individually
+import { Card } from "@/components/ui/card";
+import { CardContent } from "@/components/ui/card";
+import { CardHeader } from "@/components/ui/card";
+import { CardTitle } from "@/components/ui/card";
+import { CardDescription } from "@/components/ui/card";
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose, DialogTrigger } from "@/components/ui/dialog";
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescription } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
+
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, Plus, MoreHorizontal, CheckCircle, XCircle, Pencil } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // User schema for form validation
 const userSchema = z.object({
@@ -122,7 +130,7 @@ const UserManagement = () => {
           .from("user_roles")
           .insert({
             user_id: data.user.id,
-            role: values.role
+            role: values.role as UserRole // Type assertion to UserRole
           });
           
         if (roleError) throw roleError;
@@ -158,7 +166,10 @@ const UserManagement = () => {
     mutationFn: async ({ userId, role }: { userId: string; role: string }) => {
       const { error } = await supabase
         .from("user_roles")
-        .insert({ user_id: userId, role });
+        .insert({ 
+          user_id: userId, 
+          role: role as UserRole // Type assertion to UserRole
+        });
         
       if (error) throw error;
     },
@@ -390,6 +401,7 @@ const UserManagement = () => {
   );
 };
 
+// Role Management component
 const RoleManagement = () => {
   // The role permissions management component
   const roles = Object.values(UserRole);
