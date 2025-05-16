@@ -1,4 +1,3 @@
-
 // User Types
 export interface User {
   id: string;
@@ -257,7 +256,7 @@ export interface Warehouse {
 
 export interface InventoryTransaction {
   id: string;
-  type: "stock_in" | "stock_out" | "transfer" | "adjustment";
+  type: "stock_in" | "stock_out" | "transfer" | "adjustment" | "check_in" | "check_out";
   productId: string;
   sourceWarehouseId?: string;
   targetWarehouseId?: string;
@@ -266,6 +265,23 @@ export interface InventoryTransaction {
   date: string;
   userId: string;
   comments?: string;
+  approval_status?: string;
+  request_id?: string;
+  product_id?: string;
+  source_warehouse_id?: string;
+  target_warehouse_id?: string;
+  transaction_date?: string;
+  notes?: string;
+  user_id?: string;
+  product?: {
+    name: string;
+  };
+  source_warehouse?: {
+    name: string;
+  } | null;
+  target_warehouse?: {
+    name: string;
+  } | null;
 }
 
 export interface GoodsReceiptNote {

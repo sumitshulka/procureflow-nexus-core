@@ -20,20 +20,11 @@ import { ArrowDownToLine, ArrowUpFromLine, MoveRight, Search, Filter } from "luc
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { InventoryTransaction } from "@/types";
 
-interface InventoryTransaction {
-  id: string;
-  type: string;
-  product_id: string;
-  source_warehouse_id: string | null;
-  target_warehouse_id: string | null;
-  quantity: number;
-  reference: string;
-  transaction_date: string;
-  notes: string | null;
-  user_id: string;
-  request_id?: string | null;
-  approval_status?: string | null;
+interface EnhancedInventoryTransaction extends InventoryTransaction {
+  approval_status?: string;
+  request_id?: string;
   product: {
     name: string;
   };
@@ -84,7 +75,7 @@ const InventoryTransactions = () => {
       const userIds = [...new Set(data.map(item => item.user_id))];
       
       if (userIds.length === 0) {
-        return data;
+        return data as EnhancedInventoryTransaction[];
       }
       
       // Fetch all relevant user data in a single query
@@ -96,11 +87,11 @@ const InventoryTransactions = () => {
       if (userError) {
         console.error("Error fetching user data:", userError);
         // Return data even if user fetch fails
-        return data;
+        return data as EnhancedInventoryTransaction[];
       }
       
       // Create a user map for quick lookups
-      const userMap = (userData || []).reduce((acc, user) => {
+      const userMap = (userData || []).reduce((acc: Record<string, any>, user) => {
         acc[user.id] = user;
         return acc;
       }, {});
@@ -111,7 +102,7 @@ const InventoryTransactions = () => {
         user: {
           email: userMap[transaction.user_id]?.full_name || "Unknown User"
         }
-      })) as InventoryTransaction[];
+      })) as EnhancedInventoryTransaction[];
     },
   });
 
@@ -137,14 +128,14 @@ const InventoryTransactions = () => {
     {
       id: "date",
       header: "Date",
-      cell: (row: InventoryTransaction) => (
-        <div>{format(new Date(row.transaction_date), "MMM dd, yyyy HH:mm")}</div>
+      cell: (row: EnhancedInventoryTransaction) => (
+        <div>{format(new Date(row.transaction_date || row.date || ''), "MMM dd, yyyy HH:mm")}</div>
       ),
     },
     {
       id: "type",
       header: "Type",
-      cell: (row: InventoryTransaction) => (
+      cell: (row: EnhancedInventoryTransaction) => (
         <div className="capitalize">
           {row.type.replace("_", " ")}
         </div>
@@ -153,17 +144,17 @@ const InventoryTransactions = () => {
     {
       id: "product",
       header: "Product",
-      cell: (row: InventoryTransaction) => <div>{row.product.name}</div>,
+      cell: (row: EnhancedInventoryTransaction) => <div>{row.product?.name}</div>,
     },
     {
       id: "quantity",
       header: "Quantity",
-      cell: (row: InventoryTransaction) => <div>{row.quantity}</div>,
+      cell: (row: EnhancedInventoryTransaction) => <div>{row.quantity}</div>,
     },
     {
       id: "warehouse",
       header: "Warehouse",
-      cell: (row: InventoryTransaction) => (
+      cell: (row: EnhancedInventoryTransaction) => (
         <div>
           {row.type === "check_in" && row.target_warehouse?.name}
           {row.type === "check_out" && row.source_warehouse?.name}
@@ -180,17 +171,17 @@ const InventoryTransactions = () => {
     {
       id: "reference",
       header: "Reference",
-      cell: (row: InventoryTransaction) => <div>{row.reference || "-"}</div>,
+      cell: (row: EnhancedInventoryTransaction) => <div>{row.reference || "-"}</div>,
     },
     {
       id: "request",
       header: "Request ID",
-      cell: (row: InventoryTransaction) => <div>{row.request_id || "-"}</div>,
+      cell: (row: EnhancedInventoryTransaction) => <div>{row.request_id || "-"}</div>,
     },
     {
       id: "status",
       header: "Status",
-      cell: (row: InventoryTransaction) => {
+      cell: (row: EnhancedInventoryTransaction) => {
         if (row.type !== "check_out" || !row.approval_status) return <div>-</div>;
         
         switch (row.approval_status) {
@@ -208,14 +199,14 @@ const InventoryTransactions = () => {
     {
       id: "notes",
       header: "Notes",
-      cell: (row: InventoryTransaction) => (
+      cell: (row: EnhancedInventoryTransaction) => (
         <div className="max-w-xs truncate">{row.notes || "-"}</div>
       ),
     },
     {
       id: "user",
       header: "User",
-      cell: (row: InventoryTransaction) => <div>{row.user?.email || "Unknown"}</div>,
+      cell: (row: EnhancedInventoryTransaction) => <div>{row.user?.email || "Unknown"}</div>,
     },
   ];
 

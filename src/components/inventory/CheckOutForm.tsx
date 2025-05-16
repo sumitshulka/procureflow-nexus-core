@@ -102,7 +102,8 @@ const CheckOutForm = ({ onSuccess }: { onSuccess: () => void }) => {
           throw error;
         }
         
-        return data as PendingCheckoutRequest[] || [];
+        // Force the type assertion to handle the query result
+        return (data || []) as unknown as PendingCheckoutRequest[];
       } catch (error) {
         console.error("Error fetching pending requests:", error);
         return [] as PendingCheckoutRequest[];
