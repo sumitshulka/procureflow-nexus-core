@@ -1,3 +1,4 @@
+
 // User Types
 export interface User {
   id: string;
@@ -265,6 +266,7 @@ export interface InventoryTransaction {
   date: string;
   userId: string;
   comments?: string;
+  // Add the missing fields required by the code
   approval_status?: string;
   request_id?: string;
   product_id?: string;
@@ -282,6 +284,9 @@ export interface InventoryTransaction {
   target_warehouse?: {
     name: string;
   } | null;
+  user?: {
+    email: string;
+  };
 }
 
 export interface GoodsReceiptNote {

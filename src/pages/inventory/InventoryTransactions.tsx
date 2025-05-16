@@ -75,7 +75,8 @@ const InventoryTransactions = () => {
       const userIds = [...new Set(data.map(item => item.user_id))];
       
       if (userIds.length === 0) {
-        return data as EnhancedInventoryTransaction[];
+        // Type cast to match our interface
+        return data as unknown as EnhancedInventoryTransaction[];
       }
       
       // Fetch all relevant user data in a single query
@@ -86,8 +87,8 @@ const InventoryTransactions = () => {
 
       if (userError) {
         console.error("Error fetching user data:", userError);
-        // Return data even if user fetch fails
-        return data as EnhancedInventoryTransaction[];
+        // Return data even if user fetch fails, with type cast
+        return data as unknown as EnhancedInventoryTransaction[];
       }
       
       // Create a user map for quick lookups
@@ -97,12 +98,15 @@ const InventoryTransactions = () => {
       }, {});
       
       // Combine the transaction data with user data
-      return data.map(transaction => ({
+      const enhancedData = data.map(transaction => ({
         ...transaction,
         user: {
           email: userMap[transaction.user_id]?.full_name || "Unknown User"
         }
-      })) as EnhancedInventoryTransaction[];
+      }));
+      
+      // Type cast to match our interface
+      return enhancedData as unknown as EnhancedInventoryTransaction[];
     },
   });
 

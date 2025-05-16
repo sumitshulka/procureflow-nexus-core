@@ -27,7 +27,7 @@ import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Loader2, AlertTriangle } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 
-// Define interface for checkout request data
+// Define interface for checkout request data without recursive types
 interface PendingCheckoutRequest {
   id: string;
   product_id: string;
@@ -102,8 +102,8 @@ const CheckOutForm = ({ onSuccess }: { onSuccess: () => void }) => {
           throw error;
         }
         
-        // Force the type assertion to handle the query result
-        return (data || []) as unknown as PendingCheckoutRequest[];
+        // Type assertion without recursive types
+        return (data || []) as PendingCheckoutRequest[];
       } catch (error) {
         console.error("Error fetching pending requests:", error);
         return [] as PendingCheckoutRequest[];
