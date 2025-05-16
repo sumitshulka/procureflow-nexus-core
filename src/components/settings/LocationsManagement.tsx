@@ -99,9 +99,9 @@ const LocationsManagement = () => {
         throw new Error("Name is required");
       }
       
-      // Fix: Create a properly typed object with the required name field
+      // Create a properly typed object with the required name field
       const locationData = {
-        name: values.name, // This ensures name is required
+        name: values.name, 
         address: values.address || null,
         city: values.city || null,
         state: values.state || null,
@@ -115,7 +115,10 @@ const LocationsManagement = () => {
         .insert([locationData])
         .select();
       
-      if (error) throw error;
+      if (error) {
+        console.error("Error creating location:", error);
+        throw error;
+      }
       return data;
     },
     onSuccess: () => {
@@ -227,6 +230,8 @@ const LocationsManagement = () => {
 
   // Handle form submission
   const onSubmit = (values: LocationFormValues) => {
+    console.log("Submitting location form with values:", values);
+    
     if (currentLocation) {
       updateLocation.mutate(values);
     } else {
