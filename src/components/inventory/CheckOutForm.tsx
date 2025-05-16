@@ -27,6 +27,7 @@ import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Loader2, AlertTriangle } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 
+// Define interface for checkout request data
 interface PendingCheckoutRequest {
   id: string;
   product_id: string;
@@ -36,6 +37,7 @@ interface PendingCheckoutRequest {
   request_id: string | null;
   transaction_date: string;
   notes: string | null;
+  approval_status: string;
   product: {
     name: string;
   };
@@ -82,6 +84,7 @@ const CheckOutForm = ({ onSuccess }) => {
           request_id,
           transaction_date,
           notes,
+          approval_status,
           product:product_id(name),
           source_warehouse:source_warehouse_id(name)
         `)
@@ -97,7 +100,7 @@ const CheckOutForm = ({ onSuccess }) => {
         });
         throw error;
       }
-      return data || [] as PendingCheckoutRequest[];
+      return data as PendingCheckoutRequest[];
     },
   });
 
