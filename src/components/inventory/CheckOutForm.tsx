@@ -115,8 +115,8 @@ const CheckOutForm = ({ onSuccess }: { onSuccess: () => void }) => {
             continue;
           }
           
-          // Make sure source_warehouse has a name property before adding to valid requests
-          if ('name' in item.source_warehouse) {
+          // Safely check if name property exists before accessing it
+          if ('name' in item.source_warehouse && item.source_warehouse.name) {
             validRequests.push({
               ...item,
               source_warehouse: {
