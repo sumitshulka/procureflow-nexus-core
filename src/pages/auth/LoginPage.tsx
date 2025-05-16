@@ -62,117 +62,147 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-procurement-50 to-procurement-100 px-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-800">
-            <span className="text-procurement-600">Procurement</span> Management
+    <div className="flex min-h-screen">
+      {/* Left section - Decorative side */}
+      <div className="hidden md:flex md:w-1/2 bg-gradient-to-br from-procurement-600 to-procurement-800 text-white p-12 flex-col justify-center">
+        <div className="max-w-md mx-auto">
+          <h1 className="text-4xl font-bold mb-6">
+            Procurement Management System
           </h1>
-          <p className="text-gray-600 mt-2">
-            Sign in to access your procurement dashboard
+          <p className="text-lg mb-8 text-procurement-100">
+            Streamline your procurement process with our powerful platform. 
+            Manage requests, track orders, and optimize your supply chain in one place.
           </p>
-        </div>
-
-        <Card className="shadow-lg border-0">
-          <CardHeader className="space-y-1">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-2xl">Sign In</CardTitle>
-              <div className="h-10 w-10 rounded-full bg-procurement-100 flex items-center justify-center">
-                <LogIn className="h-5 w-5 text-procurement-600" />
+          <div className="bg-white/10 p-6 rounded-lg backdrop-blur-sm border border-white/20">
+            <p className="italic mb-4">
+              "This platform has transformed how we handle procurement across our organization. It's intuitive and powerful."
+            </p>
+            <div className="flex items-center">
+              <div className="w-10 h-10 rounded-full bg-procurement-100 text-procurement-700 flex items-center justify-center font-bold mr-3">
+                JS
+              </div>
+              <div>
+                <p className="font-medium">Jane Smith</p>
+                <p className="text-sm text-procurement-100">Procurement Director</p>
               </div>
             </div>
-            <CardDescription>
-              Enter your credentials to access your account
-            </CardDescription>
-          </CardHeader>
-          <form onSubmit={handleSubmit}>
-            <CardContent className="space-y-4">
-              {loginError && (
-                <div className="bg-destructive/10 text-destructive p-3 rounded-md text-sm">
-                  {loginError}
+          </div>
+        </div>
+      </div>
+
+      {/* Right section - Login form */}
+      <div className="w-full md:w-1/2 flex items-center justify-center px-6 py-8 md:py-0 bg-gray-50">
+        <div className="w-full max-w-md">
+          <div className="text-center md:text-left mb-8">
+            <h2 className="text-3xl font-bold text-gray-800">
+              Welcome Back
+            </h2>
+            <p className="text-gray-600 mt-2">
+              Please sign in to your account
+            </p>
+          </div>
+
+          <Card className="shadow-md border-0">
+            <CardHeader className="space-y-1">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-2xl">Sign In</CardTitle>
+                <div className="h-10 w-10 rounded-full bg-procurement-100 flex items-center justify-center">
+                  <LogIn className="h-5 w-5 text-procurement-600" />
                 </div>
-              )}
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-sm font-medium">Email</Label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  placeholder="your.email@company.com"
-                  value={credentials.email}
-                  onChange={handleChange}
-                  className="h-11"
-                  required
-                />
               </div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="password" className="text-sm font-medium">Password</Label>
-                  <Link
-                    to="/forgot-password"
-                    className="text-xs text-procurement-600 hover:text-procurement-500 hover:underline"
-                  >
-                    Forgot password?
-                  </Link>
-                </div>
-                <div className="relative">
+              <CardDescription>
+                Enter your credentials to access your account
+              </CardDescription>
+            </CardHeader>
+            <form onSubmit={handleSubmit}>
+              <CardContent className="space-y-4">
+                {loginError && (
+                  <div className="bg-destructive/10 text-destructive p-3 rounded-md text-sm">
+                    {loginError}
+                  </div>
+                )}
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="text-sm font-medium">Email</Label>
                   <Input
-                    id="password"
-                    name="password"
-                    type={showPassword ? "text" : "password"}
-                    value={credentials.password}
+                    id="email"
+                    name="email"
+                    type="email"
+                    placeholder="your.email@company.com"
+                    value={credentials.email}
                     onChange={handleChange}
-                    className="h-11 pr-10"
+                    className="h-11"
                     required
                   />
-                  <button
-                    type="button"
-                    onClick={togglePasswordVisibility}
-                    className="absolute right-3 top-2.5 text-gray-500 hover:text-gray-700"
-                    tabIndex={-1}
-                  >
-                    {showPassword ? 
-                      <EyeOff className="h-5 w-5" /> : 
-                      <Eye className="h-5 w-5" />
-                    }
-                  </button>
                 </div>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="remember"
-                  checked={credentials.remember}
-                  onCheckedChange={handleCheckboxChange}
-                  className="data-[state=checked]:bg-procurement-600 data-[state=checked]:border-procurement-600"
-                />
-                <label 
-                  htmlFor="remember" 
-                  className="text-sm text-gray-600 font-normal cursor-pointer select-none"
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="password" className="text-sm font-medium">Password</Label>
+                    <Link
+                      to="/forgot-password"
+                      className="text-xs text-procurement-600 hover:text-procurement-500 hover:underline"
+                    >
+                      Forgot password?
+                    </Link>
+                  </div>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      name="password"
+                      type={showPassword ? "text" : "password"}
+                      value={credentials.password}
+                      onChange={handleChange}
+                      className="h-11 pr-10"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={togglePasswordVisibility}
+                      className="absolute right-3 top-2.5 text-gray-500 hover:text-gray-700"
+                      tabIndex={-1}
+                    >
+                      {showPassword ? 
+                        <EyeOff className="h-5 w-5" /> : 
+                        <Eye className="h-5 w-5" />
+                      }
+                    </button>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="remember"
+                    checked={credentials.remember}
+                    onCheckedChange={handleCheckboxChange}
+                    className="data-[state=checked]:bg-procurement-600 data-[state=checked]:border-procurement-600"
+                  />
+                  <label 
+                    htmlFor="remember" 
+                    className="text-sm text-gray-600 font-normal cursor-pointer select-none"
+                  >
+                    Remember me for 30 days
+                  </label>
+                </div>
+              </CardContent>
+              <CardFooter>
+                <Button
+                  type="submit"
+                  className="w-full h-11 bg-procurement-600 hover:bg-procurement-700 transition-all duration-300 group"
+                  disabled={isLoading}
                 >
-                  Remember me for 30 days
-                </label>
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button
-                type="submit"
-                className="w-full h-11 bg-procurement-600 hover:bg-procurement-700 transition-all duration-300 group"
-                disabled={isLoading}
-              >
-                <span className="mr-1">{isLoading ? "Signing In..." : "Sign In"}</span>
-                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-              </Button>
-            </CardFooter>
-          </form>
-        </Card>
+                  <span className="mr-1">{isLoading ? "Signing In..." : "Sign In"}</span>
+                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </Button>
+              </CardFooter>
+            </form>
+          </Card>
 
-        <div className="text-center mt-6">
-          <p className="text-sm text-gray-600">
-            Don't have an account?{" "}
-            <Link to="/signup" className="text-procurement-600 hover:text-procurement-500 hover:underline">
-              Create an account
-            </Link>
-          </p>
+          <div className="text-center mt-6">
+            <p className="text-sm text-gray-600">
+              Don't have an account?{" "}
+              <Link to="/signup" className="text-procurement-600 hover:text-procurement-500 hover:underline">
+                Create an account
+              </Link>
+            </p>
+          </div>
         </div>
       </div>
     </div>
