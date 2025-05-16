@@ -10,9 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogC
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescription } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Switch } from "@/components/ui/switch";
-import { Loader2, Plus, Pencil, Trash2, Check, X } from "lucide-react";
+import { Loader2, Plus, Pencil, Check, X } from "lucide-react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -28,6 +26,15 @@ interface CustomRole {
   id: string;
   name: string;
   description: string | null;
+  created_at: string;
+}
+
+// Role permission interface
+interface RolePermission {
+  id: string;
+  role_id: string;
+  module_id: string;
+  permission: string;
   created_at: string;
 }
 
@@ -80,25 +87,27 @@ const RolesList = () => {
       const { data, error } = await supabase
         .from("custom_roles")
         .select("*")
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false }) as { data: CustomRole[] | null, error: any };
         
       if (error) throw error;
-      return data as CustomRole[];
-    },
-    onSuccess: (data) => {
-      // For each role, fetch its permissions
-      data.forEach(role => {
-        fetchRolePermissions(role.id);
-      });
+      return data || [];
     }
   });
+  
+  // Effect to fetch permissions for roles when they are loaded
+  useEffect(() => {
+    // For each role, fetch its permissions
+    roles.forEach(role => {
+      fetchRolePermissions(role.id);
+    });
+  }, [roles]);
   
   // Fetch permissions for a specific role
   const fetchRolePermissions = async (roleId: string) => {
     const { data, error } = await supabase
       .from("role_permissions")
       .select("*")
-      .eq("role_id", roleId);
+      .eq("role_id", roleId) as { data: RolePermission[] | null, error: any };
       
     if (error) {
       console.error("Error fetching role permissions:", error);
@@ -107,12 +116,15 @@ const RolesList = () => {
     
     // Group permissions by module
     const permissionsByModule: Record<string, string[]> = {};
-    data.forEach(item => {
-      if (!permissionsByModule[item.module_id]) {
-        permissionsByModule[item.module_id] = [];
-      }
-      permissionsByModule[item.module_id].push(item.permission);
-    });
+    
+    if (data) {
+      data.forEach(item => {
+        if (!permissionsByModule[item.module_id]) {
+          permissionsByModule[item.module_id] = [];
+        }
+        permissionsByModule[item.module_id].push(item.permission);
+      });
+    }
     
     setRolePermissions(prev => ({
       ...prev,
@@ -130,23 +142,25 @@ const RolesList = () => {
           description: values.description || null,
         })
         .select()
-        .single();
+        .single() as { data: CustomRole | null, error: any };
         
       if (error) throw error;
       return data;
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["custom_roles"] });
-      setRolePermissions(prev => ({
-        ...prev,
-        [data.id]: {}
-      }));
-      toast({
-        title: "Role created",
-        description: "The role has been successfully created.",
-      });
-      setIsCreateOpen(false);
-      form.reset();
+      if (data) {
+        queryClient.invalidateQueries({ queryKey: ["custom_roles"] });
+        setRolePermissions(prev => ({
+          ...prev,
+          [data.id]: {}
+        }));
+        toast({
+          title: "Role created",
+          description: "The role has been successfully created.",
+        });
+        setIsCreateOpen(false);
+        form.reset();
+      }
     },
     onError: (error) => {
       toast({
