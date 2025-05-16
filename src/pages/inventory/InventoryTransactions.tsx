@@ -11,12 +11,10 @@ import CheckOutForm from "@/components/inventory/CheckOutForm";
 import TransferForm from "@/components/inventory/TransferForm";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -25,7 +23,7 @@ import {
   Card,
   CardContent,
 } from "@/components/ui/card";
-import { PlusCircle, ArrowDownToLine, ArrowUpFromLine, MoveHorizontal, FileBarChart } from "lucide-react";
+import { PlusCircle } from "lucide-react";
 
 interface InventoryTransaction {
   id: string;
@@ -47,29 +45,6 @@ interface InventoryTransaction {
   target_warehouse: {
     name: string;
   } | null;
-  user: {
-    email: string;
-  };
-}
-
-// Define a raw transaction data type to handle possible error states from Supabase queries
-interface RawTransactionData {
-  id: string;
-  type: string;
-  product_id: string;
-  source_warehouse_id: string | null;
-  target_warehouse_id: string | null;
-  quantity: number;
-  reference: string;
-  transaction_date: string;
-  notes: string | null;
-  user_id: string;
-  product: {
-    name: string;
-  };
-  source_warehouse: any; // Could be an error object
-  target_warehouse: any; // Could be an error object
-  user: any; // Could be an error object
 }
 
 const InventoryTransactions = () => {
@@ -82,14 +57,14 @@ const InventoryTransactions = () => {
   const { data: transactions = [], isLoading } = useQuery({
     queryKey: ["inventory_transactions"],
     queryFn: async () => {
+      // First fetch all transactions with product and warehouse data
       const { data, error } = await supabase
         .from("inventory_transactions")
         .select(`
           *,
           product:product_id(name),
           source_warehouse:source_warehouse_id(name),
-          target_warehouse:target_warehouse_id(name),
-          user:user_id(email)
+          target_warehouse:target_warehouse_id(name)
         `)
         .order("transaction_date", { ascending: false });
       
@@ -102,24 +77,32 @@ const InventoryTransactions = () => {
         throw error;
       }
 
-      // Cast the data to unknown first to bypass TypeScript's strict checks
-      const rawData = data as unknown as RawTransactionData[];
+      // Create a set of unique user IDs to fetch
+      const userIds = [...new Set(data.map(item => item.user_id))];
       
-      // Transform the raw data to match our expected interface
-      const transformedData: InventoryTransaction[] = rawData.map(item => {
-        return {
-          ...item,
-          source_warehouse: item.source_warehouse_id ? 
-            (item.source_warehouse?.error ? { name: "Unknown" } : item.source_warehouse) : 
-            null,
-          target_warehouse: item.target_warehouse_id ? 
-            (item.target_warehouse?.error ? { name: "Unknown" } : item.target_warehouse) : 
-            null,
-          user: item.user?.error ? { email: "Unknown" } : item.user
-        };
-      });
+      // Fetch all relevant user emails in a single query
+      const { data: userData, error: userError } = await supabase
+        .from("profiles")
+        .select("id, full_name, email")
+        .in("id", userIds);
+
+      if (userError) {
+        console.error("Error fetching user data:", userError);
+      }
       
-      return transformedData;
+      // Create a user map for quick lookups
+      const userMap = (userData || []).reduce((acc, user) => {
+        acc[user.id] = user;
+        return acc;
+      }, {});
+      
+      // Combine the transaction data with user data
+      return data.map(transaction => ({
+        ...transaction,
+        user: {
+          email: userMap[transaction.user_id]?.email || "Unknown User"
+        }
+      }));
     },
   });
 
@@ -183,7 +166,7 @@ const InventoryTransactions = () => {
     {
       id: "user",
       header: "User",
-      cell: (row: InventoryTransaction) => <div>{row.user.email}</div>,
+      cell: (row: InventoryTransaction) => <div>{row.user?.email || "Unknown"}</div>,
     },
   ];
 
@@ -200,7 +183,10 @@ const InventoryTransactions = () => {
         actions={
           <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
-              <Button>New Transaction</Button>
+              <Button>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                New Transaction
+              </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[600px]">
               <DialogHeader>
