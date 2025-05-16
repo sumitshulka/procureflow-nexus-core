@@ -24,7 +24,8 @@ const ProtectedRoute = ({ requiredRoles }: ProtectedRouteProps) => {
   // If user is not authenticated, redirect to login
   if (!user) {
     console.log("User not authenticated, redirecting to login");
-    return <Navigate to="/login" replace />;
+    // Save the current path to redirect back after login
+    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
 
   // Log user data for debugging

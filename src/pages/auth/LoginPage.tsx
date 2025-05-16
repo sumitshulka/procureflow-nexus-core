@@ -1,6 +1,6 @@
 
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Eye, EyeOff, LogIn, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,7 +18,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/components/ui/use-toast";
 
 const LoginPage = () => {
-  const { login, isLoading } = useAuth();
+  const { login, isLoading, user } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  
+  // Get redirect path from location state or default to "/"
+  const from = location.state?.from || "/";
   
   const [credentials, setCredentials] = useState({
     email: "",
@@ -28,6 +33,14 @@ const LoginPage = () => {
 
   const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
+
+  // Redirect if user is already logged in
+  useEffect(() => {
+    if (user) {
+      console.log("User already authenticated, redirecting to:", from);
+      navigate(from, { replace: true });
+    }
+  }, [user, navigate, from]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -46,6 +59,7 @@ const LoginPage = () => {
     
     try {
       await login(credentials.email, credentials.password);
+      // Don't navigate here - the useEffect will handle it once user state updates
     } catch (error: any) {
       const errorMessage = error?.message || "An error occurred during login";
       setLoginError(errorMessage);
@@ -60,6 +74,15 @@ const LoginPage = () => {
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
   };
+
+  // If already loading auth state, show loading indicator
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-procurement-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen">

@@ -2,7 +2,7 @@
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
@@ -21,7 +21,14 @@ import UnauthorizedPage from "./pages/auth/UnauthorizedPage";
 import NotFound from "./pages/NotFound";
 import { UserRole } from "./types";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      staleTime: 30000,
+    },
+  },
+});
 
 const App = () => {
   return (
@@ -86,6 +93,7 @@ const App = () => {
               </Route>
             </Route>
             
+            {/* Redirect root to dashboard */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

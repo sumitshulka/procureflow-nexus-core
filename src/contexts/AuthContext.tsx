@@ -39,6 +39,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        console.log("Auth state change event:", event);
         setSession(session);
         setUser(session?.user ?? null);
         
@@ -54,13 +55,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log("Initial session check:", session ? "Session exists" : "No session");
       setSession(session);
       setUser(session?.user ?? null);
       
       if (session?.user) {
         fetchUserData(session.user.id);
+      } else {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     });
 
     return () => {
@@ -113,25 +116,28 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         description: "Failed to load user data.",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const login = async (email: string, password: string) => {
     try {
       setIsLoading(true);
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { error, data } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
+      
+      console.log("Login successful, session:", data.session);
       
       // Log the user activity
       await logUserActivity("login");
-      
-      navigate("/");
     } catch (error: any) {
       toast({
         title: "Login failed",
         description: error.message || "Please check your credentials and try again.",
         variant: "destructive",
       });
+      throw error; // Re-throw the error so the login page can handle it
     } finally {
       setIsLoading(false);
     }
