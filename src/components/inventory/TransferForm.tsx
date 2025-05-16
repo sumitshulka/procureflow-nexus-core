@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -328,7 +327,7 @@ const TransferForm: React.FC<TransferFormProps> = ({ onSuccess }) => {
                 </FormControl>
                 <SelectContent>
                   {inventoryItems.map((item) => (
-                    <SelectItem key={item.id} value={item.composite_id || ""}>
+                    <SelectItem key={item.id} value={item.composite_id || item.id}>
                       {item.display_name}
                     </SelectItem>
                   ))}

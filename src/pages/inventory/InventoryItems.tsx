@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -294,7 +295,7 @@ const InventoryItems = () => {
               <SelectValue placeholder="All Warehouses" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Warehouses</SelectItem>
+              <SelectItem key="all-warehouses" value="_all">All Warehouses</SelectItem>
               {warehouses.map((warehouse) => (
                 <SelectItem key={warehouse.id} value={warehouse.id}>
                   {warehouse.name}
@@ -315,7 +316,7 @@ const InventoryItems = () => {
               <SelectValue placeholder="All Categories" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Categories</SelectItem>
+              <SelectItem key="all-categories" value="_all">All Categories</SelectItem>
               {categories.map((category) => (
                 <SelectItem key={category.id} value={category.id}>
                   {category.name}
@@ -336,10 +337,10 @@ const InventoryItems = () => {
               <SelectValue placeholder="All Stock Levels" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Stock Levels</SelectItem>
-              <SelectItem value="normal">In Stock</SelectItem>
-              <SelectItem value="low">Low Stock</SelectItem>
-              <SelectItem value="out">Out of Stock</SelectItem>
+              <SelectItem key="all-stock" value="_all">All Stock Levels</SelectItem>
+              <SelectItem key="normal" value="normal">In Stock</SelectItem>
+              <SelectItem key="low" value="low">Low Stock</SelectItem>
+              <SelectItem key="out" value="out">Out of Stock</SelectItem>
             </SelectContent>
           </Select>
         </div>
