@@ -11,6 +11,7 @@ import Dashboard from "./pages/Dashboard";
 import ProductCatalog from "./pages/ProductCatalog";
 import AddProduct from "./pages/AddProduct";
 import ProcurementRequests from "./pages/ProcurementRequests";
+import Settings from "./pages/Settings";
 import LoginPage from "./pages/auth/LoginPage";
 import SignupPage from "./pages/auth/SignupPage";
 import ForgotPasswordPage from "./pages/auth/ForgotPasswordPage";
@@ -60,7 +61,16 @@ const App = () => {
                 {/* Procurement requests - accessible by all authenticated users */}
                 <Route path="/requests" element={<ProcurementRequests />} />
                 
-                {/* Additional protected routes will be added here */}
+                {/* Settings - accessible by admins */}
+                <Route 
+                  element={
+                    <ProtectedRoute 
+                      requiredRoles={[UserRole.ADMIN]} 
+                    />
+                  }
+                >
+                  <Route path="/settings" element={<Settings />} />
+                </Route>
               </Route>
             </Route>
             

@@ -29,6 +29,8 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useAuth } from "@/contexts/AuthContext";
+import { UserRole } from "@/types";
 
 const AppSidebar: React.FC = () => {
   // Using `state` instead of `collapsed` based on SidebarContext definition
@@ -36,12 +38,16 @@ const AppSidebar: React.FC = () => {
   const collapsed = state === "collapsed";
   const location = useLocation();
   const currentPath = location.pathname;
+  const { userData } = useAuth();
 
   const isActive = (path: string) => currentPath === path;
   const getNavCls = ({ isActive }: { isActive: boolean }) =>
     isActive
       ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
       : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground";
+
+  // Check if user has admin role
+  const isAdmin = userData?.roles?.includes(UserRole.ADMIN);
 
   const mainItems = [
     { title: "Dashboard", url: "/", icon: Home },
@@ -90,11 +96,14 @@ const AppSidebar: React.FC = () => {
       url: "/reports",
       icon: Archive,
     },
-    {
-      title: "Settings",
-      url: "/settings",
-      icon: Settings,
-    },
+    // Only show settings for admin users
+    ...(isAdmin ? [
+      {
+        title: "Settings",
+        url: "/settings",
+        icon: Settings,
+      }
+    ] : []),
   ];
 
   return (
