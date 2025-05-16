@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -429,7 +428,7 @@ const UsersList = () => {
                           <SelectContent>
                             {departments && departments.length > 0 ? (
                               departments.map((dept) => (
-                                <SelectItem key={dept.id} value={dept.id || "_none"}>
+                                <SelectItem key={dept.id} value={dept.id || "_none_dept"}>
                                   {dept.name || "Unnamed Department"}
                                 </SelectItem>
                               ))
@@ -478,7 +477,7 @@ const UsersList = () => {
                         </FormControl>
                         <SelectContent>
                           {Object.values(UserRole).map((role) => (
-                            <SelectItem key={role} value={role || "_default_role"}>
+                            <SelectItem key={role || "_unknown"} value={role || "_default_role"}>
                               {role ? role.replace('_', ' ').charAt(0).toUpperCase() + role.replace('_', ' ').slice(1).toLowerCase() : "Default Role"}
                             </SelectItem>
                           ))}
@@ -573,7 +572,7 @@ const UsersList = () => {
                           <SelectContent>
                             {departments && departments.length > 0 ? (
                               departments.map((dept) => (
-                                <SelectItem key={dept.id} value={dept.id || "_none"}>
+                                <SelectItem key={dept.id} value={dept.id || "_none_dept"}>
                                   {dept.name || "Unnamed Department"}
                                 </SelectItem>
                               ))

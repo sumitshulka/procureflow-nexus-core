@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -506,7 +505,7 @@ const RoleManagement = () => {
               <TableRow>
                 <TableHead className="w-[200px]">Module / Role</TableHead>
                 {roles.map(role => (
-                  <TableHead key={role}>{(role || "Unknown").replace('_', ' ')}</TableHead>
+                  <TableHead key={role || "unknown"}>{(role || "Unknown").replace('_', ' ')}</TableHead>
                 ))}
               </TableRow>
             </TableHeader>
@@ -524,7 +523,7 @@ const RoleManagement = () => {
                         {permission.name}
                       </TableCell>
                       {roles.map(role => (
-                        <TableCell key={`${role}-${permission.id}`}>
+                        <TableCell key={`${role || "unknown"}-${permission.id}`}>
                           <Button
                             variant="ghost"
                             size="sm"
