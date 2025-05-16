@@ -73,34 +73,42 @@ const CheckOutForm = ({ onSuccess }) => {
   const { data: pendingRequests = [], isLoading: isLoadingRequests } = useQuery({
     queryKey: ["pending_checkout_requests"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("inventory_transactions")
-        .select(`
-          id,
-          product_id,
-          source_warehouse_id,
-          quantity,
-          reference,
-          request_id,
-          transaction_date,
-          notes,
-          approval_status,
-          product:product_id(name),
-          source_warehouse:source_warehouse_id(name)
-        `)
-        .eq("type", "check_out")
-        .eq("approval_status", "pending")
-        .order("transaction_date", { ascending: false });
+      try {
+        const { data, error } = await supabase
+          .from("inventory_transactions")
+          .select(`
+            id,
+            product_id,
+            source_warehouse_id,
+            quantity,
+            reference,
+            request_id,
+            transaction_date,
+            notes,
+            approval_status,
+            product:product_id(name),
+            source_warehouse:source_warehouse_id(name)
+          `)
+          .eq("type", "check_out")
+          .eq("approval_status", "pending")
+          .order("transaction_date", { ascending: false });
 
-      if (error) {
-        toast({
-          title: "Error",
-          description: "Failed to fetch pending checkout requests",
-          variant: "destructive",
-        });
-        throw error;
+        if (error) {
+          toast({
+            title: "Error",
+            description: "Failed to fetch pending checkout requests",
+            variant: "destructive",
+          });
+          throw error;
+        }
+        
+        // Return empty array if no data to avoid type errors
+        return (data || []) as PendingCheckoutRequest[];
+      } catch (error) {
+        console.error("Error fetching pending requests:", error);
+        // Return empty array on error to maintain type safety
+        return [] as PendingCheckoutRequest[];
       }
-      return data as PendingCheckoutRequest[];
     },
   });
 
