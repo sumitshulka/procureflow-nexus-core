@@ -68,7 +68,7 @@ const RoleManagement = () => {
                     ) : (
                       roles.map((role) => (
                         <TableRow key={role.id}>
-                          <TableCell className="font-medium">{role.name}</TableCell>
+                          <TableCell className="font-medium">{role.name || "Unnamed Role"}</TableCell>
                           <TableCell>{role.description || "-"}</TableCell>
                           <TableCell>{new Date(role.created_at).toLocaleDateString()}</TableCell>
                         </TableRow>

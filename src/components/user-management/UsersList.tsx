@@ -426,10 +426,10 @@ const UsersList = () => {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {departments.length > 0 ? (
+                            {departments && departments.length > 0 ? (
                               departments.map((dept) => (
                                 <SelectItem key={dept.id} value={dept.id || "_none"}>
-                                  {dept.name}
+                                  {dept.name || "Unnamed Department"}
                                 </SelectItem>
                               ))
                             ) : (
@@ -477,8 +477,8 @@ const UsersList = () => {
                         </FormControl>
                         <SelectContent>
                           {Object.values(UserRole).map((role) => (
-                            <SelectItem key={role} value={role}>
-                              {role.replace('_', ' ').charAt(0).toUpperCase() + role.replace('_', ' ').slice(1).toLowerCase()}
+                            <SelectItem key={role} value={role || "_default_role"}>
+                              {role ? role.replace('_', ' ').charAt(0).toUpperCase() + role.replace('_', ' ').slice(1).toLowerCase() : "Default Role"}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -570,10 +570,10 @@ const UsersList = () => {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {departments.length > 0 ? (
+                            {departments && departments.length > 0 ? (
                               departments.map((dept) => (
                                 <SelectItem key={dept.id} value={dept.id || "_none"}>
-                                  {dept.name}
+                                  {dept.name || "Unnamed Department"}
                                 </SelectItem>
                               ))
                             ) : (

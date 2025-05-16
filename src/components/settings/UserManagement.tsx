@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -280,7 +279,7 @@ const UserManagement = () => {
                               </FormControl>
                               <SelectContent>
                                 {Object.values(UserRole).map((role) => (
-                                  <SelectItem key={role} value={role}>
+                                  <SelectItem key={role} value={role || "_default_role"}>
                                     {role.replace('_', ' ').charAt(0).toUpperCase() + role.replace('_', ' ').slice(1).toLowerCase()}
                                   </SelectItem>
                                 ))}
