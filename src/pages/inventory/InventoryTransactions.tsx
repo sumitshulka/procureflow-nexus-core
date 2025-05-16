@@ -1,18 +1,31 @@
+
 import React, { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import DataTable from "@/components/common/DataTable";
 import { format } from "date-fns";
 import { useToast } from "@/components/ui/use-toast";
 import PageHeader from "@/components/common/PageHeader";
-import { 
-  CheckInForm, 
-  CheckOutForm, 
-  TransferForm 
-} from "@/components/inventory";
+import { CheckInForm } from "@/components/inventory/CheckInForm";
+import { CheckOutForm } from "@/components/inventory/CheckOutForm";
+import { TransferForm } from "@/components/inventory/TransferForm";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PlusCircle, ArrowDownToLine, ArrowUpFromLine, MoveHorizontal, FileBarChart } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Card,
+  CardContent,
+} from "@/components/ui/card";
+import { PlusCircle, ArrowDownToLine, ArrowUpFromLine, MoveHorizontal, FileBarChart } from "lucide-react";
 
 interface InventoryTransaction {
   id: string;
