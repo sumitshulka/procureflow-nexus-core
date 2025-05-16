@@ -307,6 +307,109 @@ export type Database = {
         }
         Relationships: []
       }
+      procurement_request_items: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          estimated_price: number | null
+          id: string
+          product_id: string | null
+          quantity: number
+          request_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          estimated_price?: number | null
+          id?: string
+          product_id?: string | null
+          quantity?: number
+          request_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          estimated_price?: number | null
+          id?: string
+          product_id?: string | null
+          quantity?: number
+          request_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "procurement_request_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "procurement_request_items_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "procurement_request_details"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "procurement_request_items_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "procurement_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      procurement_requests: {
+        Row: {
+          created_at: string | null
+          date_created: string
+          date_needed: string
+          department: string | null
+          description: string | null
+          estimated_value: number | null
+          id: string
+          priority: Database["public"]["Enums"]["request_priority"]
+          request_number: string
+          requester_id: string
+          status: Database["public"]["Enums"]["request_status"]
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          date_created?: string
+          date_needed: string
+          department?: string | null
+          description?: string | null
+          estimated_value?: number | null
+          id?: string
+          priority?: Database["public"]["Enums"]["request_priority"]
+          request_number: string
+          requester_id: string
+          status?: Database["public"]["Enums"]["request_status"]
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          date_created?: string
+          date_needed?: string
+          department?: string | null
+          description?: string | null
+          estimated_value?: number | null
+          id?: string
+          priority?: Database["public"]["Enums"]["request_priority"]
+          request_number?: string
+          requester_id?: string
+          status?: Database["public"]["Enums"]["request_status"]
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           category_id: string
@@ -578,7 +681,27 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      procurement_request_details: {
+        Row: {
+          created_at: string | null
+          date_created: string | null
+          date_needed: string | null
+          department: string | null
+          description: string | null
+          estimated_value: number | null
+          id: string | null
+          priority: Database["public"]["Enums"]["request_priority"] | null
+          request_number: string | null
+          requester_department: string | null
+          requester_id: string | null
+          requester_name: string | null
+          status: Database["public"]["Enums"]["request_status"] | null
+          title: string | null
+          total_estimated_value: number | null
+          updated_at: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       has_role: {
@@ -590,6 +713,15 @@ export type Database = {
       }
     }
     Enums: {
+      request_priority: "low" | "medium" | "high" | "urgent"
+      request_status:
+        | "draft"
+        | "submitted"
+        | "in_review"
+        | "approved"
+        | "rejected"
+        | "completed"
+        | "canceled"
       user_role:
         | "admin"
         | "requester"
@@ -713,6 +845,16 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      request_priority: ["low", "medium", "high", "urgent"],
+      request_status: [
+        "draft",
+        "submitted",
+        "in_review",
+        "approved",
+        "rejected",
+        "completed",
+        "canceled",
+      ],
       user_role: [
         "admin",
         "requester",

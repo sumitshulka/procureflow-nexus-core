@@ -1,5 +1,7 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { format } from "date-fns";
 import PageHeader from "@/components/common/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,79 +12,127 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { 
+  Form, 
+  FormControl, 
+  FormDescription, 
+  FormField, 
+  FormItem, 
+  FormLabel, 
+  FormMessage 
+} from "@/components/ui/form";
+import { Textarea } from "@/components/ui/textarea";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import DataTable from "@/components/common/DataTable";
 import { Badge } from "@/components/ui/badge";
-import { Filter, Plus, Search } from "lucide-react";
+import { Filter, Plus, Search, Calendar as CalendarIcon } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/components/ui/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { cn } from "@/lib/utils";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { RequestPriority, RequestStatus } from "@/types";
+
+// Define the type for procurement requests from database
+interface ProcurementRequest {
+  id: string;
+  request_number: string;
+  title: string;
+  requester_id: string;
+  department: string | null;
+  date_created: string;
+  date_needed: string;
+  priority: RequestPriority;
+  status: RequestStatus;
+  estimated_value: number | null;
+  requester_name: string | null;
+}
+
+// Form schema for new requests
+const requestFormSchema = z.object({
+  title: z.string().min(5, "Title must be at least 5 characters"),
+  description: z.string().optional(),
+  department: z.string().optional(),
+  date_needed: z.date({
+    required_error: "Date needed is required",
+  }).refine(date => date > new Date(), {
+    message: "Date needed must be in the future",
+  }),
+  priority: z.enum(["low", "medium", "high", "urgent"]),
+});
+
+type RequestFormValues = z.infer<typeof requestFormSchema>;
 
 const ProcurementRequests = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [requests, setRequests] = useState<ProcurementRequest[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [openNewRequestDialog, setOpenNewRequestDialog] = useState(false);
+  const { user, userData } = useAuth();
+  const navigate = useNavigate();
 
-  // Mock procurement request data
-  const procurementRequests = [
-    {
-      id: "PR-2023-089",
-      title: "Office Furniture for New Branch",
-      requester: "John Doe",
-      department: "Operations",
-      dateCreated: "2023-08-30",
-      dateNeeded: "2023-09-30",
+  const form = useForm<RequestFormValues>({
+    resolver: zodResolver(requestFormSchema),
+    defaultValues: {
+      title: "",
+      description: "",
+      department: userData?.department || "",
       priority: "medium",
-      status: "submitted",
-      estimatedValue: 12500,
+      date_needed: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Default to one week from now
     },
-    {
-      id: "PR-2023-091",
-      title: "IT Equipment for Development Team",
-      requester: "Jane Smith",
-      department: "Technology",
-      dateCreated: "2023-09-01",
-      dateNeeded: "2023-09-20",
-      priority: "high",
-      status: "in_review",
-      estimatedValue: 28750,
-    },
-    {
-      id: "PR-2023-092",
-      title: "Marketing Materials for Q4 Campaign",
-      requester: "Robert Johnson",
-      department: "Marketing",
-      dateCreated: "2023-09-03",
-      dateNeeded: "2023-10-15",
-      priority: "low",
-      status: "approved",
-      estimatedValue: 5600,
-    },
-    {
-      id: "PR-2023-093",
-      title: "Office Supplies Restock",
-      requester: "Sarah Williams",
-      department: "Administration",
-      dateCreated: "2023-09-05",
-      dateNeeded: "2023-09-25",
-      priority: "medium",
-      status: "submitted",
-      estimatedValue: 3200,
-    },
-    {
-      id: "PR-2023-094",
-      title: "Training Materials for New Hires",
-      requester: "Michael Brown",
-      department: "Human Resources",
-      dateCreated: "2023-09-07",
-      dateNeeded: "2023-10-05",
-      priority: "urgent",
-      status: "draft",
-      estimatedValue: 1800,
-    },
-  ];
+  });
 
-  const filteredRequests = procurementRequests.filter((request) => {
+  const fetchRequests = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Fetch from the view that joins with profiles
+      const { data, error } = await supabase
+        .from("procurement_request_details")
+        .select("*");
+
+      if (error) throw error;
+      
+      setRequests(data || []);
+    } catch (error: any) {
+      console.error("Error fetching procurement requests:", error.message);
+      toast({
+        title: "Error",
+        description: "Failed to load procurement requests",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchRequests();
+  }, []);
+
+  const filteredRequests = requests.filter((request) => {
     const matchesSearch =
       searchTerm === "" ||
-      request.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      request.request_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
       request.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      request.requester.toLowerCase().includes(searchTerm.toLowerCase());
+      (request.requester_name && request.requester_name.toLowerCase().includes(searchTerm.toLowerCase()));
     
     const matchesStatus =
       statusFilter === "all" || request.status === statusFilter;
@@ -170,62 +220,121 @@ const ProcurementRequests = () => {
     }
   };
 
+  const onSubmit = async (values: RequestFormValues) => {
+    try {
+      if (!user) {
+        toast({
+          title: "Error",
+          description: "You must be logged in to create a request",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Insert the new request into the database
+      const { data, error } = await supabase
+        .from("procurement_requests")
+        .insert({
+          requester_id: user.id,
+          title: values.title,
+          description: values.description || null,
+          department: values.department || null,
+          date_needed: values.date_needed.toISOString(),
+          priority: values.priority,
+          status: "draft" as RequestStatus,
+          request_number: null, // Will be generated by the trigger
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: `Procurement request ${data.request_number} has been created`,
+      });
+
+      // Close the dialog and refresh the requests
+      setOpenNewRequestDialog(false);
+      form.reset();
+      fetchRequests();
+      
+    } catch (error: any) {
+      console.error("Error creating procurement request:", error.message);
+      toast({
+        title: "Error",
+        description: "Failed to create procurement request",
+        variant: "destructive",
+      });
+    }
+  };
+
   const requestColumns = [
     {
-      id: "id",
+      id: "request_number",
       header: "Request ID",
-      cell: (row: any) => <span className="font-medium">{row.id}</span>,
+      cell: (row: ProcurementRequest) => (
+        <span className="font-medium">{row.request_number}</span>
+      ),
     },
     {
       id: "title",
       header: "Title",
-      cell: (row: any) => <span className="font-medium">{row.title}</span>,
+      cell: (row: ProcurementRequest) => (
+        <span className="font-medium">{row.title}</span>
+      ),
     },
     {
-      id: "requester",
+      id: "requester_name",
       header: "Requester",
-      cell: (row: any) => row.requester,
+      cell: (row: ProcurementRequest) => row.requester_name || "—",
     },
     {
       id: "department",
       header: "Department",
-      cell: (row: any) => row.department,
+      cell: (row: ProcurementRequest) => row.department || "—",
     },
     {
-      id: "dateCreated",
+      id: "date_created",
       header: "Date Created",
-      cell: (row: any) => new Date(row.dateCreated).toLocaleDateString(),
+      cell: (row: ProcurementRequest) => format(new Date(row.date_created), "MMM dd, yyyy"),
     },
     {
-      id: "dateNeeded",
+      id: "date_needed",
       header: "Date Needed",
-      cell: (row: any) => new Date(row.dateNeeded).toLocaleDateString(),
+      cell: (row: ProcurementRequest) => format(new Date(row.date_needed), "MMM dd, yyyy"),
     },
     {
       id: "priority",
       header: "Priority",
-      cell: (row: any) => getPriorityBadge(row.priority),
+      cell: (row: ProcurementRequest) => getPriorityBadge(row.priority),
     },
     {
       id: "status",
       header: "Status",
-      cell: (row: any) => getStatusBadge(row.status),
+      cell: (row: ProcurementRequest) => getStatusBadge(row.status),
     },
     {
-      id: "estimatedValue",
+      id: "estimated_value",
       header: "Est. Value",
-      cell: (row: any) =>
-        new Intl.NumberFormat("en-US", {
-          style: "currency",
-          currency: "USD",
-        }).format(row.estimatedValue),
+      cell: (row: ProcurementRequest) =>
+        row.estimated_value 
+          ? new Intl.NumberFormat("en-US", {
+              style: "currency",
+              currency: "USD",
+            }).format(row.estimated_value)
+          : "—",
     },
     {
       id: "actions",
       header: "",
-      cell: (row: any) => (
+      cell: (row: ProcurementRequest) => (
         <div className="flex justify-end">
-          <Button size="sm" variant="ghost">
+          <Button 
+            size="sm" 
+            variant="ghost" 
+            onClick={() => navigate(`/requests/${row.id}`)}
+          >
             View
           </Button>
         </div>
@@ -239,10 +348,159 @@ const ProcurementRequests = () => {
         title="Procurement Requests"
         description="Manage and track all procurement requests"
         actions={
-          <Button size="sm">
-            <Plus className="mr-2 h-4 w-4" />
-            New Request
-          </Button>
+          <Dialog open={openNewRequestDialog} onOpenChange={setOpenNewRequestDialog}>
+            <DialogTrigger asChild>
+              <Button size="sm">
+                <Plus className="mr-2 h-4 w-4" />
+                New Request
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[525px]">
+              <DialogHeader>
+                <DialogTitle>Create New Procurement Request</DialogTitle>
+                <DialogDescription>
+                  Fill out the form below to create a new procurement request. You can add items to the request after creation.
+                </DialogDescription>
+              </DialogHeader>
+              
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+                  <FormField
+                    control={form.control}
+                    name="title"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Title</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Enter request title" {...field} />
+                        </FormControl>
+                        <FormDescription>
+                          Brief title describing what you need
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Description</FormLabel>
+                        <FormControl>
+                          <Textarea 
+                            placeholder="Add details about your procurement request" 
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="department"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Department</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Your department" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="priority"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Priority</FormLabel>
+                          <Select 
+                            onValueChange={field.onChange} 
+                            defaultValue={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select priority" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="low">Low</SelectItem>
+                              <SelectItem value="medium">Medium</SelectItem>
+                              <SelectItem value="high">High</SelectItem>
+                              <SelectItem value="urgent">Urgent</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  <FormField
+                    control={form.control}
+                    name="date_needed"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <FormLabel>Date Needed</FormLabel>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant={"outline"}
+                                className={cn(
+                                  "w-full pl-3 text-left font-normal",
+                                  !field.value && "text-muted-foreground"
+                                )}
+                              >
+                                {field.value ? (
+                                  format(field.value, "PPP")
+                                ) : (
+                                  <span>Pick a date</span>
+                                )}
+                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={field.value}
+                              onSelect={field.onChange}
+                              disabled={(date) =>
+                                date < new Date()
+                              }
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                        <FormDescription>
+                          When do you need this by?
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <DialogFooter>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={() => setOpenNewRequestDialog(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button type="submit">Create Request</Button>
+                  </DialogFooter>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
         }
       />
 
@@ -280,6 +538,7 @@ const ProcurementRequests = () => {
         columns={requestColumns}
         data={filteredRequests}
         emptyMessage="No procurement requests found"
+        isLoading={isLoading}
       />
     </div>
   );

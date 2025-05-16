@@ -11,6 +11,7 @@ import Dashboard from "./pages/Dashboard";
 import ProductCatalog from "./pages/ProductCatalog";
 import AddProduct from "./pages/AddProduct";
 import ProcurementRequests from "./pages/ProcurementRequests";
+import ProcurementRequestDetail from "./pages/ProcurementRequestDetail";
 import Settings from "./pages/Settings";
 import UserManagement from "./pages/UserManagement";
 import LoginPage from "./pages/auth/LoginPage";
@@ -75,6 +76,7 @@ const App = () => {
                 
                 {/* Procurement requests - accessible by all authenticated users */}
                 <Route path="/requests" element={<ProcurementRequests />} />
+                <Route path="/requests/:id" element={<ProcurementRequestDetail />} />
                 
                 {/* Inventory routes - accessible by admin and inventory managers */}
                 <Route 
