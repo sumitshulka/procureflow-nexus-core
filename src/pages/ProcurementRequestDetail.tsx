@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
@@ -24,7 +25,17 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
-import { FilePenLine, FileText, Plus, Trash2 } from "lucide-react";
+import { 
+  FilePenLine, 
+  FileText, 
+  Plus, 
+  Trash2,
+  Clock,
+  CheckCircle,
+  XCircle,
+  HelpCircle,
+  ClipboardList
+} from 'lucide-react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";

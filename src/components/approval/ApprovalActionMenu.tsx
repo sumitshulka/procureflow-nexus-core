@@ -56,6 +56,23 @@ const ApprovalActionMenu = ({
 
   const isPending = approval.status === 'pending';
 
+  // Move handleDialogConfirm function definition here before it's used
+  const handleDialogConfirm = () => {
+    if (!actionType) return;
+    
+    // Validation for comments
+    if (!comments.trim()) {
+      toast({
+        title: "Comments required",
+        description: "Please provide a reason for this action",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    processAction(actionType, comments);
+  };
+
   const handleAction = (action: ActionType) => {
     if (action === 'approve') {
       processAction(action);
@@ -270,22 +287,6 @@ const ApprovalActionMenu = ({
       </div>
     );
   }
-
-  const handleDialogConfirm = () => {
-    if (!actionType) return;
-    
-    // Validation for comments
-    if (!comments.trim()) {
-      toast({
-        title: "Comments required",
-        description: "Please provide a reason for this action",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    processAction(actionType, comments);
-  };
 
   return (
     <DropdownMenu>

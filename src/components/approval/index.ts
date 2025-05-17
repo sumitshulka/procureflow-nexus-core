@@ -7,3 +7,4 @@ export {
   getApprovalDetails,
   logApprovalAction
 } from './ApprovalWorkflow';
+export { default as ApprovalTimeline } from './ApprovalTimeline';
