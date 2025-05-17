@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,14 +14,25 @@ import {
 import ProductTransactionHistory from "@/components/inventory/ProductTransactionHistory";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Card,
   CardContent,
 } from "@/components/ui/card";
-import { ArrowDownToLine, ArrowUpFromLine, MoveRight, Search, Filter } from "lucide-react";
+import { ArrowDownToLine, ArrowUpFromLine, MoveRight, Search, Filter, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { InventoryTransaction } from "@/types";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface EnhancedInventoryTransaction extends InventoryTransaction {
   // These fields should already exist in the InventoryTransaction interface
@@ -31,10 +41,14 @@ interface EnhancedInventoryTransaction extends InventoryTransaction {
 const InventoryTransactions = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { hasRole } = useAuth();
   const [activeTab, setActiveTab] = useState<string>("transactions");
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");  // Changed from empty string to "all"
   const [typeFilter, setTypeFilter] = useState("all");  // Changed from empty string to "all"
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [transactionToDelete, setTransactionToDelete] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Fetch inventory transactions with related data
   const { data: transactions = [], isLoading } = useQuery({
@@ -96,6 +110,83 @@ const InventoryTransactions = () => {
       return enhancedData as unknown as InventoryTransaction[];
     },
   });
+
+  // Function to handle delete transaction
+  const handleDeleteTransaction = (transactionId: string) => {
+    setTransactionToDelete(transactionId);
+    setDeleteDialogOpen(true);
+  };
+
+  // Function to confirm transaction deletion
+  const confirmDeleteTransaction = async () => {
+    if (!transactionToDelete) return;
+    
+    try {
+      setIsDeleting(true);
+      
+      const { data: transactionData, error: fetchError } = await supabase
+        .from("inventory_transactions")
+        .select("type, approval_status")
+        .eq("id", transactionToDelete)
+        .single();
+        
+      if (fetchError) throw fetchError;
+      
+      // Only allow deletion if it's a check_out and status is draft or submitted
+      if (transactionData.type !== 'check_out' || 
+          (transactionData.approval_status !== 'pending' && 
+           transactionData.approval_status !== 'draft')) {
+        toast({
+          title: "Error",
+          description: "Only pending or draft checkout requests can be deleted",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // First delete related approval requests
+      const { error: approvalError } = await supabase
+        .from("approvals")
+        .delete()
+        .eq("entity_type", "inventory_checkout")
+        .eq("entity_id", transactionToDelete);
+        
+      if (approvalError) {
+        console.error("Error deleting approval:", approvalError);
+        // Continue anyway to delete the transaction
+      }
+      
+      // Then delete the transaction
+      const { error } = await supabase
+        .from("inventory_transactions")
+        .delete()
+        .eq("id", transactionToDelete);
+        
+      if (error) throw error;
+      
+      toast({
+        title: "Success",
+        description: "Checkout request deleted successfully",
+      });
+      
+      // Refresh transactions data
+      queryClient.invalidateQueries({
+        queryKey: ["inventory_transactions"],
+      });
+      
+    } catch (error: any) {
+      console.error("Error deleting transaction:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete checkout request",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+      setDeleteDialogOpen(false);
+      setTransactionToDelete(null);
+    }
+  };
 
   // Filter transactions based on search term, type, and status
   const filteredTransactions = transactions.filter(transaction => {
@@ -214,6 +305,29 @@ const InventoryTransactions = () => {
       header: "User",
       cell: (row: EnhancedInventoryTransaction) => <div>{row.user?.email || "Unknown"}</div>,
     },
+    {
+      id: "actions",
+      header: "",
+      cell: (row: EnhancedInventoryTransaction) => {
+        // Only show delete button for check_out with pending status
+        const canDelete = row.type === "check_out" && 
+                          (row.approval_status === "pending" || row.approval_status === "draft") && 
+                          (hasRole('admin') || hasRole('inventory_manager'));
+        
+        if (!canDelete) return null;
+        
+        return (
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-8 w-8 text-red-500 hover:bg-red-50"
+            onClick={() => handleDeleteTransaction(row.id)}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        );
+      }
+    }
   ];
 
   return (
@@ -222,6 +336,28 @@ const InventoryTransactions = () => {
         title="Inventory Transactions"
         description="Manage inventory check-ins, check-outs, and transfers"
       />
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Checkout Request</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this checkout request?
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDeleteTransaction} 
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-6">
         <TabsList className="grid grid-cols-4 w-full">
@@ -323,10 +459,6 @@ const InventoryTransactions = () => {
             <CardContent className="pt-6">
               <CheckOutRequestForm
                 onSuccess={() => {
-                  toast({
-                    title: "Success",
-                    description: "Checkout request submitted for approval",
-                  });
                   queryClient.invalidateQueries({
                     queryKey: ["inventory_transactions"],
                   });

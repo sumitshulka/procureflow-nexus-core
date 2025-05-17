@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
@@ -102,6 +101,7 @@ const ProcurementRequestDetail = () => {
   const [confirmSubmitOpen, setConfirmSubmitOpen] = useState(false);
   const [approvalHistory, setApprovalHistory] = useState<any[]>([]);
   const [loadingApprovals, setLoadingApprovals] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchRequestDetail = async () => {
     if (!id) return;
@@ -307,6 +307,7 @@ const ProcurementRequestDetail = () => {
 
   const handleDeleteItem = async (itemId: string) => {
     try {
+      setIsDeleting(true);
       const { error } = await supabase
         .from("procurement_request_items")
         .delete()
@@ -314,13 +315,18 @@ const ProcurementRequestDetail = () => {
       
       if (error) throw error;
       
+      // Update the state by removing the deleted item
+      setRequestDetail(prev => ({
+        ...prev,
+        items: prev.items.filter(item => item.id !== itemId)
+      }));
+      
       toast({
         title: "Success",
         description: "Item removed from request",
       });
       
       setDeletingItemId(null);
-      fetchRequestDetail();
       
     } catch (error: any) {
       console.error("Error deleting item:", error.message);
@@ -329,6 +335,8 @@ const ProcurementRequestDetail = () => {
         description: "Failed to remove item from request",
         variant: "destructive",
       });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -524,7 +532,7 @@ const ProcurementRequestDetail = () => {
                   <Button 
                     size="sm"
                     onClick={handleSaveEdits}
-                    isLoading={isSubmitting}
+                    disabled={isSubmitting}
                   >
                     Save Changes
                   </Button>
@@ -565,7 +573,7 @@ const ProcurementRequestDetail = () => {
                       </Button>
                       <Button
                         onClick={handleSubmitRequest}
-                        isLoading={isSubmitting}
+                        disabled={isSubmitting}
                       >
                         Submit Request
                       </Button>
@@ -785,8 +793,9 @@ const ProcurementRequestDetail = () => {
                                     <Button
                                       variant="destructive"
                                       onClick={() => handleDeleteItem(item.id)}
+                                      disabled={isDeleting}
                                     >
-                                      Delete
+                                      {isDeleting ? "Deleting..." : "Delete"}
                                     </Button>
                                   </DialogFooter>
                                 </DialogContent>

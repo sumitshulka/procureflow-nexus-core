@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -22,10 +22,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
+import {
+  Input,
+} from '@/components/ui/input';
+import {
+  Textarea,
+} from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
 import { createApprovalRequest } from '@/components/approval';
+import ProcurementRequestSelector, { ProcurementRequest } from './ProcurementRequestSelector';
+import { Link2, LinkIcon } from 'lucide-react';
 
 const formSchema = z.object({
   product_id: z.string().min(1, "Product is required"),
@@ -42,6 +48,10 @@ interface CheckOutRequestFormProps {
 const CheckOutRequestForm = ({ onSuccess }: CheckOutRequestFormProps) => {
   const { userData } = useAuth();
   const { toast } = useToast();
+  const [isRequestSelectorOpen, setIsRequestSelectorOpen] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState<ProcurementRequest | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<string | null>(null);
+  const [requestItem, setRequestItem] = useState<{id: string, quantity: number} | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -87,18 +97,18 @@ const CheckOutRequestForm = ({ onSuccess }: CheckOutRequestFormProps) => {
   });
 
   // Fetch inventory for the selected product and warehouse
-  const selectedProduct = form.watch('product_id');
-  const selectedWarehouse = form.watch('source_warehouse_id');
+  const watchedProduct = form.watch('product_id');
+  const watchedWarehouse = form.watch('source_warehouse_id');
   
   const { data: inventory, isLoading: inventoryLoading } = useQuery({
-    queryKey: ['inventory', selectedProduct, selectedWarehouse],
-    enabled: !!selectedProduct && !!selectedWarehouse,
+    queryKey: ['inventory', watchedProduct, watchedWarehouse],
+    enabled: !!watchedProduct && !!watchedWarehouse,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('inventory_items')
         .select('quantity')
-        .eq('product_id', selectedProduct)
-        .eq('warehouse_id', selectedWarehouse)
+        .eq('product_id', watchedProduct)
+        .eq('warehouse_id', watchedWarehouse)
         .single();
       
       if (error && error.code !== 'PGRST116') {
@@ -110,6 +120,23 @@ const CheckOutRequestForm = ({ onSuccess }: CheckOutRequestFormProps) => {
   });
   
   const availableQuantity = inventory?.quantity || 0;
+
+  const handleProcurementRequestSelect = (request: ProcurementRequest) => {
+    setSelectedRequest(request);
+    setIsRequestSelectorOpen(false);
+    
+    if (request.items && request.items.length > 0) {
+      // If only one product in the request, auto-select it
+      if (request.items.length === 1) {
+        const item = request.items[0];
+        setSelectedProduct(item.product_id);
+        setRequestItem({id: item.id, quantity: item.quantity});
+        form.setValue('product_id', item.product_id);
+        form.setValue('quantity', item.quantity);
+        form.setValue('reference', `PR: ${request.request_number}`);
+      }
+    }
+  };
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
@@ -130,8 +157,8 @@ const CheckOutRequestForm = ({ onSuccess }: CheckOutRequestFormProps) => {
       
       // Get product name for the approval title
       let productName = "Product";
-      if (selectedProduct) {
-        const product = products?.find(p => p.id === selectedProduct);
+      if (watchedProduct) {
+        const product = products?.find(p => p.id === watchedProduct);
         if (product) {
           productName = product.name;
         }
@@ -149,6 +176,7 @@ const CheckOutRequestForm = ({ onSuccess }: CheckOutRequestFormProps) => {
           reference: values.reference || null,
           notes: values.notes || null,
           approval_status: 'pending', // Set as pending until approved
+          request_id: selectedRequest?.id || null, // Link to procurement request if selected
         })
         .select()
         .single();
@@ -185,6 +213,9 @@ const CheckOutRequestForm = ({ onSuccess }: CheckOutRequestFormProps) => {
       });
       
       form.reset();
+      setSelectedRequest(null);
+      setSelectedProduct(null);
+      setRequestItem(null);
       onSuccess();
       
     } catch (error: any) {
@@ -199,6 +230,31 @@ const CheckOutRequestForm = ({ onSuccess }: CheckOutRequestFormProps) => {
 
   return (
     <Form {...form}>
+      <div className="mb-6">
+        <Button 
+          type="button" 
+          variant="outline" 
+          onClick={() => setIsRequestSelectorOpen(true)} 
+          className="w-full flex items-center justify-center gap-2"
+        >
+          <LinkIcon className="h-4 w-4" />
+          {selectedRequest ? `Linked to PR: ${selectedRequest.request_number}` : "Link to Procurement Request"}
+        </Button>
+
+        <ProcurementRequestSelector 
+          isOpen={isRequestSelectorOpen}
+          onOpenChange={setIsRequestSelectorOpen}
+          onSelect={handleProcurementRequestSelect}
+        />
+        
+        {selectedRequest && (
+          <div className="mt-2 p-3 border rounded-md bg-muted/30">
+            <p className="text-sm font-medium">Linked to procurement request: {selectedRequest.request_number}</p>
+            <p className="text-sm text-muted-foreground">{selectedRequest.title}</p>
+          </div>
+        )}
+      </div>
+
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
@@ -208,8 +264,18 @@ const CheckOutRequestForm = ({ onSuccess }: CheckOutRequestFormProps) => {
               <FormItem>
                 <FormLabel>Product</FormLabel>
                 <Select
-                  disabled={productsLoading}
-                  onValueChange={field.onChange}
+                  disabled={productsLoading || !!selectedProduct}
+                  onValueChange={(value) => {
+                    field.onChange(value);
+                    // If linked to request but this product doesn't match any request item,
+                    // clear the request link
+                    if (selectedRequest && !selectedRequest.items?.some(item => item.product_id === value)) {
+                      setSelectedRequest(null);
+                      setSelectedProduct(null);
+                      setRequestItem(null);
+                      form.setValue('reference', '');
+                    }
+                  }}
                   value={field.value}
                 >
                   <FormControl>
@@ -269,11 +335,12 @@ const CheckOutRequestForm = ({ onSuccess }: CheckOutRequestFormProps) => {
                   <Input
                     type="number"
                     min={1}
+                    disabled={!!requestItem}
                     onChange={(e) => field.onChange(Number(e.target.value))}
                     value={field.value}
                   />
                 </FormControl>
-                {!inventoryLoading && selectedProduct && selectedWarehouse && (
+                {!inventoryLoading && watchedProduct && watchedWarehouse && (
                   <p className="text-xs text-muted-foreground">
                     Available: {availableQuantity}
                   </p>
