@@ -258,7 +258,7 @@ const InventoryTransactions = () => {
                   <SelectValue placeholder="Filter by type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Types</SelectItem>
+                  <SelectItem value="all_types">All Types</SelectItem>
                   <SelectItem value="check_in">Check In</SelectItem>
                   <SelectItem value="check_out">Check Out</SelectItem>
                   <SelectItem value="transfer">Transfer</SelectItem>
@@ -269,7 +269,7 @@ const InventoryTransactions = () => {
                   <SelectValue placeholder="Filter by status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Statuses</SelectItem>
+                  <SelectItem value="all_statuses">All Statuses</SelectItem>
                   <SelectItem value="approved">Approved</SelectItem>
                   <SelectItem value="pending">Pending</SelectItem>
                   <SelectItem value="rejected">Rejected</SelectItem>
