@@ -1,13 +1,5 @@
-
-// Export all inventory components
-import CheckInForm from "./CheckInForm";
-import CheckOutForm from "./CheckOutForm";
-import TransferForm from "./TransferForm";
-import CheckOutRequestForm from "./CheckOutRequestForm";
-
-export { 
-  CheckInForm,
-  CheckOutForm, 
-  TransferForm,
-  CheckOutRequestForm
-};
+export { default as CheckInForm } from './CheckInForm';
+export { default as CheckOutForm } from './CheckOutForm';
+export { default as TransferForm } from './TransferForm';
+export { default as CheckOutRequestForm } from './CheckOutRequestForm';
+export { default as ProductTransactionHistory } from './ProductTransactionHistory';
