@@ -17,10 +17,10 @@ interface Transaction {
   transaction_date: string;
   type: string;
   quantity: number;
-  source_warehouse_id: string;
-  target_warehouse_id: string;
-  source_warehouse_name?: string;
-  target_warehouse_name?: string;
+  source_warehouse_id: string | null;
+  target_warehouse_id: string | null;
+  source_warehouse_name?: string | null;
+  target_warehouse_name?: string | null;
   reference: string | null;
   notes: string | null;
   approval_status: string | null;
@@ -61,12 +61,12 @@ const ProductTransactionHistory: React.FC<ProductTransactionHistoryProps> = ({ p
       ];
       
       if (warehouseIds.length > 0) {
-        const { data: warehouseData, error: warehouseError } = await supabase
+        const { data: warehouseData } = await supabase
           .from("warehouses")
           .select("id, name")
-          .in("id", warehouseIds);
+          .in("id", warehouseIds as string[]);
           
-        if (!warehouseError && warehouseData) {
+        if (warehouseData) {
           warehouseMap = warehouseData.reduce((acc: Record<string, string>, warehouse) => {
             acc[warehouse.id] = warehouse.name;
             return acc;
@@ -75,17 +75,17 @@ const ProductTransactionHistory: React.FC<ProductTransactionHistoryProps> = ({ p
       }
       
       // Fetch user data for each transaction
-      const userIds = Array.from(new Set(data.map(item => item.user_id)));
+      const userIds = Array.from(new Set(data.map(item => item.user_id).filter(Boolean)));
       
       // Get user profile details
       let userMap: Record<string, any> = {};
       if (userIds.length > 0) {
-        const { data: userData, error: userError } = await supabase
+        const { data: userData } = await supabase
           .from("profiles")
           .select("id, full_name")
-          .in("id", userIds);
+          .in("id", userIds as string[]);
 
-        if (!userError && userData) {
+        if (userData) {
           userMap = userData.reduce((acc: Record<string, any>, user) => {
             acc[user.id] = { email: user.full_name || "Unknown User" };
             return acc;
@@ -176,8 +176,15 @@ const ProductTransactionHistory: React.FC<ProductTransactionHistoryProps> = ({ p
 
   return (
     <div className="space-y-3">
+      <div className="p-4 mb-2 bg-muted/20 rounded-md">
+        <h3 className="font-medium text-sm text-muted-foreground">Transaction History</h3>
+        <p className="text-xs text-muted-foreground">
+          Showing all {transactions.length} transactions for this product
+        </p>
+      </div>
+      
       {transactions.map((transaction) => (
-        <div key={transaction.id} className="p-4 border rounded-md">
+        <div key={transaction.id} className="p-4 border rounded-md hover:bg-muted/5 transition-colors">
           <div className="flex justify-between items-start">
             <div className="flex items-center">
               {getTransactionTypeLabel(transaction.type)}
@@ -208,6 +215,11 @@ const ProductTransactionHistory: React.FC<ProductTransactionHistoryProps> = ({ p
               <p className="text-sm">
                 Transferred from <span className="font-medium">{transaction.source_warehouse_name || "Unknown"}</span> to{" "}
                 <span className="font-medium">{transaction.target_warehouse_name || "Unknown"}</span>
+              </p>
+            )}
+            {transaction.type === "adjustment" && (
+              <p className="text-sm">
+                Inventory adjustment at <span className="font-medium">{transaction.source_warehouse_name || "Unknown"}</span>
               </p>
             )}
           </div>

@@ -34,10 +34,9 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-  DialogTrigger
 } from "@/components/ui/dialog";
-import { Drawer, DrawerContent, DrawerHeader, DrawerDescription, DrawerFooter, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer";
 import { useAuth } from "@/contexts/AuthContext";
+import ProcurementRequestSelector from "./ProcurementRequestSelector";
 
 // Define the schema for the checkout form
 const checkoutFormSchema = z.object({
@@ -58,7 +57,7 @@ const checkoutFormSchema = z.object({
 type CheckoutFormValues = z.infer<typeof checkoutFormSchema>;
 
 // Define the schema for the product request form
-const productRequestFormSchema = z.object({
+const productRequestSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters"),
   description: z.string().optional(),
   category_id: z.string({
@@ -76,7 +75,7 @@ const productRequestFormSchema = z.object({
   notes: z.string().optional(),
 });
 
-type ProductRequestFormValues = z.infer<typeof productRequestFormSchema>;
+type ProductRequestFormValues = z.infer<typeof productRequestSchema>;
 
 interface ProcurementRequest {
   id: string;
@@ -91,8 +90,8 @@ const CheckOutRequestForm = ({ onSuccess }: { onSuccess: () => void }) => {
   const { toast } = useToast();
   const { user } = useAuth();
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
-  const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+  const [isProcurementSelectorOpen, setIsProcurementSelectorOpen] = useState(false);
   const [inventoryWarning, setInventoryWarning] = useState<string | null>(null);
   
   // Form for checkout
@@ -107,7 +106,7 @@ const CheckOutRequestForm = ({ onSuccess }: { onSuccess: () => void }) => {
 
   // Form for product request
   const productRequestForm = useForm<ProductRequestFormValues>({
-    resolver: zodResolver(productRequestFormSchema),
+    resolver: zodResolver(productRequestSchema),
     defaultValues: {
       name: "",
       description: "",
@@ -321,9 +320,6 @@ const CheckOutRequestForm = ({ onSuccess }: { onSuccess: () => void }) => {
       if (productError) throw productError;
 
       // Then create a procurement request with a request_number field
-      // Generate a temporary request number - in production this would be handled by DB trigger
-      const tempRequestNumber = `PR-${new Date().getFullYear()}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
-      
       const { error: requestError } = await supabase
         .from("procurement_requests")
         .insert({
@@ -333,7 +329,7 @@ const CheckOutRequestForm = ({ onSuccess }: { onSuccess: () => void }) => {
           status: "submitted",
           priority: "medium",
           date_needed: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(), // 2 weeks from now
-          request_number: tempRequestNumber,
+          request_number: `PR-${new Date().getFullYear()}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`,
         });
 
       if (requestError) throw requestError;
@@ -370,9 +366,6 @@ const CheckOutRequestForm = ({ onSuccess }: { onSuccess: () => void }) => {
     if (!user || !selectedProduct) return;
     
     try {
-      // Generate a temporary request number - in production this would be handled by DB trigger
-      const tempRequestNumber = `PR-${new Date().getFullYear()}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
-      
       const { error } = await supabase
         .from("procurement_requests")
         .insert({
@@ -382,7 +375,7 @@ const CheckOutRequestForm = ({ onSuccess }: { onSuccess: () => void }) => {
           status: "submitted",
           priority: "medium",
           date_needed: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 1 week from now
-          request_number: tempRequestNumber, 
+          request_number: `PR-${new Date().getFullYear()}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`,
         });
 
       if (error) throw error;
@@ -403,148 +396,14 @@ const CheckOutRequestForm = ({ onSuccess }: { onSuccess: () => void }) => {
     }
   };
 
-  // Request selection component (using Drawer)
-  const RequestSelector = () => {
-    const [searchTerm, setSearchTerm] = useState("");
-    const [filteredRequests, setFilteredRequests] = useState<ProcurementRequest[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
-    
-    // Fetch recent requests
-    const fetchRequests = async () => {
-      setIsLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from("procurement_request_details")
-          .select("id, request_number, title, date_created, requester_name, department")
-          .eq("status", "approved")
-          .order("date_created", { ascending: false })
-          .limit(50);
-          
-        if (error) throw error;
-        
-        setFilteredRequests(data || []);
-      } catch (error) {
-        console.error("Error fetching requests:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load procurement requests",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    const searchRequests = async () => {
-      if (!searchTerm.trim()) {
-        fetchRequests();
-        return;
-      }
-      
-      setIsLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from("procurement_request_details")
-          .select("id, request_number, title, date_created, requester_name, department")
-          .eq("status", "approved")
-          .or(`request_number.ilike.%${searchTerm}%,title.ilike.%${searchTerm}%,requester_name.ilike.%${searchTerm}%`)
-          .order("date_created", { ascending: false })
-          .limit(20);
-          
-        if (error) throw error;
-        
-        setFilteredRequests(data || []);
-      } catch (error) {
-        console.error("Error searching requests:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    const handleSelectRequest = (request: ProcurementRequest) => {
-      form.setValue("request_id", request.request_number);
-      form.setValue("reference", `PR: ${request.request_number}`);
-      setIsRequestModalOpen(false);
-    };
-
-    React.useEffect(() => {
-      if (isRequestModalOpen) {
-        fetchRequests();
-      }
-    }, [isRequestModalOpen]);
-    
-    return (
-      <Drawer open={isRequestModalOpen} onOpenChange={setIsRequestModalOpen}>
-        <DrawerTrigger asChild>
-          <Button type="button" variant="outline">
-            Select Procurement Request
-          </Button>
-        </DrawerTrigger>
-        <DrawerContent className="max-h-[90vh] overflow-y-auto">
-          <DrawerHeader>
-            <DrawerTitle>Select Procurement Request</DrawerTitle>
-            <DrawerDescription>
-              Find and select an approved procurement request
-            </DrawerDescription>
-          </DrawerHeader>
-          
-          <div className="px-4 py-2">
-            <div className="flex items-center space-x-2 mb-4">
-              <Input
-                placeholder="Search by ID, title or requester..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-              <Button onClick={searchRequests} disabled={isLoading}>
-                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Search"}
-              </Button>
-            </div>
-            
-            {isLoading ? (
-              <div className="flex justify-center py-8">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              </div>
-            ) : filteredRequests.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                No approved procurement requests found.
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {filteredRequests.map((request) => (
-                  <div
-                    key={request.id}
-                    className="border rounded-md p-3 cursor-pointer hover:bg-accent"
-                    onClick={() => handleSelectRequest(request)}
-                  >
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="font-medium">{request.request_number}</p>
-                        <p className="text-sm">{request.title}</p>
-                      </div>
-                      <div className="text-right text-sm text-muted-foreground">
-                        <p>{request.requester_name}</p>
-                        <p>{new Date(request.date_created).toLocaleDateString()}</p>
-                      </div>
-                    </div>
-                    {request.department && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Department: {request.department}
-                      </p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-          
-          <DrawerFooter>
-            <Button variant="outline" onClick={() => setIsRequestModalOpen(false)}>
-              Cancel
-            </Button>
-          </DrawerFooter>
-        </DrawerContent>
-      </Drawer>
-    );
+  // Handle procurement request selection
+  const handleRequestSelection = (request: ProcurementRequest) => {
+    form.setValue("request_id", request.request_number);
+    form.setValue("reference", `PR: ${request.request_number} - ${request.title}`);
+    toast({
+      title: "Request Selected",
+      description: `Selected procurement request: ${request.request_number}`,
+    });
   };
 
   if (productsLoading || warehousesLoading) {
@@ -719,6 +578,13 @@ const CheckOutRequestForm = ({ onSuccess }: { onSuccess: () => void }) => {
         </DialogContent>
       </Dialog>
 
+      {/* Procurement Request Selector */}
+      <ProcurementRequestSelector 
+        isOpen={isProcurementSelectorOpen}
+        onOpenChange={setIsProcurementSelectorOpen}
+        onSelect={handleRequestSelection}
+      />
+
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <div className="flex flex-col md:flex-row gap-2">
@@ -746,11 +612,9 @@ const CheckOutRequestForm = ({ onSuccess }: { onSuccess: () => void }) => {
                         ))}
                       </SelectContent>
                     </Select>
-                    <DialogTrigger asChild onClick={() => setIsProductModalOpen(true)}>
-                      <Button type="button" variant="outline">
-                        Request New Product
-                      </Button>
-                    </DialogTrigger>
+                    <Button type="button" variant="outline" onClick={() => setIsProductModalOpen(true)}>
+                      Product Not Listed
+                    </Button>
                   </div>
                   <FormMessage />
                 </FormItem>
@@ -844,7 +708,13 @@ const CheckOutRequestForm = ({ onSuccess }: { onSuccess: () => void }) => {
                   <FormControl>
                     <Input {...field} placeholder="Reference number or code" />
                   </FormControl>
-                  <RequestSelector />
+                  <Button 
+                    type="button" 
+                    variant="outline"
+                    onClick={() => setIsProcurementSelectorOpen(true)}
+                  >
+                    Select Procurement Request
+                  </Button>
                 </div>
                 <FormDescription>
                   Optional reference number for this checkout
