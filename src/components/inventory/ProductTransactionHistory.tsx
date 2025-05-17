@@ -17,8 +17,10 @@ interface Transaction {
   transaction_date: string;
   type: string;
   quantity: number;
-  source_warehouse?: { name: string } | null;
-  target_warehouse?: { name: string } | null;
+  source_warehouse_id: string;
+  target_warehouse_id: string;
+  source_warehouse_name?: string;
+  target_warehouse_name?: string;
   reference: string | null;
   notes: string | null;
   approval_status: string | null;
@@ -29,6 +31,7 @@ const ProductTransactionHistory: React.FC<ProductTransactionHistoryProps> = ({ p
   const { data: transactions, isLoading, error } = useQuery({
     queryKey: ["product_transactions", productId],
     queryFn: async () => {
+      // First, get the transaction data without joins
       const { data, error } = await supabase
         .from("inventory_transactions")
         .select(`
@@ -36,8 +39,8 @@ const ProductTransactionHistory: React.FC<ProductTransactionHistoryProps> = ({ p
           transaction_date,
           type,
           quantity,
-          source_warehouse:source_warehouse_id(name),
-          target_warehouse:target_warehouse_id(name),
+          source_warehouse_id,
+          target_warehouse_id,
           reference,
           notes,
           approval_status,
@@ -48,6 +51,29 @@ const ProductTransactionHistory: React.FC<ProductTransactionHistoryProps> = ({ p
 
       if (error) throw error;
 
+      // Fetch warehouse data separately to avoid relationship errors
+      let warehouseMap: Record<string, string> = {};
+      const warehouseIds = [
+        ...new Set([
+          ...data.map(item => item.source_warehouse_id).filter(Boolean),
+          ...data.map(item => item.target_warehouse_id).filter(Boolean)
+        ])
+      ];
+      
+      if (warehouseIds.length > 0) {
+        const { data: warehouseData, error: warehouseError } = await supabase
+          .from("warehouses")
+          .select("id, name")
+          .in("id", warehouseIds);
+          
+        if (!warehouseError && warehouseData) {
+          warehouseMap = warehouseData.reduce((acc: Record<string, string>, warehouse) => {
+            acc[warehouse.id] = warehouse.name;
+            return acc;
+          }, {});
+        }
+      }
+      
       // Fetch user data for each transaction
       const userIds = Array.from(new Set(data.map(item => item.user_id)));
       
@@ -67,9 +93,11 @@ const ProductTransactionHistory: React.FC<ProductTransactionHistoryProps> = ({ p
         }
       }
 
-      // Combine transaction data with user data
+      // Combine all data
       return data.map((transaction) => ({
         ...transaction,
+        source_warehouse_name: transaction.source_warehouse_id ? warehouseMap[transaction.source_warehouse_id] : null,
+        target_warehouse_name: transaction.target_warehouse_id ? warehouseMap[transaction.target_warehouse_id] : null,
         user: userMap[transaction.user_id] || { email: "Unknown User" }
       }));
     },
@@ -165,12 +193,12 @@ const ProductTransactionHistory: React.FC<ProductTransactionHistoryProps> = ({ p
           <div className="mt-2">
             {transaction.type === "check_in" && (
               <p className="text-sm">
-                Checked into <span className="font-medium">{transaction.target_warehouse?.name || "Unknown"}</span>
+                Checked into <span className="font-medium">{transaction.target_warehouse_name || "Unknown"}</span>
               </p>
             )}
             {transaction.type === "check_out" && (
               <p className="text-sm">
-                Checked out from <span className="font-medium">{transaction.source_warehouse?.name || "Unknown"}</span>
+                Checked out from <span className="font-medium">{transaction.source_warehouse_name || "Unknown"}</span>
                 {transaction.approval_status && (
                   <span className="ml-2">{getStatusBadge(transaction.approval_status)}</span>
                 )}
@@ -178,8 +206,8 @@ const ProductTransactionHistory: React.FC<ProductTransactionHistoryProps> = ({ p
             )}
             {transaction.type === "transfer" && (
               <p className="text-sm">
-                Transferred from <span className="font-medium">{transaction.source_warehouse?.name || "Unknown"}</span> to{" "}
-                <span className="font-medium">{transaction.target_warehouse?.name || "Unknown"}</span>
+                Transferred from <span className="font-medium">{transaction.source_warehouse_name || "Unknown"}</span> to{" "}
+                <span className="font-medium">{transaction.target_warehouse_name || "Unknown"}</span>
               </p>
             )}
           </div>

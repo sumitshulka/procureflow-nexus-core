@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import {
   Form,
   FormControl,
@@ -320,7 +320,10 @@ const CheckOutRequestForm = ({ onSuccess }: { onSuccess: () => void }) => {
 
       if (productError) throw productError;
 
-      // Then create a procurement request for this product
+      // Then create a procurement request with a request_number field
+      // Generate a temporary request number - in production this would be handled by DB trigger
+      const tempRequestNumber = `PR-${new Date().getFullYear()}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+      
       const { error: requestError } = await supabase
         .from("procurement_requests")
         .insert({
@@ -330,6 +333,7 @@ const CheckOutRequestForm = ({ onSuccess }: { onSuccess: () => void }) => {
           status: "submitted",
           priority: "medium",
           date_needed: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(), // 2 weeks from now
+          request_number: tempRequestNumber,
         });
 
       if (requestError) throw requestError;
@@ -366,6 +370,9 @@ const CheckOutRequestForm = ({ onSuccess }: { onSuccess: () => void }) => {
     if (!user || !selectedProduct) return;
     
     try {
+      // Generate a temporary request number - in production this would be handled by DB trigger
+      const tempRequestNumber = `PR-${new Date().getFullYear()}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+      
       const { error } = await supabase
         .from("procurement_requests")
         .insert({
@@ -375,6 +382,7 @@ const CheckOutRequestForm = ({ onSuccess }: { onSuccess: () => void }) => {
           status: "submitted",
           priority: "medium",
           date_needed: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 1 week from now
+          request_number: tempRequestNumber, 
         });
 
       if (error) throw error;
@@ -797,7 +805,7 @@ const CheckOutRequestForm = ({ onSuccess }: { onSuccess: () => void }) => {
           </div>
 
           {inventoryWarning && (
-            <Alert variant="warning" className="bg-yellow-50 border-yellow-200 text-yellow-800">
+            <Alert variant="destructive" className="bg-yellow-50 border-yellow-200 text-yellow-800">
               <AlertTriangle className="h-4 w-4" />
               <AlertTitle>Inventory Warning</AlertTitle>
               <AlertDescription className="flex flex-col gap-2">
