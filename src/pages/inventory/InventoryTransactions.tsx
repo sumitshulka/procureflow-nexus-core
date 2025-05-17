@@ -103,13 +103,13 @@ const InventoryTransactions = () => {
       transaction.product?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       transaction.reference?.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesType = !typeFilter || transaction.type === typeFilter;
+    const matchesType = !typeFilter || typeFilter === "all" || transaction.type === typeFilter;
     
     const matchesStatus = !statusFilter || 
-      (statusFilter === 'all') || 
-      (statusFilter === 'approved' && transaction.approval_status === 'approved') ||
-      (statusFilter === 'pending' && transaction.approval_status === 'pending') || 
-      (statusFilter === 'rejected' && transaction.approval_status === 'rejected');
+      statusFilter === "all" || 
+      (statusFilter === "approved" && transaction.approval_status === "approved") ||
+      (statusFilter === "pending" && transaction.approval_status === "pending") || 
+      (statusFilter === "rejected" && transaction.approval_status === "rejected");
     
     return matchesSearch && matchesType && matchesStatus;
   });
@@ -258,7 +258,7 @@ const InventoryTransactions = () => {
                   <SelectValue placeholder="Filter by type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all_types">All Types</SelectItem>
+                  <SelectItem value="all">All Types</SelectItem>
                   <SelectItem value="check_in">Check In</SelectItem>
                   <SelectItem value="check_out">Check Out</SelectItem>
                   <SelectItem value="transfer">Transfer</SelectItem>
@@ -269,7 +269,7 @@ const InventoryTransactions = () => {
                   <SelectValue placeholder="Filter by status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all_statuses">All Statuses</SelectItem>
+                  <SelectItem value="all">All Statuses</SelectItem>
                   <SelectItem value="approved">Approved</SelectItem>
                   <SelectItem value="pending">Pending</SelectItem>
                   <SelectItem value="rejected">Rejected</SelectItem>
