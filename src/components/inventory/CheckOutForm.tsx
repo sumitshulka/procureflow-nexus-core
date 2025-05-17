@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import {
   Card,
@@ -39,7 +40,7 @@ const CheckOutForm = ({ productId, onSuccess, onCancel }: CheckOutFormProps) => 
 
   const {
     handleSubmit,
-    control,
+    register,
     formState: { errors },
     reset
   } = useForm<CheckOutFormValues>({
@@ -56,13 +57,28 @@ const CheckOutForm = ({ productId, onSuccess, onCancel }: CheckOutFormProps) => 
     try {
       const { data, error } = await supabase
         .from('procurement_requests')
-        .select('id, request_number, title')
+        .select('id, request_number, title, description, requester_id, status, priority, date_created, date_needed')
         .in('status', ['approved'])
         .order('date_created', { ascending: false });
     
       if (error) throw error;
     
-      setAvailableRequests(data || []);
+      // Type assertion to ensure data matches ProcurementRequest[]
+      const typedData: ProcurementRequest[] = (data || []).map(item => ({
+        id: item.id,
+        title: item.title,
+        description: item.description || '',
+        requesterId: item.requester_id,
+        status: item.status,
+        priority: item.priority,
+        dateCreated: item.date_created,
+        dateNeeded: item.date_needed,
+        items: [],
+        approvalChain: [],
+        totalEstimatedValue: 0
+      }));
+      
+      setAvailableRequests(typedData);
     } catch (err) {
       console.error('Error fetching procurement requests:', err);
       toast({
@@ -84,23 +100,58 @@ const CheckOutForm = ({ productId, onSuccess, onCancel }: CheckOutFormProps) => 
     try {
       const { procurement_request_id, notes } = data;
 
+      // Get the current user's ID
+      const { data: { user } } = await supabase.auth.getUser();
+      const userId = user?.id;
+
+      if (!userId) {
+        throw new Error("User not authenticated");
+      }
+
       // Perform the checkout transaction
-      const { data: transaction, error } = await supabase.from('inventory_transactions').insert({
-        type: 'check_out',
-        product_id: productId,
-        quantity: 1, // Assuming a quantity of 1 for checkout
-        reference: 'procurement_request',
-        transaction_date: new Date().toISOString(),
-        request_id: procurement_request_id,
-        notes: notes,
-        approval_status: 'approved', // Assuming auto-approval for checkouts
-        delivery_status: 'pending',
-        user_id: supabase.auth.user()?.id,
-      }).select().single();
+      const { data: transactionData, error } = await supabase
+        .from('inventory_transactions')
+        .insert({
+          type: 'check_out',
+          product_id: productId,
+          quantity: 1, // Assuming a quantity of 1 for checkout
+          reference: 'procurement_request',
+          transaction_date: new Date().toISOString(),
+          request_id: procurement_request_id,
+          notes: notes,
+          approval_status: 'approved', // Assuming auto-approval for checkouts
+          delivery_status: 'pending',
+          user_id: userId,
+        })
+        .select()
+        .single();
 
       if (error) {
         throw error;
       }
+
+      // Convert the Supabase response to match InventoryTransaction type
+      const inventoryTransaction: InventoryTransaction = {
+        id: transactionData.id,
+        type: transactionData.type,
+        productId: transactionData.product_id,
+        quantity: transactionData.quantity,
+        reference: transactionData.reference || '',
+        date: transactionData.transaction_date || '',
+        userId: transactionData.user_id,
+        comments: transactionData.notes,
+        // Include the database field names
+        product_id: transactionData.product_id,
+        transaction_date: transactionData.transaction_date,
+        user_id: transactionData.user_id,
+        request_id: transactionData.request_id,
+        approval_status: transactionData.approval_status,
+        notes: transactionData.notes,
+        delivery_status: transactionData.delivery_status,
+        delivery_details: transactionData.delivery_details,
+        source_warehouse_id: transactionData.source_warehouse_id,
+        target_warehouse_id: transactionData.target_warehouse_id
+      };
 
       toast({
         title: "Success",
@@ -111,7 +162,7 @@ const CheckOutForm = ({ productId, onSuccess, onCancel }: CheckOutFormProps) => 
       reset();
 
       // Notify parent component
-      onSuccess(transaction);
+      onSuccess(inventoryTransaction);
     } catch (error: any) {
       console.error("Error during checkout:", error);
       toast({
@@ -136,10 +187,11 @@ const CheckOutForm = ({ productId, onSuccess, onCancel }: CheckOutFormProps) => 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
             <Label htmlFor="procurement_request_id">Procurement Request</Label>
-            <Select
+            <Select 
               onValueChange={(value) => {
-                // Manually trigger the form validation for this field
-                control._fields.procurement_request_id.onChange(value);
+                // Use register's onChange to update value
+                const event = { target: { value, name: "procurement_request_id" } };
+                register("procurement_request_id").onChange(event);
               }}
             >
               <SelectTrigger className="w-full">
@@ -154,7 +206,7 @@ const CheckOutForm = ({ productId, onSuccess, onCancel }: CheckOutFormProps) => 
                 ) : (
                   availableRequests.map((request) => (
                     <SelectItem key={request.id} value={request.id}>
-                      {request.request_number} - {request.title}
+                      {request.id} - {request.title}
                     </SelectItem>
                   ))
                 )}
@@ -166,9 +218,9 @@ const CheckOutForm = ({ productId, onSuccess, onCancel }: CheckOutFormProps) => 
           </div>
           <div>
             <Label htmlFor="notes">Notes (Optional)</Label>
-            <Input id="notes" type="text" {...control._fields.notes} />
+            <Input id="notes" type="text" {...register("notes")} />
           </div>
-          <CardFooter>
+          <CardFooter className="px-0">
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? (
                 <>
@@ -177,7 +229,7 @@ const CheckOutForm = ({ productId, onSuccess, onCancel }: CheckOutFormProps) => 
                 </>
               ) : "Check Out"}
             </Button>
-            <Button type="button" variant="outline" onClick={onCancel}>
+            <Button type="button" variant="outline" className="ml-2" onClick={onCancel}>
               Cancel
             </Button>
           </CardFooter>
