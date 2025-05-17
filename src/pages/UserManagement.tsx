@@ -6,11 +6,21 @@ import UsersList from "@/components/user-management/UsersList";
 import RolesList from "@/components/user-management/RolesList";
 import ApprovalHierarchy from "@/components/user-management/ApprovalHierarchy";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { UserRole } from "@/types";
 
 const UserManagement = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { userData } = useAuth();
   const defaultTab = location.hash ? location.hash.replace('#', '') : 'users';
+
+  // Check if user has admin permission
+  useEffect(() => {
+    if (userData && !userData.roles?.includes(UserRole.ADMIN)) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [userData, navigate]);
 
   const handleTabChange = (value: string) => {
     navigate(`/users#${value}`, { replace: true });

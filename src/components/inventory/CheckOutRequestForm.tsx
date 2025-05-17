@@ -61,7 +61,10 @@ const CheckOutRequestForm = ({ onSuccess }: CheckOutRequestFormProps) => {
         .select('*')
         .eq('is_active', true);
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching products:', error);
+        throw error;
+      }
       return data || [];
     }
   });
@@ -75,7 +78,10 @@ const CheckOutRequestForm = ({ onSuccess }: CheckOutRequestFormProps) => {
         .select('*')
         .eq('is_active', true);
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching warehouses:', error);
+        throw error;
+      }
       return data || [];
     }
   });
@@ -95,7 +101,10 @@ const CheckOutRequestForm = ({ onSuccess }: CheckOutRequestFormProps) => {
         .eq('warehouse_id', selectedWarehouse)
         .single();
       
-      if (error && error.code !== 'PGRST116') throw error;
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching inventory:', error);
+        throw error;
+      }
       return data || { quantity: 0 };
     }
   });
@@ -145,6 +154,7 @@ const CheckOutRequestForm = ({ onSuccess }: CheckOutRequestFormProps) => {
         .single();
       
       if (error) {
+        console.error('Error creating checkout transaction:', error);
         throw error;
       }
       
