@@ -32,6 +32,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { UserRole } from "@/types";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import ApprovalMenuItem from "./ApprovalMenuItem";
 
 interface SystemModule {
   id: string;
@@ -172,6 +173,11 @@ const AppSidebar: React.FC = () => {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 ))}
+                
+                {/* Add the Approvals menu item */}
+                <SidebarMenuItem>
+                  <ApprovalMenuItem />
+                </SidebarMenuItem>
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
