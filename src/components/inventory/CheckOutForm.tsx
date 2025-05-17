@@ -16,9 +16,16 @@ import { toast } from "@/components/ui/use-toast"
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ProcurementRequest, InventoryTransaction } from "@/types";
+import { ProcurementRequest, InventoryTransaction, RequestStatus } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
+
+// Define the subset of procurement request data we need
+interface ProcurementRequestMinimal {
+  id: string;
+  title: string;
+  request_number?: string; // Make it optional in interface
+}
 
 const checkOutFormSchema = z.object({
   procurement_request_id: z.string().min(1, "Procurement Request is required"),
@@ -62,14 +69,14 @@ const CheckOutForm = ({ productId, onSuccess, onCancel }: CheckOutFormProps) => 
         .order('date_created', { ascending: false });
     
       if (error) throw error;
-    
-      // Type assertion to ensure data matches ProcurementRequest[]
+      
+      // Safely cast the data to ProcurementRequest[]
       const typedData: ProcurementRequest[] = (data || []).map(item => ({
         id: item.id,
         title: item.title,
         description: item.description || '',
         requesterId: item.requester_id,
-        status: item.status,
+        status: item.status as RequestStatus, // Explicit cast to RequestStatus
         priority: item.priority,
         dateCreated: item.date_created,
         dateNeeded: item.date_needed,
@@ -101,8 +108,8 @@ const CheckOutForm = ({ productId, onSuccess, onCancel }: CheckOutFormProps) => 
       const { procurement_request_id, notes } = data;
 
       // Get the current user's ID
-      const { data: { user } } = await supabase.auth.getUser();
-      const userId = user?.id;
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData?.user?.id;
 
       if (!userId) {
         throw new Error("User not authenticated");
@@ -112,7 +119,7 @@ const CheckOutForm = ({ productId, onSuccess, onCancel }: CheckOutFormProps) => 
       const { data: transactionData, error } = await supabase
         .from('inventory_transactions')
         .insert({
-          type: 'check_out',
+          type: 'check_out' as "check_out" | "stock_in" | "stock_out" | "transfer" | "adjustment" | "check_in", // Explicit cast to allowed types
           product_id: productId,
           quantity: 1, // Assuming a quantity of 1 for checkout
           reference: 'procurement_request',
@@ -133,7 +140,7 @@ const CheckOutForm = ({ productId, onSuccess, onCancel }: CheckOutFormProps) => 
       // Convert the Supabase response to match InventoryTransaction type
       const inventoryTransaction: InventoryTransaction = {
         id: transactionData.id,
-        type: transactionData.type,
+        type: transactionData.type as "check_out" | "stock_in" | "stock_out" | "transfer" | "adjustment" | "check_in",
         productId: transactionData.product_id,
         quantity: transactionData.quantity,
         reference: transactionData.reference || '',
@@ -148,7 +155,7 @@ const CheckOutForm = ({ productId, onSuccess, onCancel }: CheckOutFormProps) => 
         approval_status: transactionData.approval_status,
         notes: transactionData.notes,
         delivery_status: transactionData.delivery_status,
-        delivery_details: transactionData.delivery_details,
+        delivery_details: transactionData.delivery_details as Record<string, any> || {},
         source_warehouse_id: transactionData.source_warehouse_id,
         target_warehouse_id: transactionData.target_warehouse_id
       };
@@ -189,9 +196,9 @@ const CheckOutForm = ({ productId, onSuccess, onCancel }: CheckOutFormProps) => 
             <Label htmlFor="procurement_request_id">Procurement Request</Label>
             <Select 
               onValueChange={(value) => {
-                // Use register's onChange to update value
+                // Use register's reference to update value
                 const event = { target: { value, name: "procurement_request_id" } };
-                register("procurement_request_id").onChange(event);
+                register("procurement_request_id").onChange?.(event as React.ChangeEvent<HTMLInputElement>);
               }}
             >
               <SelectTrigger className="w-full">
