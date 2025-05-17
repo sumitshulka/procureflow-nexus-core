@@ -201,6 +201,8 @@ const ProcurementRequests = () => {
   // Function to handle request deletion
   const handleDeleteRequest = async (requestId: string) => {
     try {
+      setDeleteErrorMessage(null);
+      
       // Check if the request can be deleted
       const { canDelete, message } = await canDeleteProcurementRequest(requestId);
       
@@ -213,8 +215,8 @@ const ProcurementRequests = () => {
       // If can delete, confirm with user
       setRequestToDelete(requestId);
       setAlertDialogOpen(true);
-    } catch (error) {
-      console.error("Error checking if request can be deleted:", error);
+    } catch (error: any) {
+      console.error("Error checking if request can be deleted:", error.message);
       toast({
         title: "Error",
         description: "Failed to process delete request",
@@ -228,6 +230,28 @@ const ProcurementRequests = () => {
     if (!requestToDelete) return;
     
     try {
+      setIsDeleting(true);
+      
+      // First, check if there are any approvals related to this request
+      const { data: approvalData, error: approvalError } = await supabase
+        .from('approvals')
+        .select('id')
+        .eq('entity_type', 'procurement_request')
+        .eq('entity_id', requestToDelete);
+        
+      if (approvalError) throw approvalError;
+      
+      // If there are approvals, delete them first
+      if (approvalData && approvalData.length > 0) {
+        const { error: deleteApprovalsError } = await supabase
+          .from('approvals')
+          .delete()
+          .eq('entity_type', 'procurement_request')
+          .eq('entity_id', requestToDelete);
+          
+        if (deleteApprovalsError) throw deleteApprovalsError;
+      }
+      
       // Delete all request items first
       const { error: itemsError } = await supabase
         .from("procurement_request_items")
@@ -242,24 +266,32 @@ const ProcurementRequests = () => {
         .delete()
         .eq("id", requestToDelete);
       
-      if (error) throw error;
+      if (error) {
+        if (error.message.includes('violates foreign key constraint')) {
+          throw new Error("This request cannot be deleted because it is referenced by other records in the system.");
+        }
+        throw error;
+      }
       
       toast({
         title: "Success",
         description: "Request deleted successfully",
       });
       
-      // Refresh the requests list
-      fetchRequests();
+      // Refresh the requests list and update the state
+      // Remove the deleted request from the state to avoid having to refetch
+      setRequests(prev => prev.filter(req => req.id !== requestToDelete));
+      
     } catch (error: any) {
       console.error("Error deleting request:", error.message);
       toast({
         title: "Error",
-        description: "Failed to delete request",
+        description: error.message || "Failed to delete request",
         variant: "destructive",
       });
     } finally {
       setRequestToDelete(null);
+      setIsDeleting(false);
       setAlertDialogOpen(false);
     }
   };
@@ -696,8 +728,11 @@ const ProcurementRequests = () => {
               {deleteErrorMessage ? "Ok" : "Cancel"}
             </AlertDialogCancel>
             {!deleteErrorMessage && (
-              <AlertDialogAction onClick={confirmDeleteRequest}>
-                Delete
+              <AlertDialogAction 
+                onClick={confirmDeleteRequest}
+                disabled={isDeleting}
+              >
+                {isDeleting ? "Deleting..." : "Delete"}
               </AlertDialogAction>
             )}
           </AlertDialogFooter>
