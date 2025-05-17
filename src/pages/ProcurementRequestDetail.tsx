@@ -84,6 +84,8 @@ const ProcurementRequestDetail = () => {
   const [openAddItemDialog, setOpenAddItemDialog] = useState(false);
   const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
   const [editingItem, setEditingItem] = useState<RequestItem | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [confirmSubmitOpen, setConfirmSubmitOpen] = useState(false);
 
   const fetchRequestDetail = async () => {
     if (!id) return;
@@ -305,6 +307,75 @@ const ProcurementRequestDetail = () => {
     fetchRequestDetail();
   };
 
+  // New function to handle submitting a request
+  const handleSubmitRequest = async () => {
+    if (!id) return;
+    
+    try {
+      setIsSubmitting(true);
+      
+      // Update the request status to SUBMITTED
+      const { error } = await supabase
+        .from("procurement_requests")
+        .update({ 
+          status: RequestStatus.SUBMITTED,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", id);
+
+      if (error) {
+        throw error;
+      }
+
+      // Close dialog and show success message
+      setConfirmSubmitOpen(false);
+      
+      toast({
+        title: "Success",
+        description: "Request has been submitted for approval",
+      });
+      
+      // Refresh the request details
+      fetchRequestDetail();
+    } catch (error: any) {
+      console.error("Error submitting request:", error.message);
+      toast({
+        title: "Error",
+        description: "Failed to submit request: " + error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Function to save edits
+  const handleSaveEdits = async () => {
+    if (!id) return;
+    
+    try {
+      setIsSubmitting(true);
+      
+      // Here you would update the request details if there were editable fields
+      // For now, we'll just toggle the editing mode off
+      setIsEditing(false);
+      
+      toast({
+        title: "Success",
+        description: "Request changes saved successfully",
+      });
+    } catch (error: any) {
+      console.error("Error saving edits:", error.message);
+      toast({
+        title: "Error",
+        description: "Failed to save changes: " + error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   // If loading, show a simple loading message
   if (isLoading) {
     return (
@@ -324,20 +395,66 @@ const ProcurementRequestDetail = () => {
         actions={
           canEditRequest() && (
             <div className="flex items-center gap-2">
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => setIsEditing(!isEditing)}
-              >
-                <FilePenLine className="mr-2 h-4 w-4" />
-                {isEditing ? "Cancel Editing" : "Edit Request"}
-              </Button>
+              {isEditing ? (
+                <>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setIsEditing(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    size="sm"
+                    onClick={handleSaveEdits}
+                    isLoading={isSubmitting}
+                  >
+                    Save Changes
+                  </Button>
+                </>
+              ) : (
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setIsEditing(true)}
+                >
+                  <FilePenLine className="mr-2 h-4 w-4" />
+                  Edit Request
+                </Button>
+              )}
               
               {requestDetail.status === RequestStatus.DRAFT && (
-                <Button size="sm">
-                  <FileText className="mr-2 h-4 w-4" />
-                  Submit Request
-                </Button>
+                <Dialog open={confirmSubmitOpen} onOpenChange={setConfirmSubmitOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="sm">
+                      <FileText className="mr-2 h-4 w-4" />
+                      Submit Request
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Submit Request</DialogTitle>
+                      <DialogDescription>
+                        Are you sure you want to submit this request for approval? 
+                        Once submitted, you won't be able to make further changes.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter className="mt-4">
+                      <Button
+                        variant="outline"
+                        onClick={() => setConfirmSubmitOpen(false)}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={handleSubmitRequest}
+                        isLoading={isSubmitting}
+                      >
+                        Submit Request
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
               )}
             </div>
           )
