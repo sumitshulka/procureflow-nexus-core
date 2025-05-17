@@ -238,7 +238,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       
-      navigate("/login");
+      // Clear user data state
+      setSession(null);
+      setUser(null);
+      setUserData(null);
+      
+      // Always navigate to login page after successful logout
+      navigate("/login", { replace: true });
     } catch (error: any) {
       toast({
         title: "Logout failed",
