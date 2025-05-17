@@ -5,6 +5,36 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserRole, RequestStatus } from '@/types';
 
+// Utility function to get approval details for an entity
+export const getApprovalDetails = async (entityType: string, entityId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('approvals')
+      .select(`
+        id,
+        status,
+        created_at,
+        approval_date,
+        comments,
+        entity_type,
+        entity_id,
+        requester_id,
+        approver_id,
+        profiles:requester_id(full_name)
+      `)
+      .eq('entity_type', entityType)
+      .eq('entity_id', entityId)
+      .order('created_at', { ascending: true });
+      
+    if (error) throw error;
+    
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching approval details:', error);
+    return [];
+  }
+};
+
 // Function to check if a procurement request is used in inventory checkout
 export const isProcurementRequestUsedInInventory = async (requestId: string): Promise<boolean> => {
   const { data, error } = await supabase
@@ -138,6 +168,37 @@ export const handleAdminRequestApproval = async (
   }
 };
 
+// Function to track approval history
+export const logApprovalAction = async (
+  entityType: string,
+  entityId: string,
+  userId: string,
+  action: string,
+  details: any = {}
+): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('activity_logs')
+      .insert({
+        user_id: userId,
+        entity_type: entityType,
+        entity_id: entityId,
+        action: action,
+        details: details
+      });
+    
+    if (error) {
+      console.error('Error logging approval action:', error);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error in activity logging:', error);
+    return false;
+  }
+};
+
 // Delete procurement request function
 export const deleteProcurementRequest = async (requestId: string): Promise<{ 
   success: boolean; 
@@ -185,7 +246,10 @@ export const useApprovalWorkflow = () => {
     handleAdminRequestApproval,
     canDeleteProcurementRequest,
     isProcurementRequestUsedInInventory,
-    deleteProcurementRequest
+    deleteProcurementRequest,
+    getApprovalDetails,
+    logApprovalAction,
+    isAdmin
   };
 };
 

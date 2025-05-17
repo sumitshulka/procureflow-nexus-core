@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import PageHeader from '@/components/common/PageHeader';
@@ -9,6 +9,8 @@ import DataTable from '@/components/common/DataTable';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import ApprovalActionMenu from '@/components/approval/ApprovalActionMenu';
+import { Button } from '@/components/ui/button';
+import { AlertCircle, CheckCircle, XCircle, AlertTriangle, Loader2 } from 'lucide-react';
 
 interface ApprovalRequest {
   id: string;
@@ -20,10 +22,14 @@ interface ApprovalRequest {
   created_at: string;
   request_title: string;
   entity_status: string;
+  comments?: string;
+  approval_date?: string;
+  approver_id?: string;
 }
 
 const Approvals = () => {
-  const [activeTab, setActiveTab] = useState('pending');
+  const [activeTab, setActiveTab] = useState<string>('pending');
+  const queryClient = useQueryClient();
 
   // Fetch approvals
   const { data: approvalRequests, isLoading, refetch } = useQuery({
@@ -75,28 +81,43 @@ const Approvals = () => {
       header: 'Status',
       cell: (row: ApprovalRequest) => {
         let badgeVariant = 'default';
+        let icon = null;
         
         switch (row.status) {
           case 'pending':
             badgeVariant = 'secondary';
+            icon = <AlertCircle className="mr-1 h-3 w-3" />;
             break;
           case 'approved':
             badgeVariant = 'success';
+            icon = <CheckCircle className="mr-1 h-3 w-3" />;
             break;
           case 'rejected':
             badgeVariant = 'destructive';
+            icon = <XCircle className="mr-1 h-3 w-3" />;
             break;
           case 'more_info':
             badgeVariant = 'warning';
+            icon = <AlertTriangle className="mr-1 h-3 w-3" />;
             break;
         }
         
         return (
-          <Badge variant={badgeVariant as any} className="capitalize">
+          <Badge variant={badgeVariant as any} className="capitalize flex items-center">
+            {icon}
             {row.status.replace('_', ' ')}
           </Badge>
         );
       },
+    },
+    {
+      id: 'entity_status',
+      header: 'Entity Status',
+      cell: (row: ApprovalRequest) => (
+        <Badge variant="outline" className="capitalize">
+          {row.entity_status ? row.entity_status.replace('_', ' ') : 'N/A'}
+        </Badge>
+      ),
     },
     {
       id: 'actions',
@@ -109,6 +130,11 @@ const Approvals = () => {
 
   const handleTabChange = (value: string) => {
     setActiveTab(value);
+  };
+
+  const handleRefresh = () => {
+    refetch();
+    queryClient.invalidateQueries({ queryKey: ['approvals'] });
   };
   
   const renderDetailPanel = (row: ApprovalRequest) => {
@@ -131,10 +157,22 @@ const Approvals = () => {
             <p className="text-sm font-medium">Submitted</p>
             <p className="text-sm">{row.created_at ? format(new Date(row.created_at), 'MMM dd, yyyy hh:mm a') : 'N/A'}</p>
           </div>
+          {row.approval_date && (
+            <div>
+              <p className="text-sm font-medium">Decision Date</p>
+              <p className="text-sm">{format(new Date(row.approval_date), 'MMM dd, yyyy hh:mm a')}</p>
+            </div>
+          )}
           <div className="col-span-2">
             <p className="text-sm font-medium">Entity ID</p>
             <p className="text-sm break-all">{row.entity_id}</p>
           </div>
+          {row.comments && (
+            <div className="col-span-2">
+              <p className="text-sm font-medium">Comments</p>
+              <p className="text-sm whitespace-pre-wrap">{row.comments}</p>
+            </div>
+          )}
         </div>
         
         <div className="mt-4">
@@ -149,6 +187,23 @@ const Approvals = () => {
       <PageHeader
         title="Approval Requests"
         description="Review and manage approval requests"
+        actions={
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={handleRefresh}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Refreshing...
+              </>
+            ) : (
+              'Refresh'
+            )}
+          </Button>
+        }
       />
       
       <Card className="p-6">

@@ -30,6 +30,9 @@ import { toast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { RequestStatus, RequestPriority, UserRole } from "@/types";
 import RequestItemForm from "@/components/procurement/RequestItemForm";
+import { useApprovalWorkflow, getApprovalDetails } from "@/components/approval";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { Timeline, TimelineItem, TimelineConnector, TimelineContent, TimelineDot, TimelineOppositeContent } from "@/components/ui/timeline";
 
 // Define the request data structure
 interface RequestDetail {
@@ -86,6 +89,8 @@ const ProcurementRequestDetail = () => {
   const [editingItem, setEditingItem] = useState<RequestItem | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [confirmSubmitOpen, setConfirmSubmitOpen] = useState(false);
+  const [approvalHistory, setApprovalHistory] = useState<any[]>([]);
+  const [loadingApprovals, setLoadingApprovals] = useState(false);
 
   const fetchRequestDetail = async () => {
     if (!id) return;
@@ -153,9 +158,29 @@ const ProcurementRequestDetail = () => {
     }
   };
 
+  const fetchApprovalHistory = async () => {
+    if (!id) return;
+    
+    setLoadingApprovals(true);
+    try {
+      const approvals = await getApprovalDetails('procurement_request', id);
+      setApprovalHistory(approvals);
+    } catch (error) {
+      console.error("Error fetching approval history:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load approval history",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingApprovals(false);
+    }
+  };
+
   useEffect(() => {
     if (id) {
       fetchRequestDetail();
+      fetchApprovalHistory();
     }
   }, [id]);
 
@@ -374,6 +399,87 @@ const ProcurementRequestDetail = () => {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // Render approval timeline
+  const renderApprovalTimeline = () => {
+    if (loadingApprovals) {
+      return (
+        <div className="flex justify-center p-8">
+          <div className="flex flex-col items-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            <p className="mt-2 text-sm text-gray-500">Loading approval history...</p>
+          </div>
+        </div>
+      );
+    }
+
+    if (approvalHistory.length === 0) {
+      return (
+        <Alert>
+          <AlertTitle>No approval history</AlertTitle>
+          <AlertDescription>
+            This request has not yet been submitted for approval or no approvals have been recorded.
+          </AlertDescription>
+        </Alert>
+      );
+    }
+
+    return (
+      <Timeline className="max-w-2xl mx-auto">
+        {approvalHistory.map((approval, index) => {
+          let icon;
+          let color;
+          
+          switch (approval.status) {
+            case 'pending':
+              icon = <Clock />;
+              color = "text-amber-500";
+              break;
+            case 'approved':
+              icon = <CheckCircle />;
+              color = "text-green-500";
+              break;
+            case 'rejected':
+              icon = <XCircle />;
+              color = "text-red-500";
+              break;
+            case 'more_info':
+              icon = <HelpCircle />;
+              color = "text-blue-500";
+              break;
+            default:
+              icon = <ClipboardList />;
+              color = "text-gray-500";
+          }
+          
+          return (
+            <TimelineItem key={approval.id}>
+              {index < approvalHistory.length - 1 && <TimelineConnector />}
+              <TimelineOppositeContent className="text-xs text-gray-500">
+                {format(new Date(approval.created_at), "MMM dd, yyyy h:mm a")}
+              </TimelineOppositeContent>
+              <TimelineDot className={color}>
+                {icon}
+              </TimelineDot>
+              <TimelineContent>
+                <h3 className="font-medium">
+                  Request {approval.status.replace('_', ' ')}
+                </h3>
+                <p className="text-sm text-gray-600">
+                  By {approval.profiles?.full_name || "Unknown user"}
+                </p>
+                {approval.comments && (
+                  <p className="text-sm mt-1 text-gray-700 bg-gray-50 p-2 rounded border">
+                    "{approval.comments}"
+                  </p>
+                )}
+              </TimelineContent>
+            </TimelineItem>
+          );
+        })}
+      </Timeline>
+    );
   };
 
   // If loading, show a simple loading message
@@ -711,11 +817,7 @@ const ProcurementRequestDetail = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="p-8 text-center">
-                <p className="text-gray-500">
-                  Approval chain will appear here once the request is submitted for approval.
-                </p>
-              </div>
+              {renderApprovalTimeline()}
             </CardContent>
           </Card>
         </TabsContent>
@@ -729,11 +831,20 @@ const ProcurementRequestDetail = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="p-8 text-center">
-                <p className="text-gray-500">
-                  Request history and activity log will appear here.
-                </p>
-              </div>
+              {isLoading ? (
+                <div className="flex justify-center p-8">
+                  <div className="flex flex-col items-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                    <p className="mt-2 text-sm text-gray-500">Loading history...</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-8 text-center">
+                  <p className="text-gray-500">
+                    Request history and activity log will appear here.
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

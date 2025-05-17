@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { MoreVertical, Check, X, HelpCircle } from 'lucide-react';
+import { MoreVertical, Check, X, HelpCircle, History } from 'lucide-react';
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -19,6 +19,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { useAuth } from '@/contexts/AuthContext';
+import { logApprovalAction } from './ApprovalWorkflow';
 
 interface ApprovalRequest {
   id: string;
@@ -50,6 +52,7 @@ const ApprovalActionMenu = ({
   const [actionType, setActionType] = useState<ActionType | null>(null);
   const [comments, setComments] = useState('');
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const isPending = approval.status === 'pending';
 
@@ -73,6 +76,15 @@ const ApprovalActionMenu = ({
       return;
     }
 
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "You must be logged in to perform this action",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(action);
     try {
       // Update the approval
@@ -83,6 +95,7 @@ const ApprovalActionMenu = ({
           approval_date: new Date().toISOString(),
           comments: commentText || null,
           updated_at: new Date().toISOString(),
+          approver_id: user.id // Make sure we record who approved it
         })
         .eq('id', approval.id);
 
@@ -95,11 +108,72 @@ const ApprovalActionMenu = ({
         
         const { error: requestError } = await supabase
           .from('procurement_requests')
-          .update({ status: newStatus })
+          .update({ 
+            status: newStatus,
+            updated_at: new Date().toISOString()
+          })
           .eq('id', approval.entity_id);
 
         if (requestError) throw requestError;
+      } 
+      // For inventory checkout requests
+      else if (approval.entity_type === 'inventory_checkout') {
+        const { error: checkoutError } = await supabase
+          .from('inventory_transactions')
+          .update({ 
+            approval_status: action === 'approve' ? 'approved' : 
+                            action === 'reject' ? 'rejected' : 'more_info'
+          })
+          .eq('id', approval.entity_id);
+
+        if (checkoutError) throw checkoutError;
+        
+        // If approved, we need to update inventory levels
+        if (action === 'approve') {
+          // Get the transaction details
+          const { data: transaction, error: transactionError } = await supabase
+            .from('inventory_transactions')
+            .select('*')
+            .eq('id', approval.entity_id)
+            .single();
+            
+          if (transactionError) throw transactionError;
+          
+          // Get current inventory level
+          const { data: inventoryData, error: inventoryError } = await supabase
+            .from('inventory_items')
+            .select('quantity')
+            .eq('product_id', transaction.product_id)
+            .eq('warehouse_id', transaction.source_warehouse_id)
+            .single();
+            
+          if (inventoryError) throw inventoryError;
+          
+          // Update inventory level
+          const { error: updateError } = await supabase
+            .from('inventory_items')
+            .update({
+              quantity: inventoryData.quantity - transaction.quantity,
+              last_updated: new Date().toISOString()
+            })
+            .eq('product_id', transaction.product_id)
+            .eq('warehouse_id', transaction.source_warehouse_id);
+            
+          if (updateError) throw updateError;
+        }
       }
+
+      // Log this action in the activity log
+      await logApprovalAction(
+        approval.entity_type, 
+        approval.entity_id,
+        user.id,
+        `${action}_request`,
+        { 
+          approval_id: approval.id,
+          comments: commentText
+        }
+      );
 
       toast({
         title: "Success",
@@ -121,22 +195,6 @@ const ApprovalActionMenu = ({
     }
   };
 
-  const handleDialogConfirm = () => {
-    if (!actionType) return;
-    
-    // Validation for comments
-    if (!comments.trim()) {
-      toast({
-        title: "Comments required",
-        description: "Please provide a reason for this action",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    processAction(actionType, comments);
-  };
-
   if (!isPending && !displayAsButtons) {
     return (
       <Button variant="ghost" size="sm" disabled>
@@ -152,35 +210,35 @@ const ApprovalActionMenu = ({
           <>
             <Button 
               size="sm" 
-              variant="approve" 
+              variant="outline"
+              className="bg-green-50 text-green-600 border-green-200 hover:bg-green-100"
               onClick={() => handleAction('approve')}
-              isLoading={loading === 'approve'}
               disabled={!!loading}
             >
               <Check className="mr-1 h-4 w-4" />
-              Approve
+              {loading === 'approve' ? 'Processing...' : 'Approve'}
             </Button>
             
             <Button 
               size="sm" 
-              variant="reject" 
+              variant="outline"
+              className="bg-red-50 text-red-600 border-red-200 hover:bg-red-100"
               onClick={() => handleAction('reject')}
-              isLoading={loading === 'reject'}
               disabled={!!loading}
             >
               <X className="mr-1 h-4 w-4" />
-              Reject
+              {loading === 'reject' ? 'Processing...' : 'Reject'}
             </Button>
             
             <Button 
               size="sm" 
               variant="outline" 
+              className="bg-amber-50 text-amber-600 border-amber-200 hover:bg-amber-100"
               onClick={() => handleAction('more_info')}
-              isLoading={loading === 'more_info'}
               disabled={!!loading}
             >
               <HelpCircle className="mr-1 h-4 w-4" />
-              Need More Info
+              {loading === 'more_info' ? 'Processing...' : 'Need More Info'}
             </Button>
             
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -213,6 +271,22 @@ const ApprovalActionMenu = ({
     );
   }
 
+  const handleDialogConfirm = () => {
+    if (!actionType) return;
+    
+    // Validation for comments
+    if (!comments.trim()) {
+      toast({
+        title: "Comments required",
+        description: "Please provide a reason for this action",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    processAction(actionType, comments);
+  };
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -221,15 +295,24 @@ const ApprovalActionMenu = ({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => handleAction('approve')}>
-          <Check className="mr-2 h-4 w-4 text-green-500" /> Approve
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => handleAction('reject')}>
-          <X className="mr-2 h-4 w-4 text-red-500" /> Reject
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => handleAction('more_info')}>
-          <HelpCircle className="mr-2 h-4 w-4 text-amber-500" /> Need More Info
-        </DropdownMenuItem>
+        {isPending && (
+          <>
+            <DropdownMenuItem onClick={() => handleAction('approve')}>
+              <Check className="mr-2 h-4 w-4 text-green-500" /> Approve
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleAction('reject')}>
+              <X className="mr-2 h-4 w-4 text-red-500" /> Reject
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleAction('more_info')}>
+              <HelpCircle className="mr-2 h-4 w-4 text-amber-500" /> Need More Info
+            </DropdownMenuItem>
+          </>
+        )}
+        {!isPending && (
+          <DropdownMenuItem disabled>
+            <History className="mr-2 h-4 w-4" /> {approval.status.charAt(0).toUpperCase() + approval.status.slice(1)}
+          </DropdownMenuItem>
+        )}
       </DropdownMenuContent>
       
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
