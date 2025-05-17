@@ -12,6 +12,7 @@ import {
   CheckOutRequestForm, 
   TransferForm 
 } from "@/components/inventory";
+import ProductTransactionHistory from "@/components/inventory/ProductTransactionHistory";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Card,
@@ -112,6 +113,21 @@ const InventoryTransactions = () => {
     
     return matchesSearch && matchesType && matchesStatus;
   });
+
+  // Show transaction history for a product
+  const showTransactionHistory = (row: EnhancedInventoryTransaction) => {
+    return (
+      <div className="space-y-4">
+        <div className="p-4 bg-muted/20 rounded-md">
+          <h3 className="text-lg font-medium">{row.product?.name}</h3>
+          <p className="text-sm text-muted-foreground">
+            Transaction history for this product
+          </p>
+        </div>
+        <ProductTransactionHistory productId={row.product_id} />
+      </div>
+    );
+  };
 
   // Define table columns
   const columns = [
@@ -242,7 +258,7 @@ const InventoryTransactions = () => {
                   <SelectValue placeholder="Filter by type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="">All Types</SelectItem>
                   <SelectItem value="check_in">Check In</SelectItem>
                   <SelectItem value="check_out">Check Out</SelectItem>
                   <SelectItem value="transfer">Transfer</SelectItem>
@@ -253,7 +269,7 @@ const InventoryTransactions = () => {
                   <SelectValue placeholder="Filter by status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="">All Statuses</SelectItem>
                   <SelectItem value="approved">Approved</SelectItem>
                   <SelectItem value="pending">Pending</SelectItem>
                   <SelectItem value="rejected">Rejected</SelectItem>
@@ -271,6 +287,9 @@ const InventoryTransactions = () => {
                   columns={columns}
                   data={filteredTransactions}
                   emptyMessage="No inventory transactions found."
+                  showDetailPanel={showTransactionHistory}
+                  detailPanelTitle="Transaction History"
+                  detailPanelDescription="View all transactions for this product"
                 />
               )}
             </CardContent>

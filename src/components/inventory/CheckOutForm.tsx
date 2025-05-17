@@ -14,7 +14,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -26,6 +25,8 @@ import {
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Loader2, AlertTriangle } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
+import { useAuth } from "@/contexts/AuthContext";
+import { UserRole } from "@/types";
 
 // Define interface for checkout request data without recursive types
 interface PendingCheckoutRequest {
@@ -60,6 +61,8 @@ type ApprovalFormValues = z.infer<typeof approvalFormSchema>;
 // This component is now for approving checkout requests, not creating them
 const CheckOutForm = ({ onSuccess }: { onSuccess: () => void }) => {
   const { toast } = useToast();
+  const { user, hasRole } = useAuth();
+  const [isAutoApproving, setIsAutoApproving] = React.useState(false);
 
   // Initialize form
   const form = useForm<ApprovalFormValues>({
@@ -70,7 +73,7 @@ const CheckOutForm = ({ onSuccess }: { onSuccess: () => void }) => {
   });
 
   // Fetch pending checkout requests
-  const { data: pendingRequests = [], isLoading: isLoadingRequests } = useQuery({
+  const { data: pendingRequests = [], isLoading: isLoadingRequests, refetch: refetchRequests } = useQuery({
     queryKey: ["pending_checkout_requests"],
     queryFn: async () => {
       try {
@@ -140,13 +143,59 @@ const CheckOutForm = ({ onSuccess }: { onSuccess: () => void }) => {
     },
   });
 
-  const onSubmit = async (data: ApprovalFormValues) => {
+  // Auto-approval for admins and procurement officers
+  React.useEffect(() => {
+    const autoApproveRequests = async () => {
+      // Check if the user is an admin or procurement officer
+      const isAdmin = hasRole(UserRole.ADMIN);
+      const isProcurementOfficer = hasRole(UserRole.PROCUREMENT_OFFICER);
+      
+      if (pendingRequests.length > 0 && (isAdmin || isProcurementOfficer) && !isAutoApproving) {
+        setIsAutoApproving(true);
+        
+        // Allow auto-approval if user is an admin
+        if (isAdmin) {
+          try {
+            toast({
+              title: "Auto-approval",
+              description: "As an admin, your checkout requests can be automatically approved.",
+            });
+            
+            // Loop through all pending requests and approve them
+            for (const request of pendingRequests) {
+              if (request.id) {
+                await processApproval({
+                  transaction_id: request.id,
+                  approval_decision: "approved",
+                  notes: "Auto-approved by admin"
+                });
+              }
+            }
+            
+            // Refresh the pending requests
+            refetchRequests();
+          } catch (error) {
+            console.error("Error during auto-approval:", error);
+          } finally {
+            setIsAutoApproving(false);
+          }
+        } else {
+          setIsAutoApproving(false);
+        }
+      }
+    };
+    
+    autoApproveRequests();
+  }, [pendingRequests, hasRole, refetchRequests]);
+
+  const processApproval = async (data: ApprovalFormValues) => {
     try {
       // Get current user
-      const { data: userData, error: userError } = await supabase.auth.getUser();
-      if (userError) throw userError;
-
-      const userId = userData.user.id;
+      if (!user) {
+        throw new Error("User not authenticated");
+      }
+      
+      const userId = user.id;
       const selectedRequest = pendingRequests.find(req => req.id === data.transaction_id);
       
       if (!selectedRequest) {
@@ -198,11 +247,16 @@ const CheckOutForm = ({ onSuccess }: { onSuccess: () => void }) => {
         if (updateInventoryError) throw updateInventoryError;
       }
 
-      toast({
-        title: "Success",
-        description: `Checkout request ${data.approval_decision}`,
-      });
-      onSuccess();
+      // Only show toast for manual approvals
+      if (!isAutoApproving) {
+        toast({
+          title: "Success",
+          description: `Checkout request ${data.approval_decision}`,
+        });
+        onSuccess();
+      }
+      
+      return true;
     } catch (error) {
       console.error("Error processing checkout approval:", error);
       toast({
@@ -210,7 +264,12 @@ const CheckOutForm = ({ onSuccess }: { onSuccess: () => void }) => {
         description: "Failed to process checkout approval",
         variant: "destructive",
       });
+      return false;
     }
+  }
+
+  const onSubmit = async (data: ApprovalFormValues) => {
+    await processApproval(data);
   };
 
   if (isLoadingRequests) {
@@ -230,6 +289,17 @@ const CheckOutForm = ({ onSuccess }: { onSuccess: () => void }) => {
           There are no checkout requests waiting for approval at this time.
         </AlertDescription>
       </Alert>
+    );
+  }
+
+  if (isAutoApproving) {
+    return (
+      <div className="flex justify-center py-8">
+        <div className="flex flex-col items-center space-y-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p>Auto-approving checkout requests...</p>
+        </div>
+      </div>
     );
   }
 

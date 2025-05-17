@@ -48,6 +48,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { RequestPriority, RequestStatus } from "@/types";
+import { useQuery } from "@tanstack/react-query";
 
 // Define the type for procurement requests from database
 interface ProcurementRequest {
@@ -62,6 +63,12 @@ interface ProcurementRequest {
   status: RequestStatus;
   estimated_value: number | null;
   requester_name: string | null;
+}
+
+// Type for department data
+interface Department {
+  id: string;
+  name: string;
 }
 
 // Form schema for new requests
@@ -88,6 +95,28 @@ const ProcurementRequests = () => {
   const { user, userData } = useAuth();
   const navigate = useNavigate();
 
+  // Fetch departments for the dropdown
+  const { data: departments = [] } = useQuery({
+    queryKey: ["departments"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("departments")
+        .select("id, name")
+        .order("name");
+      
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Failed to load departments",
+          variant: "destructive",
+        });
+        throw error;
+      }
+      
+      return data as Department[];
+    },
+  });
+
   const form = useForm<RequestFormValues>({
     resolver: zodResolver(requestFormSchema),
     defaultValues: {
@@ -98,6 +127,17 @@ const ProcurementRequests = () => {
       date_needed: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Default to one week from now
     },
   });
+
+  // When departments are loaded, set the default department if the user has one
+  useEffect(() => {
+    if (departments.length > 0 && userData?.department) {
+      // Find the department id that matches the user's department name
+      const userDept = departments.find(dept => dept.name === userData.department);
+      if (userDept) {
+        form.setValue("department", userDept.id);
+      }
+    }
+  }, [departments, userData, form]);
 
   const fetchRequests = async () => {
     try {
@@ -247,6 +287,13 @@ const ProcurementRequests = () => {
         return;
       }
 
+      // Get the department name from the selected department id
+      let departmentName = null;
+      if (values.department) {
+        const selectedDepartment = departments.find(dept => dept.id === values.department);
+        departmentName = selectedDepartment?.name || null;
+      }
+
       // Insert the new request into the database
       const { data, error } = await supabase
         .from("procurement_requests")
@@ -254,7 +301,7 @@ const ProcurementRequests = () => {
           requester_id: user.id,
           title: values.title,
           description: values.description || null,
-          department: values.department || null,
+          department: departmentName,
           date_needed: values.date_needed.toISOString(),
           priority: values.priority,
           status: "draft" as RequestStatus,
@@ -422,9 +469,23 @@ const ProcurementRequests = () => {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Department</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Your department" {...field} />
-                          </FormControl>
+                          <Select 
+                            onValueChange={field.onChange} 
+                            value={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select department" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {departments.map((dept) => (
+                                <SelectItem key={dept.id} value={dept.id}>
+                                  {dept.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                           <FormMessage />
                         </FormItem>
                       )}
