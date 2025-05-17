@@ -1,9 +1,9 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { AlertTriangle, Loader2 } from "lucide-react";
+import { AlertTriangle, Loader2, FileBox, PlusCircle } from "lucide-react";
 import { 
   Dialog,
   DialogContent, 
@@ -40,6 +40,8 @@ import ProcurementRequestSelector from "./ProcurementRequestSelector";
 
 // Define the schema for the checkout form
 const checkoutFormSchema = z.object({
+  request_id: z.string().optional(),
+  reference: z.string().optional(),
   product_id: z.string({
     required_error: "Please select a product",
   }),
@@ -49,8 +51,6 @@ const checkoutFormSchema = z.object({
   quantity: z.coerce.number().positive({
     message: "Quantity must be a positive number",
   }),
-  reference: z.string().optional(),
-  request_id: z.string().optional(),
   notes: z.string().optional(),
 });
 
@@ -84,15 +84,24 @@ interface ProcurementRequest {
   department: string | null;
   date_created: string;
   requester_name: string | null;
+  items?: {
+    id: string;
+    product_id: string;
+    quantity: number;
+    product_name: string;
+  }[];
 }
 
 const CheckOutRequestForm = ({ onSuccess }: { onSuccess: () => void }) => {
   const { toast } = useToast();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [isProcurementSelectorOpen, setIsProcurementSelectorOpen] = useState(false);
   const [inventoryWarning, setInventoryWarning] = useState<string | null>(null);
+  const [selectedRequest, setSelectedRequest] = useState<ProcurementRequest | null>(null);
+  const [availableProducts, setAvailableProducts] = useState<any[]>([]);
   
   // Form for checkout
   const form = useForm<CheckoutFormValues>({
@@ -195,6 +204,18 @@ const CheckOutRequestForm = ({ onSuccess }: { onSuccess: () => void }) => {
     },
   });
 
+  // Update available products when a procurement request is selected
+  useEffect(() => {
+    if (selectedRequest?.items && selectedRequest.items.length > 0) {
+      // Filter products to show only those in the selected procurement request
+      const requestProductIds = selectedRequest.items.map(item => item.product_id);
+      const filteredProducts = products.filter(product => requestProductIds.includes(product.id));
+      setAvailableProducts(filteredProducts);
+    } else {
+      setAvailableProducts(products);
+    }
+  }, [selectedRequest, products]);
+
   // Check inventory level when product changes
   const checkInventory = async (productId: string, warehouseId: string, quantity: number) => {
     if (!productId || !warehouseId) return;
@@ -231,7 +252,7 @@ const CheckOutRequestForm = ({ onSuccess }: { onSuccess: () => void }) => {
   const warehouseId = form.watch("source_warehouse_id");
   const quantity = form.watch("quantity");
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (productId && warehouseId && quantity) {
       checkInventory(productId, warehouseId, quantity);
     }
@@ -243,6 +264,24 @@ const CheckOutRequestForm = ({ onSuccess }: { onSuccess: () => void }) => {
     // Find the selected product to display details
     const product = products.find(p => p.id === productId);
     setSelectedProduct(product);
+  };
+
+  // Handle procurement request selection
+  const handleRequestSelection = (request: ProcurementRequest) => {
+    setSelectedRequest(request);
+    form.setValue("request_id", request.request_number);
+    form.setValue("reference", `PR: ${request.request_number} - ${request.title}`);
+    
+    // Reset product selection since we now have new products from the request
+    form.setValue("product_id", "");
+    setSelectedProduct(null);
+    
+    toast({
+      title: "Request Selected",
+      description: `Selected procurement request: ${request.request_number}`,
+    });
+    
+    setIsProcurementSelectorOpen(false);
   };
 
   // Submit checkout request
@@ -280,6 +319,7 @@ const CheckOutRequestForm = ({ onSuccess }: { onSuccess: () => void }) => {
       
       form.reset();
       setSelectedProduct(null);
+      setSelectedRequest(null);
       onSuccess();
     } catch (error: any) {
       console.error("Error creating checkout request:", error);
@@ -343,14 +383,7 @@ const CheckOutRequestForm = ({ onSuccess }: { onSuccess: () => void }) => {
       setIsProductModalOpen(false);
       
       // Refresh the products list
-      setTimeout(() => {
-        // This will trigger a refetch of products
-        // Not ideal but works for now
-        toast({
-          title: "Refreshing products list",
-          description: "Please wait while we refresh the products list",
-        });
-      }, 1000);
+      queryClient.invalidateQueries({ queryKey: ["products"] });
     } catch (error: any) {
       console.error("Error requesting new product:", error);
       toast({
@@ -396,16 +429,6 @@ const CheckOutRequestForm = ({ onSuccess }: { onSuccess: () => void }) => {
     }
   };
 
-  // Handle procurement request selection
-  const handleRequestSelection = (request: ProcurementRequest) => {
-    form.setValue("request_id", request.request_number);
-    form.setValue("reference", `PR: ${request.request_number} - ${request.title}`);
-    toast({
-      title: "Request Selected",
-      description: `Selected procurement request: ${request.request_number}`,
-    });
-  };
-
   if (productsLoading || warehousesLoading) {
     return (
       <div className="flex justify-center py-8">
@@ -419,7 +442,7 @@ const CheckOutRequestForm = ({ onSuccess }: { onSuccess: () => void }) => {
       <div>
         <h2 className="text-lg font-medium">Request Item Checkout</h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Submit a request to check out an item from inventory. Requests must be approved.
+          First select a procurement request, then choose products to check out from inventory.
         </p>
       </div>
 
@@ -587,79 +610,185 @@ const CheckOutRequestForm = ({ onSuccess }: { onSuccess: () => void }) => {
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          <div className="flex flex-col md:flex-row gap-2">
+          {/* Step 1: Select Procurement Request */}
+          <div className="p-4 border rounded-lg bg-muted/10">
+            <h3 className="text-md font-medium mb-4">Step 1: Select Procurement Request</h3>
+            
             <FormField
               control={form.control}
-              name="product_id"
+              name="reference"
               render={({ field }) => (
-                <FormItem className="flex-1">
-                  <FormLabel>Product</FormLabel>
+                <FormItem>
+                  <FormLabel>Procurement Request</FormLabel>
                   <div className="flex space-x-2">
+                    <FormControl>
+                      <div className="flex-1 flex items-center">
+                        {selectedRequest ? (
+                          <div className="bg-muted p-2 rounded-md flex-1 flex items-center">
+                            <FileBox className="h-4 w-4 mr-2 text-muted-foreground" />
+                            <span className="text-sm">{field.value}</span>
+                          </div>
+                        ) : (
+                          <Input {...field} placeholder="No request selected" readOnly className="bg-muted" />
+                        )}
+                      </div>
+                    </FormControl>
+                    <Button 
+                      type="button" 
+                      onClick={() => setIsProcurementSelectorOpen(true)}
+                      className="whitespace-nowrap"
+                    >
+                      {selectedRequest ? "Change Request" : "Select Request"}
+                    </Button>
+                  </div>
+                  <FormDescription>
+                    Select an approved procurement request to check out items
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          {/* Step 2: Select Product and Warehouse */}
+          <div className="p-4 border rounded-lg bg-muted/10">
+            <h3 className="text-md font-medium mb-4">Step 2: Select Product and Warehouse</h3>
+            
+            <div className="flex flex-col md:flex-row gap-2">
+              <FormField
+                control={form.control}
+                name="product_id"
+                render={({ field }) => (
+                  <FormItem className="flex-1">
+                    <FormLabel>Product</FormLabel>
+                    <div className="flex space-x-2">
+                      <Select
+                        onValueChange={handleProductChange}
+                        value={field.value}
+                        disabled={availableProducts.length === 0 && !selectedRequest}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder={selectedRequest && availableProducts.length === 0 ? 
+                              "No products in this request" : "Select a product"} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="max-h-80">
+                          {(selectedRequest ? availableProducts : products).map((product) => (
+                            <SelectItem key={product.id} value={product.id}>
+                              {product.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        onClick={() => setIsProductModalOpen(true)}
+                      >
+                        <PlusCircle className="h-4 w-4 mr-2" />
+                        New
+                      </Button>
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="source_warehouse_id"
+                render={({ field }) => (
+                  <FormItem className="flex-1">
+                    <FormLabel>Source Warehouse</FormLabel>
                     <Select
-                      onValueChange={handleProductChange}
+                      onValueChange={field.onChange}
                       value={field.value}
+                      disabled={!productId}
                     >
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select a product" />
+                          <SelectValue placeholder="Select a warehouse" />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent className="max-h-80">
-                        {products.map((product) => (
-                          <SelectItem key={product.id} value={product.id}>
-                            {product.name}
+                      <SelectContent>
+                        {warehouses.map((warehouse) => (
+                          <SelectItem key={warehouse.id} value={warehouse.id}>
+                            {warehouse.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
-                    <Button type="button" variant="outline" onClick={() => setIsProductModalOpen(true)}>
-                      Product Not Listed
-                    </Button>
-                  </div>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <FormField
-              control={form.control}
-              name="source_warehouse_id"
-              render={({ field }) => (
-                <FormItem className="flex-1">
-                  <FormLabel>Source Warehouse</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    value={field.value}
-                  >
+              <FormField
+                control={form.control}
+                name="quantity"
+                render={({ field }) => (
+                  <FormItem className="md:w-32">
+                    <FormLabel>Quantity</FormLabel>
                     <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a warehouse" />
-                      </SelectTrigger>
+                      <Input
+                        type="number"
+                        min={1}
+                        {...field}
+                        disabled={!productId}
+                      />
                     </FormControl>
-                    <SelectContent>
-                      {warehouses.map((warehouse) => (
-                        <SelectItem key={warehouse.id} value={warehouse.id}>
-                          {warehouse.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
+            {inventoryWarning && (
+              <Alert variant="destructive" className="bg-yellow-50 border-yellow-200 text-yellow-800 mt-4">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Inventory Warning</AlertTitle>
+                <AlertDescription className="flex flex-col gap-2">
+                  <span>{inventoryWarning}</span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={createProcurementRequest}
+                  >
+                    Create Procurement Request
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {selectedProduct && (
+              <div className="p-4 border rounded-md bg-muted/20 mt-4">
+                <h3 className="font-medium mb-2">Product Details</h3>
+                <p className="text-sm text-muted-foreground">
+                  {selectedProduct.description || "No description available"}
+                </p>
+                <p className="text-sm mt-1">
+                  <span className="font-medium">Category:</span> {selectedProduct.category?.name || "Uncategorized"}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Step 3: Add Notes */}
+          <div className="p-4 border rounded-lg bg-muted/10">
+            <h3 className="text-md font-medium mb-4">Step 3: Add Notes (Optional)</h3>
+            
             <FormField
               control={form.control}
-              name="quantity"
+              name="notes"
               render={({ field }) => (
-                <FormItem className="md:w-32">
-                  <FormLabel>Quantity</FormLabel>
+                <FormItem>
+                  <FormLabel>Notes</FormLabel>
                   <FormControl>
-                    <Input
-                      type="number"
-                      min={1}
+                    <Textarea
                       {...field}
+                      placeholder="Add any notes about this checkout request"
                     />
                   </FormControl>
                   <FormMessage />
@@ -668,81 +797,8 @@ const CheckOutRequestForm = ({ onSuccess }: { onSuccess: () => void }) => {
             />
           </div>
 
-          {inventoryWarning && (
-            <Alert variant="destructive" className="bg-yellow-50 border-yellow-200 text-yellow-800">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertTitle>Inventory Warning</AlertTitle>
-              <AlertDescription className="flex flex-col gap-2">
-                <span>{inventoryWarning}</span>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={createProcurementRequest}
-                >
-                  Create Procurement Request
-                </Button>
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {selectedProduct && (
-            <div className="p-4 border rounded-md bg-muted/20">
-              <h3 className="font-medium mb-2">Product Details</h3>
-              <p className="text-sm text-muted-foreground">
-                {selectedProduct.description || "No description available"}
-              </p>
-              <p className="text-sm mt-1">
-                <span className="font-medium">Category:</span> {selectedProduct.category?.name || "Uncategorized"}
-              </p>
-            </div>
-          )}
-
-          <FormField
-            control={form.control}
-            name="reference"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Reference</FormLabel>
-                <div className="flex space-x-2">
-                  <FormControl>
-                    <Input {...field} placeholder="Reference number or code" />
-                  </FormControl>
-                  <Button 
-                    type="button" 
-                    variant="outline"
-                    onClick={() => setIsProcurementSelectorOpen(true)}
-                  >
-                    Select Procurement Request
-                  </Button>
-                </div>
-                <FormDescription>
-                  Optional reference number for this checkout
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="notes"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Notes</FormLabel>
-                <FormControl>
-                  <Textarea
-                    {...field}
-                    placeholder="Add any notes about this checkout request"
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
           <div className="pt-4 flex justify-end">
-            <Button type="submit">Submit Request</Button>
+            <Button type="submit" disabled={!form.formState.isValid || !selectedRequest}>Submit Request</Button>
           </div>
         </form>
       </Form>
