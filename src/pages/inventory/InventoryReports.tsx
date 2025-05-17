@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import PageHeader from "@/components/common/PageHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -177,7 +178,6 @@ const InventoryReports = () => {
         <Select
           value={warehouseFilter}
           onValueChange={setWarehouseFilter}
-          className="w-full md:w-auto"
         >
           <SelectTrigger className="w-full md:w-[180px]">
             <SelectValue placeholder="Warehouse" />
