@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import PageHeader from "@/components/common/PageHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -459,10 +458,10 @@ const InventoryReports = () => {
                           fill="#8884d8"
                           dataKey="value"
                           nameKey="name"
-                          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                          label={({ name, percent }) => `${String(name)}: ${(percent * 100).toFixed(0)}%`}
                         >
                           {inventoryData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
+                            <Cell key={`cell-${index}`} fill={String(entry.color)} />
                           ))}
                         </Pie>
                         <Tooltip formatter={(value) => [`${value} units`, 'Quantity']} />
@@ -476,7 +475,7 @@ const InventoryReports = () => {
                       {inventoryData.map((item, index) => (
                         <div key={index} className="flex justify-between items-center">
                           <div className="flex items-center gap-2">
-                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }}></div>
+                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: String(item.color) }}></div>
                             <span>{item.name}</span>
                           </div>
                           <span className="font-medium">{item.value} units</span>

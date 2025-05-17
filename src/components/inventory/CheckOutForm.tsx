@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -41,13 +40,13 @@ interface PendingCheckoutRequest {
   transaction_date: string;
   notes: string | null;
   approval_status: string;
+  delivery_status?: string;
   product: {
     name: string;
   };
   source_warehouse: {
     name: string;
   } | null;
-  delivery_status?: string;
 }
 
 // Define the form schema for the approval form
@@ -114,12 +113,9 @@ const CheckOutForm = ({ onSuccess }: { onSuccess: () => void }) => {
         }
         
         // Filter out any items where source_warehouse has an error
-        const rawData = data || [];
-        
-        // First filter our data and cast properly
         const validRequests: PendingCheckoutRequest[] = [];
         
-        for (const item of rawData) {
+        for (const item of data || []) {
           // Safely handle null and undefined by using a default empty object
           const sourceObj = item.source_warehouse || {};
           
