@@ -16,7 +16,7 @@ import { toast } from "@/components/ui/use-toast"
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ProcurementRequest, InventoryTransaction, RequestStatus } from "@/types";
+import { ProcurementRequest, InventoryTransaction, RequestStatus, RequestPriority } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 
@@ -77,7 +77,7 @@ const CheckOutForm = ({ productId, onSuccess, onCancel }: CheckOutFormProps) => 
         description: item.description || '',
         requesterId: item.requester_id,
         status: item.status as RequestStatus, // Explicit cast to RequestStatus
-        priority: item.priority,
+        priority: item.priority as RequestPriority, // Explicit cast to RequestPriority
         dateCreated: item.date_created,
         dateNeeded: item.date_needed,
         items: [],
