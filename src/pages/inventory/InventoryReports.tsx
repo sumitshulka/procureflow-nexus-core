@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import PageHeader from "@/components/common/PageHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
-import { FilePdf, FileSpreadsheet, CalendarRange } from "lucide-react";
+import { FileText, FileSpreadsheet, CalendarRange } from "lucide-react";
 import { format } from "date-fns";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -197,7 +196,7 @@ const InventoryReports = () => {
             Export Excel
           </Button>
           <Button variant="outline" size="sm">
-            <FilePdf className="mr-2 h-4 w-4" />
+            <FileText className="mr-2 h-4 w-4" />
             Export PDF
           </Button>
         </div>

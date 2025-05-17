@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
@@ -107,6 +106,7 @@ const ProcurementRequests = () => {
   const [requestToDelete, setRequestToDelete] = useState<string | null>(null);
   const [deleteErrorMessage, setDeleteErrorMessage] = useState<string | null>(null);
   const [createdRequestId, setCreatedRequestId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const { user, userData } = useAuth();
   const navigate = useNavigate();
 
