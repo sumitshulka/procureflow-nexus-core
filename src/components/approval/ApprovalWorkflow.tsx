@@ -37,7 +37,7 @@ export const canDeleteProcurementRequest = async (requestId: string): Promise<{
     if (requestError) throw requestError;
     
     // Check if request is in a state that allows deletion (draft or submitted)
-    const allowedStatuses = [RequestStatus.DRAFT, RequestStatus.SUBMITTED];
+    const allowedStatuses = ['draft', 'submitted'];
     
     if (!allowedStatuses.includes(request.status)) {
       return { 

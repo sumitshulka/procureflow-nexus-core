@@ -60,6 +60,7 @@ interface Product {
   } | null;
   classification: string;
   unit: {
+    id: string;
     name: string;
     abbreviation?: string;
   } | null;
@@ -169,6 +170,8 @@ const ProductDetail = () => {
   const { data: productHistory = [] } = useQuery({
     queryKey: ["product-history", id],
     queryFn: async () => {
+      if (!id) return [];
+      
       const { data, error } = await supabase
         .from("product_history")
         .select(`
@@ -178,17 +181,36 @@ const ProductDetail = () => {
           old_value,
           new_value,
           changed_by,
-          changed_at,
-          profiles:changed_by (full_name)
+          changed_at
         `)
         .eq('product_id', id)
         .order('changed_at', { ascending: false });
       
       if (error) throw error;
       
+      // Get unique user IDs from the history
+      const userIds = [...new Set(data.map(item => item.changed_by).filter(Boolean))];
+      
+      // Fetch user names if there are any user IDs
+      let userMap = {};
+      if (userIds.length > 0) {
+        const { data: profiles, error: profilesError } = await supabase
+          .from("profiles")
+          .select("id, full_name")
+          .in('id', userIds);
+          
+        if (!profilesError && profiles) {
+          userMap = profiles.reduce((acc, profile) => ({
+            ...acc,
+            [profile.id]: profile.full_name
+          }), {});
+        }
+      }
+      
+      // Map user names to history entries
       return data.map(item => ({
         ...item,
-        user_name: item.profiles?.full_name || 'Unknown user'
+        user_name: item.changed_by ? userMap[item.changed_by] || 'Unknown user' : 'Unknown user'
       }));
     },
     enabled: !!id,
