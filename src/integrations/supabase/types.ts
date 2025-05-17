@@ -275,6 +275,8 @@ export type Database = {
       inventory_transactions: {
         Row: {
           approval_status: string | null
+          delivery_details: Json | null
+          delivery_status: string | null
           id: string
           notes: string | null
           product_id: string
@@ -289,6 +291,8 @@ export type Database = {
         }
         Insert: {
           approval_status?: string | null
+          delivery_details?: Json | null
+          delivery_status?: string | null
           id?: string
           notes?: string | null
           product_id: string
@@ -303,6 +307,8 @@ export type Database = {
         }
         Update: {
           approval_status?: string | null
+          delivery_details?: Json | null
+          delivery_status?: string | null
           id?: string
           notes?: string | null
           product_id?: string
@@ -836,6 +842,10 @@ export type Database = {
           required_role: Database["public"]["Enums"]["user_role"]
         }
         Returns: boolean
+      }
+      update_transaction_delivery_details: {
+        Args: { transaction_id: string; details: Json }
+        Returns: Json
       }
     }
     Enums: {

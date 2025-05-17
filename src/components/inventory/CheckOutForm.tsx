@@ -389,170 +389,156 @@ const CheckOutForm = ({ onSuccess }: { onSuccess: () => void }) => {
     onSuccess();
   };
 
-  if (isLoadingRequests || isLoadingApprovedRequests) {
-    return (
-      <div className="flex justify-center py-8">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  // Show delivery form if needed
-  if (showDeliveryForm && selectedTransactionId) {
-    return (
-      <div className="space-y-6">
-        <h2 className="text-lg font-medium">Record Delivery Details</h2>
-        <p className="text-sm text-muted-foreground">
-          Enter the recipient and delivery information for this checkout.
-        </p>
-        <DeliveryDetailsForm 
-          transactionId={selectedTransactionId} 
-          onSuccess={handleDeliverySuccess}
-          onCancel={() => setShowDeliveryForm(false)}
-        />
-      </div>
-    );
-  }
-
-  // Display approval form if there are pending requests
-  if (pendingRequests.length > 0) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h2 className="text-lg font-medium">Approve Checkout Requests</h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            Review and approve or reject pending checkout requests.
-          </p>
+  return (
+    <div>
+      {isLoadingRequests || isLoadingApprovedRequests ? (
+        <div className="flex justify-center py-8">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
-
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="transaction_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Select Checkout Request</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a checkout request" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {pendingRequests.map((request) => (
-                        <SelectItem key={request.id} value={request.id}>
-                          {request.product.name} - {request.quantity} units from {request.source_warehouse?.name || 'Unknown location'}
-                          {request.request_id ? ` (${request.request_id})` : ''}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="approval_decision"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Decision</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select your decision" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="approved">Approve</SelectItem>
-                      <SelectItem value="rejected">Reject</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="notes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Notes</FormLabel>
-                  <FormControl>
-                    <Textarea {...field} placeholder="Add any notes about this decision..." />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="pt-4 flex justify-end">
-              <Button type="submit">Process Request</Button>
+      ) : (
+        <>
+          {showDeliveryForm && selectedTransactionId ? (
+            <div className="space-y-6">
+              <h2 className="text-lg font-medium">Record Delivery Details</h2>
+              <p className="text-sm text-muted-foreground">
+                Enter the recipient and delivery information for this checkout.
+              </p>
+              <DeliveryDetailsForm 
+                transactionId={selectedTransactionId} 
+                onSuccess={handleDeliverySuccess}
+                onCancel={() => setShowDeliveryForm(false)}
+              />
             </div>
-          </form>
-        </Form>
-      </div>
-    );
-  }
-  
-  // Display delivery recording section if there are approved requests without delivery details
-  if (approvedRequests.length > 0) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h2 className="text-lg font-medium">Record Delivery Information</h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            The following items have been approved for checkout but need delivery information.
-          </p>
-        </div>
-        
-        <div className="space-y-4">
-          {approvedRequests.map((request) => (
-            <div 
-              key={request.id}
-              className="flex items-center justify-between p-4 border rounded-lg bg-background"
-            >
+          ) : pendingRequests.length > 0 ? (
+            <div className="space-y-6">
               <div>
-                <p className="font-medium">{request.product.name}</p>
-                <p className="text-sm text-muted-foreground">
-                  {request.quantity} units from {request.source_warehouse?.name || 'Unknown location'}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  {request.request_id ? `Request ID: ${request.request_id}` : 'No request ID'}
+                <h2 className="text-lg font-medium">Approve Checkout Requests</h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Review and approve or reject pending checkout requests.
                 </p>
               </div>
-              <Button 
-                onClick={() => handleDeliveryRecord(request.id)}
-                className="flex items-center gap-2"
-              >
-                <TruckIcon className="h-4 w-4" />
-                Record Delivery
-              </Button>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="transaction_id"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Select Checkout Request</FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a checkout request" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {pendingRequests.map((request) => (
+                              <SelectItem key={request.id} value={request.id}>
+                                {request.product.name} - {request.quantity} units from {request.source_warehouse?.name || 'Unknown location'}
+                                {request.request_id ? ` (${request.request_id})` : ''}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-  // If no pending requests and no approved requests without delivery
-  return (
-    <Alert>
-      <AlertTriangle className="h-4 w-4" />
-      <AlertTitle>No pending actions</AlertTitle>
-      <AlertDescription>
-        There are no checkout requests waiting for approval or delivery information at this time.
-      </AlertDescription>
-    </Alert>
+                  <FormField
+                    control={form.control}
+                    name="approval_decision"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Decision</FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select your decision" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="approved">Approve</SelectItem>
+                            <SelectItem value="rejected">Reject</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="notes"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Notes</FormLabel>
+                        <FormControl>
+                          <Textarea {...field} placeholder="Add any notes about this decision..." />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="pt-4 flex justify-end">
+                    <Button type="submit">Process Request</Button>
+                  </div>
+                </form>
+              </Form>
+            </div>
+          ) : approvedRequests.length > 0 ? (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-lg font-medium">Record Delivery Information</h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  The following items have been approved for checkout but need delivery information.
+                </p>
+              </div>
+              <div className="space-y-4">
+                {approvedRequests.map((request) => (
+                  <div 
+                    key={request.id}
+                    className="flex items-center justify-between p-4 border rounded-lg bg-background"
+                  >
+                    <div>
+                      <p className="font-medium">{request.product.name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {request.quantity} units from {request.source_warehouse?.name || 'Unknown location'}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {request.request_id ? `Request ID: ${request.request_id}` : 'No request ID'}
+                      </p>
+                    </div>
+                    <Button 
+                      onClick={() => handleDeliveryRecord(request.id)}
+                      className="flex items-center gap-2"
+                    >
+                      <TruckIcon className="h-4 w-4" />
+                      Record Delivery
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <Alert>
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>No pending actions</AlertTitle>
+              <AlertDescription>
+                There are no checkout requests waiting for approval or delivery information at this time.
+              </AlertDescription>
+            </Alert>
+          )}
+        </>
+      )}
+    </div>
   );
 };
 

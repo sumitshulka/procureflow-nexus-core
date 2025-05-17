@@ -1,4 +1,3 @@
-
 import React from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -18,6 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { Loader2 } from "lucide-react";
+import { updateTransactionDeliveryDetails } from "@/lib/supabase/rpcActions";
 
 const deliveryFormSchema = z.object({
   delivery_method: z.enum(["direct", "courier"], {
@@ -89,15 +89,14 @@ const DeliveryDetailsForm = ({ transactionId, onSuccess, onCancel }: DeliveryDet
         throw error;
       }
 
-      // Make a second update to add the delivery_details as metadata
-      // This is a workaround if the column doesn't exist in the database yet
-      const { error: metadataError } = await supabase.rpc('update_transaction_delivery_details', { 
-        transaction_id: transactionId,
-        details: deliveryDetails 
-      }).select();
+      // Make a second update to add the delivery_details using our helper function
+      const { error: detailsError } = await updateTransactionDeliveryDetails(
+        transactionId,
+        deliveryDetails
+      );
 
-      if (metadataError) {
-        console.warn("Could not save delivery details metadata:", metadataError);
+      if (detailsError) {
+        console.warn("Could not save delivery details metadata:", detailsError);
         // Don't throw, as the main update succeeded
       }
 
