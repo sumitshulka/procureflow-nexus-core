@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -344,10 +343,14 @@ const CheckOutRequestForm = ({ onSuccess }: { onSuccess: () => void }) => {
     if (!user || missingProducts.length === 0) return;
     
     try {
+      // Generate a request number (format: PR-YYYY-MM-DD-XXXX)
+      const requestNumber = `PR-${new Date().toISOString().slice(0, 10)}-${Math.floor(1000 + Math.random() * 9000)}`;
+      
       // Create a procurement request
       const { data: newRequest, error } = await supabase
         .from("procurement_requests")
         .insert({
+          request_number: requestNumber,
           title: `Auto-generated request for missing inventory items`,
           description: `Items needed for checkout that were not available in inventory.\nOriginal request: ${selectedRequest?.request_number}`,
           requester_id: user.id,
@@ -424,10 +427,14 @@ const CheckOutRequestForm = ({ onSuccess }: { onSuccess: () => void }) => {
 
       if (productError) throw productError;
 
+      // Generate a request number (format: PR-YYYY-MM-DD-XXXX)
+      const requestNumber = `PR-${new Date().toISOString().slice(0, 10)}-${Math.floor(1000 + Math.random() * 9000)}`;
+      
       // Then create a procurement request with a request_number field
       const { error: requestError } = await supabase
         .from("procurement_requests")
         .insert({
+          request_number: requestNumber,
           title: `New Product Request: ${data.name}`,
           description: `Request for new product addition to inventory. ${data.notes || ''}`,
           requester_id: user.id,
@@ -728,7 +735,7 @@ const CheckOutRequestForm = ({ onSuccess }: { onSuccess: () => void }) => {
               </Table>
             </div>
             
-            <Alert variant="warning">
+            <Alert variant="destructive">
               <AlertTriangle className="h-4 w-4" />
               <AlertTitle>Missing Inventory</AlertTitle>
               <AlertDescription>
@@ -905,7 +912,7 @@ const CheckOutRequestForm = ({ onSuccess }: { onSuccess: () => void }) => {
                   <Select
                     value={customItem?.product_id || ""}
                     onValueChange={(value) => setCustomItem({
-                      ...customItem || { quantity: 1 },
+                      ...customItem || { quantity: 1, source_warehouse_id: "" },
                       product_id: value
                     })}
                   >
