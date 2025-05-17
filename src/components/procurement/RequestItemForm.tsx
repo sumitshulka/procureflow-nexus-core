@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -82,6 +82,7 @@ const RequestItemForm: React.FC<RequestItemFormProps> = ({
   existingItem,
 }) => {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [isNewProductModalOpen, setIsNewProductModalOpen] = useState(false);
   const [inventoryStatus, setInventoryStatus] = useState<{
@@ -357,6 +358,9 @@ const RequestItemForm: React.FC<RequestItemFormProps> = ({
       
       newProductForm.reset();
       setIsNewProductModalOpen(false);
+      
+      // Refresh products list
+      queryClient.invalidateQueries({ queryKey: ["products"] });
     } catch (error: any) {
       toast({
         title: "Error",
