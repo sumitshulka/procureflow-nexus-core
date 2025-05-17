@@ -843,6 +843,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_request_completed: {
+        Args: { request_id: string }
+        Returns: boolean
+      }
       update_transaction_delivery_details: {
         Args: { transaction_id: string; details: Json }
         Returns: Json

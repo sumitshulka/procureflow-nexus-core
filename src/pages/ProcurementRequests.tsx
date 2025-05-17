@@ -252,15 +252,7 @@ const ProcurementRequests = () => {
         if (deleteApprovalsError) throw deleteApprovalsError;
       }
       
-      // Delete all request items first
-      const { error: itemsError } = await supabase
-        .from("procurement_request_items")
-        .delete()
-        .eq("request_id", requestToDelete);
-      
-      if (itemsError) throw itemsError;
-      
-      // Then delete the request
+      // Delete the request - the trigger we created will handle deleting related items
       const { error } = await supabase
         .from("procurement_requests")
         .delete()
@@ -278,7 +270,6 @@ const ProcurementRequests = () => {
         description: "Request deleted successfully",
       });
       
-      // Refresh the requests list and update the state
       // Remove the deleted request from the state to avoid having to refetch
       setRequests(prev => prev.filter(req => req.id !== requestToDelete));
       

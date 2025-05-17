@@ -358,6 +358,18 @@ const ProcurementRequestDetail = () => {
     try {
       setIsSubmitting(true);
       
+      // Check if there are any items in the request
+      if (requestDetail.items.length === 0) {
+        toast({
+          title: "Error",
+          description: "You must add at least one item to the request before submitting.",
+          variant: "destructive",
+        });
+        setIsSubmitting(false);
+        setConfirmSubmitOpen(false);
+        return;
+      }
+      
       // Update the request status to SUBMITTED
       const { error } = await supabase
         .from("procurement_requests")
