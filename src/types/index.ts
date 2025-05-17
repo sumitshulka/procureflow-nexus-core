@@ -274,6 +274,9 @@ export interface InventoryTransaction {
   request_id?: string;
   approval_status?: string;
   notes?: string;
+  delivery_status?: string;
+  delivery_details?: Record<string, any>;
+  delivery_date?: string;
   // Related data
   product?: {
     name: string;

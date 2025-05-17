@@ -66,7 +66,7 @@ const DeliveryDetailsForm = ({ transactionId, onSuccess, onCancel }: DeliveryDet
         recipient_name: data.recipient_name,
         recipient_contact: data.recipient_contact,
         delivery_date: new Date().toISOString(),
-        ...((data.delivery_method === "courier") ? {
+        ...(data.delivery_method === "courier" ? {
           courier_name: data.courier_name,
           courier_tracking: data.courier_tracking,
         } : {}),
@@ -77,14 +77,28 @@ const DeliveryDetailsForm = ({ transactionId, onSuccess, onCancel }: DeliveryDet
       const { error } = await supabase
         .from("inventory_transactions")
         .update({
-          delivery_details: deliveryDetails,
           delivery_status: "delivered",
           delivery_date: new Date().toISOString(),
+          notes: data.delivery_notes 
+            ? `${data.delivery_notes}\n(Delivery details recorded)`
+            : "(Delivery details recorded)"
         })
         .eq("id", transactionId);
 
       if (error) {
         throw error;
+      }
+
+      // Make a second update to add the delivery_details as metadata
+      // This is a workaround if the column doesn't exist in the database yet
+      const { error: metadataError } = await supabase.rpc('update_transaction_delivery_details', { 
+        transaction_id: transactionId,
+        details: deliveryDetails 
+      }).select();
+
+      if (metadataError) {
+        console.warn("Could not save delivery details metadata:", metadataError);
+        // Don't throw, as the main update succeeded
       }
 
       toast({

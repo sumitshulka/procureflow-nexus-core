@@ -22,6 +22,26 @@ const TIME_PERIODS = {
   custom: { label: "Custom Range", days: null },
 };
 
+// Define chart data interfaces
+interface InventoryChartData {
+  name: string;
+  value: number;
+  color: string;
+}
+
+interface TransactionChartData {
+  month: string;
+  checkin: number;
+  checkout: number;
+  transfer: number;
+}
+
+interface ProductMovementData {
+  name: string;
+  checkins: number;
+  checkouts: number;
+}
+
 const InventoryReports = () => {
   const { toast } = useToast();
   const [startDate, setStartDate] = useState<Date | undefined>(new Date(new Date().setDate(new Date().getDate() - 30)));
@@ -96,9 +116,9 @@ const InventoryReports = () => {
         // Convert to array for the chart
         return Object.entries(categoryTotals).map(([name, value], index) => ({
           name,
-          value,
+          value: value as number,
           color: COLORS[index % COLORS.length]
-        }));
+        })) as InventoryChartData[];
       } catch (error) {
         console.error("Error fetching inventory levels:", error);
         toast({
@@ -106,7 +126,7 @@ const InventoryReports = () => {
           description: "Failed to load inventory data",
           variant: "destructive",
         });
-        return [];
+        return [] as InventoryChartData[];
       }
     }
   });

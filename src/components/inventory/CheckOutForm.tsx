@@ -115,28 +115,40 @@ const CheckOutForm = ({ onSuccess }: { onSuccess: () => void }) => {
         // Filter out any items where source_warehouse has an error
         const validRequests: PendingCheckoutRequest[] = [];
         
-        for (const item of data || []) {
-          // Safely handle null and undefined by using a default empty object
-          const sourceObj = item.source_warehouse || {};
-          
-          // First determine if we have a proper object with a name
-          let warehouseName: string | null = null;
-          
-          // Only try to access properties if we have a non-null object
-          if (
-            typeof sourceObj === 'object' && 
-            sourceObj !== null &&
-            'name' in sourceObj && 
-            typeof sourceObj.name === 'string'
-          ) {
-            warehouseName = sourceObj.name;
+        if (data) {
+          for (const item of data) {
+            // Safely handle null and undefined by using a default empty object
+            const sourceObj = item.source_warehouse || {};
+            
+            // First determine if we have a proper object with a name
+            let warehouseName: string | null = null;
+            
+            // Only try to access properties if we have a non-null object
+            if (
+              typeof sourceObj === 'object' && 
+              sourceObj !== null &&
+              'name' in sourceObj && 
+              typeof sourceObj.name === 'string'
+            ) {
+              warehouseName = sourceObj.name;
+            }
+            
+            // Push to valid requests with properly formatted data
+            validRequests.push({
+              id: item.id,
+              product_id: item.product_id,
+              source_warehouse_id: item.source_warehouse_id,
+              quantity: item.quantity,
+              reference: item.reference,
+              request_id: item.request_id,
+              transaction_date: item.transaction_date,
+              notes: item.notes,
+              approval_status: item.approval_status,
+              delivery_status: item.delivery_status,
+              product: item.product || { name: 'Unknown Product' },
+              source_warehouse: warehouseName ? { name: warehouseName } : null
+            });
           }
-          
-          // Push to valid requests with properly formatted data
-          validRequests.push({
-            ...item,
-            source_warehouse: warehouseName ? { name: warehouseName } : null
-          });
         }
         
         return validRequests;
@@ -181,23 +193,35 @@ const CheckOutForm = ({ onSuccess }: { onSuccess: () => void }) => {
         // Process data similar to pendingRequests
         const validRequests: PendingCheckoutRequest[] = [];
         
-        for (const item of data || []) {
-          const sourceObj = item.source_warehouse || {};
-          let warehouseName: string | null = null;
-          
-          if (
-            typeof sourceObj === 'object' && 
-            sourceObj !== null &&
-            'name' in sourceObj && 
-            typeof sourceObj.name === 'string'
-          ) {
-            warehouseName = sourceObj.name;
+        if (data) {
+          for (const item of data) {
+            const sourceObj = item.source_warehouse || {};
+            let warehouseName: string | null = null;
+            
+            if (
+              typeof sourceObj === 'object' && 
+              sourceObj !== null &&
+              'name' in sourceObj && 
+              typeof sourceObj.name === 'string'
+            ) {
+              warehouseName = sourceObj.name;
+            }
+            
+            validRequests.push({
+              id: item.id,
+              product_id: item.product_id,
+              source_warehouse_id: item.source_warehouse_id,
+              quantity: item.quantity,
+              reference: item.reference,
+              request_id: item.request_id,
+              transaction_date: item.transaction_date,
+              notes: item.notes,
+              approval_status: item.approval_status,
+              delivery_status: item.delivery_status,
+              product: item.product || { name: 'Unknown Product' },
+              source_warehouse: warehouseName ? { name: warehouseName } : null
+            });
           }
-          
-          validRequests.push({
-            ...item,
-            source_warehouse: warehouseName ? { name: warehouseName } : null
-          });
         }
         
         return validRequests;
