@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -31,7 +32,7 @@ import { ArrowDownToLine, ArrowUpFromLine, MoveRight, Search, Filter, Trash2 } f
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { InventoryTransaction } from "@/types";
+import { InventoryTransaction, UserRole } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface EnhancedInventoryTransaction extends InventoryTransaction {
@@ -44,8 +45,8 @@ const InventoryTransactions = () => {
   const { hasRole } = useAuth();
   const [activeTab, setActiveTab] = useState<string>("transactions");
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");  // Changed from empty string to "all"
-  const [typeFilter, setTypeFilter] = useState("all");  // Changed from empty string to "all"
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState("all");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [transactionToDelete, setTransactionToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -312,7 +313,7 @@ const InventoryTransactions = () => {
         // Only show delete button for check_out with pending status
         const canDelete = row.type === "check_out" && 
                           (row.approval_status === "pending" || row.approval_status === "draft") && 
-                          (hasRole('admin') || hasRole('inventory_manager'));
+                          (hasRole(UserRole.ADMIN) || hasRole(UserRole.INVENTORY_MANAGER));
         
         if (!canDelete) return null;
         
