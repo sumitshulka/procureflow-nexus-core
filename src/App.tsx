@@ -7,6 +7,7 @@ import ProductDetail from "@/pages/ProductDetail";
 import InventoryItems from "@/pages/inventory/InventoryItems";
 import InventoryTransactions from "@/pages/inventory/InventoryTransactions";
 import InventoryIndex from "@/pages/inventory/InventoryIndex";
+import Warehouses from "@/pages/inventory/Warehouses";
 import ProcurementRequests from "@/pages/ProcurementRequests";
 import ProcurementRequestDetail from "@/pages/ProcurementRequestDetail";
 import Settings from "@/pages/Settings";
@@ -28,6 +29,7 @@ function App() {
               <Route index element={<InventoryItems />} />
               <Route path="items" element={<InventoryItems />} />
               <Route path="transactions" element={<InventoryTransactions />} />
+              <Route path="warehouses" element={<Warehouses />} />
             </Route>
             <Route path="/requests" element={<ProcurementRequests />} />
             <Route path="/requests/:id" element={<ProcurementRequestDetail />} />
