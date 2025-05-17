@@ -20,6 +20,7 @@ import ForgotPasswordPage from "./pages/auth/ForgotPasswordPage";
 import UpdatePasswordPage from "./pages/auth/UpdatePasswordPage";
 import UnauthorizedPage from "./pages/auth/UnauthorizedPage";
 import NotFound from "./pages/NotFound";
+import Approvals from "./pages/Approvals";
 
 // Inventory pages
 import InventoryIndex from "./pages/inventory/InventoryIndex";
@@ -77,6 +78,21 @@ const App = () => {
                 {/* Procurement requests - accessible by all authenticated users */}
                 <Route path="/requests" element={<ProcurementRequests />} />
                 <Route path="/requests/:id" element={<ProcurementRequestDetail />} />
+                
+                {/* Approvals - accessible by admin, procurement officers, and inventory managers */}
+                <Route 
+                  element={
+                    <ProtectedRoute 
+                      requiredRoles={[
+                        UserRole.ADMIN, 
+                        UserRole.PROCUREMENT_OFFICER, 
+                        UserRole.INVENTORY_MANAGER
+                      ]} 
+                    />
+                  }
+                >
+                  <Route path="/approvals" element={<Approvals />} />
+                </Route>
                 
                 {/* Inventory routes - accessible by admin and inventory managers */}
                 <Route 

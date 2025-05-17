@@ -42,6 +42,38 @@ export type Database = {
         }
         Relationships: []
       }
+      approval_assignments: {
+        Row: {
+          approver_id: string
+          created_at: string | null
+          department_id: string | null
+          entity_type: string
+          id: string
+        }
+        Insert: {
+          approver_id: string
+          created_at?: string | null
+          department_id?: string | null
+          entity_type: string
+          id?: string
+        }
+        Update: {
+          approver_id?: string
+          created_at?: string | null
+          department_id?: string | null
+          entity_type?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "approval_assignments_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       approval_hierarchies: {
         Row: {
           approver_level: number
@@ -83,6 +115,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      approvals: {
+        Row: {
+          approval_date: string | null
+          approver_id: string | null
+          comments: string | null
+          created_at: string | null
+          entity_id: string
+          entity_type: string
+          id: string
+          requester_id: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          approval_date?: string | null
+          approver_id?: string | null
+          comments?: string | null
+          created_at?: string | null
+          entity_id: string
+          entity_type: string
+          id?: string
+          requester_id: string
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          approval_date?: string | null
+          approver_id?: string | null
+          comments?: string | null
+          created_at?: string | null
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          requester_id?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       categories: {
         Row: {
@@ -681,6 +752,23 @@ export type Database = {
       }
     }
     Views: {
+      approval_requests_view: {
+        Row: {
+          approval_date: string | null
+          approver_id: string | null
+          comments: string | null
+          created_at: string | null
+          entity_id: string | null
+          entity_status: Database["public"]["Enums"]["request_status"] | null
+          entity_type: string | null
+          id: string | null
+          request_title: string | null
+          requester_id: string | null
+          requester_name: string | null
+          status: string | null
+        }
+        Relationships: []
+      }
       procurement_request_details: {
         Row: {
           created_at: string | null
