@@ -1,5 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
+import { UserRole } from "@/types";
 
 /**
  * Update the delivery details for a transaction
@@ -28,7 +29,7 @@ export const updateTransactionDeliveryDetails = async (
  */
 export const assignRoleToUser = async (
   userId: string,
-  role: string
+  role: UserRole
 ) => {
   const { data, error } = await supabase
     .from('user_roles')
@@ -49,7 +50,7 @@ export const assignRoleToUser = async (
  */
 export const hasUserRole = async (
   userId: string,
-  role: string
+  role: UserRole
 ) => {
   const { data, error } = await supabase
     .rpc('has_role', {
@@ -79,4 +80,3 @@ export const getUserRoles = async (
     .select('role')
     .eq('user_id', userId);
 };
-
