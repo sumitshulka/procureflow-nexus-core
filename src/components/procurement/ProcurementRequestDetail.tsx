@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -64,7 +65,7 @@ const ProcurementRequestDetail = () => {
     title: "",
     description: "",
     department: "",
-    priority: "medium" as RequestPriority, // Fix: Type assertion to RequestPriority
+    priority: RequestPriority.MEDIUM, // Fix: Use the enum directly
     date_needed: "",
   });
 
@@ -100,11 +101,16 @@ const ProcurementRequestDetail = () => {
 
       if (error) throw error;
 
+      // Convert string priority to enum value
+      const priorityValue = data.priority ? 
+        (RequestPriority[data.priority.toUpperCase() as keyof typeof RequestPriority] || RequestPriority.MEDIUM) : 
+        RequestPriority.MEDIUM;
+
       setFormData({
         title: data.title || "",
         description: data.description || "",
         department: data.department || "",
-        priority: data.priority || "medium",
+        priority: priorityValue,
         date_needed: data.date_needed ? new Date(data.date_needed).toISOString().split("T")[0] : "",
       });
 
@@ -143,7 +149,7 @@ const ProcurementRequestDetail = () => {
     setFormData((prev) => ({ 
       ...prev, 
       [name]: name === "priority" 
-        ? value as RequestPriority // Fix: Type assertion for priority
+        ? value as RequestPriority 
         : value 
     }));
   };
@@ -425,10 +431,10 @@ const ProcurementRequestDetail = () => {
                           <SelectValue placeholder="Select priority" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="low">Low</SelectItem>
-                          <SelectItem value="medium">Medium</SelectItem>
-                          <SelectItem value="high">High</SelectItem>
-                          <SelectItem value="urgent">Urgent</SelectItem>
+                          <SelectItem value={RequestPriority.LOW}>Low</SelectItem>
+                          <SelectItem value={RequestPriority.MEDIUM}>Medium</SelectItem>
+                          <SelectItem value={RequestPriority.HIGH}>High</SelectItem>
+                          <SelectItem value={RequestPriority.URGENT}>Urgent</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
