@@ -138,6 +138,44 @@ export const handleAdminRequestApproval = async (
   }
 };
 
+// Delete procurement request function
+export const deleteProcurementRequest = async (requestId: string): Promise<{ 
+  success: boolean; 
+  message: string 
+}> => {
+  try {
+    // First check if the request can be deleted
+    const { canDelete, message } = await canDeleteProcurementRequest(requestId);
+    
+    if (!canDelete) {
+      return { success: false, message: message || 'Cannot delete this request' };
+    }
+    
+    // Delete the request
+    const { error } = await supabase
+      .from('procurement_requests')
+      .delete()
+      .eq('id', requestId);
+    
+    if (error) {
+      console.error('Error deleting procurement request:', error);
+      return { 
+        success: false, 
+        message: `Failed to delete request: ${error.message}` 
+      };
+    }
+    
+    return { success: true, message: 'Request deleted successfully' };
+    
+  } catch (error) {
+    console.error('Error in delete process:', error);
+    return { 
+      success: false, 
+      message: 'Failed to delete request' 
+    };
+  }
+};
+
 // Component that provides approval workflow functions through context
 export const useApprovalWorkflow = () => {
   const { userData } = useAuth();
@@ -146,7 +184,8 @@ export const useApprovalWorkflow = () => {
   return {
     handleAdminRequestApproval,
     canDeleteProcurementRequest,
-    isProcurementRequestUsedInInventory
+    isProcurementRequestUsedInInventory,
+    deleteProcurementRequest
   };
 };
 

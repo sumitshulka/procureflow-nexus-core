@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -42,8 +42,8 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { toast } from "@/components/ui/use-toast";
-import { Edit, Save, Tag, History, ArrowLeft } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
+import { Edit, Save, Tag, History, ArrowLeft, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -367,7 +367,8 @@ const ProductDetail = () => {
     return (
       <div className="page-container">
         <div className="flex items-center justify-center h-64">
-          <p className="text-gray-500">Loading product details...</p>
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <span className="ml-2 text-lg">Loading product details...</span>
         </div>
       </div>
     );
@@ -636,9 +637,9 @@ const ProductDetail = () => {
                               <Input 
                                 type="number" 
                                 step="0.01" 
-                                placeholder="Enter price" 
-                                {...field}
-                                onChange={(e) => field.onChange(e.target.value === "" ? undefined : Number(e.target.value))}
+                                placeholder="0.00" 
+                                {...field} 
+                                value={field.value === undefined ? '' : field.value}
                               />
                             </FormControl>
                             <FormMessage />
@@ -650,27 +651,21 @@ const ProductDetail = () => {
                         control={form.control}
                         name="is_active"
                         render={({ field }) => (
-                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                            <div className="space-y-0.5">
-                              <FormLabel>Active Status</FormLabel>
+                          <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                            <FormControl>
+                              <input
+                                type="checkbox"
+                                checked={field.value}
+                                onChange={field.onChange}
+                                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                              />
+                            </FormControl>
+                            <div className="space-y-1 leading-none">
+                              <FormLabel>Active</FormLabel>
                               <FormDescription>
-                                Inactive products will not appear in catalogs
+                                Active products appear in searches and can be ordered
                               </FormDescription>
                             </div>
-                            <FormControl>
-                              <Select
-                                value={field.value ? "active" : "inactive"}
-                                onValueChange={(value) => field.onChange(value === "active")}
-                              >
-                                <SelectTrigger className="w-[120px]">
-                                  <SelectValue placeholder="Select status" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="active">Active</SelectItem>
-                                  <SelectItem value="inactive">Inactive</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </FormControl>
                           </FormItem>
                         )}
                       />
@@ -683,9 +678,9 @@ const ProductDetail = () => {
                         <FormItem>
                           <FormLabel>Description</FormLabel>
                           <FormControl>
-                            <Textarea 
-                              placeholder="Enter product description" 
-                              className="h-32"
+                            <Textarea
+                              placeholder="Enter product description"
+                              className="min-h-[120px]"
                               {...field}
                             />
                           </FormControl>
@@ -700,27 +695,13 @@ const ProductDetail = () => {
                       render={() => (
                         <FormItem>
                           <FormLabel>Tags</FormLabel>
-                          <div className="flex flex-wrap gap-2 py-2">
-                            {form.getValues("tags").map((tag, i) => (
-                              <Badge key={i} className="flex items-center gap-1">
-                                {tag}
-                                <button
-                                  type="button"
-                                  onClick={() => removeTag(tag)}
-                                  className="ml-1 rounded-full hover:bg-primary-foreground p-1 h-4 w-4 inline-flex items-center justify-center text-xs"
-                                >
-                                  ×
-                                </button>
-                              </Badge>
-                            ))}
-                          </div>
-                          <div className="flex gap-2">
+                          <div className="flex items-center gap-2">
                             <Input
+                              placeholder="Add tag..."
                               value={tagInput}
                               onChange={(e) => setTagInput(e.target.value)}
-                              placeholder="Enter tag"
                               onKeyDown={(e) => {
-                                if (e.key === "Enter" && tagInput) {
+                                if (e.key === 'Enter') {
                                   e.preventDefault();
                                   addTag();
                                 }
@@ -730,14 +711,42 @@ const ProductDetail = () => {
                               Add
                             </Button>
                           </div>
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {form.getValues("tags").map((tag, i) => (
+                              <Badge
+                                key={i}
+                                variant="secondary"
+                                className="px-2 py-1 gap-1"
+                              >
+                                {tag}
+                                <button
+                                  type="button"
+                                  className="ml-1 rounded-full h-4 w-4 flex items-center justify-center bg-muted-foreground/20 hover:bg-muted-foreground/40 text-muted-foreground"
+                                  onClick={() => removeTag(tag)}
+                                >
+                                  ×
+                                </button>
+                              </Badge>
+                            ))}
+                          </div>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
                     
-                    <div className="flex justify-end">
+                    <div className="flex justify-end pt-4">
                       <Button type="submit" disabled={updateProduct.isPending}>
-                        {updateProduct.isPending ? "Saving..." : "Save Changes"}
+                        {updateProduct.isPending ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Saving...
+                          </>
+                        ) : (
+                          <>
+                            <Save className="mr-2 h-4 w-4" />
+                            Save Changes
+                          </>
+                        )}
                       </Button>
                     </div>
                   </form>
@@ -751,41 +760,76 @@ const ProductDetail = () => {
           <Card>
             <CardHeader>
               <CardTitle>Change History</CardTitle>
-              <CardDescription>History of changes made to this product</CardDescription>
+              <CardDescription>
+                Track changes made to this product over time
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {productHistory.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  No changes have been recorded for this product
+                <div className="text-center py-10 text-muted-foreground">
+                  <History className="mx-auto h-10 w-10 mb-2 opacity-30" />
+                  <p>No history records found for this product</p>
                 </div>
               ) : (
-                <div className="space-y-8">
+                <div className="space-y-4">
                   {productHistory.map((entry) => (
-                    <div key={entry.id} className="border-b pb-6 last:border-0">
-                      <div className="flex justify-between mb-2">
-                        <span className="font-medium capitalize">
-                          Changed {entry.field.replace('_', ' ')}
-                        </span>
-                        <span className="text-sm text-gray-500">
+                    <div key={entry.id} className="border-b pb-4 last:border-0">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="capitalize">
+                            {entry.field.replace('_', ' ')}
+                          </Badge>
+                          <span className="text-sm text-muted-foreground">
+                            by {entry.user_name}
+                          </span>
+                        </div>
+                        <span className="text-sm text-muted-foreground">
                           {new Date(entry.changed_at).toLocaleString()}
                         </span>
                       </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="bg-gray-50 p-3 rounded">
-                          <div className="text-xs text-gray-500 mb-1">Previous Value:</div>
-                          <div className="whitespace-pre-line text-sm">
-                            {entry.old_value || 'None'}
+                      
+                      <div className="mt-2 grid grid-cols-2 gap-4">
+                        <div>
+                          <div className="text-xs text-muted-foreground mb-1">Old Value</div>
+                          <div className="text-sm bg-muted/20 p-2 rounded-md max-h-24 overflow-auto">
+                            {entry.field === 'tags' ? (
+                              entry.old_value ? (
+                                <div className="flex flex-wrap gap-1">
+                                  {JSON.parse(entry.old_value).map((tag: string, i: number) => (
+                                    <Badge key={i} variant="outline" className="text-xs">
+                                      {tag}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              ) : (
+                                <span className="text-muted-foreground">No tags</span>
+                              )
+                            ) : (
+                              entry.old_value || <span className="text-muted-foreground italic">Empty</span>
+                            )}
                           </div>
                         </div>
-                        <div className="bg-green-50 p-3 rounded">
-                          <div className="text-xs text-gray-500 mb-1">New Value:</div>
-                          <div className="whitespace-pre-line text-sm">
-                            {entry.new_value || 'None'}
+                        
+                        <div>
+                          <div className="text-xs text-muted-foreground mb-1">New Value</div>
+                          <div className="text-sm bg-muted/20 p-2 rounded-md max-h-24 overflow-auto">
+                            {entry.field === 'tags' ? (
+                              entry.new_value ? (
+                                <div className="flex flex-wrap gap-1">
+                                  {JSON.parse(entry.new_value).map((tag: string, i: number) => (
+                                    <Badge key={i} variant="outline" className="text-xs">
+                                      {tag}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              ) : (
+                                <span className="text-muted-foreground">No tags</span>
+                              )
+                            ) : (
+                              entry.new_value || <span className="text-muted-foreground italic">Empty</span>
+                            )}
                           </div>
                         </div>
-                      </div>
-                      <div className="text-sm text-gray-500 mt-2">
-                        Changed by {entry.user_name}
                       </div>
                     </div>
                   ))}

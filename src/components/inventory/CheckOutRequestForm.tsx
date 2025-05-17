@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { AlertTriangle, Loader2, FileBox, PlusCircle } from "lucide-react";
+import { AlertTriangle, Loader2, FileBox, PlusCircle, Trash2, Plus } from "lucide-react";
 import { 
   Dialog,
   DialogContent, 
@@ -36,27 +36,33 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useAuth } from "@/contexts/AuthContext";
-import ProcurementRequestSelector from "./ProcurementRequestSelector";
+import ProcurementRequestSelector, { ProcurementRequest, ProcurementRequestItem } from "./ProcurementRequestSelector";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 
-// Define the schema for the checkout form
+// Define interface for checkout item
+interface CheckoutItem {
+  product_id: string;
+  product_name: string;
+  source_warehouse_id: string;
+  quantity: number;
+  notes?: string;
+  available: boolean;
+  inventory_quantity?: number;
+}
+
+// Define schema for checkout request form
 const checkoutFormSchema = z.object({
   request_id: z.string().optional(),
   reference: z.string().optional(),
-  product_id: z.string({
-    required_error: "Please select a product",
-  }),
-  source_warehouse_id: z.string({
-    required_error: "Please select a warehouse",
-  }),
-  quantity: z.coerce.number().positive({
-    message: "Quantity must be a positive number",
-  }),
   notes: z.string().optional(),
 });
 
 type CheckoutFormValues = z.infer<typeof checkoutFormSchema>;
 
-// Define the schema for the product request form
+// Define schema for product request form
 const productRequestSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters"),
   description: z.string().optional(),
@@ -77,43 +83,31 @@ const productRequestSchema = z.object({
 
 type ProductRequestFormValues = z.infer<typeof productRequestSchema>;
 
-interface ProcurementRequest {
-  id: string;
-  request_number: string;
-  title: string;
-  department: string | null;
-  date_created: string;
-  requester_name: string | null;
-  items?: {
-    id: string;
-    product_id: string;
-    quantity: number;
-    product_name: string;
-  }[];
-}
-
 const CheckOutRequestForm = ({ onSuccess }: { onSuccess: () => void }) => {
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [isProcurementSelectorOpen, setIsProcurementSelectorOpen] = useState(false);
-  const [inventoryWarning, setInventoryWarning] = useState<string | null>(null);
   const [selectedRequest, setSelectedRequest] = useState<ProcurementRequest | null>(null);
-  const [availableProducts, setAvailableProducts] = useState<any[]>([]);
+  const [checkoutItems, setCheckoutItems] = useState<CheckoutItem[]>([]);
+  const [isRFPModalOpen, setIsRFPModalOpen] = useState(false);
+  const [missingProducts, setMissingProducts] = useState<ProcurementRequestItem[]>([]);
+  const [customItem, setCustomItem] = useState<{
+    product_id: string;
+    source_warehouse_id: string;
+    quantity: number;
+  } | null>(null);
   
-  // Form for checkout
+  // Forms for checkout and product request
   const form = useForm<CheckoutFormValues>({
     resolver: zodResolver(checkoutFormSchema),
     defaultValues: {
-      quantity: 1,
       reference: "",
       notes: "",
     },
   });
 
-  // Form for product request
   const productRequestForm = useForm<ProductRequestFormValues>({
     resolver: zodResolver(productRequestSchema),
     defaultValues: {
@@ -204,131 +198,202 @@ const CheckOutRequestForm = ({ onSuccess }: { onSuccess: () => void }) => {
     },
   });
 
-  // Update available products when a procurement request is selected
-  useEffect(() => {
-    if (selectedRequest?.items && selectedRequest.items.length > 0) {
-      // Filter products to show only those in the selected procurement request
-      const requestProductIds = selectedRequest.items.map(item => item.product_id);
-      const filteredProducts = products.filter(product => requestProductIds.includes(product.id));
-      setAvailableProducts(filteredProducts);
-    } else {
-      setAvailableProducts(products);
-    }
-  }, [selectedRequest, products]);
-
-  // Check inventory level when product changes
-  const checkInventory = async (productId: string, warehouseId: string, quantity: number) => {
-    if (!productId || !warehouseId) return;
-    
-    try {
-      const { data, error } = await supabase
-        .from("inventory_items")
-        .select("quantity")
-        .eq("product_id", productId)
-        .eq("warehouse_id", warehouseId)
-        .single();
-
-      if (error) {
-        if (error.code === "PGRST116") {  // No rows returned
-          setInventoryWarning("This product is not available in the selected warehouse.");
-        } else {
-          console.error("Error checking inventory:", error);
-        }
-        return;
-      }
-
-      if (data.quantity < quantity) {
-        setInventoryWarning(`Only ${data.quantity} units available. You're requesting ${quantity} units.`);
-      } else {
-        setInventoryWarning(null);
-      }
-    } catch (error) {
-      console.error("Error checking inventory:", error);
-    }
-  };
-
-  // Watch for changes to perform inventory check
-  const productId = form.watch("product_id");
-  const warehouseId = form.watch("source_warehouse_id");
-  const quantity = form.watch("quantity");
-
-  useEffect(() => {
-    if (productId && warehouseId && quantity) {
-      checkInventory(productId, warehouseId, quantity);
-    }
-  }, [productId, warehouseId, quantity]);
-
-  const handleProductChange = async (productId: string) => {
-    form.setValue("product_id", productId);
-    
-    // Find the selected product to display details
-    const product = products.find(p => p.id === productId);
-    setSelectedProduct(product);
-  };
-
-  // Handle procurement request selection
-  const handleRequestSelection = (request: ProcurementRequest) => {
+  // Handle procurement request selection and auto-populate items
+  const handleRequestSelection = async (request: ProcurementRequest) => {
     setSelectedRequest(request);
     form.setValue("request_id", request.request_number);
     form.setValue("reference", `PR: ${request.request_number} - ${request.title}`);
     
-    // Reset product selection since we now have new products from the request
-    form.setValue("product_id", "");
-    setSelectedProduct(null);
+    // Reset checkout items
+    setCheckoutItems([]);
+    
+    if (!request.items || request.items.length === 0) {
+      toast({
+        title: "Warning",
+        description: "This request doesn't have any items",
+        variant: "destructive",
+      });
+      setIsProcurementSelectorOpen(false);
+      return;
+    }
+    
+    // Process each item in the request
+    const newCheckoutItems: CheckoutItem[] = [];
+    const unavailableItems: ProcurementRequestItem[] = [];
+    
+    for (const item of request.items) {
+      // Find product details
+      const product = products.find(p => p.id === item.product_id);
+      
+      if (!product) {
+        unavailableItems.push(item);
+        continue;
+      }
+      
+      // Check inventory availability for this product across all warehouses
+      const { data: inventoryItems, error } = await supabase
+        .from("inventory_items")
+        .select("warehouse_id, quantity")
+        .eq("product_id", item.product_id)
+        .gt("quantity", 0);
+        
+      if (error || !inventoryItems || inventoryItems.length === 0) {
+        // Product exists but no inventory
+        unavailableItems.push(item);
+        continue;
+      }
+      
+      // Find best warehouse (one with most inventory)
+      const bestWarehouse = inventoryItems.reduce((prev, current) => 
+        (prev.quantity > current.quantity) ? prev : current);
+        
+      // Add to checkout items
+      newCheckoutItems.push({
+        product_id: item.product_id,
+        product_name: product.name,
+        source_warehouse_id: bestWarehouse.warehouse_id,
+        quantity: Math.min(item.quantity, bestWarehouse.quantity), // Only allow checking out what's available
+        available: true,
+        inventory_quantity: bestWarehouse.quantity
+      });
+    }
+    
+    setCheckoutItems(newCheckoutItems);
+    setMissingProducts(unavailableItems);
+    
+    if (unavailableItems.length > 0) {
+      setIsRFPModalOpen(true);
+    }
     
     toast({
       title: "Request Selected",
-      description: `Selected procurement request: ${request.request_number}`,
+      description: `Populated ${newCheckoutItems.length} items from request`,
     });
     
     setIsProcurementSelectorOpen(false);
   };
 
-  // Submit checkout request
-  const onSubmit = async (data: CheckoutFormValues) => {
-    if (!user) {
+  // Add custom item to checkout
+  const addCustomItem = () => {
+    if (!customItem?.product_id || !customItem?.source_warehouse_id || !customItem?.quantity) {
       toast({
         title: "Error",
-        description: "You must be logged in to create a checkout request",
+        description: "Please select product, warehouse, and quantity",
         variant: "destructive",
       });
       return;
     }
+    
+    const product = products.find(p => p.id === customItem.product_id);
+    
+    if (!product) {
+      toast({
+        title: "Error",
+        description: "Selected product not found",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setCheckoutItems([...checkoutItems, {
+      product_id: customItem.product_id,
+      product_name: product.name,
+      source_warehouse_id: customItem.source_warehouse_id,
+      quantity: customItem.quantity,
+      available: true
+    }]);
+    
+    setCustomItem(null);
+  };
 
+  // Check inventory level for a specific checkout item
+  const checkInventory = async (item: CheckoutItem) => {
     try {
-      const { error } = await supabase
-        .from("inventory_transactions")
+      const { data, error } = await supabase
+        .from("inventory_items")
+        .select("quantity")
+        .eq("product_id", item.product_id)
+        .eq("warehouse_id", item.source_warehouse_id)
+        .single();
+
+      if (error) {
+        console.error("Error checking inventory:", error);
+        return;
+      }
+
+      const updatedItems = checkoutItems.map(existingItem => {
+        if (existingItem.product_id === item.product_id && 
+            existingItem.source_warehouse_id === item.source_warehouse_id) {
+          return {
+            ...existingItem,
+            available: data.quantity >= item.quantity,
+            inventory_quantity: data.quantity
+          };
+        }
+        return existingItem;
+      });
+      
+      setCheckoutItems(updatedItems);
+    } catch (error) {
+      console.error("Error checking inventory:", error);
+    }
+  };
+
+  // Create a procurement request for missing items
+  const createProcurementRequest = async () => {
+    if (!user || missingProducts.length === 0) return;
+    
+    try {
+      // Create a procurement request
+      const { data: newRequest, error } = await supabase
+        .from("procurement_requests")
         .insert({
-          type: "check_out",
-          product_id: data.product_id,
-          source_warehouse_id: data.source_warehouse_id,
-          quantity: data.quantity,
-          reference: data.reference || null,
-          request_id: data.request_id || null,
-          notes: data.notes || null,
-          user_id: user.id,
-          approval_status: "pending", // All checkout requests start as pending
-        });
+          title: `Auto-generated request for missing inventory items`,
+          description: `Items needed for checkout that were not available in inventory.\nOriginal request: ${selectedRequest?.request_number}`,
+          requester_id: user.id,
+          status: "submitted",
+          priority: "high",
+          date_needed: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 1 week from now
+        })
+        .select()
+        .single();
 
       if (error) throw error;
+      
+      // Add items to the request
+      const requestItems = missingProducts.map(item => ({
+        request_id: newRequest.id,
+        product_id: item.product_id,
+        quantity: item.quantity,
+      }));
+      
+      const { error: itemsError } = await supabase
+        .from("procurement_request_items")
+        .insert(requestItems);
+
+      if (itemsError) throw itemsError;
 
       toast({
         title: "Success",
-        description: "Checkout request submitted for approval",
+        description: "Procurement request created for missing items",
       });
       
-      form.reset();
-      setSelectedProduct(null);
-      setSelectedRequest(null);
-      onSuccess();
+      setIsRFPModalOpen(false);
     } catch (error: any) {
-      console.error("Error creating checkout request:", error);
+      console.error("Error creating procurement request:", error);
       toast({
         title: "Error",
-        description: error.message || "Failed to create checkout request",
+        description: error.message || "Failed to create procurement request",
         variant: "destructive",
       });
     }
+  };
+
+  // Remove item from checkout list
+  const removeItem = (index: number) => {
+    const newItems = [...checkoutItems];
+    newItems.splice(index, 1);
+    setCheckoutItems(newItems);
   };
 
   // Submit product request
@@ -369,7 +434,6 @@ const CheckOutRequestForm = ({ onSuccess }: { onSuccess: () => void }) => {
           status: "submitted",
           priority: "medium",
           date_needed: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(), // 2 weeks from now
-          request_number: `PR-${new Date().getFullYear()}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`,
         });
 
       if (requestError) throw requestError;
@@ -394,40 +458,73 @@ const CheckOutRequestForm = ({ onSuccess }: { onSuccess: () => void }) => {
     }
   };
 
-  // Create a procurement request
-  const createProcurementRequest = async () => {
-    if (!user || !selectedProduct) return;
-    
+  // Submit checkout request for all items
+  const onSubmit = async (data: CheckoutFormValues) => {
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to create a checkout request",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (checkoutItems.length === 0) {
+      toast({
+        title: "Error",
+        description: "Please add at least one item to check out",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
+      // Create checkout transactions for each item
+      const transactions = checkoutItems.map(item => ({
+        type: "check_out",
+        product_id: item.product_id,
+        source_warehouse_id: item.source_warehouse_id,
+        quantity: item.quantity,
+        reference: data.reference || null,
+        request_id: data.request_id || null,
+        notes: item.notes || data.notes || null,
+        user_id: user.id,
+        approval_status: "pending", // All checkout requests start as pending
+      }));
+
       const { error } = await supabase
-        .from("procurement_requests")
-        .insert({
-          title: `Procurement for ${selectedProduct.name}`,
-          description: `Inventory levels low. Additional ${quantity} units needed.`,
-          requester_id: user.id,
-          status: "submitted",
-          priority: "medium",
-          date_needed: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 1 week from now
-          request_number: `PR-${new Date().getFullYear()}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`,
-        });
+        .from("inventory_transactions")
+        .insert(transactions);
 
       if (error) throw error;
 
       toast({
         title: "Success",
-        description: "Procurement request created successfully",
+        description: "Checkout requests submitted for approval",
       });
       
-      setInventoryWarning(null);
+      form.reset();
+      setCheckoutItems([]);
+      setSelectedRequest(null);
+      onSuccess();
     } catch (error: any) {
-      console.error("Error creating procurement request:", error);
+      console.error("Error creating checkout requests:", error);
       toast({
         title: "Error",
-        description: error.message || "Failed to create procurement request",
+        description: error.message || "Failed to create checkout requests",
         variant: "destructive",
       });
     }
   };
+
+  // Check inventory when item details change
+  useEffect(() => {
+    checkoutItems.forEach(item => {
+      if (item.product_id && item.source_warehouse_id) {
+        checkInventory(item);
+      }
+    });
+  }, [checkoutItems.map(item => `${item.product_id}-${item.source_warehouse_id}-${item.quantity}`).join(',')]);
 
   if (productsLoading || warehousesLoading) {
     return (
@@ -601,6 +698,56 @@ const CheckOutRequestForm = ({ onSuccess }: { onSuccess: () => void }) => {
         </DialogContent>
       </Dialog>
 
+      {/* Missing Products RFP Dialog */}
+      <Dialog open={isRFPModalOpen} onOpenChange={setIsRFPModalOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Missing Products</DialogTitle>
+            <DialogDescription>
+              Some products from the procurement request are not available in inventory
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Product ID</TableHead>
+                    <TableHead>Quantity</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {missingProducts.map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell>{item.product_name}</TableCell>
+                      <TableCell>{item.quantity}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            
+            <Alert variant="warning">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Missing Inventory</AlertTitle>
+              <AlertDescription>
+                These items are not available in inventory. Would you like to create a procurement request for them?
+              </AlertDescription>
+            </Alert>
+            
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsRFPModalOpen(false)}>
+                Skip
+              </Button>
+              <Button onClick={createProcurementRequest}>
+                Create Procurement Request
+              </Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Procurement Request Selector */}
       <ProcurementRequestSelector 
         isOpen={isProcurementSelectorOpen}
@@ -650,129 +797,181 @@ const CheckOutRequestForm = ({ onSuccess }: { onSuccess: () => void }) => {
             />
           </div>
 
-          {/* Step 2: Select Product and Warehouse */}
+          {/* Step 2: Checkout Items */}
           <div className="p-4 border rounded-lg bg-muted/10">
-            <h3 className="text-md font-medium mb-4">Step 2: Select Product and Warehouse</h3>
+            <h3 className="text-md font-medium mb-4">Step 2: Items to Check Out</h3>
             
-            <div className="flex flex-col md:flex-row gap-2">
-              <FormField
-                control={form.control}
-                name="product_id"
-                render={({ field }) => (
-                  <FormItem className="flex-1">
-                    <FormLabel>Product</FormLabel>
-                    <div className="flex space-x-2">
-                      <Select
-                        onValueChange={handleProductChange}
-                        value={field.value}
-                        disabled={availableProducts.length === 0 && !selectedRequest}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder={selectedRequest && availableProducts.length === 0 ? 
-                              "No products in this request" : "Select a product"} />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent className="max-h-80">
-                          {(selectedRequest ? availableProducts : products).map((product) => (
-                            <SelectItem key={product.id} value={product.id}>
-                              {product.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Button 
-                        type="button" 
-                        variant="outline" 
-                        onClick={() => setIsProductModalOpen(true)}
-                      >
-                        <PlusCircle className="h-4 w-4 mr-2" />
-                        New
-                      </Button>
-                    </div>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="source_warehouse_id"
-                render={({ field }) => (
-                  <FormItem className="flex-1">
-                    <FormLabel>Source Warehouse</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value}
-                      disabled={!productId}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a warehouse" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {warehouses.map((warehouse) => (
-                          <SelectItem key={warehouse.id} value={warehouse.id}>
-                            {warehouse.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="quantity"
-                render={({ field }) => (
-                  <FormItem className="md:w-32">
-                    <FormLabel>Quantity</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        min={1}
-                        {...field}
-                        disabled={!productId}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            {inventoryWarning && (
-              <Alert variant="destructive" className="bg-yellow-50 border-yellow-200 text-yellow-800 mt-4">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertTitle>Inventory Warning</AlertTitle>
-                <AlertDescription className="flex flex-col gap-2">
-                  <span>{inventoryWarning}</span>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={createProcurementRequest}
-                  >
-                    Create Procurement Request
-                  </Button>
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {selectedProduct && (
-              <div className="p-4 border rounded-md bg-muted/20 mt-4">
-                <h3 className="font-medium mb-2">Product Details</h3>
-                <p className="text-sm text-muted-foreground">
-                  {selectedProduct.description || "No description available"}
-                </p>
-                <p className="text-sm mt-1">
-                  <span className="font-medium">Category:</span> {selectedProduct.category?.name || "Uncategorized"}
-                </p>
+            {/* Display checkout items */}
+            {checkoutItems.length > 0 ? (
+              <div className="space-y-4">
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Product</TableHead>
+                        <TableHead>Warehouse</TableHead>
+                        <TableHead>Quantity</TableHead>
+                        <TableHead>Availability</TableHead>
+                        <TableHead></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {checkoutItems.map((item, index) => (
+                        <TableRow key={index}>
+                          <TableCell>{item.product_name}</TableCell>
+                          <TableCell>
+                            <Select
+                              value={item.source_warehouse_id}
+                              onValueChange={(value) => {
+                                const updatedItems = [...checkoutItems];
+                                updatedItems[index].source_warehouse_id = value;
+                                setCheckoutItems(updatedItems);
+                              }}
+                            >
+                              <SelectTrigger className="w-[180px]">
+                                <SelectValue placeholder="Select warehouse" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {warehouses.map((warehouse) => (
+                                  <SelectItem key={warehouse.id} value={warehouse.id}>
+                                    {warehouse.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              type="number"
+                              min="1"
+                              className="w-20"
+                              value={item.quantity}
+                              onChange={(e) => {
+                                const updatedItems = [...checkoutItems];
+                                updatedItems[index].quantity = parseInt(e.target.value, 10) || 1;
+                                setCheckoutItems(updatedItems);
+                              }}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            {item.inventory_quantity !== undefined ? (
+                              item.inventory_quantity >= item.quantity ? (
+                                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                                  Available ({item.inventory_quantity})
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+                                  Limited ({item.inventory_quantity})
+                                </Badge>
+                              )
+                            ) : (
+                              <Badge variant="outline" className="bg-slate-50">
+                                Checking...
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => removeItem(index)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
+            ) : (
+              <Card className="bg-muted/20">
+                <CardContent className="pt-6">
+                  <div className="flex flex-col items-center justify-center p-4 text-center">
+                    <p className="text-muted-foreground mb-2">No items selected for checkout</p>
+                    <p className="text-sm text-muted-foreground">Select a procurement request to populate items</p>
+                  </div>
+                </CardContent>
+              </Card>
             )}
+            
+            {/* Add custom item */}
+            <div className="mt-4">
+              <h4 className="text-sm font-medium mb-2">Add Custom Item</h4>
+              <div className="flex flex-wrap gap-2 items-end">
+                <div className="w-full sm:w-auto">
+                  <Select
+                    value={customItem?.product_id || ""}
+                    onValueChange={(value) => setCustomItem({
+                      ...customItem || { quantity: 1 },
+                      product_id: value
+                    })}
+                  >
+                    <SelectTrigger className="w-full sm:w-[200px]">
+                      <SelectValue placeholder="Select product" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {products.map((product) => (
+                        <SelectItem key={product.id} value={product.id}>
+                          {product.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="w-full sm:w-auto">
+                  <Select
+                    value={customItem?.source_warehouse_id || ""}
+                    onValueChange={(value) => setCustomItem({
+                      ...customItem || { quantity: 1, product_id: "" },
+                      source_warehouse_id: value
+                    })}
+                  >
+                    <SelectTrigger className="w-full sm:w-[180px]">
+                      <SelectValue placeholder="Select warehouse" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {warehouses.map((warehouse) => (
+                        <SelectItem key={warehouse.id} value={warehouse.id}>
+                          {warehouse.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Input
+                    type="number"
+                    placeholder="Qty"
+                    min="1"
+                    className="w-20"
+                    value={customItem?.quantity || ""}
+                    onChange={(e) => setCustomItem({
+                      ...customItem || { product_id: "", source_warehouse_id: "" },
+                      quantity: parseInt(e.target.value, 10) || 1
+                    })}
+                  />
+                </div>
+                <Button 
+                  type="button"
+                  variant="secondary"
+                  onClick={addCustomItem}
+                  disabled={!customItem?.product_id || !customItem?.source_warehouse_id}
+                >
+                  <Plus className="h-4 w-4 mr-1" /> Add
+                </Button>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setIsProductModalOpen(true)}
+                >
+                  <PlusCircle className="h-4 w-4 mr-2" />
+                  New Product
+                </Button>
+              </div>
+            </div>
           </div>
 
           {/* Step 3: Add Notes */}
@@ -798,7 +997,12 @@ const CheckOutRequestForm = ({ onSuccess }: { onSuccess: () => void }) => {
           </div>
 
           <div className="pt-4 flex justify-end">
-            <Button type="submit" disabled={!form.formState.isValid || !selectedRequest}>Submit Request</Button>
+            <Button 
+              type="submit" 
+              disabled={checkoutItems.length === 0}
+            >
+              Submit Request
+            </Button>
           </div>
         </form>
       </Form>
