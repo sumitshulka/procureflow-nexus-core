@@ -3,7 +3,7 @@ import React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import {
@@ -23,10 +23,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { Loader2, AlertTriangle } from "lucide-react";
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
+import { Loader2, AlertTriangle, Package, TruckIcon } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
 import { UserRole } from "@/types";
+import DeliveryDetailsForm from "./DeliveryDetailsForm";
 
 // Define interface for checkout request data without recursive types
 interface PendingCheckoutRequest {
@@ -45,6 +47,7 @@ interface PendingCheckoutRequest {
   source_warehouse: {
     name: string;
   } | null;
+  delivery_status?: string;
 }
 
 // Define the form schema for the approval form
@@ -61,8 +64,12 @@ type ApprovalFormValues = z.infer<typeof approvalFormSchema>;
 // This component is now for approving checkout requests, not creating them
 const CheckOutForm = ({ onSuccess }: { onSuccess: () => void }) => {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { user, hasRole } = useAuth();
   const [isAutoApproving, setIsAutoApproving] = React.useState(false);
+  const [showDeliveryForm, setShowDeliveryForm] = React.useState(false);
+  const [selectedTransactionId, setSelectedTransactionId] = React.useState<string | null>(null);
+  const [approvedTransactions, setApprovedTransactions] = React.useState<string[]>([]);
 
   // Initialize form
   const form = useForm<ApprovalFormValues>({
@@ -89,6 +96,7 @@ const CheckOutForm = ({ onSuccess }: { onSuccess: () => void }) => {
             transaction_date,
             notes,
             approval_status,
+            delivery_status,
             product:product_id(name),
             source_warehouse:source_warehouse_id(name)
           `)
@@ -138,6 +146,67 @@ const CheckOutForm = ({ onSuccess }: { onSuccess: () => void }) => {
         return validRequests;
       } catch (error) {
         console.error("Error fetching pending requests:", error);
+        return [] as PendingCheckoutRequest[];
+      }
+    },
+  });
+
+  // Fetch approved checkout requests that need delivery details
+  const { data: approvedRequests = [], isLoading: isLoadingApprovedRequests } = useQuery({
+    queryKey: ["approved_checkout_requests_no_delivery"],
+    queryFn: async () => {
+      try {
+        const { data, error } = await supabase
+          .from("inventory_transactions")
+          .select(`
+            id,
+            product_id,
+            source_warehouse_id,
+            quantity,
+            reference,
+            request_id,
+            transaction_date,
+            notes,
+            approval_status,
+            delivery_status,
+            product:product_id(name),
+            source_warehouse:source_warehouse_id(name)
+          `)
+          .eq("type", "check_out")
+          .eq("approval_status", "approved")
+          .or("delivery_status.is.null,delivery_status.eq.pending")
+          .order("transaction_date", { ascending: false });
+
+        if (error) {
+          console.error("Error fetching approved checkout requests:", error);
+          return [] as PendingCheckoutRequest[];
+        }
+
+        // Process data similar to pendingRequests
+        const validRequests: PendingCheckoutRequest[] = [];
+        
+        for (const item of data || []) {
+          const sourceObj = item.source_warehouse || {};
+          let warehouseName: string | null = null;
+          
+          if (
+            typeof sourceObj === 'object' && 
+            sourceObj !== null &&
+            'name' in sourceObj && 
+            typeof sourceObj.name === 'string'
+          ) {
+            warehouseName = sourceObj.name;
+          }
+          
+          validRequests.push({
+            ...item,
+            source_warehouse: warehouseName ? { name: warehouseName } : null
+          });
+        }
+        
+        return validRequests;
+      } catch (error) {
+        console.error("Error fetching approved requests:", error);
         return [] as PendingCheckoutRequest[];
       }
     },
@@ -231,7 +300,7 @@ const CheckOutForm = ({ onSuccess }: { onSuccess: () => void }) => {
             description: "Not enough inventory available for this checkout",
             variant: "destructive",
           });
-          return;
+          return false;
         }
 
         // Update inventory
@@ -245,6 +314,9 @@ const CheckOutForm = ({ onSuccess }: { onSuccess: () => void }) => {
           .eq("product_id", selectedRequest.product_id);
 
         if (updateInventoryError) throw updateInventoryError;
+        
+        // Add this transaction to the approved list
+        setApprovedTransactions(prev => [...prev, data.transaction_id]);
       }
 
       // Only show toast for manual approvals
@@ -253,6 +325,13 @@ const CheckOutForm = ({ onSuccess }: { onSuccess: () => void }) => {
           title: "Success",
           description: `Checkout request ${data.approval_decision}`,
         });
+        
+        // Invalidate queries to refresh data
+        queryClient.invalidateQueries({ queryKey: ["pending_checkout_requests"] });
+        queryClient.invalidateQueries({ queryKey: ["approved_checkout_requests_no_delivery"] });
+        queryClient.invalidateQueries({ queryKey: ["inventory_transactions"] });
+        queryClient.invalidateQueries({ queryKey: ["inventory_items"] });
+        
         onSuccess();
       }
       
@@ -272,7 +351,25 @@ const CheckOutForm = ({ onSuccess }: { onSuccess: () => void }) => {
     await processApproval(data);
   };
 
-  if (isLoadingRequests) {
+  const handleDeliveryRecord = (transactionId: string) => {
+    setSelectedTransactionId(transactionId);
+    setShowDeliveryForm(true);
+  };
+
+  const handleDeliverySuccess = () => {
+    setShowDeliveryForm(false);
+    setSelectedTransactionId(null);
+    // Invalidate queries to refresh data
+    queryClient.invalidateQueries({ queryKey: ["approved_checkout_requests_no_delivery"] });
+    queryClient.invalidateQueries({ queryKey: ["inventory_transactions"] });
+    toast({
+      title: "Success",
+      description: "Delivery information has been recorded successfully",
+    });
+    onSuccess();
+  };
+
+  if (isLoadingRequests || isLoadingApprovedRequests) {
     return (
       <div className="flex justify-center py-8">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -280,114 +377,162 @@ const CheckOutForm = ({ onSuccess }: { onSuccess: () => void }) => {
     );
   }
 
-  if (pendingRequests.length === 0) {
+  // Show delivery form if needed
+  if (showDeliveryForm && selectedTransactionId) {
     return (
-      <Alert>
-        <AlertTriangle className="h-4 w-4" />
-        <AlertTitle>No pending checkout requests</AlertTitle>
-        <AlertDescription>
-          There are no checkout requests waiting for approval at this time.
-        </AlertDescription>
-      </Alert>
+      <div className="space-y-6">
+        <h2 className="text-lg font-medium">Record Delivery Details</h2>
+        <p className="text-sm text-muted-foreground">
+          Enter the recipient and delivery information for this checkout.
+        </p>
+        <DeliveryDetailsForm 
+          transactionId={selectedTransactionId} 
+          onSuccess={handleDeliverySuccess}
+          onCancel={() => setShowDeliveryForm(false)}
+        />
+      </div>
     );
   }
 
-  if (isAutoApproving) {
+  // Display approval form if there are pending requests
+  if (pendingRequests.length > 0) {
     return (
-      <div className="flex justify-center py-8">
-        <div className="flex flex-col items-center space-y-4">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p>Auto-approving checkout requests...</p>
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-lg font-medium">Approve Checkout Requests</h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            Review and approve or reject pending checkout requests.
+          </p>
+        </div>
+
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="transaction_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Select Checkout Request</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a checkout request" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {pendingRequests.map((request) => (
+                        <SelectItem key={request.id} value={request.id}>
+                          {request.product.name} - {request.quantity} units from {request.source_warehouse?.name || 'Unknown location'}
+                          {request.request_id ? ` (${request.request_id})` : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="approval_decision"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Decision</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select your decision" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="approved">Approve</SelectItem>
+                      <SelectItem value="rejected">Reject</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Notes</FormLabel>
+                  <FormControl>
+                    <Textarea {...field} placeholder="Add any notes about this decision..." />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="pt-4 flex justify-end">
+              <Button type="submit">Process Request</Button>
+            </div>
+          </form>
+        </Form>
+      </div>
+    );
+  }
+  
+  // Display delivery recording section if there are approved requests without delivery details
+  if (approvedRequests.length > 0) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-lg font-medium">Record Delivery Information</h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            The following items have been approved for checkout but need delivery information.
+          </p>
+        </div>
+        
+        <div className="space-y-4">
+          {approvedRequests.map((request) => (
+            <div 
+              key={request.id}
+              className="flex items-center justify-between p-4 border rounded-lg bg-background"
+            >
+              <div>
+                <p className="font-medium">{request.product.name}</p>
+                <p className="text-sm text-muted-foreground">
+                  {request.quantity} units from {request.source_warehouse?.name || 'Unknown location'}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {request.request_id ? `Request ID: ${request.request_id}` : 'No request ID'}
+                </p>
+              </div>
+              <Button 
+                onClick={() => handleDeliveryRecord(request.id)}
+                className="flex items-center gap-2"
+              >
+                <TruckIcon className="h-4 w-4" />
+                Record Delivery
+              </Button>
+            </div>
+          ))}
         </div>
       </div>
     );
   }
 
+  // If no pending requests and no approved requests without delivery
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-lg font-medium">Approve Checkout Requests</h2>
-        <p className="text-sm text-muted-foreground mt-1">
-          Review and approve or reject pending checkout requests.
-        </p>
-      </div>
-
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          <FormField
-            control={form.control}
-            name="transaction_id"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Select Checkout Request</FormLabel>
-                <Select
-                  onValueChange={field.onChange}
-                  defaultValue={field.value}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a checkout request" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {pendingRequests.map((request) => (
-                      <SelectItem key={request.id} value={request.id}>
-                        {request.product.name} - {request.quantity} units from {request.source_warehouse?.name || 'Unknown location'}
-                        {request.request_id ? ` (${request.request_id})` : ''}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="approval_decision"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Decision</FormLabel>
-                <Select
-                  onValueChange={field.onChange}
-                  defaultValue={field.value}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select your decision" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="approved">Approve</SelectItem>
-                    <SelectItem value="rejected">Reject</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="notes"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Notes</FormLabel>
-                <FormControl>
-                  <Textarea {...field} placeholder="Add any notes about this decision..." />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <div className="pt-4 flex justify-end">
-            <Button type="submit">Process Request</Button>
-          </div>
-        </form>
-      </Form>
-    </div>
+    <Alert>
+      <AlertTriangle className="h-4 w-4" />
+      <AlertTitle>No pending actions</AlertTitle>
+      <AlertDescription>
+        There are no checkout requests waiting for approval or delivery information at this time.
+      </AlertDescription>
+    </Alert>
   );
 };
 

@@ -1,53 +1,271 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import PageHeader from "@/components/common/PageHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
-import { FileText, FileSpreadsheet, CalendarRange } from "lucide-react";
+import { FileText, FileSpreadsheet, CalendarRange, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/components/ui/use-toast";
 
-// Sample data for charts - in a real app, this would come from the API
-const inventoryLevelData = [
-  { name: "Electronics", value: 450, color: "#8884d8" },
-  { name: "Office Supplies", value: 300, color: "#82ca9d" },
-  { name: "Furniture", value: 120, color: "#ffc658" },
-  { name: "Computer Parts", value: 200, color: "#ff8042" },
-  { name: "Other", value: 75, color: "#0088fe" },
-];
-
-const inventoryTransactionData = [
-  { month: "Jan", checkin: 40, checkout: 24, transfer: 10 },
-  { month: "Feb", checkin: 30, checkout: 13, transfer: 15 },
-  { month: "Mar", checkin: 20, checkout: 35, transfer: 5 },
-  { month: "Apr", checkin: 27, checkout: 18, transfer: 12 },
-  { month: "May", checkin: 18, checkout: 22, transfer: 8 },
-  { month: "Jun", checkin: 23, checkout: 17, transfer: 14 },
-];
-
-const productMovementData = [
-  { name: "Laptops", checkins: 32, checkouts: 27 },
-  { name: "Monitors", checkins: 25, checkouts: 18 },
-  { name: "Office Chairs", checkins: 12, checkouts: 10 },
-  { name: "Keyboards", checkins: 30, checkouts: 22 },
-  { name: "Mice", checkins: 35, checkouts: 31 },
-];
+// Monthly time period options
+const TIME_PERIODS = {
+  last7days: { label: "Last 7 Days", days: 7 },
+  last30days: { label: "Last 30 Days", days: 30 },
+  last90days: { label: "Last 90 Days", days: 90 },
+  custom: { label: "Custom Range", days: null },
+};
 
 const InventoryReports = () => {
-  const [startDate, setStartDate] = useState<Date | undefined>(new Date(2025, 0, 1));
+  const { toast } = useToast();
+  const [startDate, setStartDate] = useState<Date | undefined>(new Date(new Date().setDate(new Date().getDate() - 30)));
   const [endDate, setEndDate] = useState<Date | undefined>(new Date());
   const [dateRange, setDateRange] = useState<string>("last30days");
   const [warehouseFilter, setWarehouseFilter] = useState<string>("all");
 
-  // Calculate totals for display in the summary cards
-  const totalInventoryValue = inventoryLevelData.reduce((sum, item) => sum + item.value, 0);
-  const totalCheckins = inventoryTransactionData.reduce((sum, item) => sum + item.checkin, 0);
-  const totalCheckouts = inventoryTransactionData.reduce((sum, item) => sum + item.checkout, 0);
+  useEffect(() => {
+    // Update date range when period changes
+    if (dateRange !== "custom" && TIME_PERIODS[dateRange]) {
+      const days = TIME_PERIODS[dateRange].days;
+      if (days) {
+        setEndDate(new Date());
+        setStartDate(new Date(new Date().setDate(new Date().getDate() - days)));
+      }
+    }
+  }, [dateRange]);
+
+  // Format dates for queries
+  const formattedStartDate = startDate ? startDate.toISOString() : undefined;
+  const formattedEndDate = endDate ? endDate.toISOString() : undefined;
+
+  // Fetch warehouses for filter
+  const { data: warehouses = [] } = useQuery({
+    queryKey: ["warehouses_for_reports"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("warehouses")
+        .select("id, name")
+        .eq("is_active", true);
+      
+      if (error) throw error;
+      return data || [];
+    }
+  });
+
+  // Fetch inventory levels data
+  const { data: inventoryData = [], isLoading: isLoadingInventory } = useQuery({
+    queryKey: ["inventory_levels", warehouseFilter],
+    queryFn: async () => {
+      try {
+        let query = supabase
+          .from("inventory_items")
+          .select(`
+            quantity,
+            product:product_id(
+              name,
+              category:category_id(name)
+            )
+          `);
+        
+        if (warehouseFilter !== "all") {
+          query = query.eq("warehouse_id", warehouseFilter);
+        }
+        
+        const { data, error } = await query;
+        
+        if (error) throw error;
+        
+        // Process data to group by category
+        const categoryTotals = {};
+        const COLORS = ["#8884d8", "#82ca9d", "#ffc658", "#ff8042", "#0088fe", "#00C49F", "#FFBB28"];
+        
+        data.forEach(item => {
+          const categoryName = item.product?.category?.name || "Uncategorized";
+          if (!categoryTotals[categoryName]) {
+            categoryTotals[categoryName] = 0;
+          }
+          categoryTotals[categoryName] += item.quantity;
+        });
+        
+        // Convert to array for the chart
+        return Object.entries(categoryTotals).map(([name, value], index) => ({
+          name,
+          value,
+          color: COLORS[index % COLORS.length]
+        }));
+      } catch (error) {
+        console.error("Error fetching inventory levels:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load inventory data",
+          variant: "destructive",
+        });
+        return [];
+      }
+    }
+  });
+
+  // Fetch transaction data
+  const { data: transactionData = [], isLoading: isLoadingTransactions } = useQuery({
+    queryKey: ["inventory_transactions_summary", formattedStartDate, formattedEndDate, warehouseFilter],
+    queryFn: async () => {
+      try {
+        // First determine the date ranges for each month in the period
+        const months = [];
+        const currentDate = new Date(startDate || new Date());
+        const end = new Date(endDate || new Date());
+        
+        while (currentDate <= end) {
+          months.push({
+            month: format(currentDate, "MMM"),
+            year: format(currentDate, "yyyy"),
+            startDate: new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).toISOString(),
+            endDate: new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).toISOString(),
+          });
+          currentDate.setMonth(currentDate.getMonth() + 1);
+        }
+        
+        // Create an array to store results for each month
+        const results = [];
+        
+        // For each month, query transaction counts
+        for (const monthData of months) {
+          let checkInQuery = supabase
+            .from("inventory_transactions")
+            .select("id")
+            .eq("type", "check_in")
+            .gte("transaction_date", monthData.startDate)
+            .lte("transaction_date", monthData.endDate);
+            
+          let checkOutQuery = supabase
+            .from("inventory_transactions")
+            .select("id")
+            .eq("type", "check_out")
+            .gte("transaction_date", monthData.startDate)
+            .lte("transaction_date", monthData.endDate);
+            
+          let transferQuery = supabase
+            .from("inventory_transactions")
+            .select("id")
+            .eq("type", "transfer")
+            .gte("transaction_date", monthData.startDate)
+            .lte("transaction_date", monthData.endDate);
+          
+          // Apply warehouse filter if needed
+          if (warehouseFilter !== "all") {
+            checkInQuery = checkInQuery.eq("target_warehouse_id", warehouseFilter);
+            checkOutQuery = checkOutQuery.eq("source_warehouse_id", warehouseFilter);
+            transferQuery = transferQuery.or(`source_warehouse_id.eq.${warehouseFilter},target_warehouse_id.eq.${warehouseFilter}`);
+          }
+          
+          // Execute all queries
+          const [checkInData, checkOutData, transferData] = await Promise.all([
+            checkInQuery,
+            checkOutQuery,
+            transferQuery
+          ]);
+          
+          results.push({
+            month: monthData.month,
+            checkin: checkInData.data?.length || 0,
+            checkout: checkOutData.data?.length || 0,
+            transfer: transferData.data?.length || 0
+          });
+        }
+        
+        return results;
+      } catch (error) {
+        console.error("Error fetching transaction data:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load transaction data",
+          variant: "destructive",
+        });
+        return [];
+      }
+    }
+  });
+
+  // Fetch product movement data
+  const { data: productMovementData = [], isLoading: isLoadingProductMovement } = useQuery({
+    queryKey: ["product_movement", formattedStartDate, formattedEndDate, warehouseFilter],
+    queryFn: async () => {
+      try {
+        // Calculate check-ins and check-outs by product
+        let productQuery = supabase
+          .from("inventory_transactions")
+          .select(`
+            product_id,
+            quantity,
+            type,
+            product:product_id(name)
+          `)
+          .in("type", ["check_in", "check_out"])
+          .gte("transaction_date", formattedStartDate)
+          .lte("transaction_date", formattedEndDate);
+        
+        // Apply warehouse filter if selected
+        if (warehouseFilter !== "all") {
+          productQuery = productQuery.or(
+            `and(type.eq.check_in,target_warehouse_id.eq.${warehouseFilter}),` +
+            `and(type.eq.check_out,source_warehouse_id.eq.${warehouseFilter})`
+          );
+        }
+        
+        const { data, error } = await productQuery;
+        
+        if (error) throw error;
+        
+        // Process data to group by product
+        const productTotals = {};
+        
+        data.forEach(item => {
+          const productName = item.product?.name || "Unknown Product";
+          if (!productTotals[productName]) {
+            productTotals[productName] = { name: productName, checkins: 0, checkouts: 0 };
+          }
+          
+          if (item.type === "check_in") {
+            productTotals[productName].checkins += item.quantity;
+          } else if (item.type === "check_out") {
+            productTotals[productName].checkouts += item.quantity;
+          }
+        });
+        
+        // Sort by total movement (checkins + checkouts)
+        return Object.values(productTotals)
+          .sort((a: any, b: any) => (b.checkins + b.checkouts) - (a.checkins + a.checkouts))
+          .slice(0, 5); // Get top 5 products
+      } catch (error) {
+        console.error("Error fetching product movement:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load product movement data",
+          variant: "destructive",
+        });
+        return [];
+      }
+    }
+  });
+
+  // Calculate summary statistics
+  const totalInventoryItems = inventoryData.reduce((sum, item) => sum + (item.value as number), 0);
+  const totalCheckins = transactionData.reduce((sum, item) => sum + item.checkin, 0);
+  const totalCheckouts = transactionData.reduce((sum, item) => sum + item.checkout, 0);
+  
+  const renderLoadingState = () => (
+    <div className="flex justify-center items-center p-12">
+      <Loader2 className="h-8 w-8 animate-spin text-primary mr-2" />
+      <span>Loading data...</span>
+    </div>
+  );
 
   return (
     <div className="space-y-6">
@@ -60,18 +278,15 @@ const InventoryReports = () => {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Inventory Value
+              Total Inventory Items
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {new Intl.NumberFormat("en-US", {
-                style: "currency",
-                currency: "USD",
-              }).format(totalInventoryValue)}
+              {isLoadingInventory ? <Loader2 className="h-4 w-4 animate-spin" /> : totalInventoryItems.toLocaleString()}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Across all warehouses
+              Units across all categories
             </p>
           </CardContent>
         </Card>
@@ -79,15 +294,17 @@ const InventoryReports = () => {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Check-ins (30 days)
+              Total Check-ins ({TIME_PERIODS[dateRange]?.label || "Selected Period"})
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {totalCheckins}
+              {isLoadingTransactions ? <Loader2 className="h-4 w-4 animate-spin" /> : totalCheckins.toLocaleString()}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              {totalCheckins > 100 ? "12% increase" : "5% decrease"} compared to previous period
+              {formattedStartDate && formattedEndDate ? 
+                `From ${format(new Date(formattedStartDate), "MMM d, yyyy")} to ${format(new Date(formattedEndDate), "MMM d, yyyy")}` 
+                : "All time"}
             </p>
           </CardContent>
         </Card>
@@ -95,15 +312,17 @@ const InventoryReports = () => {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Check-outs (30 days)
+              Total Check-outs ({TIME_PERIODS[dateRange]?.label || "Selected Period"})
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {totalCheckouts}
+              {isLoadingTransactions ? <Loader2 className="h-4 w-4 animate-spin" /> : totalCheckouts.toLocaleString()}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              {totalCheckouts > 100 ? "8% increase" : "3% decrease"} compared to previous period
+              {formattedStartDate && formattedEndDate ? 
+                `From ${format(new Date(formattedStartDate), "MMM d, yyyy")} to ${format(new Date(formattedEndDate), "MMM d, yyyy")}` 
+                : "All time"}
             </p>
           </CardContent>
         </Card>
@@ -184,9 +403,11 @@ const InventoryReports = () => {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Warehouses</SelectItem>
-            <SelectItem value="warehouse1">Main Warehouse</SelectItem>
-            <SelectItem value="warehouse2">East Facility</SelectItem>
-            <SelectItem value="warehouse3">West Distribution</SelectItem>
+            {warehouses.map(warehouse => (
+              <SelectItem key={warehouse.id} value={warehouse.id}>
+                {warehouse.name}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
 
@@ -218,49 +439,57 @@ const InventoryReports = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={inventoryLevelData}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                        nameKey="name"
-                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                      >
-                        {inventoryLevelData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip formatter={(value) => [`${value} units`, 'Quantity']} />
-                      <Legend />
-                    </PieChart>
-                  </ResponsiveContainer>
+              {isLoadingInventory ? (
+                renderLoadingState()
+              ) : inventoryData.length === 0 ? (
+                <div className="text-center p-6">
+                  <p>No inventory data available for the selected filters</p>
                 </div>
-                <div>
-                  <h3 className="font-medium text-lg mb-3">Summary</h3>
-                  <div className="space-y-2">
-                    {inventoryLevelData.map((item, index) => (
-                      <div key={index} className="flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }}></div>
-                          <span>{item.name}</span>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={inventoryData}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          outerRadius={80}
+                          fill="#8884d8"
+                          dataKey="value"
+                          nameKey="name"
+                          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                        >
+                          {inventoryData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip formatter={(value) => [`${value} units`, 'Quantity']} />
+                        <Legend />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-lg mb-3">Summary</h3>
+                    <div className="space-y-2">
+                      {inventoryData.map((item, index) => (
+                        <div key={index} className="flex justify-between items-center">
+                          <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }}></div>
+                            <span>{item.name}</span>
+                          </div>
+                          <span className="font-medium">{item.value} units</span>
                         </div>
-                        <span className="font-medium">{item.value} units</span>
+                      ))}
+                      <div className="pt-2 mt-2 border-t flex justify-between items-center">
+                        <span className="font-medium">Total</span>
+                        <span className="font-bold">{totalInventoryItems} units</span>
                       </div>
-                    ))}
-                    <div className="pt-2 mt-2 border-t flex justify-between items-center">
-                      <span className="font-medium">Total</span>
-                      <span className="font-bold">{inventoryLevelData.reduce((acc, item) => acc + item.value, 0)} units</span>
                     </div>
                   </div>
                 </div>
-              </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -274,20 +503,28 @@ const InventoryReports = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="h-[350px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={inventoryTransactionData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Bar dataKey="checkin" name="Check-ins" fill="#82ca9d" />
-                    <Bar dataKey="checkout" name="Check-outs" fill="#8884d8" />
-                    <Bar dataKey="transfer" name="Transfers" fill="#ffc658" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+              {isLoadingTransactions ? (
+                renderLoadingState()
+              ) : transactionData.length === 0 ? (
+                <div className="text-center p-6">
+                  <p>No transaction data available for the selected period</p>
+                </div>
+              ) : (
+                <div className="h-[350px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={transactionData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="month" />
+                      <YAxis />
+                      <Tooltip />
+                      <Legend />
+                      <Bar dataKey="checkin" name="Check-ins" fill="#82ca9d" />
+                      <Bar dataKey="checkout" name="Check-outs" fill="#8884d8" />
+                      <Bar dataKey="transfer" name="Transfers" fill="#ffc658" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -301,22 +538,30 @@ const InventoryReports = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="h-[350px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={productMovementData}
-                    margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Bar dataKey="checkins" name="Check-ins" fill="#8884d8" />
-                    <Bar dataKey="checkouts" name="Check-outs" fill="#82ca9d" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+              {isLoadingProductMovement ? (
+                renderLoadingState()
+              ) : productMovementData.length === 0 ? (
+                <div className="text-center p-6">
+                  <p>No product movement data available for the selected period</p>
+                </div>
+              ) : (
+                <div className="h-[350px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={productMovementData}
+                      margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" />
+                      <YAxis />
+                      <Tooltip />
+                      <Legend />
+                      <Bar dataKey="checkins" name="Check-ins" fill="#8884d8" />
+                      <Bar dataKey="checkouts" name="Check-outs" fill="#82ca9d" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
