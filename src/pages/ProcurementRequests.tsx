@@ -37,9 +37,19 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import DataTable from "@/components/common/DataTable";
 import { Badge } from "@/components/ui/badge";
-import { Filter, Plus, Search, Calendar as CalendarIcon } from "lucide-react";
+import { Filter, Plus, Search, Calendar as CalendarIcon, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -49,6 +59,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { RequestPriority, RequestStatus } from "@/types";
 import { useQuery } from "@tanstack/react-query";
+import { canDeleteProcurementRequest } from "@/components/approval";
 
 // Define the type for procurement requests from database
 interface ProcurementRequest {
@@ -92,6 +103,10 @@ const ProcurementRequests = () => {
   const [requests, setRequests] = useState<ProcurementRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [openNewRequestDialog, setOpenNewRequestDialog] = useState(false);
+  const [alertDialogOpen, setAlertDialogOpen] = useState(false);
+  const [requestToDelete, setRequestToDelete] = useState<string | null>(null);
+  const [deleteErrorMessage, setDeleteErrorMessage] = useState<string | null>(null);
+  const [createdRequestId, setCreatedRequestId] = useState<string | null>(null);
   const { user, userData } = useAuth();
   const navigate = useNavigate();
 
@@ -182,6 +197,72 @@ const ProcurementRequests = () => {
   useEffect(() => {
     fetchRequests();
   }, []);
+  
+  // Function to handle request deletion
+  const handleDeleteRequest = async (requestId: string) => {
+    try {
+      // Check if the request can be deleted
+      const { canDelete, message } = await canDeleteProcurementRequest(requestId);
+      
+      if (!canDelete) {
+        setDeleteErrorMessage(message || "This request cannot be deleted");
+        setAlertDialogOpen(true);
+        return;
+      }
+      
+      // If can delete, confirm with user
+      setRequestToDelete(requestId);
+      setAlertDialogOpen(true);
+    } catch (error) {
+      console.error("Error checking if request can be deleted:", error);
+      toast({
+        title: "Error",
+        description: "Failed to process delete request",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  // Function to execute request deletion after confirmation
+  const confirmDeleteRequest = async () => {
+    if (!requestToDelete) return;
+    
+    try {
+      // Delete all request items first
+      const { error: itemsError } = await supabase
+        .from("procurement_request_items")
+        .delete()
+        .eq("request_id", requestToDelete);
+      
+      if (itemsError) throw itemsError;
+      
+      // Then delete the request
+      const { error } = await supabase
+        .from("procurement_requests")
+        .delete()
+        .eq("id", requestToDelete);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Success",
+        description: "Request deleted successfully",
+      });
+      
+      // Refresh the requests list
+      fetchRequests();
+    } catch (error: any) {
+      console.error("Error deleting request:", error.message);
+      toast({
+        title: "Error",
+        description: "Failed to delete request",
+        variant: "destructive",
+      });
+    } finally {
+      setRequestToDelete(null);
+      setAlertDialogOpen(false);
+    }
+  };
 
   const filteredRequests = requests.filter((request) => {
     const matchesSearch =
@@ -312,15 +393,20 @@ const ProcurementRequests = () => {
 
       if (error) throw error;
 
+      // Store the created request ID to redirect to the items page
+      setCreatedRequestId(data.id);
+      
       toast({
         title: "Success",
         description: `Procurement request ${data.request_number} has been created`,
       });
 
-      // Close the dialog and refresh the requests
+      // Close the dialog and reset the form
       setOpenNewRequestDialog(false);
       form.reset();
-      fetchRequests();
+      
+      // Navigate to the newly created request for step 2 (adding items)
+      navigate(`/requests/${data.id}`);
       
     } catch (error: any) {
       console.error("Error creating procurement request:", error.message);
@@ -392,7 +478,7 @@ const ProcurementRequests = () => {
       id: "actions",
       header: "",
       cell: (row: ProcurementRequest) => (
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-2">
           <Button 
             size="sm" 
             variant="ghost" 
@@ -400,6 +486,16 @@ const ProcurementRequests = () => {
           >
             View
           </Button>
+          {[RequestStatus.DRAFT, RequestStatus.SUBMITTED].includes(row.status) && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-red-500 hover:text-red-700 hover:bg-red-50"
+              onClick={() => handleDeleteRequest(row.id)}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       ),
     },
@@ -422,7 +518,7 @@ const ProcurementRequests = () => {
               <DialogHeader>
                 <DialogTitle>Create New Procurement Request</DialogTitle>
                 <DialogDescription>
-                  Fill out the form below to create a new procurement request. You can add items to the request after creation.
+                  Step 1: Create a new request. You'll be able to add items in the next step.
                 </DialogDescription>
               </DialogHeader>
               
@@ -572,7 +668,7 @@ const ProcurementRequests = () => {
                     >
                       Cancel
                     </Button>
-                    <Button type="submit">Create Request</Button>
+                    <Button type="submit">Create Request & Continue</Button>
                   </DialogFooter>
                 </form>
               </Form>
@@ -580,6 +676,33 @@ const ProcurementRequests = () => {
           </Dialog>
         }
       />
+
+      {/* Alert Dialog for Deletion Confirmation */}
+      <AlertDialog open={alertDialogOpen} onOpenChange={setAlertDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {deleteErrorMessage ? "Cannot Delete Request" : "Confirm Deletion"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteErrorMessage || "Are you sure you want to delete this request? This action cannot be undone."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setRequestToDelete(null);
+              setDeleteErrorMessage(null);
+            }}>
+              {deleteErrorMessage ? "Ok" : "Cancel"}
+            </AlertDialogCancel>
+            {!deleteErrorMessage && (
+              <AlertDialogAction onClick={confirmDeleteRequest}>
+                Delete
+              </AlertDialogAction>
+            )}
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <div className="flex flex-col md:flex-row gap-4 mb-6">
         <div className="relative flex-1">

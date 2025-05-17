@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -309,7 +308,11 @@ const ProductCatalog = () => {
       header: "",
       cell: (row: any) => (
         <div className="flex justify-end">
-          <Button size="sm" variant="ghost">
+          <Button 
+            size="sm" 
+            variant="ghost"
+            onClick={() => navigate(`/product/${row.id}`)}
+          >
             View
           </Button>
         </div>
@@ -485,7 +488,7 @@ const ProductCatalog = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredProducts.map((product) => (
-                <Card key={product.id} className="overflow-hidden">
+                <Card key={product.id} className="overflow-hidden cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate(`/product/${product.id}`)}>
                   <CardHeader className="pb-3">
                     <div className="flex justify-between items-start">
                       <div>

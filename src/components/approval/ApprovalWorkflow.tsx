@@ -3,7 +3,7 @@ import React from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
-import { UserRole } from '@/types';
+import { UserRole, RequestStatus } from '@/types';
 
 // Function to check if a procurement request is used in inventory checkout
 export const isProcurementRequestUsedInInventory = async (requestId: string): Promise<boolean> => {
@@ -19,6 +19,52 @@ export const isProcurementRequestUsedInInventory = async (requestId: string): Pr
   }
   
   return (data && data.length > 0);
+};
+
+// Function to check if a procurement request can be deleted
+export const canDeleteProcurementRequest = async (requestId: string): Promise<{
+  canDelete: boolean;
+  message?: string;
+}> => {
+  try {
+    // Get the request status
+    const { data: request, error: requestError } = await supabase
+      .from('procurement_requests')
+      .select('status')
+      .eq('id', requestId)
+      .single();
+    
+    if (requestError) throw requestError;
+    
+    // Check if request is in a state that allows deletion (draft or submitted)
+    const allowedStatuses = [RequestStatus.DRAFT, RequestStatus.SUBMITTED];
+    
+    if (!allowedStatuses.includes(request.status)) {
+      return { 
+        canDelete: false, 
+        message: `Request cannot be deleted because it is in ${request.status} status` 
+      };
+    }
+    
+    // Check if the request is used in inventory
+    const isUsedInInventory = await isProcurementRequestUsedInInventory(requestId);
+    
+    if (isUsedInInventory) {
+      return { 
+        canDelete: false, 
+        message: 'Request cannot be deleted because it is used in inventory transactions' 
+      };
+    }
+    
+    return { canDelete: true };
+    
+  } catch (error) {
+    console.error('Error checking if request can be deleted:', error);
+    return { 
+      canDelete: false, 
+      message: 'Could not determine if request can be deleted' 
+    };
+  }
 };
 
 // Function to handle admin request approval logic
@@ -96,20 +142,6 @@ export const handleAdminRequestApproval = async (
 export const useApprovalWorkflow = () => {
   const { userData } = useAuth();
   const isAdmin = userData?.roles?.includes(UserRole.ADMIN);
-  
-  // Check if current user can delete a procurement request
-  const canDeleteProcurementRequest = async (requestId: string): Promise<boolean> => {
-    // Only admins can delete requests
-    if (!isAdmin) return false;
-    
-    // Check if the request is used in inventory
-    const isUsedInInventory = await isProcurementRequestUsedInInventory(requestId);
-    
-    // Cannot delete if used in inventory
-    if (isUsedInInventory) return false;
-    
-    return true;
-  };
   
   return {
     handleAdminRequestApproval,
