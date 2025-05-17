@@ -1,9 +1,11 @@
 
+import { Outlet } from "react-router-dom";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import AppHeader from "@/components/layout/AppHeader";
 import AppSidebar from "@/components/layout/AppSidebar";
-import { Outlet } from "react-router-dom";
 
+// This component is a duplicate of Layout.tsx
+// It's kept for backward compatibility but should be consolidated in the future
 const AppLayout = () => {
   return (
     <SidebarProvider defaultOpen={true}>
