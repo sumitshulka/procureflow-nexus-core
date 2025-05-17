@@ -33,8 +33,8 @@ const InventoryTransactions = () => {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<string>("transactions");
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
-  const [typeFilter, setTypeFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");  // Changed from empty string to "all"
+  const [typeFilter, setTypeFilter] = useState("all");  // Changed from empty string to "all"
 
   // Fetch inventory transactions with related data
   const { data: transactions = [], isLoading } = useQuery({

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
@@ -7,26 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { 
   Dialog, 
   DialogContent, 
-  DialogDescription, 
-  DialogFooter, 
   DialogHeader, 
+  DialogFooter, 
   DialogTitle, 
   DialogTrigger 
 } from "@/components/ui/dialog";
-import { 
-  Form, 
-  FormControl, 
-  FormDescription, 
-  FormField, 
-  FormItem, 
-  FormLabel, 
-  FormMessage 
-} from "@/components/ui/form";
 import { Separator } from "@/components/ui/separator";
 import { 
   Table, 
@@ -41,9 +28,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { RequestStatus, RequestPriority, UserRole } from "@/types";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import RequestItemForm from "@/components/procurement/RequestItemForm";
 
 // Define the request data structure
 interface RequestDetail {
@@ -88,15 +73,6 @@ const emptyRequest: RequestDetail = {
   items: [],
 };
 
-// Form schema for request item
-const requestItemSchema = z.object({
-  description: z.string().min(1, "Description is required"),
-  quantity: z.number().min(1, "Quantity must be at least 1"),
-  estimated_price: z.number().min(0, "Price cannot be negative").optional(),
-});
-
-type RequestItemFormValues = z.infer<typeof requestItemSchema>;
-
 const ProcurementRequestDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -106,15 +82,7 @@ const ProcurementRequestDetail = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [openAddItemDialog, setOpenAddItemDialog] = useState(false);
   const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
-
-  const itemForm = useForm<RequestItemFormValues>({
-    resolver: zodResolver(requestItemSchema),
-    defaultValues: {
-      description: "",
-      quantity: 1,
-      estimated_price: 0,
-    },
-  });
+  const [editingItem, setEditingItem] = useState<RequestItem | null>(null);
 
   const fetchRequestDetail = async () => {
     if (!id) return;
@@ -298,42 +266,6 @@ const ProcurementRequestDetail = () => {
     );
   };
 
-  const handleAddItem = async (values: RequestItemFormValues) => {
-    try {
-      const newItem = {
-        request_id: id,
-        description: values.description,
-        quantity: values.quantity,
-        estimated_price: values.estimated_price || 0,
-      };
-      
-      const { data, error } = await supabase
-        .from("procurement_request_items")
-        .insert(newItem)
-        .select()
-        .single();
-      
-      if (error) throw error;
-      
-      toast({
-        title: "Success",
-        description: "Item added to request",
-      });
-      
-      setOpenAddItemDialog(false);
-      itemForm.reset();
-      fetchRequestDetail();
-      
-    } catch (error: any) {
-      console.error("Error adding item:", error.message);
-      toast({
-        title: "Error",
-        description: "Failed to add item to request",
-        variant: "destructive",
-      });
-    }
-  };
-
   const handleDeleteItem = async (itemId: string) => {
     try {
       const { error } = await supabase
@@ -359,6 +291,17 @@ const ProcurementRequestDetail = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const handleEditItem = (item: RequestItem) => {
+    setEditingItem(item);
+    setOpenAddItemDialog(true);
+  };
+
+  const handleItemSuccess = () => {
+    setOpenAddItemDialog(false);
+    setEditingItem(null);
+    fetchRequestDetail();
   };
 
   // If loading, show a simple loading message
@@ -491,78 +434,25 @@ const ProcurementRequestDetail = () => {
                       Add Item
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="sm:max-w-[500px]">
+                  <DialogContent className="sm:max-w-[700px]">
                     <DialogHeader>
-                      <DialogTitle>Add Item to Request</DialogTitle>
+                      <DialogTitle>
+                        {editingItem ? "Edit Item" : "Add Item to Request"}
+                      </DialogTitle>
                       <DialogDescription>
-                        Add a new item to this procurement request.
+                        {editingItem 
+                          ? "Edit the details of this item." 
+                          : "Add a new item to this procurement request."
+                        }
                       </DialogDescription>
                     </DialogHeader>
                     
-                    <Form {...itemForm}>
-                      <form onSubmit={itemForm.handleSubmit(handleAddItem)} className="space-y-4 py-4">
-                        <FormField
-                          control={itemForm.control}
-                          name="description"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Description</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Item description" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <div className="grid grid-cols-2 gap-4">
-                          <FormField
-                            control={itemForm.control}
-                            name="quantity"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Quantity</FormLabel>
-                                <FormControl>
-                                  <Input 
-                                    type="number" 
-                                    min={1}
-                                    placeholder="1" 
-                                    {...field}
-                                    onChange={(e) => field.onChange(parseInt(e.target.value))}
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          
-                          <FormField
-                            control={itemForm.control}
-                            name="estimated_price"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Est. Price (per unit)</FormLabel>
-                                <FormControl>
-                                  <Input 
-                                    type="number"
-                                    min={0}
-                                    step={0.01}
-                                    placeholder="0.00" 
-                                    {...field}
-                                    onChange={(e) => field.onChange(parseFloat(e.target.value))}
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-
-                        <DialogFooter>
-                          <Button type="submit">Add Item</Button>
-                        </DialogFooter>
-                      </form>
-                    </Form>
+                    {/* Using the enhanced RequestItemForm component */}
+                    <RequestItemForm 
+                      requestId={id || ''} 
+                      onSuccess={handleItemSuccess}
+                      existingItem={editingItem || undefined}
+                    />
                   </DialogContent>
                 </Dialog>
               )}
@@ -581,7 +471,7 @@ const ProcurementRequestDetail = () => {
                       <TableHead>Est. Unit Price</TableHead>
                       <TableHead>Est. Total</TableHead>
                       {(canEditRequest() && requestDetail.status === RequestStatus.DRAFT) && (
-                        <TableHead className="w-16"></TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
                       )}
                     </TableRow>
                   </TableHeader>
@@ -619,44 +509,54 @@ const ProcurementRequestDetail = () => {
                         </TableCell>
                         {(canEditRequest() && requestDetail.status === RequestStatus.DRAFT) && (
                           <TableCell className="text-right">
-                            <Dialog
-                              open={deletingItemId === item.id}
-                              onOpenChange={(open) => !open && setDeletingItemId(null)}
-                            >
-                              <DialogTrigger asChild>
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon" 
-                                  className="h-8 w-8 text-red-500"
-                                  onClick={() => setDeletingItemId(item.id)}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent className="sm:max-w-[425px]">
-                                <DialogHeader>
-                                  <DialogTitle>Confirm Deletion</DialogTitle>
-                                  <DialogDescription>
-                                    Are you sure you want to remove this item from the request?
-                                    This action cannot be undone.
-                                  </DialogDescription>
-                                </DialogHeader>
-                                <DialogFooter className="mt-4">
-                                  <Button
-                                    variant="outline"
-                                    onClick={() => setDeletingItemId(null)}
+                            <div className="flex justify-end space-x-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => handleEditItem(item)}
+                              >
+                                <FilePenLine className="h-4 w-4" />
+                              </Button>
+                              <Dialog
+                                open={deletingItemId === item.id}
+                                onOpenChange={(open) => !open && setDeletingItemId(null)}
+                              >
+                                <DialogTrigger asChild>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-8 w-8 text-red-500"
+                                    onClick={() => setDeletingItemId(item.id)}
                                   >
-                                    Cancel
+                                    <Trash2 className="h-4 w-4" />
                                   </Button>
-                                  <Button
-                                    variant="destructive"
-                                    onClick={() => handleDeleteItem(item.id)}
-                                  >
-                                    Delete
-                                  </Button>
-                                </DialogFooter>
-                              </DialogContent>
-                            </Dialog>
+                                </DialogTrigger>
+                                <DialogContent className="sm:max-w-[425px]">
+                                  <DialogHeader>
+                                    <DialogTitle>Confirm Deletion</DialogTitle>
+                                    <DialogDescription>
+                                      Are you sure you want to remove this item from the request?
+                                      This action cannot be undone.
+                                    </DialogDescription>
+                                  </DialogHeader>
+                                  <DialogFooter className="mt-4">
+                                    <Button
+                                      variant="outline"
+                                      onClick={() => setDeletingItemId(null)}
+                                    >
+                                      Cancel
+                                    </Button>
+                                    <Button
+                                      variant="destructive"
+                                      onClick={() => handleDeleteItem(item.id)}
+                                    >
+                                      Delete
+                                    </Button>
+                                  </DialogFooter>
+                                </DialogContent>
+                              </Dialog>
+                            </div>
                           </TableCell>
                         )}
                       </TableRow>
