@@ -168,6 +168,90 @@ export const handleAdminRequestApproval = async (
   }
 };
 
+// Create a new approval request
+export const createApprovalRequest = async (
+  entityType: string,
+  entityId: string,
+  requesterId: string,
+  entityTitle: string = "",
+  status: string = "pending"
+): Promise<{ success: boolean; message: string }> => {
+  try {
+    // First check if there's already an approval request for this entity
+    const { data: existingApprovals } = await supabase
+      .from('approvals')
+      .select('id, status')
+      .eq('entity_type', entityType)
+      .eq('entity_id', entityId)
+      .order('created_at', { ascending: false })
+      .limit(1);
+    
+    if (existingApprovals && existingApprovals.length > 0) {
+      // If the most recent approval is still pending, don't create a new one
+      if (existingApprovals[0].status === 'pending') {
+        return {
+          success: true,
+          message: 'Approval request already exists'
+        };
+      }
+    }
+    
+    // Determine if user is admin for auto-approval
+    const { data: userRoles, error: rolesError } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', requesterId);
+      
+    if (rolesError) throw rolesError;
+    
+    const isAdmin = userRoles?.some(r => r.role === 'admin');
+    
+    // If admin, auto-approve the request
+    if (isAdmin) {
+      status = 'approved';
+    }
+    
+    // Insert the approval request
+    const { error } = await supabase
+      .from('approvals')
+      .insert({
+        entity_type: entityType,
+        entity_id: entityId,
+        requester_id: requesterId,
+        status: status,
+        approval_date: status === 'approved' ? new Date().toISOString() : null
+      });
+    
+    if (error) throw error;
+    
+    // For inventory checkout requests, update the transaction status if auto-approved
+    if (entityType === 'inventory_checkout' && status === 'approved') {
+      const { error: updateError } = await supabase
+        .from('inventory_transactions')
+        .update({ approval_status: 'approved' })
+        .eq('id', entityId);
+      
+      if (updateError) {
+        console.error('Error updating inventory transaction status:', updateError);
+      }
+    }
+    
+    return {
+      success: true,
+      message: status === 'approved' 
+        ? 'Request auto-approved as administrator' 
+        : 'Approval request created successfully'
+    };
+    
+  } catch (error) {
+    console.error('Error creating approval request:', error);
+    return {
+      success: false,
+      message: 'Failed to create approval request'
+    };
+  }
+};
+
 // Function to track approval history
 export const logApprovalAction = async (
   entityType: string,
@@ -249,6 +333,7 @@ export const useApprovalWorkflow = () => {
     deleteProcurementRequest,
     getApprovalDetails,
     logApprovalAction,
+    createApprovalRequest,
     isAdmin
   };
 };

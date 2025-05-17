@@ -11,6 +11,7 @@ import { format } from 'date-fns';
 import ApprovalActionMenu from '@/components/approval/ApprovalActionMenu';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, CheckCircle, XCircle, AlertTriangle, Loader2 } from 'lucide-react';
+import { ApprovalTimeline } from '@/components/approval';
 
 interface ApprovalRequest {
   id: string;
@@ -48,6 +49,32 @@ const Approvals = () => {
       return data as ApprovalRequest[];
     }
   });
+
+  // Fetch approval history for a specific request
+  const fetchApprovalHistory = async (entityType: string, entityId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('approvals')
+        .select(`
+          id,
+          status,
+          created_at,
+          approval_date,
+          comments,
+          profiles:requester_id(full_name)
+        `)
+        .eq('entity_type', entityType)
+        .eq('entity_id', entityId)
+        .order('created_at', { ascending: true });
+        
+      if (error) throw error;
+      
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching approval history:', error);
+      return [];
+    }
+  };
 
   const columns = [
     {
@@ -137,7 +164,21 @@ const Approvals = () => {
     queryClient.invalidateQueries({ queryKey: ['approvals'] });
   };
   
-  const renderDetailPanel = (row: ApprovalRequest) => {
+  const renderDetailPanel = async (row: ApprovalRequest) => {
+    const [approvalHistory, setApprovalHistory] = useState([]);
+    const [loading, setLoading] = useState(true);
+    
+    React.useEffect(() => {
+      const loadApprovalHistory = async () => {
+        setLoading(true);
+        const history = await fetchApprovalHistory(row.entity_type, row.entity_id);
+        setApprovalHistory(history);
+        setLoading(false);
+      };
+      
+      loadApprovalHistory();
+    }, [row.entity_type, row.entity_id]);
+    
     return (
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
@@ -173,6 +214,14 @@ const Approvals = () => {
               <p className="text-sm whitespace-pre-wrap">{row.comments}</p>
             </div>
           )}
+        </div>
+        
+        <div className="mt-4">
+          <h3 className="font-medium text-sm mb-2">Approval History</h3>
+          <ApprovalTimeline 
+            approvalHistory={approvalHistory} 
+            loading={loading} 
+          />
         </div>
         
         <div className="mt-4">

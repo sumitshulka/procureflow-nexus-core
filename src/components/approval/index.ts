@@ -5,6 +5,7 @@ export {
   canDeleteProcurementRequest, 
   deleteProcurementRequest,
   getApprovalDetails,
-  logApprovalAction
+  logApprovalAction,
+  createApprovalRequest
 } from './ApprovalWorkflow';
 export { default as ApprovalTimeline } from './ApprovalTimeline';
