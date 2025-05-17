@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -46,7 +45,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import PageHeader from "@/components/common/PageHeader";
-import { RequestStatus, UserRole } from "@/types";
+import { RequestStatus, UserRole, RequestPriority } from "@/types";
 import RequestItemForm from "@/components/procurement/RequestItemForm";
 
 const ProcurementRequestDetail = () => {
@@ -65,7 +64,7 @@ const ProcurementRequestDetail = () => {
     title: "",
     description: "",
     department: "",
-    priority: "",
+    priority: "medium" as RequestPriority, // Fix: Type assertion to RequestPriority
     date_needed: "",
   });
 
@@ -141,7 +140,12 @@ const ProcurementRequestDetail = () => {
   // Handle input field changes
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ 
+      ...prev, 
+      [name]: name === "priority" 
+        ? value as RequestPriority // Fix: Type assertion for priority
+        : value 
+    }));
   };
 
   // Handle save request changes
@@ -412,7 +416,10 @@ const ProcurementRequestDetail = () => {
                       <Select
                         name="priority"
                         value={formData.priority}
-                        onValueChange={(value) => setFormData(prev => ({ ...prev, priority: value }))}
+                        onValueChange={(value) => setFormData(prev => ({ 
+                          ...prev, 
+                          priority: value as RequestPriority 
+                        }))}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Select priority" />
