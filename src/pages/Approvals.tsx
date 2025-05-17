@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -11,6 +12,7 @@ import ApprovalActionMenu from '@/components/approval/ApprovalActionMenu';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, CheckCircle, XCircle, AlertTriangle, Loader2 } from 'lucide-react';
 import { ApprovalTimeline } from '@/components/approval';
+import { useToast } from '@/components/ui/use-toast';
 
 interface ApprovalRequest {
   id: string;
@@ -30,50 +32,33 @@ interface ApprovalRequest {
 const Approvals = () => {
   const [activeTab, setActiveTab] = useState<string>('pending');
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   // Fetch approvals
   const { data: approvalRequests, isLoading, refetch } = useQuery({
     queryKey: ['approvals', activeTab],
     queryFn: async () => {
-      const { data, error } = await supabase
+      console.log("Fetching approvals with status:", activeTab);
+      
+      let query = supabase
         .from('approval_requests_view')
-        .select('*')
-        .eq('status', activeTab);
+        .select('*');
+        
+      if (activeTab !== 'all') {
+        query = query.eq('status', activeTab);
+      }
+      
+      const { data, error } = await query;
       
       if (error) {
         console.error('Error fetching approvals:', error);
         throw new Error('Failed to fetch approvals');
       }
       
+      console.log(`Found ${data?.length} approval requests with status ${activeTab}`, data);
       return data as ApprovalRequest[];
     }
   });
-
-  // Fetch approval history for a specific request
-  const fetchApprovalHistory = async (entityType: string, entityId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('approvals')
-        .select(`
-          id,
-          status,
-          created_at,
-          approval_date,
-          comments,
-          profiles:requester_id(full_name)
-        `)
-        .eq('entity_type', entityType)
-        .eq('entity_id', entityId)
-        .order('created_at', { ascending: true });
-        
-      if (error) throw error;
-      
-      return data || [];
-    } catch (error) {
-      console.error('Error fetching approval history:', error);
-      return [];
-    }
-  };
 
   const columns = [
     {
@@ -88,7 +73,12 @@ const Approvals = () => {
     {
       id: 'title',
       header: 'Title',
-      cell: (row: ApprovalRequest) => <span>{row.request_title || 'Untitled'}</span>,
+      cell: (row: ApprovalRequest) => {
+        // Extract title from comments if it exists (used for inventory checkout)
+        const titleMatch = row.comments?.match(/Title: (.*)/);
+        const title = titleMatch ? titleMatch[1] : (row.request_title || 'Untitled');
+        return <span>{title}</span>;
+      },
     },
     {
       id: 'requester',
@@ -149,7 +139,14 @@ const Approvals = () => {
       id: 'actions',
       header: 'Actions',
       cell: (row: ApprovalRequest) => (
-        <ApprovalActionMenu approval={row} onActionComplete={() => refetch()} />
+        <ApprovalActionMenu 
+          approval={row} 
+          onActionComplete={() => {
+            refetch();
+            queryClient.invalidateQueries({ queryKey: ['approvals'] });
+            queryClient.invalidateQueries({ queryKey: ['inventory_transactions'] });
+          }} 
+        />
       ),
     },
   ];
@@ -163,15 +160,133 @@ const Approvals = () => {
     queryClient.invalidateQueries({ queryKey: ['approvals'] });
   };
   
-  // Modified renderDetailPanel function that returns a JSX element directly
+  // Component for showing approval details
+  const ApprovalDetail = ({ 
+    entityType, 
+    entityId, 
+    row, 
+    onActionComplete 
+  }: { 
+    entityType: string, 
+    entityId: string, 
+    row: ApprovalRequest, 
+    onActionComplete: () => void 
+  }) => {
+    const [approvalHistory, setApprovalHistory] = useState([]);
+    const [loading, setLoading] = useState(true);
+    
+    // Fetch approval history
+    const fetchApprovalHistory = async () => {
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('approvals')
+          .select(`
+            id,
+            status,
+            created_at,
+            approval_date,
+            comments,
+            profiles:requester_id(full_name)
+          `)
+          .eq('entity_type', entityType)
+          .eq('entity_id', entityId)
+          .order('created_at', { ascending: true });
+          
+        if (error) throw error;
+        
+        setApprovalHistory(data || []);
+      } catch (error) {
+        console.error('Error fetching approval history:', error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch approval history",
+          variant: "destructive"
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    useEffect(() => {
+      fetchApprovalHistory();
+    }, [entityType, entityId]);
+    
+    // Extract title from comments if it exists
+    const titleMatch = row.comments?.match(/Title: (.*)/);
+    const title = titleMatch ? titleMatch[1] : row.request_title;
+    
+    return (
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <p className="text-sm font-medium">Request Type</p>
+            <p className="text-sm">{row.entity_type.replace('_', ' ')}</p>
+          </div>
+          <div>
+            <p className="text-sm font-medium">Status</p>
+            <p className="text-sm capitalize">{row.status.replace('_', ' ')}</p>
+          </div>
+          <div>
+            <p className="text-sm font-medium">Requester</p>
+            <p className="text-sm">{row.requester_name || 'Unknown'}</p>
+          </div>
+          <div>
+            <p className="text-sm font-medium">Submitted</p>
+            <p className="text-sm">{row.created_at ? format(new Date(row.created_at), 'MMM dd, yyyy hh:mm a') : 'N/A'}</p>
+          </div>
+          {row.approval_date && (
+            <div>
+              <p className="text-sm font-medium">Decision Date</p>
+              <p className="text-sm">{format(new Date(row.approval_date), 'MMM dd, yyyy hh:mm a')}</p>
+            </div>
+          )}
+          <div className="col-span-2">
+            <p className="text-sm font-medium">Entity ID</p>
+            <p className="text-sm break-all">{row.entity_id}</p>
+          </div>
+          <div className="col-span-2">
+            <p className="text-sm font-medium">Title</p>
+            <p className="text-sm">{title || 'No title'}</p>
+          </div>
+          {row.comments && !row.comments.startsWith('Title:') && (
+            <div className="col-span-2">
+              <p className="text-sm font-medium">Comments</p>
+              <p className="text-sm whitespace-pre-wrap">{row.comments}</p>
+            </div>
+          )}
+        </div>
+        
+        <div className="mt-4">
+          <h3 className="font-medium text-sm mb-2">Approval History</h3>
+          <ApprovalTimeline 
+            approvalHistory={approvalHistory} 
+            loading={loading} 
+          />
+        </div>
+        
+        <div className="mt-4">
+          <ApprovalActionMenu 
+            approval={row} 
+            onActionComplete={() => {
+              onActionComplete();
+              fetchApprovalHistory();
+            }} 
+            displayAsButtons 
+          />
+        </div>
+      </div>
+    );
+  };
+
+  // Render detail panel that returns JSX directly
   const renderDetailPanel = (row: ApprovalRequest) => {
-    // Create a detail component that handles its own state
     return (
       <ApprovalDetail 
         entityType={row.entity_type} 
         entityId={row.entity_id} 
         row={row} 
-        onActionComplete={() => refetch()} 
+        onActionComplete={handleRefresh} 
       />
     );
   };
@@ -207,6 +322,7 @@ const Approvals = () => {
             <TabsTrigger value="approved">Approved</TabsTrigger>
             <TabsTrigger value="rejected">Rejected</TabsTrigger>
             <TabsTrigger value="more_info">Need Info</TabsTrigger>
+            <TabsTrigger value="all">All</TabsTrigger>
           </TabsList>
 
           <TabsContent value={activeTab}>
@@ -221,115 +337,6 @@ const Approvals = () => {
           </TabsContent>
         </Tabs>
       </Card>
-    </div>
-  );
-};
-
-// New component to handle the details panel with internal state
-const ApprovalDetail = ({ 
-  entityType, 
-  entityId, 
-  row, 
-  onActionComplete 
-}: { 
-  entityType: string, 
-  entityId: string, 
-  row: ApprovalRequest, 
-  onActionComplete: () => void 
-}) => {
-  const [approvalHistory, setApprovalHistory] = useState([]);
-  const [loading, setLoading] = useState(true);
-  
-  React.useEffect(() => {
-    const loadApprovalHistory = async () => {
-      setLoading(true);
-      try {
-        const history = await fetchApprovalHistory(entityType, entityId);
-        setApprovalHistory(history);
-      } catch (error) {
-        console.error("Error loading approval history:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    loadApprovalHistory();
-  }, [entityType, entityId]);
-
-  // Function to fetch approval history
-  const fetchApprovalHistory = async (entityType: string, entityId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('approvals')
-        .select(`
-          id,
-          status,
-          created_at,
-          approval_date,
-          comments,
-          profiles:requester_id(full_name)
-        `)
-        .eq('entity_type', entityType)
-        .eq('entity_id', entityId)
-        .order('created_at', { ascending: true });
-        
-      if (error) throw error;
-      
-      return data || [];
-    } catch (error) {
-      console.error('Error fetching approval history:', error);
-      return [];
-    }
-  };
-  
-  return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <p className="text-sm font-medium">Request Type</p>
-          <p className="text-sm">{row.entity_type.replace('_', ' ')}</p>
-        </div>
-        <div>
-          <p className="text-sm font-medium">Status</p>
-          <p className="text-sm capitalize">{row.status.replace('_', ' ')}</p>
-        </div>
-        <div>
-          <p className="text-sm font-medium">Requester</p>
-          <p className="text-sm">{row.requester_name || 'Unknown'}</p>
-        </div>
-        <div>
-          <p className="text-sm font-medium">Submitted</p>
-          <p className="text-sm">{row.created_at ? format(new Date(row.created_at), 'MMM dd, yyyy hh:mm a') : 'N/A'}</p>
-        </div>
-        {row.approval_date && (
-          <div>
-            <p className="text-sm font-medium">Decision Date</p>
-            <p className="text-sm">{format(new Date(row.approval_date), 'MMM dd, yyyy hh:mm a')}</p>
-          </div>
-        )}
-        <div className="col-span-2">
-          <p className="text-sm font-medium">Entity ID</p>
-          <p className="text-sm break-all">{row.entity_id}</p>
-        </div>
-        {row.comments && (
-          <div className="col-span-2">
-            <p className="text-sm font-medium">Comments</p>
-            <p className="text-sm whitespace-pre-wrap">{row.comments}</p>
-          </div>
-        )}
-      </div>
-      
-      <div className="mt-4">
-        <h3 className="font-medium text-sm mb-2">Approval History</h3>
-        <ApprovalTimeline 
-          approvalHistory={approvalHistory} 
-          loading={loading} 
-        />
-      </div>
-      
-      <div className="mt-4">
-        <ApprovalActionMenu approval={row} onActionComplete={onActionComplete} displayAsButtons />
-      </div>
     </div>
   );
 };

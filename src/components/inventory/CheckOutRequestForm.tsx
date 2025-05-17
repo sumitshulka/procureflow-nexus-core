@@ -150,11 +150,13 @@ const CheckOutRequestForm = ({ onSuccess }: CheckOutRequestFormProps) => {
       
       // Create approval request for the checkout
       if (transaction) {
+        const approvalTitle = `Request to checkout ${values.quantity} of ${productName}`;
+        
         const approvalResult = await createApprovalRequest(
           'inventory_checkout',
           transaction.id,
           userData.id,
-          `Request to checkout ${values.quantity} of ${productName}`
+          approvalTitle
         );
         
         if (!approvalResult.success) {

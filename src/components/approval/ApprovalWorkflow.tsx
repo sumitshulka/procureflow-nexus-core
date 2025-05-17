@@ -177,6 +177,8 @@ export const createApprovalRequest = async (
   status: string = "pending"
 ): Promise<{ success: boolean; message: string }> => {
   try {
+    console.log(`Creating approval request for ${entityType}, ${entityId}, ${requesterId}, ${entityTitle}`);
+    
     // First check if there's already an approval request for this entity
     const { data: existingApprovals } = await supabase
       .from('approvals')
@@ -212,17 +214,21 @@ export const createApprovalRequest = async (
     }
     
     // Insert the approval request
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('approvals')
       .insert({
         entity_type: entityType,
         entity_id: entityId,
         requester_id: requesterId,
         status: status,
-        approval_date: status === 'approved' ? new Date().toISOString() : null
-      });
+        approval_date: status === 'approved' ? new Date().toISOString() : null,
+        comments: entityTitle ? `Title: ${entityTitle}` : null
+      })
+      .select();
     
     if (error) throw error;
+    
+    console.log(`Approval request created:`, data);
     
     // For inventory checkout requests, update the transaction status if auto-approved
     if (entityType === 'inventory_checkout' && status === 'approved') {
@@ -243,11 +249,11 @@ export const createApprovalRequest = async (
         : 'Approval request created successfully'
     };
     
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating approval request:', error);
     return {
       success: false,
-      message: 'Failed to create approval request'
+      message: 'Failed to create approval request: ' + error.message
     };
   }
 };
