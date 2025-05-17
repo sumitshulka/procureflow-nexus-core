@@ -11,6 +11,7 @@ import ProcurementRequests from "@/pages/ProcurementRequests";
 import ProcurementRequestDetail from "@/pages/ProcurementRequestDetail";
 import Settings from "@/pages/Settings";
 import Approvals from "@/pages/Approvals";
+import UserManagement from "@/pages/UserManagement";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { Toaster } from "@/components/ui/toaster";
 
@@ -32,6 +33,7 @@ function App() {
             <Route path="/requests/:id" element={<ProcurementRequestDetail />} />
             <Route path="/approvals" element={<Approvals />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/users" element={<UserManagement />} />
           </Route>
         </Routes>
         <Toaster />
