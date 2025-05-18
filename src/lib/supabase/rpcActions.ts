@@ -25,7 +25,7 @@ export const updateTransactionDeliveryDetails = async (
         delivery_status: 'delivered'
       })
       .eq('id', transactionId)
-      .select();
+      .select('*');  // Explicitly select all columns from the main table
     
     if (error) {
       console.error('Error updating delivery details:', error);
