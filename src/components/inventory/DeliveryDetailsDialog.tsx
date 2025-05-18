@@ -111,14 +111,13 @@ const DeliveryDetailsDialog = ({
         delivered_at: new Date().toISOString(),
       };
 
-      // Use the direct update method instead of the RPC function to avoid ambiguity issues
       const { data, error } = await updateTransactionDeliveryDetails(
         transactionId,
         deliveryDetails
       );
 
       if (error) {
-        console.error('Error details:', error);
+        console.error('Error updating delivery details:', error);
         throw error;
       }
 
@@ -128,9 +127,6 @@ const DeliveryDetailsDialog = ({
         title: "Success",
         description: "Delivery details saved successfully",
       });
-
-      // Update inventory quantity automatically
-      // This happens via database trigger when delivery_status is set to 'delivered'
 
       onSuccess();
       onClose();
@@ -145,6 +141,13 @@ const DeliveryDetailsDialog = ({
       setIsSubmitting(false);
     }
   };
+
+  // Reset form when dialog opens
+  useEffect(() => {
+    if (isOpen) {
+      form.reset();
+    }
+  }, [isOpen, form]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>

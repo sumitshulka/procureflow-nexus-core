@@ -13,15 +13,31 @@ export const updateTransactionDeliveryDetails = async (
   transactionId: string,
   deliveryDetails: Record<string, any>
 ) => {
-  // Use a direct update instead of the function to avoid ambiguity issues
-  return await supabase
-    .from('inventory_transactions')
-    .update({
-      delivery_details: deliveryDetails,
-      delivery_status: 'delivered'
-    })
-    .eq('id', transactionId)
-    .select();
+  console.log(`Updating delivery details for transaction ${transactionId}`);
+  console.log('Delivery details:', deliveryDetails);
+
+  try {
+    // Use a direct update instead of the function to avoid ambiguity issues
+    const { data, error } = await supabase
+      .from('inventory_transactions')
+      .update({
+        delivery_details: deliveryDetails,
+        delivery_status: 'delivered'
+      })
+      .eq('id', transactionId)
+      .select();
+    
+    if (error) {
+      console.error('Error updating delivery details:', error);
+      throw error;
+    }
+    
+    console.log('Update successful, returned data:', data);
+    return { data, error: null };
+  } catch (error: any) {
+    console.error('Exception in updateTransactionDeliveryDetails:', error);
+    return { data: null, error };
+  }
 };
 
 /**
