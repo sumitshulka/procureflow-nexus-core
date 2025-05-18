@@ -32,10 +32,6 @@ const ProtectedRoute = ({ requiredRoles }: ProtectedRouteProps) => {
 
   // Clear any redirect path that might have been saved
   sessionStorage.removeItem('redirectPath');
-
-  // Log user data for debugging
-  console.log("User data in ProtectedRoute:", userData);
-  console.log("Required roles for route:", requiredRoles);
   
   // If the user has 'admin' role, always grant access regardless of required roles
   if (userData?.roles && Array.isArray(userData.roles) && userData.roles.some(role => 

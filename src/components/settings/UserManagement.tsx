@@ -25,6 +25,7 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, Plus, MoreHorizontal, CheckCircle, XCircle, Pencil } from "lucide-react";
+import ResetPasswordAction from "@/components/user-management/ResetPasswordAction";
 
 // User schema for form validation
 const userSchema = z.object({
@@ -355,31 +356,35 @@ const UserManagement = () => {
                               {new Date(userData.createdAt).toLocaleDateString()}
                             </TableCell>
                             <TableCell className="text-right">
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon">
-                                    <MoreHorizontal className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem>
-                                    <Pencil className="w-4 h-4 mr-2" /> Edit User
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem 
-                                    onSelect={() => {
-                                      const role = prompt("Enter role to add:", "requester");
-                                      if (role && Object.values(UserRole).includes(role as UserRole)) {
-                                        addRoleMutation.mutate({ 
-                                          userId: userData.id, 
-                                          role 
-                                        });
-                                      }
-                                    }}
-                                  >
-                                    <Plus className="w-4 h-4 mr-2" /> Add Role
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
+                              <div className="flex justify-end space-x-2">
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon">
+                                      <MoreHorizontal className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem>
+                                      <Pencil className="w-4 h-4 mr-2" /> Edit User
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem 
+                                      onSelect={() => {
+                                        const role = prompt("Enter role to add:", "requester");
+                                        if (role && Object.values(UserRole).includes(role as UserRole)) {
+                                          addRoleMutation.mutate({ 
+                                            userId: userData.id, 
+                                            role 
+                                          });
+                                        }
+                                      }}
+                                    >
+                                      <Plus className="w-4 h-4 mr-2" /> Add Role
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                                
+                                <ResetPasswordAction userId={userData.id} userEmail={userData.email} />
+                              </div>
                             </TableCell>
                           </TableRow>
                         ))

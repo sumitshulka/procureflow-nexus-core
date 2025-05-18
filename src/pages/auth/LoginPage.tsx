@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Eye, EyeOff, LogIn, ArrowRight } from "lucide-react";
@@ -24,6 +23,7 @@ const LoginPage = () => {
   
   // Get redirect path from location state or default to "/"
   const from = location.state?.from || "/";
+  const redirectPath = sessionStorage.getItem('redirectPath') || from;
   
   const [credentials, setCredentials] = useState({
     email: "",
@@ -33,15 +33,16 @@ const LoginPage = () => {
 
   const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [redirected, setRedirected] = useState(false);
 
   // Redirect if user is already logged in
   useEffect(() => {
-    console.log("LoginPage: checking authentication", { user, session, from });
-    if (user && session) {
-      console.log("User already authenticated, redirecting to:", from);
-      navigate(from, { replace: true });
+    if (!isLoading && user && session && !redirected) {
+      console.log("User already authenticated, redirecting to:", redirectPath);
+      setRedirected(true);
+      navigate(redirectPath, { replace: true });
     }
-  }, [user, session, navigate, from]);
+  }, [user, session, navigate, redirectPath, isLoading, redirected]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -77,17 +78,8 @@ const LoginPage = () => {
     setShowPassword(!showPassword);
   };
 
-  // If already loading auth state, show loading indicator
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-procurement-600"></div>
-      </div>
-    );
-  }
-
-  // If already authenticated, we'll be redirected by the useEffect, but show loading in the meantime
-  if (user && session) {
+  // If already authenticated and we've triggered a redirect, show loading
+  if (!isLoading && user && session && redirected) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-procurement-600"></div>

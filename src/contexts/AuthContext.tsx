@@ -12,7 +12,7 @@ interface UserData {
   fullName: string | null;
   avatarUrl: string | null;
   roles: UserRole[];
-  department?: string; // Adding department field
+  department?: string;
 }
 
 interface AuthContextType {
@@ -35,6 +35,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [authInitialized, setAuthInitialized] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -42,20 +43,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      (event, newSession) => {
         console.log("Auth state change event:", event);
-        setSession(session);
-        setUser(session?.user ?? null);
         
-        if (session?.user) {
-          console.log("Session user detected, will fetch user data");
-          // Use setTimeout to avoid recursive Supabase auth calls
-          setTimeout(() => {
-            fetchUserData(session.user.id);
-          }, 0);
-        } else {
-          console.log("No session user, clearing userData");
+        if (event === 'SIGNED_OUT') {
+          // When signed out, clear all auth state
+          setSession(null);
+          setUser(null);
           setUserData(null);
+          setIsLoading(false);
+        } else if (newSession) {
+          setSession(newSession);
+          setUser(newSession.user);
+          
+          // Use setTimeout to avoid recursive Supabase auth calls
+          if (newSession.user) {
+            setTimeout(() => {
+              fetchUserData(newSession.user.id);
+            }, 0);
+          }
+        } else {
           setIsLoading(false);
         }
       }
@@ -65,21 +72,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const initializeAuth = async () => {
       try {
         console.log("Checking for existing session");
-        const { data: { session } } = await supabase.auth.getSession();
-        console.log("Initial session check:", session ? "Session exists" : "No session");
+        const { data: { session: existingSession } } = await supabase.auth.getSession();
+        console.log("Initial session check:", existingSession ? "Session exists" : "No session");
         
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          console.log("Initial session user found, fetching user data");
-          await fetchUserData(session.user.id);
+        if (existingSession?.user) {
+          setSession(existingSession);
+          setUser(existingSession.user);
+          await fetchUserData(existingSession.user.id);
         } else {
           setIsLoading(false);
         }
+        
+        setAuthInitialized(true);
       } catch (error) {
         console.error("Error initializing auth:", error);
         setIsLoading(false);
+        setAuthInitialized(true);
       }
     };
 
@@ -126,10 +134,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.log("Setting userData to:", userData);
       setUserData(userData);
       
-      // Verify admin role specifically for debugging
-      if (userData.roles.includes(UserRole.ADMIN)) {
-        console.log("User has ADMIN role!");
-      }
     } catch (error) {
       console.error("Error fetching user data:", error);
       toast({
@@ -230,7 +234,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       setIsLoading(true);
       
-      // Log the user activity before logging out
+      // Log activity before signing out
       if (user) {
         await logUserActivity("logout");
       }
@@ -238,7 +242,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       
-      // Clear user data state
+      // Clear user data
       setSession(null);
       setUser(null);
       setUserData(null);
@@ -327,7 +331,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     session,
     user,
     userData,
-    isLoading,
+    isLoading: isLoading || !authInitialized,
     login,
     signUp,
     logout,

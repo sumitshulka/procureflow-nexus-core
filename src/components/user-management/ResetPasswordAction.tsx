@@ -13,10 +13,12 @@ interface ResetPasswordActionProps {
 
 const ResetPasswordAction = ({ userId, userEmail }: ResetPasswordActionProps) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const { hasRole } = useAuth();
+  const { userData, hasRole } = useAuth();
   
-  // Only admin can reset passwords
-  if (!hasRole(UserRole.ADMIN)) return null;
+  // Only show the button if user has admin role
+  if (!userData || !hasRole(UserRole.ADMIN)) {
+    return null;
+  }
 
   return (
     <>
