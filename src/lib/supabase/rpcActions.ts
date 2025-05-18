@@ -80,3 +80,20 @@ export const getUserRoles = async (
     .select('role')
     .eq('user_id', userId);
 };
+
+/**
+ * Update a user's password (admin only)
+ * 
+ * @param userId - The user ID to update
+ * @param newPassword - The new password
+ * @returns The result of the operation
+ */
+export const updateUserPassword = async (
+  userId: string,
+  newPassword: string
+) => {
+  return await supabase.auth.admin.updateUserById(
+    userId,
+    { password: newPassword }
+  );
+};

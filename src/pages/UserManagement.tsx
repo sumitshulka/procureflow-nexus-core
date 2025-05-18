@@ -26,11 +26,6 @@ const UserManagement = () => {
     navigate(`/users#${value}`, { replace: true });
   };
 
-  // Log which tab is active for debugging
-  useEffect(() => {
-    console.log("Current active tab in UserManagement:", defaultTab);
-  }, [defaultTab]);
-
   return (
     <div className="page-container">
       <PageHeader 

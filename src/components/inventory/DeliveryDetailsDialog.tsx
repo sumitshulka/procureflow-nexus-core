@@ -1,0 +1,217 @@
+
+import React, { useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/components/ui/use-toast';
+import { updateTransactionDeliveryDetails } from '@/lib/supabase/rpcActions';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Loader2 } from 'lucide-react';
+
+interface DeliveryDetailsDialogProps {
+  transactionId: string;
+  product: string;
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+const formSchema = z.object({
+  recipient_name: z.string().min(2, { message: "Recipient name is required" }),
+  recipient_id: z.string().optional(),
+  recipient_department: z.string().optional(),
+  delivery_notes: z.string().optional(),
+  location: z.string().optional(),
+});
+
+type FormValues = z.infer<typeof formSchema>;
+
+const DeliveryDetailsDialog = ({ 
+  transactionId, 
+  product,
+  isOpen, 
+  onClose, 
+  onSuccess 
+}: DeliveryDetailsDialogProps) => {
+  const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      recipient_name: "",
+      recipient_id: "",
+      recipient_department: "",
+      delivery_notes: "",
+      location: "",
+    }
+  });
+
+  const onSubmit = async (values: FormValues) => {
+    try {
+      setIsSubmitting(true);
+
+      // Add delivery timestamp
+      const deliveryDetails = {
+        ...values,
+        delivered_at: new Date().toISOString(),
+      };
+
+      // Update transaction with delivery details
+      const { error } = await updateTransactionDeliveryDetails(
+        transactionId,
+        deliveryDetails
+      );
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Delivery details saved successfully",
+      });
+
+      // Update inventory quantity automatically
+      // This happens via database trigger when delivery_status is set to 'delivered'
+
+      onSuccess();
+      onClose();
+    } catch (error: any) {
+      console.error('Error saving delivery details:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to save delivery details",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle>Record Delivery Details</DialogTitle>
+          <DialogDescription>
+            Enter the delivery information for <strong>{product}</strong>
+          </DialogDescription>
+        </DialogHeader>
+
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+            <FormField
+              control={form.control}
+              name="recipient_name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Recipient Name*</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter recipient's full name" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="recipient_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Recipient ID/Badge</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter ID or badge number" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="recipient_department"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Department</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter department" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="location"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Delivery Location</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter delivery location" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="delivery_notes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Notes</FormLabel>
+                  <FormControl>
+                    <Textarea 
+                      placeholder="Any additional notes or comments" 
+                      className="min-h-[100px]"
+                      {...field} 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <DialogFooter>
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  "Save Delivery Details"
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+export default DeliveryDetailsDialog;

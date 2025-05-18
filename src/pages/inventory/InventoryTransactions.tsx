@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,6 +11,7 @@ import {
   CheckOutRequestForm, 
   TransferForm 
 } from "@/components/inventory";
+import DeliveryDetailsDialog from "@/components/inventory/DeliveryDetailsDialog";
 import ProductTransactionHistory from "@/components/inventory/ProductTransactionHistory";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -28,7 +28,7 @@ import {
   Card,
   CardContent,
 } from "@/components/ui/card";
-import { ArrowDownToLine, ArrowUpFromLine, MoveRight, Search, Filter, Trash2 } from "lucide-react";
+import { ArrowDownToLine, ArrowUpFromLine, MoveRight, Search, Filter, Trash2, PackageCheck } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -50,6 +50,10 @@ const InventoryTransactions = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [transactionToDelete, setTransactionToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  
+  // States for delivery details dialog
+  const [deliveryDialogOpen, setDeliveryDialogOpen] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState<EnhancedInventoryTransaction | null>(null);
 
   // Fetch inventory transactions with related data
   const { data: transactions = [], isLoading } = useQuery({
@@ -189,6 +193,12 @@ const InventoryTransactions = () => {
     }
   };
 
+  // Handle opening delivery details dialog for assigning checkout
+  const handleDeliveryDetails = (transaction: EnhancedInventoryTransaction) => {
+    setSelectedTransaction(transaction);
+    setDeliveryDialogOpen(true);
+  };
+
   // Filter transactions based on search term, type, and status
   const filteredTransactions = transactions.filter(transaction => {
     const matchesSearch = !searchTerm || 
@@ -295,6 +305,19 @@ const InventoryTransactions = () => {
       },
     },
     {
+      id: "delivery",
+      header: "Delivery",
+      cell: (row: EnhancedInventoryTransaction) => {
+        if (row.type !== "check_out" || row.approval_status !== "approved") return <div>-</div>;
+        
+        if (row.delivery_status === "delivered") {
+          return <div className="px-2 py-1 rounded-full bg-green-100 text-green-800 text-xs font-medium">Delivered</div>;
+        } else {
+          return <div className="px-2 py-1 rounded-full bg-blue-100 text-blue-800 text-xs font-medium">Not delivered</div>;
+        }
+      },
+    },
+    {
       id: "notes",
       header: "Notes",
       cell: (row: EnhancedInventoryTransaction) => (
@@ -314,18 +337,38 @@ const InventoryTransactions = () => {
         const canDelete = row.type === "check_out" && 
                           (row.approval_status === "pending" || row.approval_status === "draft") && 
                           (hasRole(UserRole.ADMIN) || hasRole(UserRole.INVENTORY_MANAGER));
-        
-        if (!canDelete) return null;
+                          
+        // Only show delivery details button for approved checkouts that haven't been delivered yet
+        const canAssignDelivery = row.type === "check_out" && 
+                                  row.approval_status === "approved" && 
+                                  row.delivery_status !== "delivered" &&
+                                  (hasRole(UserRole.ADMIN) || hasRole(UserRole.INVENTORY_MANAGER) || hasRole(UserRole.PROCUREMENT_OFFICER));
         
         return (
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-8 w-8 text-red-500 hover:bg-red-50"
-            onClick={() => handleDeleteTransaction(row.id)}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
+          <div className="flex gap-2">
+            {canDelete && (
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-8 w-8 text-red-500 hover:bg-red-50"
+                onClick={() => handleDeleteTransaction(row.id)}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
+            
+            {canAssignDelivery && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-blue-500 hover:bg-blue-50"
+                onClick={() => handleDeliveryDetails(row)}
+                title="Record delivery details"
+              >
+                <PackageCheck className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
         );
       }
     }
@@ -359,6 +402,24 @@ const InventoryTransactions = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Delivery Details Dialog */}
+      {selectedTransaction && (
+        <DeliveryDetailsDialog
+          transactionId={selectedTransaction.id}
+          product={selectedTransaction.product?.name || "Product"}
+          isOpen={deliveryDialogOpen}
+          onClose={() => setDeliveryDialogOpen(false)}
+          onSuccess={() => {
+            queryClient.invalidateQueries({
+              queryKey: ["inventory_transactions"],
+            });
+            queryClient.invalidateQueries({
+              queryKey: ["inventory_items"],
+            });
+          }}
+        />
+      )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-6">
         <TabsList className="grid grid-cols-4 w-full">
