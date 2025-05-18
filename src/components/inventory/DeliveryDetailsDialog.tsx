@@ -1,7 +1,7 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { updateTransactionDeliveryDetails } from '@/lib/supabase/rpcActions';
 import {
   Dialog,
@@ -22,6 +22,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -35,10 +36,15 @@ interface DeliveryDetailsDialogProps {
   onSuccess: () => void;
 }
 
+interface Department {
+  id: string;
+  name: string;
+}
+
 const formSchema = z.object({
   recipient_name: z.string().min(2, { message: "Recipient name is required" }),
   recipient_id: z.string().optional(),
-  recipient_department: z.string().optional(),
+  recipient_department: z.string(),
   delivery_notes: z.string().optional(),
   location: z.string().optional(),
 });
@@ -54,6 +60,7 @@ const DeliveryDetailsDialog = ({
 }: DeliveryDetailsDialogProps) => {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [departments, setDepartments] = useState<Department[]>([]);
   
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -66,6 +73,31 @@ const DeliveryDetailsDialog = ({
     }
   });
 
+  // Fetch departments when the dialog opens
+  useEffect(() => {
+    if (isOpen) {
+      const fetchDepartments = async () => {
+        try {
+          const { data, error } = await supabase
+            .from('departments')
+            .select('id, name');
+            
+          if (error) throw error;
+          setDepartments(data || []);
+        } catch (error) {
+          console.error('Error fetching departments:', error);
+          toast({
+            title: "Error",
+            description: "Failed to load departments",
+            variant: "destructive",
+          });
+        }
+      };
+      
+      fetchDepartments();
+    }
+  }, [isOpen, toast]);
+
   const onSubmit = async (values: FormValues) => {
     try {
       setIsSubmitting(true);
@@ -76,7 +108,7 @@ const DeliveryDetailsDialog = ({
         delivered_at: new Date().toISOString(),
       };
 
-      // Update transaction with delivery details
+      // Update transaction with delivery details using the function parameter
       const { error } = await updateTransactionDeliveryDetails(
         transactionId,
         deliveryDetails
@@ -151,10 +183,21 @@ const DeliveryDetailsDialog = ({
               name="recipient_department"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Department</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter department" {...field} />
-                  </FormControl>
+                  <FormLabel>Department*</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select department" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {departments.map((dept) => (
+                        <SelectItem key={dept.id} value={dept.name}>
+                          {dept.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}

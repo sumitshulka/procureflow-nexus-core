@@ -66,3 +66,24 @@ BEGIN
   RETURN result;
 END;
 $function$;
+
+-- Improve the validate_procurement_request_deletion function to ensure proper deletion
+CREATE OR REPLACE FUNCTION public.validate_procurement_request_deletion()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Check if request is in a status that allows deletion
+  IF OLD.status NOT IN ('draft', 'submitted') THEN
+    RAISE EXCEPTION 'Cannot delete request with status %', OLD.status;
+  END IF;
+  
+  -- Check if the request is used in inventory
+  IF EXISTS (
+    SELECT 1 FROM public.inventory_transactions
+    WHERE request_id = OLD.id::text
+  ) THEN
+    RAISE EXCEPTION 'Cannot delete request that is used in inventory transactions';
+  END IF;
+  
+  RETURN OLD;
+END;
+$$ LANGUAGE plpgsql;

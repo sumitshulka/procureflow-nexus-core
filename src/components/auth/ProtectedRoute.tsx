@@ -26,7 +26,9 @@ const ProtectedRoute = ({ requiredRoles }: ProtectedRouteProps) => {
   if (!user) {
     console.log("User not authenticated, redirecting to login");
     // Save the current path to redirect back after login
-    sessionStorage.setItem('redirectPath', location.pathname);
+    if (location.pathname !== "/login") {
+      sessionStorage.setItem('redirectPath', location.pathname);
+    }
     return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
 

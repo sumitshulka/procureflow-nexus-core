@@ -97,3 +97,30 @@ export const updateUserPassword = async (
     { password: newPassword }
   );
 };
+
+/**
+ * Delete a procurement request
+ * 
+ * @param requestId - The ID of the procurement request to delete
+ * @returns The result of the operation
+ */
+export const deleteProcurementRequest = async (
+  requestId: string
+) => {
+  // Delete related request items first
+  const { error: itemsError } = await supabase
+    .from('procurement_request_items')
+    .delete()
+    .eq('request_id', requestId);
+  
+  if (itemsError) {
+    console.error('Error deleting request items:', itemsError);
+    return { error: itemsError };
+  }
+  
+  // Then delete the request itself
+  return await supabase
+    .from('procurement_requests')
+    .delete()
+    .eq('id', requestId);
+};
