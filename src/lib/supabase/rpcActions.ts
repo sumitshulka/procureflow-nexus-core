@@ -13,11 +13,15 @@ export const updateTransactionDeliveryDetails = async (
   transactionId: string,
   deliveryDetails: Record<string, any>
 ) => {
+  // Use a direct update instead of the function to avoid ambiguity issues
   return await supabase
-    .rpc('update_transaction_delivery_details', {
-      transaction_id: transactionId,
-      details: deliveryDetails
-    });
+    .from('inventory_transactions')
+    .update({
+      delivery_details: deliveryDetails,
+      delivery_status: 'delivered'
+    })
+    .eq('id', transactionId)
+    .select();
 };
 
 /**

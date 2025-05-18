@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -37,15 +37,41 @@ import { z } from "zod";
 import { Edit, Trash2, UserPlus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
+interface Department {
+  id: string;
+  name: string;
+}
+
 // Form schema for user creation/editing
 const userFormSchema = z.object({
   email: z.string().email("Invalid email address"),
   fullName: z.string().min(1, "Full name is required"),
   password: z.string().min(6, "Password must be at least 6 characters").optional(),
-  role: z.string().min(1, "Role is required")
+  role: z.string().min(1, "Role is required"),
+  department: z.string().optional()
 });
 
 const UsersList = () => {
+  const [departments, setDepartments] = useState<Department[]>([]);
+  
+  // Fetch departments
+  useEffect(() => {
+    const fetchDepartments = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('departments')
+          .select('id, name');
+          
+        if (error) throw error;
+        setDepartments(data || []);
+      } catch (error) {
+        console.error('Error fetching departments:', error);
+      }
+    };
+    
+    fetchDepartments();
+  }, []);
+
   // Fetch users
   const { data: users, isLoading, refetch } = useQuery({
     queryKey: ["users"],
@@ -94,7 +120,8 @@ const UsersList = () => {
       email: "",
       fullName: "",
       password: "",
-      role: UserRole.REQUESTER
+      role: UserRole.REQUESTER,
+      department: ""
     }
   });
 
@@ -104,12 +131,15 @@ const UsersList = () => {
     defaultValues: {
       email: "",
       fullName: "",
-      role: ""
+      role: "",
+      department: ""
     }
   });
 
   const handleAddUser = async (values) => {
     try {
+      console.log("Creating user with values:", values);
+      
       // Create user in auth
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email: values.email,
@@ -117,6 +147,7 @@ const UsersList = () => {
         options: {
           data: {
             full_name: values.fullName,
+            department: values.department,
           }
         }
       });
@@ -125,6 +156,19 @@ const UsersList = () => {
 
       // Assign role if user is created
       if (signUpData.user) {
+        // Update the department in profiles table
+        const { error: profileError } = await supabase
+          .from("profiles")
+          .update({
+            department: values.department
+          })
+          .eq("id", signUpData.user.id);
+          
+        if (profileError) {
+          console.error("Error updating user profile:", profileError);
+        }
+        
+        // Assign user role
         const { error: roleError } = await supabase
           .from("user_roles")
           .insert({
@@ -158,7 +202,8 @@ const UsersList = () => {
     editForm.reset({
       email: user.email,
       fullName: user.fullName,
-      role: user.roles[0] || UserRole.REQUESTER
+      role: user.roles[0] || UserRole.REQUESTER,
+      department: user.department || ""
     });
     setIsEditDialogOpen(true);
   };
@@ -170,7 +215,10 @@ const UsersList = () => {
       // Update profile
       const { error: profileError } = await supabase
         .from("profiles")
-        .update({ full_name: values.fullName })
+        .update({ 
+          full_name: values.fullName,
+          department: values.department 
+        })
         .eq("id", currentUser.id);
 
       if (profileError) throw profileError;
@@ -346,6 +394,28 @@ const UsersList = () => {
               />
               <FormField
                 control={addForm.control}
+                name="department"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Department</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select department" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {departments.map((dept) => (
+                          <SelectItem key={dept.id} value={dept.name}>{dept.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={addForm.control}
                 name="role"
                 render={({ field }) => (
                   <FormItem>
@@ -407,6 +477,28 @@ const UsersList = () => {
                     <FormControl>
                       <Input {...field} />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={editForm.control}
+                name="department"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Department</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value || ""}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select department" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {departments.map((dept) => (
+                          <SelectItem key={dept.id} value={dept.name}>{dept.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}

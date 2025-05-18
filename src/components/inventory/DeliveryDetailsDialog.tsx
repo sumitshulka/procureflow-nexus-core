@@ -44,7 +44,7 @@ interface Department {
 const formSchema = z.object({
   recipient_name: z.string().min(2, { message: "Recipient name is required" }),
   recipient_id: z.string().optional(),
-  recipient_department: z.string(),
+  recipient_department: z.string().min(1, { message: "Department is required" }),
   delivery_notes: z.string().optional(),
   location: z.string().optional(),
 });
@@ -101,6 +101,9 @@ const DeliveryDetailsDialog = ({
   const onSubmit = async (values: FormValues) => {
     try {
       setIsSubmitting(true);
+      
+      console.log('Submitting delivery details for transaction:', transactionId);
+      console.log('Form values:', values);
 
       // Add delivery timestamp
       const deliveryDetails = {
@@ -108,14 +111,19 @@ const DeliveryDetailsDialog = ({
         delivered_at: new Date().toISOString(),
       };
 
-      // Update transaction with delivery details using the function parameter
-      const { error } = await updateTransactionDeliveryDetails(
+      // Use the direct update method instead of the RPC function to avoid ambiguity issues
+      const { data, error } = await updateTransactionDeliveryDetails(
         transactionId,
         deliveryDetails
       );
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error details:', error);
+        throw error;
+      }
 
+      console.log('Transaction updated successfully:', data);
+      
       toast({
         title: "Success",
         description: "Delivery details saved successfully",
