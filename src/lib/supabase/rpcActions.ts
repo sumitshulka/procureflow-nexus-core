@@ -25,7 +25,21 @@ export const updateTransactionDeliveryDetails = async (
         delivery_status: 'delivered'
       })
       .eq('id', transactionId)
-      .select('id, product_id, type, quantity, source_warehouse_id, target_warehouse_id, delivery_details, delivery_status, user_id, transaction_date, notes, reference');  // Explicitly select specific columns
+      // Explicitly list all columns we need without any ambiguous references
+      .select(`
+        id, 
+        product_id, 
+        type, 
+        quantity, 
+        source_warehouse_id, 
+        target_warehouse_id, 
+        delivery_details, 
+        delivery_status, 
+        user_id, 
+        transaction_date, 
+        notes, 
+        reference
+      `);  
     
     if (error) {
       console.error('Error updating delivery details:', error);
