@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { UserRole } from "@/types";
 
@@ -17,29 +16,12 @@ export const updateTransactionDeliveryDetails = async (
   console.log('Delivery details:', deliveryDetails);
 
   try {
-    // Use a direct update with explicit table alias and column selection
+    // Use the dedicated RPC function instead of a direct update
     const { data, error } = await supabase
-      .from('inventory_transactions')
-      .update({
-        delivery_details: deliveryDetails,
-        delivery_status: 'delivered'
-      })
-      .eq('id', transactionId)
-      // Explicitly list all columns we need without any ambiguous references
-      .select(`
-        id, 
-        product_id, 
-        type, 
-        quantity, 
-        source_warehouse_id, 
-        target_warehouse_id, 
-        delivery_details, 
-        delivery_status, 
-        user_id, 
-        transaction_date, 
-        notes, 
-        reference
-      `);  
+      .rpc('update_transaction_delivery_details', {
+        transaction_id: transactionId,
+        details: deliveryDetails
+      });
     
     if (error) {
       console.error('Error updating delivery details:', error);
