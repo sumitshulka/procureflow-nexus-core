@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -111,6 +110,11 @@ const DeliveryDetailsDialog = ({
         delivered_at: new Date().toISOString(),
       };
 
+      console.log('Calling updateTransactionDeliveryDetails with:', {
+        transactionId,
+        deliveryDetails
+      });
+
       const { data, error } = await updateTransactionDeliveryDetails(
         transactionId,
         deliveryDetails
@@ -118,7 +122,12 @@ const DeliveryDetailsDialog = ({
 
       if (error) {
         console.error('Error updating delivery details:', error);
-        throw error;
+        toast({
+          title: "Error",
+          description: `Failed to save delivery details: ${error.message || 'Unknown error'}`,
+          variant: "destructive",
+        });
+        return;
       }
 
       console.log('Transaction updated successfully:', data);

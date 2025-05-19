@@ -17,7 +17,7 @@ export const updateTransactionDeliveryDetails = async (
   console.log('Delivery details:', deliveryDetails);
 
   try {
-    // Use a direct update instead of the function to avoid ambiguity issues
+    // Use a direct update with explicit table alias and column selection
     const { data, error } = await supabase
       .from('inventory_transactions')
       .update({
@@ -25,7 +25,7 @@ export const updateTransactionDeliveryDetails = async (
         delivery_status: 'delivered'
       })
       .eq('id', transactionId)
-      .select('*');  // Explicitly select all columns from the main table
+      .select('id, product_id, type, quantity, source_warehouse_id, target_warehouse_id, delivery_details, delivery_status, user_id, transaction_date, notes, reference');  // Explicitly select specific columns
     
     if (error) {
       console.error('Error updating delivery details:', error);
