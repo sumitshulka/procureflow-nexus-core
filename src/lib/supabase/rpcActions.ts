@@ -136,11 +136,14 @@ export const canDeleteProcurementRequest = async (
       return { canDelete: false, message: error.message || 'Error checking request status' };
     }
     
+    // Parse the JSON response data safely
+    const result = data as { success: boolean; message: string; data?: any };
+    
     // If the function returns success: false, the request cannot be deleted
-    if (data && !data.success) {
+    if (result && !result.success) {
       return { 
         canDelete: false, 
-        message: data.message || 'This request cannot be deleted'
+        message: result.message || 'This request cannot be deleted'
       };
     }
     
@@ -176,13 +179,16 @@ export const deleteProcurementRequest = async (
       return { data: null, error };
     }
     
-    if (!data.success) {
-      console.error(`Cannot delete request: ${data.message}`);
-      return { data: null, error: new Error(data.message || 'Request cannot be deleted') };
+    // Parse the JSON response data safely
+    const result = data as { success: boolean; message: string; data?: any };
+    
+    if (!result.success) {
+      console.error(`Cannot delete request: ${result.message}`);
+      return { data: null, error: new Error(result.message || 'Request cannot be deleted') };
     }
     
     console.log('Request deleted successfully:', data);
-    return { data: data.data, error: null };
+    return { data: result.data, error: null };
   } catch (error: any) {
     console.error('Exception in deleteProcurementRequest:', error);
     return { data: null, error };
