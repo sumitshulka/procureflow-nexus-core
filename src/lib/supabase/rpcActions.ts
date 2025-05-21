@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { UserRole } from "@/types";
 
@@ -115,6 +116,61 @@ export const updateUserPassword = async (
 };
 
 /**
+ * Check if a procurement request can be deleted
+ * 
+ * @param requestId - The ID of the procurement request to check
+ * @returns Object with canDelete flag and error message if any
+ */
+export const canDeleteProcurementRequest = async (
+  requestId: string
+) => {
+  try {
+    // First check if the request is in a status that allows deletion
+    const { data: requestData, error: requestError } = await supabase
+      .from('procurement_requests')
+      .select('status')
+      .eq('id', requestId)
+      .single();
+    
+    if (requestError) {
+      console.error('Error fetching request status:', requestError);
+      return { canDelete: false, message: 'Error checking request status' };
+    }
+    
+    if (!['draft', 'submitted'].includes(requestData.status)) {
+      return { 
+        canDelete: false, 
+        message: `Cannot delete request with status "${requestData.status}". Only draft or submitted requests can be deleted.` 
+      };
+    }
+    
+    // Check if there are any inventory transactions linked to this request
+    const { data: transactions, error: transactionError } = await supabase
+      .from('inventory_transactions')
+      .select('id')
+      .eq('request_id', requestId)
+      .limit(1);
+    
+    if (transactionError) {
+      console.error('Error checking for linked transactions:', transactionError);
+      return { canDelete: false, message: 'Error checking for linked inventory transactions' };
+    }
+    
+    if (transactions && transactions.length > 0) {
+      return { 
+        canDelete: false, 
+        message: 'This request cannot be deleted because it is linked to inventory transactions' 
+      };
+    }
+    
+    return { canDelete: true, message: null };
+  } catch (error: any) {
+    console.error('Error in canDeleteProcurementRequest:', error);
+    return { canDelete: false, message: error.message || 'An unexpected error occurred' };
+  }
+}
+
+/**
  * Delete a procurement request
  * 
  * @param requestId - The ID of the procurement request to delete
@@ -123,20 +179,66 @@ export const updateUserPassword = async (
 export const deleteProcurementRequest = async (
   requestId: string
 ) => {
-  // Delete related request items first
-  const { error: itemsError } = await supabase
-    .from('procurement_request_items')
-    .delete()
-    .eq('request_id', requestId);
-  
-  if (itemsError) {
-    console.error('Error deleting request items:', itemsError);
-    return { error: itemsError };
+  try {
+    console.log(`Attempting to delete procurement request: ${requestId}`);
+    
+    // First check if the request can be deleted
+    const { canDelete, message } = await canDeleteProcurementRequest(requestId);
+    
+    if (!canDelete) {
+      console.error(`Cannot delete request: ${message}`);
+      return { data: null, error: new Error(message || 'Request cannot be deleted') };
+    }
+    
+    console.log('Request can be deleted, proceeding with deletion');
+    
+    // Delete related request items first
+    const { error: itemsError } = await supabase
+      .from('procurement_request_items')
+      .delete()
+      .eq('request_id', requestId);
+    
+    if (itemsError) {
+      console.error('Error deleting request items:', itemsError);
+      return { data: null, error: itemsError };
+    }
+    
+    // Delete related approvals if any
+    const { error: approvalsError } = await supabase
+      .from('approvals')
+      .delete()
+      .eq('entity_type', 'procurement_request')
+      .eq('entity_id', requestId);
+    
+    if (approvalsError) {
+      console.error('Error deleting request approvals:', approvalsError);
+      // We can still proceed even if this fails
+    }
+    
+    // Then delete the request itself
+    const { data, error } = await supabase
+      .from('procurement_requests')
+      .delete()
+      .eq('id', requestId)
+      .select();
+    
+    if (error) {
+      console.error('Error deleting procurement request:', error);
+      // Check for specific error messages from the trigger
+      if (error.message.includes('violates foreign key constraint')) {
+        return { 
+          data: null, 
+          error: new Error('This request cannot be deleted because it is referenced by other records in the system.') 
+        };
+      }
+      return { data: null, error };
+    }
+    
+    console.log('Request deleted successfully:', data);
+    return { data, error: null };
+    
+  } catch (error: any) {
+    console.error('Exception in deleteProcurementRequest:', error);
+    return { data: null, error };
   }
-  
-  // Then delete the request itself
-  return await supabase
-    .from('procurement_requests')
-    .delete()
-    .eq('id', requestId);
 };

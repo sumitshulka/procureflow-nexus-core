@@ -58,7 +58,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { RequestPriority, RequestStatus } from "@/types";
 import { useQuery } from "@tanstack/react-query";
-import { canDeleteProcurementRequest } from "@/components/approval";
+import { canDeleteProcurementRequest, deleteProcurementRequest } from "@/lib/supabase/rpcActions";
 
 // Define the type for procurement requests from database
 interface ProcurementRequest {
@@ -203,7 +203,7 @@ const ProcurementRequests = () => {
     try {
       setDeleteErrorMessage(null);
       
-      // Check if the request can be deleted
+      // Check if the request can be deleted using our improved function
       const { canDelete, message } = await canDeleteProcurementRequest(requestId);
       
       if (!canDelete) {
@@ -232,36 +232,10 @@ const ProcurementRequests = () => {
     try {
       setIsDeleting(true);
       
-      // First, check if there are any approvals related to this request
-      const { data: approvalData, error: approvalError } = await supabase
-        .from('approvals')
-        .select('id')
-        .eq('entity_type', 'procurement_request')
-        .eq('entity_id', requestToDelete);
-        
-      if (approvalError) throw approvalError;
-      
-      // If there are approvals, delete them first
-      if (approvalData && approvalData.length > 0) {
-        const { error: deleteApprovalsError } = await supabase
-          .from('approvals')
-          .delete()
-          .eq('entity_type', 'procurement_request')
-          .eq('entity_id', requestToDelete);
-          
-        if (deleteApprovalsError) throw deleteApprovalsError;
-      }
-      
-      // Delete the request - the trigger we created will handle deleting related items
-      const { error } = await supabase
-        .from("procurement_requests")
-        .delete()
-        .eq("id", requestToDelete);
+      // Use our improved deleteProcurementRequest function
+      const { data, error } = await deleteProcurementRequest(requestToDelete);
       
       if (error) {
-        if (error.message.includes('violates foreign key constraint')) {
-          throw new Error("This request cannot be deleted because it is referenced by other records in the system.");
-        }
         throw error;
       }
       
