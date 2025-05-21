@@ -192,50 +192,75 @@ export const deleteProcurementRequest = async (
     
     console.log('Request can be deleted, proceeding with deletion');
     
-    // Delete related request items first
-    const { error: itemsError } = await supabase
-      .from('procurement_request_items')
-      .delete()
-      .eq('request_id', requestId);
-    
-    if (itemsError) {
-      console.error('Error deleting request items:', itemsError);
-      return { data: null, error: itemsError };
+    // Start a transaction to ensure atomicity
+    const { error: transactionError } = await supabase.rpc('begin_transaction');
+    if (transactionError) {
+      console.error('Error starting transaction:', transactionError);
+      return { data: null, error: transactionError };
     }
     
-    // Delete related approvals if any
-    const { error: approvalsError } = await supabase
-      .from('approvals')
-      .delete()
-      .eq('entity_type', 'procurement_request')
-      .eq('entity_id', requestId);
-    
-    if (approvalsError) {
-      console.error('Error deleting request approvals:', approvalsError);
-      // We can still proceed even if this fails
-    }
-    
-    // Then delete the request itself
-    const { data, error } = await supabase
-      .from('procurement_requests')
-      .delete()
-      .eq('id', requestId)
-      .select();
-    
-    if (error) {
-      console.error('Error deleting procurement request:', error);
-      // Check for specific error messages from the trigger
-      if (error.message.includes('violates foreign key constraint')) {
-        return { 
-          data: null, 
-          error: new Error('This request cannot be deleted because it is referenced by other records in the system.') 
-        };
+    try {
+      // Delete related request items first
+      const { error: itemsError } = await supabase
+        .from('procurement_request_items')
+        .delete()
+        .eq('request_id', requestId);
+      
+      if (itemsError) {
+        console.error('Error deleting request items:', itemsError);
+        await supabase.rpc('rollback_transaction');
+        return { data: null, error: itemsError };
       }
-      return { data: null, error };
+      
+      // Delete related approvals if any
+      const { error: approvalsError } = await supabase
+        .from('approvals')
+        .delete()
+        .eq('entity_type', 'procurement_request')
+        .eq('entity_id', requestId);
+      
+      if (approvalsError) {
+        console.error('Error deleting request approvals:', approvalsError);
+        // We don't rollback for approvals errors, just log and continue
+      }
+      
+      // Then delete the request itself
+      const { data, error } = await supabase
+        .from('procurement_requests')
+        .delete()
+        .eq('id', requestId)
+        .select();
+      
+      if (error) {
+        console.error('Error deleting procurement request:', error);
+        // Check for specific error messages from the trigger
+        await supabase.rpc('rollback_transaction');
+        if (error.message.includes('violates foreign key constraint')) {
+          return { 
+            data: null, 
+            error: new Error('This request cannot be deleted because it is referenced by other records in the system.') 
+          };
+        }
+        return { data: null, error };
+      }
+      
+      // Commit the transaction
+      const { error: commitError } = await supabase.rpc('commit_transaction');
+      if (commitError) {
+        console.error('Error committing transaction:', commitError);
+        await supabase.rpc('rollback_transaction');
+        return { data: null, error: commitError };
+      }
+      
+      console.log('Request deleted successfully:', data);
+      return { data, error: null };
+      
+    } catch (innerError: any) {
+      // If any error occurs during deletion, roll back the transaction
+      await supabase.rpc('rollback_transaction');
+      console.error('Exception during deletion transaction:', innerError);
+      return { data: null, error: innerError };
     }
-    
-    console.log('Request deleted successfully:', data);
-    return { data, error: null };
     
   } catch (error: any) {
     console.error('Exception in deleteProcurementRequest:', error);
