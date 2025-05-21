@@ -193,10 +193,12 @@ export const deleteProcurementRequest = async (
     console.log('Request can be deleted, proceeding with deletion');
     
     // Start a transaction to ensure atomicity
-    const { error: transactionError } = await supabase.rpc('begin_transaction');
-    if (transactionError) {
-      console.error('Error starting transaction:', transactionError);
-      return { data: null, error: transactionError };
+    const { data: beginData, error: beginError } = await supabase
+      .functions.invoke('begin-transaction');
+      
+    if (beginError) {
+      console.error('Error starting transaction:', beginError);
+      return { data: null, error: beginError };
     }
     
     try {
@@ -208,7 +210,7 @@ export const deleteProcurementRequest = async (
       
       if (itemsError) {
         console.error('Error deleting request items:', itemsError);
-        await supabase.rpc('rollback_transaction');
+        await supabase.functions.invoke('rollback-transaction');
         return { data: null, error: itemsError };
       }
       
@@ -234,7 +236,7 @@ export const deleteProcurementRequest = async (
       if (error) {
         console.error('Error deleting procurement request:', error);
         // Check for specific error messages from the trigger
-        await supabase.rpc('rollback_transaction');
+        await supabase.functions.invoke('rollback-transaction');
         if (error.message.includes('violates foreign key constraint')) {
           return { 
             data: null, 
@@ -245,10 +247,12 @@ export const deleteProcurementRequest = async (
       }
       
       // Commit the transaction
-      const { error: commitError } = await supabase.rpc('commit_transaction');
+      const { data: commitData, error: commitError } = await supabase
+        .functions.invoke('commit-transaction');
+        
       if (commitError) {
         console.error('Error committing transaction:', commitError);
-        await supabase.rpc('rollback_transaction');
+        await supabase.functions.invoke('rollback-transaction');
         return { data: null, error: commitError };
       }
       
@@ -257,7 +261,7 @@ export const deleteProcurementRequest = async (
       
     } catch (innerError: any) {
       // If any error occurs during deletion, roll back the transaction
-      await supabase.rpc('rollback_transaction');
+      await supabase.functions.invoke('rollback-transaction');
       console.error('Exception during deletion transaction:', innerError);
       return { data: null, error: innerError };
     }
