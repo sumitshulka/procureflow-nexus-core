@@ -13,6 +13,8 @@ Deno.serve(async (req) => {
   }
 
   try {
+    console.log("Rollback transaction function called")
+    
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -21,16 +23,21 @@ Deno.serve(async (req) => {
     // Call the rollback_transaction function
     const { data, error } = await supabaseClient.rpc('rollback_transaction')
     
-    if (error) throw error
+    if (error) {
+      console.error("Error in rollback_transaction:", error)
+      throw error
+    }
 
+    console.log("Transaction rolled back successfully")
     return new Response(JSON.stringify({ data, error: null }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     })
   } catch (error) {
+    console.error("Error in rollback-transaction function:", error)
     return new Response(JSON.stringify({ data: null, error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 400,
+      status: 200, // Return 200 even on error to handle it on client side
     })
   }
 })

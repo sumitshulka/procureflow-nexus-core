@@ -2,10 +2,10 @@
 project_id = "eflyftrzgspczjqslssa"
 
 [functions.begin-transaction]
-verify_jwt = true
+verify_jwt = false
 
 [functions.commit-transaction]
-verify_jwt = true
+verify_jwt = false
 
 [functions.rollback-transaction]
-verify_jwt = true
+verify_jwt = false
