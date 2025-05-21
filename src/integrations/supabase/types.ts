@@ -840,12 +840,16 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
+      can_delete_procurement_request: {
+        Args: { p_request_id: string }
+        Returns: Json
+      }
       commit_transaction: {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
       delete_procurement_request: {
-        Args: { request_id: string }
+        Args: { p_request_id: string }
         Returns: Json
       }
       has_role: {

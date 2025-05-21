@@ -125,14 +125,14 @@ export const canDeleteProcurementRequest = async (
   requestId: string
 ) => {
   try {
-    // Call the database function to do validation
+    // Call the database function to do validation with renamed parameter
     const { data, error } = await supabase
-      .rpc('delete_procurement_request', {
-        request_id: requestId
+      .rpc('can_delete_procurement_request', {
+        p_request_id: requestId
       });
     
     if (error) {
-      console.error('Error calling delete_procurement_request function:', error);
+      console.error('Error calling can_delete_procurement_request function:', error);
       return { canDelete: false, message: error.message || 'Error checking request status' };
     }
     
@@ -147,9 +147,8 @@ export const canDeleteProcurementRequest = async (
       };
     }
     
-    // If we get here, the function has already performed the deletion
-    // So we simply return success
-    return { canDelete: true, message: null, alreadyDeleted: true };
+    // If we get here, the request can be deleted
+    return { canDelete: true, message: null };
   } catch (error: any) {
     console.error('Error in canDeleteProcurementRequest:', error);
     return { canDelete: false, message: error.message || 'An unexpected error occurred' };
@@ -168,10 +167,10 @@ export const deleteProcurementRequest = async (
   try {
     console.log(`Attempting to delete procurement request: ${requestId}`);
     
-    // Use the database function to delete the request
+    // Use the database function to delete the request with renamed parameter
     const { data, error } = await supabase
       .rpc('delete_procurement_request', {
-        request_id: requestId
+        p_request_id: requestId
       });
       
     if (error) {
