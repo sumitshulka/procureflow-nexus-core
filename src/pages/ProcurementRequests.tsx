@@ -204,7 +204,19 @@ const ProcurementRequests = () => {
       setDeleteErrorMessage(null);
       
       // Check if the request can be deleted using our improved function
-      const { canDelete, message } = await canDeleteProcurementRequest(requestId);
+      const { canDelete, message, alreadyDeleted } = await canDeleteProcurementRequest(requestId);
+      
+      if (alreadyDeleted) {
+        // The request was already deleted by the canDelete function (due to database function behavior)
+        toast({
+          title: "Success",
+          description: "Request deleted successfully",
+        });
+        
+        // Remove the deleted request from the state to avoid having to refetch
+        setRequests(prev => prev.filter(req => req.id !== requestId));
+        return;
+      }
       
       if (!canDelete) {
         setDeleteErrorMessage(message || "This request cannot be deleted");

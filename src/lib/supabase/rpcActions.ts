@@ -125,45 +125,28 @@ export const canDeleteProcurementRequest = async (
   requestId: string
 ) => {
   try {
-    // First check if the request is in a status that allows deletion
-    const { data: requestData, error: requestError } = await supabase
-      .from('procurement_requests')
-      .select('status')
-      .eq('id', requestId)
-      .single();
+    // Call the database function to do validation
+    const { data, error } = await supabase
+      .rpc('delete_procurement_request', {
+        request_id: requestId
+      });
     
-    if (requestError) {
-      console.error('Error fetching request status:', requestError);
-      return { canDelete: false, message: 'Error checking request status' };
+    if (error) {
+      console.error('Error calling delete_procurement_request function:', error);
+      return { canDelete: false, message: error.message || 'Error checking request status' };
     }
     
-    if (!['draft', 'submitted'].includes(requestData.status)) {
+    // If the function returns success: false, the request cannot be deleted
+    if (data && !data.success) {
       return { 
         canDelete: false, 
-        message: `Cannot delete request with status "${requestData.status}". Only draft or submitted requests can be deleted.` 
+        message: data.message || 'This request cannot be deleted'
       };
     }
     
-    // Check if there are any inventory transactions linked to this request
-    const { data: transactions, error: transactionError } = await supabase
-      .from('inventory_transactions')
-      .select('id')
-      .eq('request_id', requestId)
-      .limit(1);
-    
-    if (transactionError) {
-      console.error('Error checking for linked transactions:', transactionError);
-      return { canDelete: false, message: 'Error checking for linked inventory transactions' };
-    }
-    
-    if (transactions && transactions.length > 0) {
-      return { 
-        canDelete: false, 
-        message: 'This request cannot be deleted because it is linked to inventory transactions' 
-      };
-    }
-    
-    return { canDelete: true, message: null };
+    // If we get here, the function has already performed the deletion
+    // So we simply return success
+    return { canDelete: true, message: null, alreadyDeleted: true };
   } catch (error: any) {
     console.error('Error in canDeleteProcurementRequest:', error);
     return { canDelete: false, message: error.message || 'An unexpected error occurred' };
@@ -182,96 +165,24 @@ export const deleteProcurementRequest = async (
   try {
     console.log(`Attempting to delete procurement request: ${requestId}`);
     
-    // First check if the request can be deleted
-    const { canDelete, message } = await canDeleteProcurementRequest(requestId);
-    
-    if (!canDelete) {
-      console.error(`Cannot delete request: ${message}`);
-      return { data: null, error: new Error(message || 'Request cannot be deleted') };
+    // Use the database function to delete the request
+    const { data, error } = await supabase
+      .rpc('delete_procurement_request', {
+        request_id: requestId
+      });
+      
+    if (error) {
+      console.error('Error calling delete_procurement_request function:', error);
+      return { data: null, error };
     }
     
-    console.log('Request can be deleted, proceeding with deletion');
-    
-    // Start a transaction to ensure atomicity
-    const { data: beginData, error: beginError } = await supabase
-      .functions.invoke('begin-transaction');
-      
-    if (beginError) {
-      console.error('Error starting transaction:', beginError);
-      return { data: null, error: beginError };
+    if (!data.success) {
+      console.error(`Cannot delete request: ${data.message}`);
+      return { data: null, error: new Error(data.message || 'Request cannot be deleted') };
     }
     
-    try {
-      // Delete related request items first
-      const { error: itemsError } = await supabase
-        .from('procurement_request_items')
-        .delete()
-        .eq('request_id', requestId);
-      
-      if (itemsError) {
-        console.error('Error deleting request items:', itemsError);
-        const { error: rollbackError } = await supabase.functions.invoke('rollback-transaction');
-        if (rollbackError) console.error('Error rolling back transaction:', rollbackError);
-        return { data: null, error: itemsError };
-      }
-      
-      // Delete related approvals if any
-      const { error: approvalsError } = await supabase
-        .from('approvals')
-        .delete()
-        .eq('entity_type', 'procurement_request')
-        .eq('entity_id', requestId);
-      
-      if (approvalsError) {
-        console.error('Error deleting request approvals:', approvalsError);
-        // We don't rollback for approvals errors, just log and continue
-      }
-      
-      // Then delete the request itself
-      const { data, error } = await supabase
-        .from('procurement_requests')
-        .delete()
-        .eq('id', requestId)
-        .select();
-      
-      if (error) {
-        console.error('Error deleting procurement request:', error);
-        // Check for specific error messages
-        const { error: rollbackError } = await supabase.functions.invoke('rollback-transaction');
-        if (rollbackError) console.error('Error rolling back transaction:', rollbackError);
-        
-        if (error.message.includes('violates foreign key constraint')) {
-          return { 
-            data: null, 
-            error: new Error('This request cannot be deleted because it is referenced by other records in the system.') 
-          };
-        }
-        return { data: null, error };
-      }
-      
-      // Commit the transaction
-      const { data: commitData, error: commitError } = await supabase
-        .functions.invoke('commit-transaction');
-        
-      if (commitError) {
-        console.error('Error committing transaction:', commitError);
-        const { error: rollbackError } = await supabase.functions.invoke('rollback-transaction');
-        if (rollbackError) console.error('Error rolling back transaction:', rollbackError);
-        return { data: null, error: commitError };
-      }
-      
-      console.log('Request deleted successfully:', data);
-      return { data, error: null };
-      
-    } catch (innerError: any) {
-      // If any error occurs during deletion, roll back the transaction
-      const { error: rollbackError } = await supabase.functions.invoke('rollback-transaction');
-      if (rollbackError) console.error('Error rolling back transaction:', rollbackError);
-      
-      console.error('Exception during deletion transaction:', innerError);
-      return { data: null, error: innerError };
-    }
-    
+    console.log('Request deleted successfully:', data);
+    return { data: data.data, error: null };
   } catch (error: any) {
     console.error('Exception in deleteProcurementRequest:', error);
     return { data: null, error };

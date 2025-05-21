@@ -803,7 +803,7 @@ export type Database = {
           comments: string | null
           created_at: string | null
           entity_id: string | null
-          entity_status: Database["public"]["Enums"]["request_status"] | null
+          entity_status: string | null
           entity_type: string | null
           id: string | null
           request_title: string | null
@@ -842,6 +842,10 @@ export type Database = {
       }
       commit_transaction: {
         Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      delete_procurement_request: {
+        Args: { request_id: string }
         Returns: Json
       }
       has_role: {

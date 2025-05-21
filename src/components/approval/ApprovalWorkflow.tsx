@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserRole, RequestStatus } from '@/types';
+import { canDeleteProcurementRequest, deleteProcurementRequest } from '@/lib/supabase/rpcActions';
 
 // Utility function to get approval details for an entity
 export const getApprovalDetails = async (entityType: string, entityId: string) => {
@@ -32,68 +33,6 @@ export const getApprovalDetails = async (entityType: string, entityId: string) =
   } catch (error) {
     console.error('Error fetching approval details:', error);
     return [];
-  }
-};
-
-// Function to check if a procurement request is used in inventory checkout
-export const isProcurementRequestUsedInInventory = async (requestId: string): Promise<boolean> => {
-  const { data, error } = await supabase
-    .from('inventory_transactions')
-    .select('id')
-    .eq('request_id', requestId)
-    .limit(1);
-  
-  if (error) {
-    console.error('Error checking if procurement request is used in inventory:', error);
-    return false;
-  }
-  
-  return (data && data.length > 0);
-};
-
-// Function to check if a procurement request can be deleted
-export const canDeleteProcurementRequest = async (requestId: string): Promise<{
-  canDelete: boolean;
-  message?: string;
-}> => {
-  try {
-    // Get the request status
-    const { data: request, error: requestError } = await supabase
-      .from('procurement_requests')
-      .select('status')
-      .eq('id', requestId)
-      .single();
-    
-    if (requestError) throw requestError;
-    
-    // Check if request is in a state that allows deletion (draft or submitted)
-    const allowedStatuses = ['draft', 'submitted'];
-    
-    if (!allowedStatuses.includes(request.status)) {
-      return { 
-        canDelete: false, 
-        message: `Request cannot be deleted because it is in ${request.status} status` 
-      };
-    }
-    
-    // Check if the request is used in inventory
-    const isUsedInInventory = await isProcurementRequestUsedInInventory(requestId);
-    
-    if (isUsedInInventory) {
-      return { 
-        canDelete: false, 
-        message: 'Request cannot be deleted because it is used in inventory transactions' 
-      };
-    }
-    
-    return { canDelete: true };
-    
-  } catch (error) {
-    console.error('Error checking if request can be deleted:', error);
-    return { 
-      canDelete: false, 
-      message: 'Could not determine if request can be deleted' 
-    };
   }
 };
 
@@ -289,44 +228,6 @@ export const logApprovalAction = async (
   }
 };
 
-// Delete procurement request function
-export const deleteProcurementRequest = async (requestId: string): Promise<{ 
-  success: boolean; 
-  message: string 
-}> => {
-  try {
-    // First check if the request can be deleted
-    const { canDelete, message } = await canDeleteProcurementRequest(requestId);
-    
-    if (!canDelete) {
-      return { success: false, message: message || 'Cannot delete this request' };
-    }
-    
-    // Delete the request
-    const { error } = await supabase
-      .from('procurement_requests')
-      .delete()
-      .eq('id', requestId);
-    
-    if (error) {
-      console.error('Error deleting procurement request:', error);
-      return { 
-        success: false, 
-        message: `Failed to delete request: ${error.message}` 
-      };
-    }
-    
-    return { success: true, message: 'Request deleted successfully' };
-    
-  } catch (error) {
-    console.error('Error in delete process:', error);
-    return { 
-      success: false, 
-      message: 'Failed to delete request' 
-    };
-  }
-};
-
 // Component that provides approval workflow functions through context
 export const useApprovalWorkflow = () => {
   const { userData } = useAuth();
@@ -335,7 +236,6 @@ export const useApprovalWorkflow = () => {
   return {
     handleAdminRequestApproval,
     canDeleteProcurementRequest,
-    isProcurementRequestUsedInInventory,
     deleteProcurementRequest,
     getApprovalDetails,
     logApprovalAction,
