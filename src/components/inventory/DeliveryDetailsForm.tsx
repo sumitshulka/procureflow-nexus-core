@@ -73,36 +73,20 @@ const DeliveryDetailsForm = ({ transactionId, onSuccess, onCancel }: DeliveryDet
         delivery_notes: data.delivery_notes,
       };
 
-      // Update the transaction with delivery details
-      const { error } = await supabase
-        .from("inventory_transactions")
-        .update({
-          delivery_status: "delivered",
-          delivery_date: new Date().toISOString(),
-          notes: data.delivery_notes 
-            ? `${data.delivery_notes}\n(Delivery details recorded)`
-            : "(Delivery details recorded)"
-        })
-        .eq("id", transactionId);
-
-      if (error) {
-        throw error;
-      }
-
       // Make a second update to add the delivery_details using our helper function
+      // which will automatically set delivery_status to 'delivered'
       const { error: detailsError } = await updateTransactionDeliveryDetails(
         transactionId,
         deliveryDetails
       );
 
       if (detailsError) {
-        console.warn("Could not save delivery details metadata:", detailsError);
-        // Don't throw, as the main update succeeded
+        throw detailsError;
       }
 
       toast({
         title: "Success",
-        description: "Delivery details recorded successfully",
+        description: "Delivery details recorded and inventory updated successfully",
       });
 
       onSuccess();

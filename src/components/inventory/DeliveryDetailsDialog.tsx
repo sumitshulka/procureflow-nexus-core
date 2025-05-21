@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -134,7 +135,7 @@ const DeliveryDetailsDialog = ({
       
       toast({
         title: "Success",
-        description: "Delivery details saved successfully",
+        description: "Delivery details saved and inventory updated successfully",
       });
 
       onSuccess();
