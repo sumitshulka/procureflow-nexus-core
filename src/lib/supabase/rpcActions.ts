@@ -148,7 +148,7 @@ export const canDeleteProcurementRequest = async (
     }
     
     // If we get here, the request can be deleted
-    return { canDelete: true, message: null, alreadyDeleted: false };
+    return { canDelete: true, message: null };
   } catch (error: any) {
     console.error('Error in canDeleteProcurementRequest:', error);
     return { canDelete: false, message: error.message || 'An unexpected error occurred' };
