@@ -79,7 +79,7 @@ const ProductCatalog = () => {
   const [filterTags, setFilterTags] = useState<string[]>([]);
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
 
-  // Fetch products from Supabase
+  // Fetch products from Supabase with improved error handling
   const fetchProducts = async (): Promise<Product[]> => {
     console.log("Fetching products");
     try {
@@ -102,7 +102,7 @@ const ProductCatalog = () => {
         throw new Error(error.message);
       }
       
-      console.log("Products fetched:", data);
+      console.log("Products fetched:", data?.length || 0);
       return data || [];
     } catch (err) {
       console.error("Exception fetching products:", err);
@@ -134,7 +134,7 @@ const ProductCatalog = () => {
         throw new Error(error.message);
       }
 
-      console.log("Categories fetched:", data);
+      console.log("Categories fetched:", data?.length || 0);
       return data || [];
     } catch (err) {
       console.error("Exception fetching categories:", err);
@@ -161,6 +161,11 @@ const ProductCatalog = () => {
       }
     }
   });
+
+  // Refetch data on component mount to ensure fresh data
+  useEffect(() => {
+    refetchProducts();
+  }, [refetchProducts]);
 
   // Get all unique tags from products
   const allTags = Array.from(
@@ -474,87 +479,100 @@ const ProductCatalog = () => {
         </Sheet>
       </div>
 
-      <Tabs value={viewMode} onValueChange={setViewMode} className="w-full">
-        <TabsList>
-          <TabsTrigger value="grid">Grid View</TabsTrigger>
-          <TabsTrigger value="table">Table View</TabsTrigger>
-        </TabsList>
+      {!isProductsLoading && products.length === 0 ? (
+        <div className="flex flex-col items-center justify-center p-8 border rounded-md bg-background">
+          <h3 className="text-lg font-medium mb-2">No products found</h3>
+          <p className="text-muted-foreground text-center mb-4">
+            There are no products in the catalog. Click the button below to add your first product.
+          </p>
+          <Button onClick={() => navigate("/add-product")}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Product
+          </Button>
+        </div>
+      ) : (
+        <Tabs value={viewMode} onValueChange={setViewMode} className="w-full">
+          <TabsList>
+            <TabsTrigger value="grid">Grid View</TabsTrigger>
+            <TabsTrigger value="table">Table View</TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="grid" className="mt-4">
-          {filteredProducts.length === 0 ? (
-            <div className="text-center py-10">
-              <p className="text-muted-foreground">No products match your search criteria</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredProducts.map((product) => (
-                <Card key={product.id} className="overflow-hidden cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate(`/product/${product.id}`)}>
-                  <CardHeader className="pb-3">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <CardTitle className="text-lg">{product.name}</CardTitle>
-                        <CardDescription className="text-xs mt-1">
-                          {product.id} · {product.category?.name || "No Category"}
-                        </CardDescription>
+          <TabsContent value="grid" className="mt-4">
+            {filteredProducts.length === 0 ? (
+              <div className="text-center py-10">
+                <p className="text-muted-foreground">No products match your search criteria</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredProducts.map((product) => (
+                  <Card key={product.id} className="overflow-hidden cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate(`/product/${product.id}`)}>
+                    <CardHeader className="pb-3">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <CardTitle className="text-lg">{product.name}</CardTitle>
+                          <CardDescription className="text-xs mt-1">
+                            {product.id} · {product.category?.name || "No Category"}
+                          </CardDescription>
+                        </div>
+                        <div className="flex flex-col items-end gap-1">
+                          <Badge variant={product.classification === "goods" ? "default" : "secondary"}>
+                            {product.classification === "goods" ? "Goods" : "Services"}
+                          </Badge>
+                          <span className="text-xs">{product.unit?.name || "N/A"}</span>
+                        </div>
                       </div>
-                      <div className="flex flex-col items-end gap-1">
-                        <Badge variant={product.classification === "goods" ? "default" : "secondary"}>
-                          {product.classification === "goods" ? "Goods" : "Services"}
-                        </Badge>
-                        <span className="text-xs">{product.unit?.name || "N/A"}</span>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="pb-2">
-                    <p className="text-sm text-muted-foreground line-clamp-2">
-                      {product.description || "No description available"}
-                    </p>
-                    <div className="mt-3 flex items-center justify-between">
-                      <p className="font-medium text-lg">
-                        {product.current_price != null ? 
-                          new Intl.NumberFormat("en-US", {
-                            style: "currency",
-                            currency: "USD",
-                          }).format(product.current_price) : 
-                          "Price not set"
-                        }
+                    </CardHeader>
+                    <CardContent className="pb-2">
+                      <p className="text-sm text-muted-foreground line-clamp-2">
+                        {product.description || "No description available"}
                       </p>
-                    </div>
-                  </CardContent>
-                  <CardFooter className="pt-2">
-                    <div className="flex flex-wrap gap-1 items-center">
-                      {product.tags && product.tags.length > 0 ? (
-                        <>
-                          <Tag className="h-3 w-3 text-muted-foreground" />
-                          {product.tags.map((tag, i) => (
-                            <Badge
-                              variant="outline"
-                              key={i}
-                              className="text-xs px-2 py-0"
-                            >
-                              {tag}
-                            </Badge>
-                          ))}
-                        </>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">No tags</span>
-                      )}
-                    </div>
-                  </CardFooter>
-                </Card>
-              ))}
-            </div>
-          )}
-        </TabsContent>
+                      <div className="mt-3 flex items-center justify-between">
+                        <p className="font-medium text-lg">
+                          {product.current_price != null ? 
+                            new Intl.NumberFormat("en-US", {
+                              style: "currency",
+                              currency: "USD",
+                            }).format(product.current_price) : 
+                            "Price not set"
+                          }
+                        </p>
+                      </div>
+                    </CardContent>
+                    <CardFooter className="pt-2">
+                      <div className="flex flex-wrap gap-1 items-center">
+                        {product.tags && product.tags.length > 0 ? (
+                          <>
+                            <Tag className="h-3 w-3 text-muted-foreground" />
+                            {product.tags.map((tag, i) => (
+                              <Badge
+                                variant="outline"
+                                key={i}
+                                className="text-xs px-2 py-0"
+                              >
+                                {tag}
+                              </Badge>
+                            ))}
+                          </>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">No tags</span>
+                        )}
+                      </div>
+                    </CardFooter>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
 
-        <TabsContent value="table" className="mt-4">
-          <DataTable
-            columns={productColumns}
-            data={filteredProducts}
-            emptyMessage="No products found"
-          />
-        </TabsContent>
-      </Tabs>
+          <TabsContent value="table" className="mt-4">
+            <DataTable
+              columns={productColumns}
+              data={filteredProducts}
+              emptyMessage="No products found"
+            />
+          </TabsContent>
+        </Tabs>
+      )}
     </div>
   );
 };

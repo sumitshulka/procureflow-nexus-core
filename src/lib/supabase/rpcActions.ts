@@ -210,7 +210,8 @@ export const deleteProcurementRequest = async (
       
       if (itemsError) {
         console.error('Error deleting request items:', itemsError);
-        await supabase.functions.invoke('rollback-transaction');
+        const { error: rollbackError } = await supabase.functions.invoke('rollback-transaction');
+        if (rollbackError) console.error('Error rolling back transaction:', rollbackError);
         return { data: null, error: itemsError };
       }
       
@@ -235,8 +236,10 @@ export const deleteProcurementRequest = async (
       
       if (error) {
         console.error('Error deleting procurement request:', error);
-        // Check for specific error messages from the trigger
-        await supabase.functions.invoke('rollback-transaction');
+        // Check for specific error messages
+        const { error: rollbackError } = await supabase.functions.invoke('rollback-transaction');
+        if (rollbackError) console.error('Error rolling back transaction:', rollbackError);
+        
         if (error.message.includes('violates foreign key constraint')) {
           return { 
             data: null, 
@@ -252,7 +255,8 @@ export const deleteProcurementRequest = async (
         
       if (commitError) {
         console.error('Error committing transaction:', commitError);
-        await supabase.functions.invoke('rollback-transaction');
+        const { error: rollbackError } = await supabase.functions.invoke('rollback-transaction');
+        if (rollbackError) console.error('Error rolling back transaction:', rollbackError);
         return { data: null, error: commitError };
       }
       
@@ -261,7 +265,9 @@ export const deleteProcurementRequest = async (
       
     } catch (innerError: any) {
       // If any error occurs during deletion, roll back the transaction
-      await supabase.functions.invoke('rollback-transaction');
+      const { error: rollbackError } = await supabase.functions.invoke('rollback-transaction');
+      if (rollbackError) console.error('Error rolling back transaction:', rollbackError);
+      
       console.error('Exception during deletion transaction:', innerError);
       return { data: null, error: innerError };
     }

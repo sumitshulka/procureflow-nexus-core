@@ -246,6 +246,8 @@ const ProcurementRequests = () => {
       
       // Remove the deleted request from the state to avoid having to refetch
       setRequests(prev => prev.filter(req => req.id !== requestToDelete));
+      setRequestToDelete(null);
+      setAlertDialogOpen(false);
       
     } catch (error: any) {
       console.error("Error deleting request:", error.message);
@@ -255,7 +257,6 @@ const ProcurementRequests = () => {
         variant: "destructive",
       });
     } finally {
-      setRequestToDelete(null);
       setIsDeleting(false);
       setAlertDialogOpen(false);
     }
