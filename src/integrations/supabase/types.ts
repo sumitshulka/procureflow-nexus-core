@@ -836,6 +836,14 @@ export type Database = {
       }
     }
     Functions: {
+      begin_transaction: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      commit_transaction: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       has_role: {
         Args: {
           user_id: string
@@ -846,6 +854,10 @@ export type Database = {
       is_request_completed: {
         Args: { request_id: string }
         Returns: boolean
+      }
+      rollback_transaction: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
       }
       update_transaction_delivery_details: {
         Args: { transaction_id: string; details: Json }
