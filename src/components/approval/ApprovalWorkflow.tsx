@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
@@ -20,14 +19,41 @@ export const getApprovalDetails = async (entityType: string, entityId: string) =
         entity_type,
         entity_id,
         requester_id,
-        approver_id,
-        profiles:requester_id(full_name)
+        approver_id
       `)
       .eq('entity_type', entityType)
       .eq('entity_id', entityId)
       .order('created_at', { ascending: true });
       
     if (error) throw error;
+    
+    // If we have approvals, fetch the profile data separately to avoid join issues
+    if (data && data.length > 0) {
+      const requesterIds = [...new Set(data.map(approval => approval.requester_id))];
+      
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', requesterIds);
+        
+      if (profilesError) {
+        console.error('Error fetching profiles:', profilesError);
+        // Continue without profile names if profiles fetch fails
+        return data.map(approval => ({
+          ...approval,
+          profiles: { full_name: 'Unknown user' }
+        }));
+      }
+      
+      // Map profile data to approvals
+      return data.map(approval => {
+        const profile = profiles?.find(p => p.id === approval.requester_id);
+        return {
+          ...approval,
+          profiles: { full_name: profile?.full_name || 'Unknown user' }
+        };
+      });
+    }
     
     return data || [];
   } catch (error) {
