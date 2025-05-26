@@ -1,3 +1,4 @@
+
 import React from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -59,6 +60,8 @@ const DeliveryDetailsForm = ({ transactionId, onSuccess, onCancel }: DeliveryDet
     try {
       setIsSubmitting(true);
 
+      console.log('DeliveryDetailsForm submitting for transaction:', transactionId);
+
       // Create the delivery details object
       const deliveryDetails = {
         delivery_method: data.delivery_method,
@@ -72,8 +75,9 @@ const DeliveryDetailsForm = ({ transactionId, onSuccess, onCancel }: DeliveryDet
         delivery_notes: data.delivery_notes,
       };
 
-      // Make a second update to add the delivery_details using our helper function
-      // which will automatically set delivery_status to 'delivered'
+      console.log('Calling updateTransactionDeliveryDetails from DeliveryDetailsForm');
+
+      // Use our helper function which calls the RPC function
       const { error: detailsError } = await updateTransactionDeliveryDetails(
         transactionId,
         deliveryDetails
@@ -90,7 +94,7 @@ const DeliveryDetailsForm = ({ transactionId, onSuccess, onCancel }: DeliveryDet
 
       onSuccess();
     } catch (error: any) {
-      console.error("Error updating delivery details:", error);
+      console.error("Error in DeliveryDetailsForm:", error);
       toast({
         title: "Error",
         description: error.message || "Failed to update delivery details",

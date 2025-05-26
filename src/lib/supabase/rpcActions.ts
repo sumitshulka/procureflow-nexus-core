@@ -25,11 +25,11 @@ export const updateTransactionDeliveryDetails = async (
       });
     
     if (error) {
-      console.error('Error updating delivery details:', error);
+      console.error('Error calling RPC function:', error);
       throw error;
     }
     
-    console.log('Update successful, returned data:', data);
+    console.log('RPC function successful, returned data:', data);
     return { data, error: null };
   } catch (error: any) {
     console.error('Exception in updateTransactionDeliveryDetails:', error);

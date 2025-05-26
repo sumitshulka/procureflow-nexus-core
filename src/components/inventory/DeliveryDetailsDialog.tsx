@@ -115,13 +115,14 @@ const DeliveryDetailsDialog = ({
         deliveryDetails
       });
 
+      // Call our RPC function directly through the helper
       const { data, error } = await updateTransactionDeliveryDetails(
         transactionId,
         deliveryDetails
       );
 
       if (error) {
-        console.error('Error updating delivery details:', error);
+        console.error('Error from updateTransactionDeliveryDetails:', error);
         toast({
           title: "Error",
           description: `Failed to save delivery details: ${error.message || 'Unknown error'}`,
@@ -130,7 +131,7 @@ const DeliveryDetailsDialog = ({
         return;
       }
 
-      console.log('Transaction updated successfully:', data);
+      console.log('Delivery details saved successfully:', data);
       
       toast({
         title: "Success",
@@ -140,7 +141,7 @@ const DeliveryDetailsDialog = ({
       onSuccess();
       onClose();
     } catch (error: any) {
-      console.error('Error saving delivery details:', error);
+      console.error('Exception in onSubmit:', error);
       toast({
         title: "Error",
         description: error.message || "Failed to save delivery details",
