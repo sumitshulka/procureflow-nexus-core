@@ -874,6 +874,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
+      update_transaction_delivery_details: {
+        Args: { transaction_id: string; p_delivery_details: Json }
+        Returns: Json
+      }
     }
     Enums: {
       request_priority: "low" | "medium" | "high" | "urgent"

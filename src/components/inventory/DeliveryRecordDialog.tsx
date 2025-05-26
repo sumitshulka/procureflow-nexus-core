@@ -76,7 +76,7 @@ const DeliveryRecordDialog: React.FC<DeliveryRecordDialogProps> = ({
 
       console.log("[DeliveryRecord] Calling record_delivery_and_update_inventory function");
 
-      // Use the new database function to record delivery and update inventory
+      // Use the database function to record delivery and update inventory
       const { data, error } = await supabase.rpc('record_delivery_and_update_inventory', {
         transaction_id: transactionId,
         p_delivery_details: deliveryData
