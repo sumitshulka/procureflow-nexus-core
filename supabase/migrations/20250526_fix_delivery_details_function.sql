@@ -1,5 +1,5 @@
 
--- Fix the delivery details function to ensure it doesn't reference updated_at
+-- Fix the delivery details function to properly handle updated_at column
 CREATE OR REPLACE FUNCTION public.update_transaction_delivery_details(transaction_id uuid, details jsonb)
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -8,11 +8,12 @@ AS $function$
 DECLARE
   result jsonb;
 BEGIN
-  -- Update the transaction without trying to set updated_at (which doesn't exist)
+  -- Update the transaction with the new updated_at column
   UPDATE public.inventory_transactions
   SET 
     delivery_details = details,
-    delivery_status = 'delivered'
+    delivery_status = 'delivered',
+    updated_at = NOW()
   WHERE id = transaction_id
   RETURNING jsonb_build_object(
     'id', id,
@@ -28,7 +29,8 @@ BEGIN
     'request_id', request_id,
     'reference', reference,
     'notes', notes,
-    'target_warehouse_id', target_warehouse_id
+    'target_warehouse_id', target_warehouse_id,
+    'updated_at', updated_at
   ) INTO result;
   
   RETURN result;

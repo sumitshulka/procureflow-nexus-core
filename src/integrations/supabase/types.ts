@@ -287,6 +287,7 @@ export type Database = {
           target_warehouse_id: string | null
           transaction_date: string | null
           type: string
+          updated_at: string | null
           user_id: string
         }
         Insert: {
@@ -303,6 +304,7 @@ export type Database = {
           target_warehouse_id?: string | null
           transaction_date?: string | null
           type: string
+          updated_at?: string | null
           user_id: string
         }
         Update: {
@@ -319,6 +321,7 @@ export type Database = {
           target_warehouse_id?: string | null
           transaction_date?: string | null
           type?: string
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: [
