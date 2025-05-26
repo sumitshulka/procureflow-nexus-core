@@ -61,24 +61,29 @@ const ResetPasswordDialog = ({ userId, userEmail, isOpen, onClose }: ResetPasswo
     try {
       setIsSubmitting(true);
       
-      // Call Supabase admin API to update user's password
-      const { error } = await supabase.auth.admin.updateUserById(
-        userId,
-        { password: newPassword }
-      );
+      console.log('Resetting password for user:', userEmail);
       
-      if (error) throw error;
+      // Call the Edge Function to reset password
+      const { data, error } = await supabase.functions.invoke('reset-user-password', {
+        body: {
+          userId: userId,
+          newPassword: newPassword,
+          userEmail: userEmail
+        }
+      });
+      
+      if (error) {
+        console.error('Edge function error:', error);
+        throw new Error(error.message || 'Failed to call reset password function');
+      }
+      
+      if (data.error) {
+        throw new Error(data.error);
+      }
       
       toast({
         title: "Success",
-        description: `Password reset for ${userEmail}`,
-      });
-      
-      // Log activity
-      await supabase.from('activity_logs').insert({
-        user_id: userId,
-        action: 'password_reset_by_admin',
-        details: { target_user: userEmail }
+        description: data.message || `Password reset for ${userEmail}`,
       });
       
       setNewPassword('');
