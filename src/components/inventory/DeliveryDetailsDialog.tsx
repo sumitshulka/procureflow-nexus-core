@@ -21,7 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import { updateTransactionDeliveryDetails } from "@/lib/supabase/rpcActions";
+import { supabase } from "@/integrations/supabase/client";
 
 const deliveryFormSchema = z.object({
   recipient_name: z.string().min(1, "Recipient name is required"),
@@ -74,11 +74,25 @@ const DeliveryDetailsDialog: React.FC<DeliveryDetailsDialogProps> = ({
         delivered_at: new Date().toISOString(),
       };
 
-      console.info("[DeliveryDetailsDialog] Calling updateTransactionDeliveryDetails with clean RPC function");
+      console.info("[DeliveryDetailsDialog] Using direct Supabase update instead of RPC");
 
-      const result = await updateTransactionDeliveryDetails(transactionId, deliveryDetails);
-      
-      console.info("[DeliveryDetailsDialog] Success result:", result);
+      // Update transaction with delivery details and set delivery status to delivered
+      // Using direct supabase call instead of RPC to avoid trigger issues
+      const { data, error } = await supabase
+        .from('inventory_transactions')
+        .update({
+          delivery_details: deliveryDetails,
+          delivery_status: 'delivered'
+        })
+        .eq('id', transactionId)
+        .select();
+
+      if (error) {
+        console.error("[DeliveryDetailsDialog] Supabase error:", error);
+        throw error;
+      }
+
+      console.info("[DeliveryDetailsDialog] Update successful:", data);
 
       toast({
         title: "Success",
@@ -90,7 +104,7 @@ const DeliveryDetailsDialog: React.FC<DeliveryDetailsDialogProps> = ({
       onClose();
       
     } catch (error: any) {
-      console.error("[DeliveryDetailsDialog] Error from updateTransactionDeliveryDetails:", error);
+      console.error("[DeliveryDetailsDialog] Error recording delivery details:", error);
       console.error("[DeliveryDetailsDialog] Error details:", {
         message: error.message,
         code: error.code,
