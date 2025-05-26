@@ -10,6 +10,7 @@ export const checkAuthentication = async () => {
   const { data: { user }, error } = await supabase.auth.getUser();
   
   if (error || !user) {
+    console.error("[supabaseHelpers] Authentication check failed:", error);
     toast({
       title: "Authentication required",
       description: "Please log in to continue",
@@ -18,6 +19,7 @@ export const checkAuthentication = async () => {
     return null;
   }
   
+  console.info("[supabaseHelpers] User authenticated:", user.id);
   return user;
 };
 
@@ -27,7 +29,14 @@ export const checkAuthentication = async () => {
  * @param operation Description of the operation that failed
  */
 export const logDatabaseError = (error: any, operation: string) => {
-  console.error(`Database error during ${operation}:`, error);
+  console.error(`[supabaseHelpers] Database error during ${operation}:`, error);
+  console.error(`[supabaseHelpers] Error details:`, {
+    message: error.message,
+    code: error.code,
+    details: error.details,
+    hint: error.hint,
+    stack: error.stack
+  });
   
   // Check for common error types
   if (error.code === "PGRST116") {
@@ -38,8 +47,15 @@ export const logDatabaseError = (error: any, operation: string) => {
     });
   } else if (error.message?.includes("RLS")) {
     toast({
-      title: "Access denied",
+      title: "Access denied", 
       description: "Row-level security policy violation",
+      variant: "destructive",
+    });
+  } else if (error.message?.includes("updated_at")) {
+    console.error(`[supabaseHelpers] CRITICAL: updated_at field error in ${operation}:`, error);
+    toast({
+      title: "Database schema error",
+      description: `Database field access error during ${operation}. Check logs for details.`,
       variant: "destructive",
     });
   } else {

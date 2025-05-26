@@ -1,12 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import { updateTransactionDeliveryDetails } from '@/lib/supabase/rpcActions';
+
+import React, { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -17,15 +16,22 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Loader2 } from 'lucide-react';
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/use-toast";
+import { updateTransactionDeliveryDetails } from "@/lib/supabase/rpcActions";
+
+const deliveryFormSchema = z.object({
+  recipient_name: z.string().min(1, "Recipient name is required"),
+  recipient_id: z.string().optional(),
+  recipient_department: z.string().min(1, "Department is required"),
+  delivery_notes: z.string().optional(),
+  location: z.string().optional(),
+});
+
+type DeliveryFormValues = z.infer<typeof deliveryFormSchema>;
 
 interface DeliveryDetailsDialogProps {
   transactionId: string;
@@ -35,116 +41,70 @@ interface DeliveryDetailsDialogProps {
   onSuccess: () => void;
 }
 
-interface Department {
-  id: string;
-  name: string;
-}
-
-const formSchema = z.object({
-  recipient_name: z.string().min(2, { message: "Recipient name is required" }),
-  recipient_id: z.string().optional(),
-  recipient_department: z.string().min(1, { message: "Department is required" }),
-  delivery_notes: z.string().optional(),
-  location: z.string().optional(),
-});
-
-type FormValues = z.infer<typeof formSchema>;
-
-const DeliveryDetailsDialog = ({ 
-  transactionId, 
+const DeliveryDetailsDialog: React.FC<DeliveryDetailsDialogProps> = ({
+  transactionId,
   product,
-  isOpen, 
-  onClose, 
-  onSuccess 
-}: DeliveryDetailsDialogProps) => {
+  isOpen,
+  onClose,
+  onSuccess,
+}) => {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [departments, setDepartments] = useState<Department[]>([]);
-  
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
+
+  const form = useForm<DeliveryFormValues>({
+    resolver: zodResolver(deliveryFormSchema),
     defaultValues: {
       recipient_name: "",
       recipient_id: "",
       recipient_department: "",
       delivery_notes: "",
       location: "",
-    }
+    },
   });
 
-  // Fetch departments when the dialog opens
-  useEffect(() => {
-    if (isOpen) {
-      const fetchDepartments = async () => {
-        try {
-          const { data, error } = await supabase
-            .from('departments')
-            .select('id, name');
-            
-          if (error) throw error;
-          setDepartments(data || []);
-        } catch (error) {
-          console.error('Error fetching departments:', error);
-          toast({
-            title: "Error",
-            description: "Failed to load departments",
-            variant: "destructive",
-          });
-        }
-      };
-      
-      fetchDepartments();
-    }
-  }, [isOpen, toast]);
-
-  const onSubmit = async (values: FormValues) => {
+  const onSubmit = async (values: DeliveryFormValues) => {
     try {
       setIsSubmitting(true);
       
-      console.log('Submitting delivery details for transaction:', transactionId);
-      console.log('Form values:', values);
+      console.info("[DeliveryDetailsDialog] Submitting delivery details for transaction:", transactionId);
+      console.info("[DeliveryDetailsDialog] Form values:", values);
 
-      // Add delivery timestamp
       const deliveryDetails = {
         ...values,
         delivered_at: new Date().toISOString(),
       };
 
-      console.log('Calling updateTransactionDeliveryDetails with:', {
+      console.info("[DeliveryDetailsDialog] Calling updateTransactionDeliveryDetails with:", {
         transactionId,
-        deliveryDetails
+        deliveryDetails,
       });
 
-      // Call our RPC function directly through the helper
-      const { data, error } = await updateTransactionDeliveryDetails(
-        transactionId,
-        deliveryDetails
-      );
-
-      if (error) {
-        console.error('Error from updateTransactionDeliveryDetails:', error);
-        toast({
-          title: "Error",
-          description: `Failed to save delivery details: ${error.message || 'Unknown error'}`,
-          variant: "destructive",
-        });
-        return;
-      }
-
-      console.log('Delivery details saved successfully:', data);
+      const result = await updateTransactionDeliveryDetails(transactionId, deliveryDetails);
       
+      console.info("[DeliveryDetailsDialog] Success result:", result);
+
       toast({
         title: "Success",
-        description: "Delivery details saved and inventory updated successfully",
+        description: "Delivery details recorded successfully",
       });
 
+      form.reset();
       onSuccess();
       onClose();
+      
     } catch (error: any) {
-      console.error('Exception in onSubmit:', error);
+      console.error("[DeliveryDetailsDialog] Error from updateTransactionDeliveryDetails:", error);
+      console.error("[DeliveryDetailsDialog] Error details:", {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+        stack: error.stack
+      });
+      
       toast({
         title: "Error",
-        description: error.message || "Failed to save delivery details",
+        description: error.message || "Failed to record delivery details",
         variant: "destructive",
       });
     } finally {
@@ -152,33 +112,35 @@ const DeliveryDetailsDialog = ({
     }
   };
 
-  // Reset form when dialog opens
-  useEffect(() => {
-    if (isOpen) {
-      form.reset();
-    }
-  }, [isOpen, form]);
+  const handleClose = () => {
+    console.info("[DeliveryDetailsDialog] Dialog closing");
+    form.reset();
+    onClose();
+  };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px]">
+    <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Record Delivery Details</DialogTitle>
-          <DialogDescription>
-            Enter the delivery information for <strong>{product}</strong>
-          </DialogDescription>
         </DialogHeader>
+        
+        <div className="mb-4">
+          <p className="text-sm text-muted-foreground">
+            Product: <span className="font-medium">{product}</span>
+          </p>
+        </div>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
               control={form.control}
               name="recipient_name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Recipient Name*</FormLabel>
+                  <FormLabel>Recipient Name *</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter recipient's full name" {...field} />
+                    <Input placeholder="Enter recipient name" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -190,9 +152,9 @@ const DeliveryDetailsDialog = ({
               name="recipient_id"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Recipient ID/Badge</FormLabel>
+                  <FormLabel>Recipient ID/Employee ID</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter ID or badge number" {...field} />
+                    <Input placeholder="Enter employee ID (optional)" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -204,21 +166,10 @@ const DeliveryDetailsDialog = ({
               name="recipient_department"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Department*</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select department" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {departments.map((dept) => (
-                        <SelectItem key={dept.id} value={dept.name}>
-                          {dept.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <FormLabel>Department *</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter department" {...field} />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -231,7 +182,7 @@ const DeliveryDetailsDialog = ({
                 <FormItem>
                   <FormLabel>Delivery Location</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter delivery location" {...field} />
+                    <Input placeholder="Building, floor, room (optional)" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -243,11 +194,10 @@ const DeliveryDetailsDialog = ({
               name="delivery_notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Notes</FormLabel>
+                  <FormLabel>Delivery Notes</FormLabel>
                   <FormControl>
                     <Textarea 
-                      placeholder="Any additional notes or comments" 
-                      className="min-h-[100px]"
+                      placeholder="Additional notes about the delivery (optional)" 
                       {...field} 
                     />
                   </FormControl>
@@ -256,21 +206,14 @@ const DeliveryDetailsDialog = ({
               )}
             />
 
-            <DialogFooter>
-              <Button
-                type="submit"
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  "Save Delivery Details"
-                )}
+            <div className="flex justify-end space-x-2 pt-4">
+              <Button type="button" variant="outline" onClick={handleClose}>
+                Cancel
               </Button>
-            </DialogFooter>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? "Recording..." : "Record Delivery"}
+              </Button>
+            </div>
           </form>
         </Form>
       </DialogContent>
