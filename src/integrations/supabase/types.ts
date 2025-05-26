@@ -867,7 +867,7 @@ export type Database = {
         Returns: boolean
       }
       record_delivery_and_update_inventory: {
-        Args: { transaction_id: string; delivery_details: Json }
+        Args: { transaction_id: string; p_delivery_details: Json }
         Returns: Json
       }
       rollback_transaction: {
