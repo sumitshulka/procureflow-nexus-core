@@ -74,27 +74,24 @@ const DeliveryRecordDialog: React.FC<DeliveryRecordDialogProps> = ({
         delivered_at: new Date().toISOString(),
       };
 
-      console.log("[DeliveryRecord] Updating transaction with delivery data");
+      console.log("[DeliveryRecord] Calling record_delivery_and_update_inventory function");
 
-      const { data, error } = await supabase
-        .from('inventory_transactions')
-        .update({
-          delivery_details: deliveryData,
-          delivery_status: 'delivered'
-        })
-        .eq('id', transactionId)
-        .select();
+      // Use the new database function to record delivery and update inventory
+      const { data, error } = await supabase.rpc('record_delivery_and_update_inventory', {
+        transaction_id: transactionId,
+        delivery_details: deliveryData
+      });
 
       if (error) {
-        console.error("[DeliveryRecord] Database error:", error);
+        console.error("[DeliveryRecord] Database function error:", error);
         throw error;
       }
 
-      console.log("[DeliveryRecord] Transaction updated successfully:", data);
+      console.log("[DeliveryRecord] Function executed successfully:", data);
 
       toast({
         title: "Success",
-        description: "Delivery details recorded successfully",
+        description: "Delivery details recorded and inventory updated successfully",
       });
 
       form.reset();

@@ -866,12 +866,12 @@ export type Database = {
         Args: { request_id: string }
         Returns: boolean
       }
-      rollback_transaction: {
-        Args: Record<PropertyKey, never>
+      record_delivery_and_update_inventory: {
+        Args: { transaction_id: string; delivery_details: Json }
         Returns: Json
       }
-      update_transaction_delivery_details: {
-        Args: { transaction_id: string; details: Json }
+      rollback_transaction: {
+        Args: Record<PropertyKey, never>
         Returns: Json
       }
     }
