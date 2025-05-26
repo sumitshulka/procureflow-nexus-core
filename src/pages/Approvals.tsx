@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -175,7 +174,7 @@ const Approvals = () => {
     const [approvalHistory, setApprovalHistory] = useState([]);
     const [loading, setLoading] = useState(true);
     
-    // Fetch approval history
+    // Fetch approval history using the same pattern as ApprovalWorkflow
     const fetchApprovalHistory = async () => {
       setLoading(true);
       try {
@@ -187,7 +186,7 @@ const Approvals = () => {
             created_at,
             approval_date,
             comments,
-            profiles:requester_id(full_name)
+            requester_id
           `)
           .eq('entity_type', entityType)
           .eq('entity_id', entityId)
@@ -195,7 +194,38 @@ const Approvals = () => {
           
         if (error) throw error;
         
-        setApprovalHistory(data || []);
+        // If we have approvals, fetch the profile data separately to avoid join issues
+        if (data && data.length > 0) {
+          const requesterIds = [...new Set(data.map(approval => approval.requester_id))];
+          
+          const { data: profiles, error: profilesError } = await supabase
+            .from('profiles')
+            .select('id, full_name')
+            .in('id', requesterIds);
+            
+          if (profilesError) {
+            console.error('Error fetching profiles:', profilesError);
+            // Continue without profile names if profiles fetch fails
+            setApprovalHistory(data.map(approval => ({
+              ...approval,
+              profiles: { full_name: 'Unknown user' }
+            })));
+            return;
+          }
+          
+          // Map profile data to approvals
+          const enrichedData = data.map(approval => {
+            const profile = profiles?.find(p => p.id === approval.requester_id);
+            return {
+              ...approval,
+              profiles: { full_name: profile?.full_name || 'Unknown user' }
+            };
+          });
+          
+          setApprovalHistory(enrichedData);
+        } else {
+          setApprovalHistory(data || []);
+        }
       } catch (error) {
         console.error('Error fetching approval history:', error);
         toast({
