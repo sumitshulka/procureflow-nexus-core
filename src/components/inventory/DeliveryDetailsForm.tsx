@@ -1,103 +1,113 @@
 
-import React from "react";
-import { z } from "zod";
+import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { 
+import * as z from "zod";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Form,
   FormControl,
   FormField,
   FormItem,
   FormLabel,
-  FormMessage
+  FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import { Loader2 } from "lucide-react";
-import { updateTransactionDeliveryDetails } from "@/lib/supabase/rpcActions";
+import { supabase } from "@/integrations/supabase/client";
 
 const deliveryFormSchema = z.object({
-  delivery_method: z.enum(["direct", "courier"], {
-    required_error: "Please select a delivery method",
-  }),
-  recipient_name: z.string().min(2, "Recipient name is required"),
-  recipient_contact: z.string().optional(),
-  courier_name: z.string().optional(),
-  courier_tracking: z.string().optional(),
+  recipient_name: z.string().min(1, "Recipient name is required"),
+  recipient_id: z.string().optional(),
+  recipient_department: z.string().min(1, "Department is required"),
   delivery_notes: z.string().optional(),
+  location: z.string().optional(),
 });
 
 type DeliveryFormValues = z.infer<typeof deliveryFormSchema>;
 
 interface DeliveryDetailsFormProps {
   transactionId: string;
+  product: string;
+  isOpen: boolean;
+  onClose: () => void;
   onSuccess: () => void;
-  onCancel: () => void;
 }
 
-const DeliveryDetailsForm = ({ transactionId, onSuccess, onCancel }: DeliveryDetailsFormProps) => {
+const DeliveryDetailsForm: React.FC<DeliveryDetailsFormProps> = ({
+  transactionId,
+  product,
+  isOpen,
+  onClose,
+  onSuccess,
+}) => {
   const { toast } = useToast();
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<DeliveryFormValues>({
     resolver: zodResolver(deliveryFormSchema),
     defaultValues: {
-      delivery_method: "direct",
       recipient_name: "",
-      recipient_contact: "",
-      courier_name: "",
-      courier_tracking: "",
+      recipient_id: "",
+      recipient_department: "",
       delivery_notes: "",
-    }
+      location: "",
+    },
   });
 
-  const watchDeliveryMethod = form.watch("delivery_method");
-
-  const onSubmit = async (data: DeliveryFormValues) => {
+  const onSubmit = async (values: DeliveryFormValues) => {
     try {
       setIsSubmitting(true);
+      
+      console.info("[DeliveryDetailsForm] Starting delivery recording for transaction:", transactionId);
+      console.info("[DeliveryDetailsForm] Form values:", values);
 
-      console.log('DeliveryDetailsForm submitting for transaction:', transactionId);
-
-      // Create the delivery details object
       const deliveryDetails = {
-        delivery_method: data.delivery_method,
-        recipient_name: data.recipient_name,
-        recipient_contact: data.recipient_contact,
-        delivery_date: new Date().toISOString(),
-        ...(data.delivery_method === "courier" ? {
-          courier_name: data.courier_name,
-          courier_tracking: data.courier_tracking,
-        } : {}),
-        delivery_notes: data.delivery_notes,
+        ...values,
+        delivered_at: new Date().toISOString(),
       };
 
-      console.log('Calling updateTransactionDeliveryDetails from DeliveryDetailsForm');
+      console.info("[DeliveryDetailsForm] Calling supabase to update delivery details");
 
-      // Use our helper function which calls the RPC function
-      const { error: detailsError } = await updateTransactionDeliveryDetails(
-        transactionId,
-        deliveryDetails
-      );
+      // Update transaction with delivery details and set delivery status to delivered
+      const { data, error } = await supabase
+        .from('inventory_transactions')
+        .update({
+          delivery_details: deliveryDetails,
+          delivery_status: 'delivered'
+        })
+        .eq('id', transactionId)
+        .select();
 
-      if (detailsError) {
-        throw detailsError;
+      if (error) {
+        console.error("[DeliveryDetailsForm] Supabase error:", error);
+        throw error;
       }
+
+      console.info("[DeliveryDetailsForm] Update successful:", data);
 
       toast({
         title: "Success",
-        description: "Delivery details recorded and inventory updated successfully",
+        description: "Delivery details recorded successfully",
       });
 
+      form.reset();
       onSuccess();
+      onClose();
+      
     } catch (error: any) {
-      console.error("Error in DeliveryDetailsForm:", error);
+      console.error("[DeliveryDetailsForm] Error recording delivery details:", error);
+      
       toast({
         title: "Error",
-        description: error.message || "Failed to update delivery details",
+        description: error.message || "Failed to record delivery details",
         variant: "destructive",
       });
     } finally {
@@ -105,129 +115,112 @@ const DeliveryDetailsForm = ({ transactionId, onSuccess, onCancel }: DeliveryDet
     }
   };
 
+  const handleClose = () => {
+    console.info("[DeliveryDetailsForm] Dialog closing");
+    form.reset();
+    onClose();
+  };
+
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <FormField
-          control={form.control}
-          name="delivery_method"
-          render={({ field }) => (
-            <FormItem className="space-y-2">
-              <FormLabel>Delivery Method</FormLabel>
-              <FormControl>
-                <RadioGroup
-                  onValueChange={field.onChange}
-                  defaultValue={field.value}
-                  className="flex flex-col space-y-1"
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="direct" id="direct" />
-                    <FormLabel htmlFor="direct" className="font-normal cursor-pointer">
-                      Direct Handoff
-                    </FormLabel>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="courier" id="courier" />
-                    <FormLabel htmlFor="courier" className="font-normal cursor-pointer">
-                      Courier Service
-                    </FormLabel>
-                  </div>
-                </RadioGroup>
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="recipient_name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Recipient Name</FormLabel>
-              <FormControl>
-                <Input {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="recipient_contact"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Recipient Contact (Optional)</FormLabel>
-              <FormControl>
-                <Input {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        {watchDeliveryMethod === "courier" && (
-          <>
-            <FormField
-              control={form.control}
-              name="courier_name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Courier Service Name</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="courier_tracking"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Tracking Number</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </>
-        )}
-
-        <FormField
-          control={form.control}
-          name="delivery_notes"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Notes (Optional)</FormLabel>
-              <FormControl>
-                <Textarea {...field} rows={3} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <div className="flex justify-end space-x-2 pt-4">
-          <Button type="button" variant="outline" onClick={onCancel}>
-            Cancel
-          </Button>
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Processing...
-              </>
-            ) : "Record Delivery"}
-          </Button>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Record Delivery Details</DialogTitle>
+        </DialogHeader>
+        
+        <div className="mb-4">
+          <p className="text-sm text-muted-foreground">
+            Product: <span className="font-medium">{product}</span>
+          </p>
         </div>
-      </form>
-    </Form>
+
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="recipient_name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Recipient Name *</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter recipient name" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="recipient_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Recipient ID/Employee ID</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter employee ID (optional)" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="recipient_department"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Department *</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter department" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="location"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Delivery Location</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Building, floor, room (optional)" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="delivery_notes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Delivery Notes</FormLabel>
+                  <FormControl>
+                    <Textarea 
+                      placeholder="Additional notes about the delivery (optional)" 
+                      {...field} 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="flex justify-end space-x-2 pt-4">
+              <Button type="button" variant="outline" onClick={handleClose}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? "Recording..." : "Record Delivery"}
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
   );
 };
 
