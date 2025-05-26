@@ -74,9 +74,10 @@ const DeliveryDetailsForm: React.FC<DeliveryDetailsFormProps> = ({
         delivered_at: new Date().toISOString(),
       };
 
-      console.info("[DeliveryDetailsForm] Calling supabase to update delivery details");
+      console.info("[DeliveryDetailsForm] Calling supabase to update delivery details directly");
 
       // Update transaction with delivery details and set delivery status to delivered
+      // Using direct supabase call instead of RPC to avoid trigger issues
       const { data, error } = await supabase
         .from('inventory_transactions')
         .update({
