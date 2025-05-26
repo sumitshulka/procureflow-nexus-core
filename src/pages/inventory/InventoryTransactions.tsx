@@ -11,7 +11,7 @@ import {
   CheckOutRequestForm, 
   TransferForm 
 } from "@/components/inventory";
-import DeliveryDetailsDialog from "@/components/inventory/DeliveryDetailsDialog";
+import DeliveryRecordDialog from "@/components/inventory/DeliveryRecordDialog";
 import ProductTransactionHistory from "@/components/inventory/ProductTransactionHistory";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -381,33 +381,11 @@ const InventoryTransactions = () => {
         description="Manage inventory check-ins, check-outs, and transfers"
       />
 
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Checkout Request</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this checkout request?
-              This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={confirmDeleteTransaction} 
-              disabled={isDeleting}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              {isDeleting ? "Deleting..." : "Delete"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
       {/* Delivery Details Dialog */}
       {selectedTransaction && (
-        <DeliveryDetailsDialog
+        <DeliveryRecordDialog
           transactionId={selectedTransaction.id}
-          product={selectedTransaction.product?.name || "Product"}
+          productName={selectedTransaction.product?.name || "Product"}
           isOpen={deliveryDialogOpen}
           onClose={() => setDeliveryDialogOpen(false)}
           onSuccess={() => {

@@ -23,7 +23,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
-const deliveryFormSchema = z.object({
+const deliverySchema = z.object({
   recipient_name: z.string().min(1, "Recipient name is required"),
   recipient_id: z.string().optional(),
   recipient_department: z.string().min(1, "Department is required"),
@@ -31,19 +31,19 @@ const deliveryFormSchema = z.object({
   location: z.string().optional(),
 });
 
-type DeliveryFormValues = z.infer<typeof deliveryFormSchema>;
+type DeliveryFormData = z.infer<typeof deliverySchema>;
 
-interface DeliveryDetailsFormProps {
+interface DeliveryRecordDialogProps {
   transactionId: string;
-  product: string;
+  productName: string;
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-const DeliveryDetailsForm: React.FC<DeliveryDetailsFormProps> = ({
+const DeliveryRecordDialog: React.FC<DeliveryRecordDialogProps> = ({
   transactionId,
-  product,
+  productName,
   isOpen,
   onClose,
   onSuccess,
@@ -51,8 +51,8 @@ const DeliveryDetailsForm: React.FC<DeliveryDetailsFormProps> = ({
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const form = useForm<DeliveryFormValues>({
-    resolver: zodResolver(deliveryFormSchema),
+  const form = useForm<DeliveryFormData>({
+    resolver: zodResolver(deliverySchema),
     defaultValues: {
       recipient_name: "",
       recipient_id: "",
@@ -62,37 +62,35 @@ const DeliveryDetailsForm: React.FC<DeliveryDetailsFormProps> = ({
     },
   });
 
-  const onSubmit = async (values: DeliveryFormValues) => {
+  const handleSubmit = async (values: DeliveryFormData) => {
     try {
       setIsSubmitting(true);
       
-      console.info("[DeliveryDetailsForm] Starting delivery recording for transaction:", transactionId);
-      console.info("[DeliveryDetailsForm] Form values:", values);
+      console.log("[DeliveryRecord] Starting delivery recording for:", transactionId);
+      console.log("[DeliveryRecord] Form data:", values);
 
-      const deliveryDetails = {
+      const deliveryData = {
         ...values,
         delivered_at: new Date().toISOString(),
       };
 
-      console.info("[DeliveryDetailsForm] Calling supabase to update delivery details directly");
+      console.log("[DeliveryRecord] Updating transaction with delivery data");
 
-      // Update transaction with delivery details and set delivery status to delivered
-      // Using direct supabase call instead of RPC to avoid trigger issues
       const { data, error } = await supabase
         .from('inventory_transactions')
         .update({
-          delivery_details: deliveryDetails,
+          delivery_details: deliveryData,
           delivery_status: 'delivered'
         })
         .eq('id', transactionId)
         .select();
 
       if (error) {
-        console.error("[DeliveryDetailsForm] Supabase error:", error);
+        console.error("[DeliveryRecord] Database error:", error);
         throw error;
       }
 
-      console.info("[DeliveryDetailsForm] Update successful:", data);
+      console.log("[DeliveryRecord] Transaction updated successfully:", data);
 
       toast({
         title: "Success",
@@ -104,7 +102,7 @@ const DeliveryDetailsForm: React.FC<DeliveryDetailsFormProps> = ({
       onClose();
       
     } catch (error: any) {
-      console.error("[DeliveryDetailsForm] Error recording delivery details:", error);
+      console.error("[DeliveryRecord] Error:", error);
       
       toast({
         title: "Error",
@@ -117,7 +115,6 @@ const DeliveryDetailsForm: React.FC<DeliveryDetailsFormProps> = ({
   };
 
   const handleClose = () => {
-    console.info("[DeliveryDetailsForm] Dialog closing");
     form.reset();
     onClose();
   };
@@ -131,12 +128,12 @@ const DeliveryDetailsForm: React.FC<DeliveryDetailsFormProps> = ({
         
         <div className="mb-4">
           <p className="text-sm text-muted-foreground">
-            Product: <span className="font-medium">{product}</span>
+            Product: <span className="font-medium">{productName}</span>
           </p>
         </div>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
             <FormField
               control={form.control}
               name="recipient_name"
@@ -225,4 +222,4 @@ const DeliveryDetailsForm: React.FC<DeliveryDetailsFormProps> = ({
   );
 };
 
-export default DeliveryDetailsForm;
+export default DeliveryRecordDialog;
