@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,10 +10,10 @@ import {
   CheckInForm, 
   CheckOutForm, 
   CheckOutRequestForm, 
-  TransferForm 
+  TransferForm,
+  DeliveryRecordDialog,
+  ProductTransactionHistory
 } from "@/components/inventory";
-import DeliveryRecordDialog from "@/components/inventory/DeliveryRecordDialog";
-import ProductTransactionHistory from "@/components/inventory/ProductTransactionHistory";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AlertDialog,
@@ -216,7 +217,6 @@ const InventoryTransactions = () => {
     return matchesSearch && matchesType && matchesStatus;
   });
 
-  // Show transaction history for a product
   const showTransactionHistory = (row: EnhancedInventoryTransaction) => {
     return (
       <div className="space-y-4">
@@ -398,6 +398,28 @@ const InventoryTransactions = () => {
           }}
         />
       )}
+
+      {/* Delete Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Checkout Request</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this checkout request? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDeleteTransaction}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-6">
         <TabsList className="grid grid-cols-4 w-full">
