@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -69,6 +68,43 @@ const DeliveryRecordDialog: React.FC<DeliveryRecordDialogProps> = ({
       console.log("[DeliveryRecord] Starting delivery recording for:", transactionId);
       console.log("[DeliveryRecord] Form data:", values);
 
+      // First, let's check the current state of the transaction
+      const { data: currentTransaction, error: fetchError } = await supabase
+        .from('inventory_transactions')
+        .select('*')
+        .eq('id', transactionId)
+        .single();
+
+      if (fetchError) {
+        console.error("[DeliveryRecord] Error fetching current transaction:", fetchError);
+        throw fetchError;
+      }
+
+      console.log("[DeliveryRecord] Current transaction state:", currentTransaction);
+
+      // Check if already delivered to prevent double processing
+      if (currentTransaction.delivery_status === 'delivered') {
+        console.warn("[DeliveryRecord] Transaction already marked as delivered!");
+        toast({
+          title: "Warning",
+          description: "This transaction is already marked as delivered",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Get current inventory before update
+      const { data: inventoryBefore, error: inventoryError } = await supabase
+        .from('inventory_items')
+        .select('quantity')
+        .eq('product_id', currentTransaction.product_id)
+        .eq('warehouse_id', currentTransaction.source_warehouse_id)
+        .single();
+
+      if (!inventoryError && inventoryBefore) {
+        console.log("[DeliveryRecord] Current inventory before delivery:", inventoryBefore.quantity);
+      }
+
       const deliveryData = {
         ...values,
         delivered_at: new Date().toISOString(),
@@ -88,6 +124,24 @@ const DeliveryRecordDialog: React.FC<DeliveryRecordDialogProps> = ({
       }
 
       console.log("[DeliveryRecord] Function executed successfully:", data);
+
+      // Check inventory after update
+      const { data: inventoryAfter, error: inventoryAfterError } = await supabase
+        .from('inventory_items')
+        .select('quantity')
+        .eq('product_id', currentTransaction.product_id)
+        .eq('warehouse_id', currentTransaction.source_warehouse_id)
+        .single();
+
+      if (!inventoryAfterError && inventoryAfter && inventoryBefore) {
+        const reduction = inventoryBefore.quantity - inventoryAfter.quantity;
+        console.log("[DeliveryRecord] Inventory reduction:", reduction);
+        console.log("[DeliveryRecord] Expected reduction:", currentTransaction.quantity);
+        
+        if (reduction !== currentTransaction.quantity) {
+          console.error("[DeliveryRecord] MISMATCH: Expected reduction", currentTransaction.quantity, "but got", reduction);
+        }
+      }
 
       toast({
         title: "Success",
