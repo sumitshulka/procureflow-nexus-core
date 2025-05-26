@@ -1,5 +1,7 @@
 
--- Comprehensive fix for the updated_at column issue in inventory_transactions
+-- Clean migration to fix delivery details system completely
+-- This migration ensures the inventory_transactions table has the correct structure
+-- and the trigger functions work without referencing non-existent fields
 
 -- First, ensure the updated_at column exists in inventory_transactions
 DO $$ 
@@ -20,52 +22,11 @@ UPDATE public.inventory_transactions
 SET updated_at = transaction_date 
 WHERE updated_at IS NULL;
 
--- Create or replace the delivery details function with proper error handling
-CREATE OR REPLACE FUNCTION public.update_transaction_delivery_details(transaction_id uuid, details jsonb)
-RETURNS jsonb
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $function$
-DECLARE
-  result jsonb;
-  current_time timestamptz := NOW();
-BEGIN
-  -- Update the transaction with delivery details and mark as delivered
-  UPDATE public.inventory_transactions
-  SET 
-    delivery_details = details,
-    delivery_status = 'delivered',
-    updated_at = current_time
-  WHERE id = transaction_id
-  RETURNING jsonb_build_object(
-    'id', id,
-    'delivery_details', delivery_details,
-    'delivery_status', delivery_status,
-    'type', type,
-    'product_id', product_id,
-    'quantity', quantity,
-    'source_warehouse_id', source_warehouse_id,
-    'transaction_date', transaction_date,
-    'user_id', user_id,
-    'approval_status', approval_status,
-    'request_id', request_id,
-    'reference', reference,
-    'notes', notes,
-    'target_warehouse_id', target_warehouse_id,
-    'updated_at', updated_at
-  ) INTO result;
-  
-  IF result IS NULL THEN
-    RAISE EXCEPTION 'Transaction with id % not found', transaction_id;
-  END IF;
-  
-  RETURN result;
-END;
-$function$;
-
--- Drop and recreate the inventory update trigger with comprehensive error handling
+-- Drop existing trigger and function to ensure clean slate
 DROP TRIGGER IF EXISTS update_inventory_after_checkout_trigger ON public.inventory_transactions;
+DROP FUNCTION IF EXISTS public.update_inventory_after_checkout();
 
+-- Create the inventory update function without any problematic field references
 CREATE OR REPLACE FUNCTION public.update_inventory_after_checkout()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -153,11 +114,53 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Recreate the trigger
+-- Create the trigger
 CREATE TRIGGER update_inventory_after_checkout_trigger
 AFTER UPDATE ON public.inventory_transactions
 FOR EACH ROW
 EXECUTE FUNCTION public.update_inventory_after_checkout();
+
+-- Create the delivery details update function
+CREATE OR REPLACE FUNCTION public.update_transaction_delivery_details(transaction_id uuid, details jsonb)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $function$
+DECLARE
+  result jsonb;
+BEGIN
+  -- Update the transaction with delivery details and mark as delivered
+  UPDATE public.inventory_transactions
+  SET 
+    delivery_details = details,
+    delivery_status = 'delivered',
+    updated_at = NOW()
+  WHERE id = transaction_id
+  RETURNING jsonb_build_object(
+    'id', id,
+    'delivery_details', delivery_details,
+    'delivery_status', delivery_status,
+    'type', type,
+    'product_id', product_id,
+    'quantity', quantity,
+    'source_warehouse_id', source_warehouse_id,
+    'transaction_date', transaction_date,
+    'user_id', user_id,
+    'approval_status', approval_status,
+    'request_id', request_id,
+    'reference', reference,
+    'notes', notes,
+    'target_warehouse_id', target_warehouse_id,
+    'updated_at', updated_at
+  ) INTO result;
+  
+  IF result IS NULL THEN
+    RAISE EXCEPTION 'Transaction with id % not found', transaction_id;
+  END IF;
+  
+  RETURN result;
+END;
+$function$;
 
 -- Create a trigger to automatically update the updated_at column
 CREATE OR REPLACE FUNCTION public.update_modified_column()
@@ -179,7 +182,10 @@ CREATE TRIGGER update_inventory_transactions_updated_at
 
 -- Add comments for documentation
 COMMENT ON TRIGGER update_inventory_after_checkout_trigger ON public.inventory_transactions
-IS 'Reduces inventory quantities when checkout transactions are marked as delivered';
+IS 'Reduces inventory quantities when checkout transactions are marked as delivered - clean version';
 
 COMMENT ON TRIGGER update_inventory_transactions_updated_at ON public.inventory_transactions
 IS 'Automatically updates the updated_at column when a row is modified';
+
+COMMENT ON FUNCTION public.update_transaction_delivery_details(uuid, jsonb)
+IS 'Updates transaction delivery details and marks as delivered - clean version';

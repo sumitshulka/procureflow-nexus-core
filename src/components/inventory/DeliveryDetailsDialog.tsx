@@ -74,10 +74,7 @@ const DeliveryDetailsDialog: React.FC<DeliveryDetailsDialogProps> = ({
         delivered_at: new Date().toISOString(),
       };
 
-      console.info("[DeliveryDetailsDialog] Calling updateTransactionDeliveryDetails with:", {
-        transactionId,
-        deliveryDetails,
-      });
+      console.info("[DeliveryDetailsDialog] Calling updateTransactionDeliveryDetails with clean RPC function");
 
       const result = await updateTransactionDeliveryDetails(transactionId, deliveryDetails);
       
