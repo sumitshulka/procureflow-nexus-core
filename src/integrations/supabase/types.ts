@@ -624,6 +624,511 @@ export type Database = {
         }
         Relationships: []
       }
+      purchase_order_items: {
+        Row: {
+          created_at: string
+          delivery_date: string | null
+          description: string
+          discount_amount: number | null
+          discount_rate: number | null
+          final_amount: number
+          id: string
+          po_id: string
+          product_id: string | null
+          quantity: number
+          specifications: string | null
+          tax_amount: number | null
+          tax_rate: number | null
+          total_price: number
+          unit_price: number
+          warranty_period: string | null
+        }
+        Insert: {
+          created_at?: string
+          delivery_date?: string | null
+          description: string
+          discount_amount?: number | null
+          discount_rate?: number | null
+          final_amount: number
+          id?: string
+          po_id: string
+          product_id?: string | null
+          quantity: number
+          specifications?: string | null
+          tax_amount?: number | null
+          tax_rate?: number | null
+          total_price: number
+          unit_price: number
+          warranty_period?: string | null
+        }
+        Update: {
+          created_at?: string
+          delivery_date?: string | null
+          description?: string
+          discount_amount?: number | null
+          discount_rate?: number | null
+          final_amount?: number
+          id?: string
+          po_id?: string
+          product_id?: string | null
+          quantity?: number
+          specifications?: string | null
+          tax_amount?: number | null
+          tax_rate?: number | null
+          total_price?: number
+          unit_price?: number
+          warranty_period?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_order_items_po_id_fkey"
+            columns: ["po_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_order_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_orders: {
+        Row: {
+          acknowledgment_date: string | null
+          acknowledgment_notes: string | null
+          actual_delivery_date: string | null
+          attachments: Json | null
+          billing_address: Json | null
+          created_at: string
+          created_by: string
+          currency: string | null
+          delivery_address: Json | null
+          delivery_terms: string | null
+          discount_amount: number | null
+          expected_delivery_date: string | null
+          final_amount: number
+          id: string
+          payment_terms: string | null
+          po_date: string
+          po_number: string
+          procurement_request_id: string | null
+          rfp_id: string | null
+          rfp_response_id: string | null
+          special_instructions: string | null
+          status: string
+          tax_amount: number | null
+          total_amount: number
+          updated_at: string
+          vendor_id: string
+          warranty_terms: string | null
+        }
+        Insert: {
+          acknowledgment_date?: string | null
+          acknowledgment_notes?: string | null
+          actual_delivery_date?: string | null
+          attachments?: Json | null
+          billing_address?: Json | null
+          created_at?: string
+          created_by: string
+          currency?: string | null
+          delivery_address?: Json | null
+          delivery_terms?: string | null
+          discount_amount?: number | null
+          expected_delivery_date?: string | null
+          final_amount: number
+          id?: string
+          payment_terms?: string | null
+          po_date?: string
+          po_number: string
+          procurement_request_id?: string | null
+          rfp_id?: string | null
+          rfp_response_id?: string | null
+          special_instructions?: string | null
+          status?: string
+          tax_amount?: number | null
+          total_amount: number
+          updated_at?: string
+          vendor_id: string
+          warranty_terms?: string | null
+        }
+        Update: {
+          acknowledgment_date?: string | null
+          acknowledgment_notes?: string | null
+          actual_delivery_date?: string | null
+          attachments?: Json | null
+          billing_address?: Json | null
+          created_at?: string
+          created_by?: string
+          currency?: string | null
+          delivery_address?: Json | null
+          delivery_terms?: string | null
+          discount_amount?: number | null
+          expected_delivery_date?: string | null
+          final_amount?: number
+          id?: string
+          payment_terms?: string | null
+          po_date?: string
+          po_number?: string
+          procurement_request_id?: string | null
+          rfp_id?: string | null
+          rfp_response_id?: string | null
+          special_instructions?: string | null
+          status?: string
+          tax_amount?: number | null
+          total_amount?: number
+          updated_at?: string
+          vendor_id?: string
+          warranty_terms?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_orders_procurement_request_id_fkey"
+            columns: ["procurement_request_id"]
+            isOneToOne: false
+            referencedRelation: "procurement_request_details"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_procurement_request_id_fkey"
+            columns: ["procurement_request_id"]
+            isOneToOne: false
+            referencedRelation: "procurement_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_rfp_id_fkey"
+            columns: ["rfp_id"]
+            isOneToOne: false
+            referencedRelation: "rfps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_rfp_response_id_fkey"
+            columns: ["rfp_response_id"]
+            isOneToOne: false
+            referencedRelation: "rfp_responses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_registration_details"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_registrations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rfp_evaluation_criteria: {
+        Row: {
+          created_at: string
+          criteria_name: string
+          criteria_type: string
+          description: string | null
+          evaluation_method: string | null
+          id: string
+          max_score: number
+          rfp_id: string
+          weightage: number
+        }
+        Insert: {
+          created_at?: string
+          criteria_name: string
+          criteria_type: string
+          description?: string | null
+          evaluation_method?: string | null
+          id?: string
+          max_score?: number
+          rfp_id: string
+          weightage: number
+        }
+        Update: {
+          created_at?: string
+          criteria_name?: string
+          criteria_type?: string
+          description?: string | null
+          evaluation_method?: string | null
+          id?: string
+          max_score?: number
+          rfp_id?: string
+          weightage?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rfp_evaluation_criteria_rfp_id_fkey"
+            columns: ["rfp_id"]
+            isOneToOne: false
+            referencedRelation: "rfps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rfp_response_items: {
+        Row: {
+          brand_model: string | null
+          created_at: string
+          delivery_timeline: string | null
+          description: string
+          id: string
+          product_id: string | null
+          quantity: number
+          rfp_response_id: string
+          specifications: string | null
+          total_price: number
+          unit_price: number
+          warranty_period: string | null
+        }
+        Insert: {
+          brand_model?: string | null
+          created_at?: string
+          delivery_timeline?: string | null
+          description: string
+          id?: string
+          product_id?: string | null
+          quantity: number
+          rfp_response_id: string
+          specifications?: string | null
+          total_price: number
+          unit_price: number
+          warranty_period?: string | null
+        }
+        Update: {
+          brand_model?: string | null
+          created_at?: string
+          delivery_timeline?: string | null
+          description?: string
+          id?: string
+          product_id?: string | null
+          quantity?: number
+          rfp_response_id?: string
+          specifications?: string | null
+          total_price?: number
+          unit_price?: number
+          warranty_period?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rfp_response_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rfp_response_items_rfp_response_id_fkey"
+            columns: ["rfp_response_id"]
+            isOneToOne: false
+            referencedRelation: "rfp_responses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rfp_responses: {
+        Row: {
+          bid_validity_until: string | null
+          commercial_documents: Json | null
+          commercial_score: number | null
+          compliance_documents: Json | null
+          created_at: string
+          currency: string | null
+          delivery_timeline: string | null
+          evaluated_at: string | null
+          evaluated_by: string | null
+          evaluation_notes: string | null
+          id: string
+          payment_terms_accepted: boolean | null
+          response_number: string
+          rfp_id: string
+          status: string
+          submitted_at: string
+          technical_documents: Json | null
+          technical_score: number | null
+          total_bid_amount: number
+          total_score: number | null
+          updated_at: string
+          vendor_id: string
+          warranty_period: string | null
+        }
+        Insert: {
+          bid_validity_until?: string | null
+          commercial_documents?: Json | null
+          commercial_score?: number | null
+          compliance_documents?: Json | null
+          created_at?: string
+          currency?: string | null
+          delivery_timeline?: string | null
+          evaluated_at?: string | null
+          evaluated_by?: string | null
+          evaluation_notes?: string | null
+          id?: string
+          payment_terms_accepted?: boolean | null
+          response_number: string
+          rfp_id: string
+          status?: string
+          submitted_at?: string
+          technical_documents?: Json | null
+          technical_score?: number | null
+          total_bid_amount: number
+          total_score?: number | null
+          updated_at?: string
+          vendor_id: string
+          warranty_period?: string | null
+        }
+        Update: {
+          bid_validity_until?: string | null
+          commercial_documents?: Json | null
+          commercial_score?: number | null
+          compliance_documents?: Json | null
+          created_at?: string
+          currency?: string | null
+          delivery_timeline?: string | null
+          evaluated_at?: string | null
+          evaluated_by?: string | null
+          evaluation_notes?: string | null
+          id?: string
+          payment_terms_accepted?: boolean | null
+          response_number?: string
+          rfp_id?: string
+          status?: string
+          submitted_at?: string
+          technical_documents?: Json | null
+          technical_score?: number | null
+          total_bid_amount?: number
+          total_score?: number | null
+          updated_at?: string
+          vendor_id?: string
+          warranty_period?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rfp_responses_rfp_id_fkey"
+            columns: ["rfp_id"]
+            isOneToOne: false
+            referencedRelation: "rfps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rfp_responses_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_registration_details"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rfp_responses_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_registrations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rfps: {
+        Row: {
+          attachments: Json | null
+          bid_validity_period: number | null
+          commercial_evaluation_deadline: string | null
+          created_at: string
+          created_by: string
+          currency: string | null
+          delivery_terms: string | null
+          description: string | null
+          estimated_value: number | null
+          evaluation_criteria: Json | null
+          id: string
+          minimum_eligibility_criteria: string | null
+          payment_terms: string | null
+          pre_bid_meeting_date: string | null
+          pre_bid_meeting_venue: string | null
+          procurement_request_id: string | null
+          rfp_number: string
+          status: string
+          submission_deadline: string
+          technical_evaluation_deadline: string | null
+          terms_and_conditions: string | null
+          title: string
+          updated_at: string
+          warranty_requirements: string | null
+        }
+        Insert: {
+          attachments?: Json | null
+          bid_validity_period?: number | null
+          commercial_evaluation_deadline?: string | null
+          created_at?: string
+          created_by: string
+          currency?: string | null
+          delivery_terms?: string | null
+          description?: string | null
+          estimated_value?: number | null
+          evaluation_criteria?: Json | null
+          id?: string
+          minimum_eligibility_criteria?: string | null
+          payment_terms?: string | null
+          pre_bid_meeting_date?: string | null
+          pre_bid_meeting_venue?: string | null
+          procurement_request_id?: string | null
+          rfp_number: string
+          status?: string
+          submission_deadline: string
+          technical_evaluation_deadline?: string | null
+          terms_and_conditions?: string | null
+          title: string
+          updated_at?: string
+          warranty_requirements?: string | null
+        }
+        Update: {
+          attachments?: Json | null
+          bid_validity_period?: number | null
+          commercial_evaluation_deadline?: string | null
+          created_at?: string
+          created_by?: string
+          currency?: string | null
+          delivery_terms?: string | null
+          description?: string | null
+          estimated_value?: number | null
+          evaluation_criteria?: Json | null
+          id?: string
+          minimum_eligibility_criteria?: string | null
+          payment_terms?: string | null
+          pre_bid_meeting_date?: string | null
+          pre_bid_meeting_venue?: string | null
+          procurement_request_id?: string | null
+          rfp_number?: string
+          status?: string
+          submission_deadline?: string
+          technical_evaluation_deadline?: string | null
+          terms_and_conditions?: string | null
+          title?: string
+          updated_at?: string
+          warranty_requirements?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rfps_procurement_request_id_fkey"
+            columns: ["procurement_request_id"]
+            isOneToOne: false
+            referencedRelation: "procurement_request_details"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rfps_procurement_request_id_fkey"
+            columns: ["procurement_request_id"]
+            isOneToOne: false
+            referencedRelation: "procurement_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       role_permissions: {
         Row: {
           created_at: string

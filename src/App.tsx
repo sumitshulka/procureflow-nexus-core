@@ -1,3 +1,4 @@
+
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import Dashboard from "@/pages/Dashboard";
@@ -17,6 +18,12 @@ import VendorRegistration from "@/pages/VendorRegistration";
 import VendorRegistrationSuccess from "@/pages/VendorRegistrationSuccess";
 import VendorManagement from "@/pages/VendorManagement";
 import VendorPortal from "@/pages/VendorPortal";
+import CreateRfp from "@/pages/rfp/CreateRfp";
+import ActiveRfps from "@/pages/rfp/ActiveRfps";
+import RfpResponses from "@/pages/rfp/RfpResponses";
+import CreatePurchaseOrder from "@/pages/purchase-orders/CreatePurchaseOrder";
+import PendingPurchaseOrders from "@/pages/purchase-orders/PendingPurchaseOrders";
+import ActivePurchaseOrders from "@/pages/purchase-orders/ActivePurchaseOrders";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { Toaster } from "@/components/ui/toaster";
 import NotFoundPage from "@/components/common/NotFoundPage";
@@ -48,6 +55,17 @@ function App() {
               </Route>
               <Route path="/requests" element={<ProcurementRequests />} />
               <Route path="/requests/:id" element={<ProcurementRequestDetail />} />
+              
+              {/* RFP Routes */}
+              <Route path="/rfp/create" element={<CreateRfp />} />
+              <Route path="/rfp/active" element={<ActiveRfps />} />
+              <Route path="/rfp/:rfpId/responses" element={<RfpResponses />} />
+              
+              {/* Purchase Order Routes */}
+              <Route path="/purchase-orders/create" element={<CreatePurchaseOrder />} />
+              <Route path="/purchase-orders/pending" element={<PendingPurchaseOrders />} />
+              <Route path="/purchase-orders/active" element={<ActivePurchaseOrders />} />
+              
               <Route path="/approvals" element={<Approvals />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/users" element={<UserManagement />} />
