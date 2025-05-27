@@ -1,4 +1,3 @@
-
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import Dashboard from "@/pages/Dashboard";
@@ -29,6 +28,7 @@ import { Toaster } from "@/components/ui/toaster";
 import NotFoundPage from "@/components/common/NotFoundPage";
 import LoginPage from "@/pages/auth/LoginPage";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import CreateRfpWizard from "@/pages/rfp/CreateRfpWizard";
 
 function App() {
   return (
@@ -58,6 +58,7 @@ function App() {
               
               {/* RFP Routes */}
               <Route path="/rfp/create" element={<CreateRfp />} />
+              <Route path="/rfp/create/wizard" element={<CreateRfpWizard />} />
               <Route path="/rfp/active" element={<ActiveRfps />} />
               <Route path="/rfp/:rfpId/responses" element={<RfpResponses />} />
               
