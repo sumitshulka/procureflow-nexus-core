@@ -98,11 +98,26 @@ const CreateRfp = () => {
 
     setIsLoading(true);
     try {
-      // Insert RFP
+      // Insert RFP - don't include rfp_number as it's auto-generated
       const { data: rfpData, error: rfpError } = await supabase
         .from("rfps")
         .insert({
-          ...data,
+          title: data.title,
+          description: data.description,
+          procurement_request_id: data.procurement_request_id || null,
+          submission_deadline: data.submission_deadline.toISOString(),
+          technical_evaluation_deadline: data.technical_evaluation_deadline?.toISOString(),
+          commercial_evaluation_deadline: data.commercial_evaluation_deadline?.toISOString(),
+          estimated_value: data.estimated_value,
+          currency: data.currency,
+          terms_and_conditions: data.terms_and_conditions,
+          minimum_eligibility_criteria: data.minimum_eligibility_criteria,
+          pre_bid_meeting_date: data.pre_bid_meeting_date?.toISOString(),
+          pre_bid_meeting_venue: data.pre_bid_meeting_venue,
+          bid_validity_period: data.bid_validity_period,
+          payment_terms: data.payment_terms,
+          delivery_terms: data.delivery_terms,
+          warranty_requirements: data.warranty_requirements,
           created_by: user.id,
           status: "draft",
         })

@@ -152,7 +152,7 @@ const CreatePurchaseOrder = () => {
     try {
       const orderTotals = calculateOrderTotals(data.items);
 
-      // Insert Purchase Order
+      // Insert Purchase Order - don't include po_number as it's auto-generated
       const { data: poData, error: poError } = await supabase
         .from("purchase_orders")
         .insert({
