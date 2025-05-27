@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -62,6 +61,40 @@ const RfpWizard = () => {
 
   const progress = (currentStep / steps.length) * 100;
 
+  const renderCurrentStep = () => {
+    if (!CurrentStepComponent) return null;
+
+    // Pass different props based on the step
+    if (currentStep === 5) {
+      // Review step only needs data and onUpdate
+      return (
+        <CurrentStepComponent
+          data={wizardData}
+          onUpdate={updateWizardData}
+        />
+      );
+    } else if (currentStep === 4) {
+      // Terms step needs data, onUpdate, and onNext
+      return (
+        <CurrentStepComponent
+          data={wizardData}
+          onUpdate={updateWizardData}
+          onNext={handleNext}
+        />
+      );
+    } else {
+      // Other steps need all props
+      return (
+        <CurrentStepComponent
+          data={wizardData}
+          onUpdate={updateWizardData}
+          onNext={handleNext}
+          onPrevious={handlePrevious}
+        />
+      );
+    }
+  };
+
   return (
     <div className="container mx-auto py-6">
       <Card>
@@ -76,14 +109,7 @@ const RfpWizard = () => {
           </div>
         </CardHeader>
         <CardContent>
-          {CurrentStepComponent && (
-            <CurrentStepComponent
-              data={wizardData}
-              onUpdate={updateWizardData}
-              onNext={handleNext}
-              onPrevious={handlePrevious}
-            />
-          )}
+          {renderCurrentStep()}
 
           <div className="flex justify-between mt-8">
             <Button

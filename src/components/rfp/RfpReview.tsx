@@ -23,6 +23,31 @@ const RfpReview: React.FC<RfpReviewProps> = ({ data }) => {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const formatDate = (date: any) => {
+    if (!date) return 'Not specified';
+    
+    try {
+      // Handle if date is already a Date object
+      if (date instanceof Date) {
+        return format(date, "PPP");
+      }
+      
+      // Handle if date is a string
+      if (typeof date === 'string') {
+        const parsedDate = new Date(date);
+        if (isNaN(parsedDate.getTime())) {
+          return 'Invalid date';
+        }
+        return format(parsedDate, "PPP");
+      }
+      
+      return 'Not specified';
+    } catch (error) {
+      console.error('Date formatting error:', error);
+      return 'Invalid date';
+    }
+  };
+
   const handleSubmit = async () => {
     if (!user) {
       toast({
@@ -39,14 +64,22 @@ const RfpReview: React.FC<RfpReviewProps> = ({ data }) => {
       const rfpData = {
         title: data.basicInfo.title,
         description: data.basicInfo.description,
-        submission_deadline: data.basicInfo.submission_deadline.toISOString(),
-        technical_evaluation_deadline: data.basicInfo.technical_evaluation_deadline?.toISOString(),
-        commercial_evaluation_deadline: data.basicInfo.commercial_evaluation_deadline?.toISOString(),
+        submission_deadline: data.basicInfo.submission_deadline?.toISOString ? 
+          data.basicInfo.submission_deadline.toISOString() : 
+          new Date(data.basicInfo.submission_deadline).toISOString(),
+        technical_evaluation_deadline: data.basicInfo.technical_evaluation_deadline?.toISOString ? 
+          data.basicInfo.technical_evaluation_deadline.toISOString() : 
+          data.basicInfo.technical_evaluation_deadline ? new Date(data.basicInfo.technical_evaluation_deadline).toISOString() : null,
+        commercial_evaluation_deadline: data.basicInfo.commercial_evaluation_deadline?.toISOString ? 
+          data.basicInfo.commercial_evaluation_deadline.toISOString() : 
+          data.basicInfo.commercial_evaluation_deadline ? new Date(data.basicInfo.commercial_evaluation_deadline).toISOString() : null,
         estimated_value: data.basicInfo.estimated_value,
         currency: data.basicInfo.currency,
         terms_and_conditions: data.terms.terms_and_conditions,
         minimum_eligibility_criteria: data.terms.minimum_eligibility_criteria,
-        pre_bid_meeting_date: data.basicInfo.pre_bid_meeting_date?.toISOString(),
+        pre_bid_meeting_date: data.basicInfo.pre_bid_meeting_date?.toISOString ? 
+          data.basicInfo.pre_bid_meeting_date.toISOString() : 
+          data.basicInfo.pre_bid_meeting_date ? new Date(data.basicInfo.pre_bid_meeting_date).toISOString() : null,
         pre_bid_meeting_venue: data.basicInfo.pre_bid_meeting_venue,
         bid_validity_period: data.basicInfo.bid_validity_period,
         payment_terms: data.terms.payment_terms,
@@ -84,7 +117,7 @@ const RfpReview: React.FC<RfpReviewProps> = ({ data }) => {
     }
   };
 
-  const totalEstimatedValue = data.boqItems.reduce((sum, item) => sum + item.total_amount, 0);
+  const totalEstimatedValue = data.boqItems?.reduce((sum, item) => sum + (item.total_amount || 0), 0) || 0;
 
   return (
     <div className="space-y-6">
@@ -107,26 +140,26 @@ const RfpReview: React.FC<RfpReviewProps> = ({ data }) => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <span className="font-medium">Title:</span>
-              <p className="text-muted-foreground">{data.basicInfo.title}</p>
+              <p className="text-muted-foreground">{data.basicInfo?.title || 'Not specified'}</p>
             </div>
             <div>
               <span className="font-medium">Estimated Value:</span>
               <p className="text-muted-foreground">
-                {data.basicInfo.currency} {data.basicInfo.estimated_value?.toLocaleString() || 'Not specified'}
+                {data.basicInfo?.currency || 'USD'} {data.basicInfo?.estimated_value?.toLocaleString() || 'Not specified'}
               </p>
             </div>
             <div>
               <span className="font-medium">Submission Deadline:</span>
               <p className="text-muted-foreground">
-                {format(data.basicInfo.submission_deadline, "PPP")}
+                {formatDate(data.basicInfo?.submission_deadline)}
               </p>
             </div>
             <div>
               <span className="font-medium">Bid Validity:</span>
-              <p className="text-muted-foreground">{data.basicInfo.bid_validity_period} days</p>
+              <p className="text-muted-foreground">{data.basicInfo?.bid_validity_period || 30} days</p>
             </div>
           </div>
-          {data.basicInfo.description && (
+          {data.basicInfo?.description && (
             <div>
               <span className="font-medium">Description:</span>
               <p className="text-muted-foreground mt-1">{data.basicInfo.description}</p>
@@ -139,29 +172,29 @@ const RfpReview: React.FC<RfpReviewProps> = ({ data }) => {
       <Card>
         <CardHeader>
           <CardTitle className="text-base flex items-center justify-between">
-            Bill of Quantities ({data.boqItems.length} items)
+            Bill of Quantities ({data.boqItems?.length || 0} items)
             <Edit className="h-4 w-4 text-muted-foreground" />
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
-            {data.boqItems.slice(0, 3).map((item, index) => (
-              <div key={item.id} className="flex justify-between items-center">
-                <span className="text-sm">{item.product_name} (Qty: {item.quantity})</span>
+            {data.boqItems?.slice(0, 3).map((item, index) => (
+              <div key={item.id || index} className="flex justify-between items-center">
+                <span className="text-sm">{item.product_name || 'Unnamed product'} (Qty: {item.quantity || 0})</span>
                 <span className="text-sm font-medium">
-                  {data.basicInfo.currency} {item.total_amount.toFixed(2)}
+                  {data.basicInfo?.currency || 'USD'} {(item.total_amount || 0).toFixed(2)}
                 </span>
               </div>
-            ))}
-            {data.boqItems.length > 3 && (
+            )) || <p className="text-sm text-muted-foreground">No BOQ items added</p>}
+            {(data.boqItems?.length || 0) > 3 && (
               <p className="text-sm text-muted-foreground">
-                ...and {data.boqItems.length - 3} more items
+                ...and {(data.boqItems?.length || 0) - 3} more items
               </p>
             )}
             <Separator />
             <div className="flex justify-between items-center font-semibold">
               <span>Total Estimated Value:</span>
-              <span>{data.basicInfo.currency} {totalEstimatedValue.toFixed(2)}</span>
+              <span>{data.basicInfo?.currency || 'USD'} {totalEstimatedValue.toFixed(2)}</span>
             </div>
           </div>
         </CardContent>
@@ -194,7 +227,7 @@ const RfpReview: React.FC<RfpReviewProps> = ({ data }) => {
                   Closed RFP
                 </Badge>
                 <span className="text-sm text-muted-foreground">
-                  {data.vendors.length} selected vendor(s)
+                  {data.vendors?.length || 0} selected vendor(s)
                 </span>
               </>
             )}
@@ -212,7 +245,7 @@ const RfpReview: React.FC<RfpReviewProps> = ({ data }) => {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {data.terms.payment_terms && (
+            {data.terms?.payment_terms && (
               <div>
                 <span className="font-medium">Payment Terms:</span>
                 <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
@@ -220,7 +253,7 @@ const RfpReview: React.FC<RfpReviewProps> = ({ data }) => {
                 </p>
               </div>
             )}
-            {data.terms.delivery_terms && (
+            {data.terms?.delivery_terms && (
               <div>
                 <span className="font-medium">Delivery Terms:</span>
                 <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
