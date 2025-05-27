@@ -67,7 +67,7 @@ const RfpWizard = () => {
 
     // Pass different props based on the step
     if (currentStep === 5) {
-      // Review step only needs data and onUpdate
+      // Review step only needs data and onUpdate (RfpReviewProps)
       return (
         <CurrentStepComponent
           data={wizardData}
