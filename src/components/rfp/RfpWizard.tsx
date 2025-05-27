@@ -63,26 +63,48 @@ const RfpWizard = () => {
   const progress = (currentStep / steps.length) * 100;
 
   const renderCurrentStep = () => {
-    if (!CurrentStepComponent) return null;
-
-    // Pass different props based on the step
-    if (currentStep === 5) {
-      // Review step only needs data and onUpdate (RfpReviewProps)
-      return (
-        <CurrentStepComponent
-          data={wizardData}
-          onUpdate={updateWizardData}
-        />
-      );
-    } else {
-      // All other steps need data, onUpdate, and onNext
-      return (
-        <CurrentStepComponent
-          data={wizardData}
-          onUpdate={updateWizardData}
-          onNext={handleNext}
-        />
-      );
+    switch (currentStep) {
+      case 1:
+        return (
+          <RfpBasicInfo
+            data={wizardData}
+            onUpdate={updateWizardData}
+            onNext={handleNext}
+          />
+        );
+      case 2:
+        return (
+          <RfpBoq
+            data={wizardData}
+            onUpdate={updateWizardData}
+            onNext={handleNext}
+          />
+        );
+      case 3:
+        return (
+          <RfpVendors
+            data={wizardData}
+            onUpdate={updateWizardData}
+            onNext={handleNext}
+          />
+        );
+      case 4:
+        return (
+          <RfpTerms
+            data={wizardData}
+            onUpdate={updateWizardData}
+            onNext={handleNext}
+          />
+        );
+      case 5:
+        return (
+          <RfpReview
+            data={wizardData}
+            onUpdate={updateWizardData}
+          />
+        );
+      default:
+        return null;
     }
   };
 
