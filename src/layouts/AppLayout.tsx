@@ -1,6 +1,6 @@
 
 import { Outlet } from "react-router-dom";
-import { SidebarProvider } from "@/components/ui/sidebar";
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import AppHeader from "@/components/layout/AppHeader";
 import AppSidebar from "@/components/layout/AppSidebar";
 
@@ -11,11 +11,11 @@ const AppLayout = () => {
     <SidebarProvider defaultOpen={true}>
       <div className="min-h-screen flex flex-col w-full">
         <AppHeader />
-        <div className="flex flex-1 pt-16 h-screen overflow-hidden">
+        <div className="flex flex-1 pt-16">
           <AppSidebar />
-          <main className="flex-1 overflow-y-auto bg-gray-50">
+          <SidebarInset className="flex-1 overflow-y-auto bg-gray-50">
             <Outlet />
-          </main>
+          </SidebarInset>
         </div>
       </div>
     </SidebarProvider>
