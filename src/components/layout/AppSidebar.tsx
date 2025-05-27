@@ -1,4 +1,3 @@
-
 import React from "react";
 import {
   Sidebar,
@@ -251,81 +250,79 @@ const AppSidebar = () => {
   ];
 
   return (
-    <Sidebar collapsible="icon" className="border-r">
-      <SidebarContent className="flex flex-col h-full">
-        <ScrollArea className="flex-1">
-          <div className="p-2">
-            <SidebarGroup>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {menuItems.map((item) => {
-                    if (item.roles && !item.roles.some((role) => hasRole(role as any))) {
-                      return null;
-                    }
+    <Sidebar collapsible="icon" className="border-r mt-16">
+      <SidebarContent className="h-[calc(100vh-4rem)]">
+        <ScrollArea className="flex-1 h-full">
+          <SidebarGroup className="pt-4">
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {menuItems.map((item) => {
+                  if (item.roles && !item.roles.some((role) => hasRole(role as any))) {
+                    return null;
+                  }
 
-                    if (item.subItems) {
-                      return (
-                        <SidebarMenuItem key={item.title}>
-                          <Accordion type="single" collapsible className="w-full">
-                            <AccordionItem value={item.title} className="border-0">
-                              <AccordionTrigger className="flex items-center justify-between py-2 px-2 text-sm font-medium hover:bg-sidebar-accent hover:text-sidebar-accent-foreground rounded-md [&[data-state=open]>svg]:rotate-180">
-                                <div className="flex items-center space-x-3">
-                                  <item.icon className="h-4 w-4" />
-                                  {state === "expanded" && <span>{item.title}</span>}
-                                </div>
-                              </AccordionTrigger>
-                              <AccordionContent className="pb-1">
-                                <div className="ml-6 space-y-1">
-                                  {item.subItems.map((subItem) => (
-                                    <SidebarMenuButton key={subItem.title} asChild>
-                                      <NavLink
-                                        to={subItem.href}
-                                        className={({ isActive }) =>
-                                          cn(
-                                            "block rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                                            isActive 
-                                              ? "bg-sidebar-accent text-sidebar-accent-foreground" 
-                                              : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                                          )
-                                        }
-                                      >
-                                        {subItem.title}
-                                      </NavLink>
-                                    </SidebarMenuButton>
-                                  ))}
-                                </div>
-                              </AccordionContent>
-                            </AccordionItem>
-                          </Accordion>
-                        </SidebarMenuItem>
-                      );
-                    }
-
+                  if (item.subItems) {
                     return (
                       <SidebarMenuItem key={item.title}>
-                        <SidebarMenuButton asChild>
-                          <NavLink
-                            to={item.href}
-                            className={({ isActive }) =>
-                              cn(
-                                "flex items-center space-x-3 rounded-md px-2 py-2 text-sm font-medium transition-colors",
-                                isActive 
-                                  ? "bg-sidebar-accent text-sidebar-accent-foreground" 
-                                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                              )
-                            }
-                          >
-                            <item.icon className="h-4 w-4" />
-                            {state === "expanded" && <span>{item.title}</span>}
-                          </NavLink>
-                        </SidebarMenuButton>
+                        <Accordion type="single" collapsible className="w-full">
+                          <AccordionItem value={item.title} className="border-0">
+                            <AccordionTrigger className="flex items-center justify-between py-2 px-2 text-sm font-medium hover:bg-sidebar-accent hover:text-sidebar-accent-foreground rounded-md [&[data-state=open]>svg]:rotate-180">
+                              <div className="flex items-center space-x-3">
+                                <item.icon className="h-4 w-4" />
+                                {state === "expanded" && <span>{item.title}</span>}
+                              </div>
+                            </AccordionTrigger>
+                            <AccordionContent className="pb-1">
+                              <div className="ml-6 space-y-1">
+                                {item.subItems.map((subItem) => (
+                                  <SidebarMenuButton key={subItem.title} asChild>
+                                    <NavLink
+                                      to={subItem.href}
+                                      className={({ isActive }) =>
+                                        cn(
+                                          "block rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                                          isActive 
+                                            ? "bg-sidebar-accent text-sidebar-accent-foreground" 
+                                            : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                                        )
+                                      }
+                                    >
+                                      {subItem.title}
+                                    </NavLink>
+                                  </SidebarMenuButton>
+                                ))}
+                              </div>
+                            </AccordionContent>
+                          </AccordionItem>
+                        </Accordion>
                       </SidebarMenuItem>
                     );
-                  })}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          </div>
+                  }
+
+                  return (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton asChild>
+                        <NavLink
+                          to={item.href}
+                          className={({ isActive }) =>
+                            cn(
+                              "flex items-center space-x-3 rounded-md px-2 py-2 text-sm font-medium transition-colors",
+                              isActive 
+                                ? "bg-sidebar-accent text-sidebar-accent-foreground" 
+                                : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                            )
+                          }
+                        >
+                          <item.icon className="h-4 w-4" />
+                          {state === "expanded" && <span>{item.title}</span>}
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
         </ScrollArea>
       </SidebarContent>
     </Sidebar>
