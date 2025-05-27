@@ -252,8 +252,8 @@ const AppSidebar = () => {
 
   return (
     <Sidebar collapsible="icon" className="border-r">
-      <SidebarContent className="p-0">
-        <ScrollArea className="h-full w-full">
+      <SidebarContent className="p-0 h-full">
+        <ScrollArea className="h-[calc(100vh-4rem)] w-full">
           <SidebarGroup className="p-2">
             <SidebarGroupContent>
               <SidebarMenu>
