@@ -74,3 +74,41 @@ export interface VendorCommunication {
   parent_id?: string;
   attachments?: string[];
 }
+
+// Helper function to safely parse JSON addresses
+export function parseAddress(jsonData: any): Address {
+  if (typeof jsonData === 'string') {
+    try {
+      const parsed = JSON.parse(jsonData);
+      return {
+        street: parsed.street || '',
+        city: parsed.city || '',
+        state: parsed.state || '',
+        postal_code: parsed.postal_code || '',
+        country: parsed.country || 'India',
+      };
+    } catch {
+      return { street: '', city: '', state: '', postal_code: '', country: 'India' };
+    }
+  }
+  
+  if (jsonData && typeof jsonData === 'object') {
+    return {
+      street: jsonData.street || '',
+      city: jsonData.city || '',
+      state: jsonData.state || '',
+      postal_code: jsonData.postal_code || '',
+      country: jsonData.country || 'India',
+    };
+  }
+  
+  return { street: '', city: '', state: '', postal_code: '', country: 'India' };
+}
+
+// Helper function to safely parse attachments
+export function parseAttachments(attachments: any): string[] {
+  if (Array.isArray(attachments)) {
+    return attachments.filter(item => typeof item === 'string');
+  }
+  return [];
+}

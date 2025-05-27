@@ -10,7 +10,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { VendorRegistration } from '@/types/vendor';
 import { useNavigate } from 'react-router-dom';
 import { Building, FileText, Upload, User, CreditCard, Phone, Mail, MapPin } from 'lucide-react';
 
@@ -91,16 +90,38 @@ const VendorRegistrationPage = () => {
         throw new Error('Failed to create user account');
       }
 
-      // Insert vendor registration
-      const vendorData: Partial<VendorRegistration> = {
+      // Create proper vendor data with all required fields
+      const vendorData = {
         ...values,
         user_id: authData.user.id,
-        status: 'pending',
+        status: 'pending' as const,
+        // Ensure addresses are properly formatted
+        registered_address: {
+          street: values.registered_address.street,
+          city: values.registered_address.city,
+          state: values.registered_address.state,
+          postal_code: values.registered_address.postal_code,
+          country: values.registered_address.country,
+        },
+        business_address: values.business_address ? {
+          street: values.business_address.street || '',
+          city: values.business_address.city || '',
+          state: values.business_address.state || '',
+          postal_code: values.business_address.postal_code || '',
+          country: values.business_address.country || 'India',
+        } : undefined,
+        billing_address: values.billing_address ? {
+          street: values.billing_address.street || '',
+          city: values.billing_address.city || '',
+          state: values.billing_address.state || '',
+          postal_code: values.billing_address.postal_code || '',
+          country: values.billing_address.country || 'India',
+        } : undefined,
       };
 
       const { error: insertError } = await supabase
         .from('vendor_registrations')
-        .insert(vendorData);
+        .insert([vendorData]);
 
       if (insertError) throw insertError;
 

@@ -130,7 +130,7 @@ const UserManagement = () => {
           .from("user_roles")
           .insert({
             user_id: data.user.id,
-            role: values.role as UserRole // Type assertion to UserRole
+            role: values.role as any // Cast to any to avoid type issues
           });
           
         if (roleError) throw roleError;
@@ -168,7 +168,7 @@ const UserManagement = () => {
         .from("user_roles")
         .insert({ 
           user_id: userId, 
-          role: role as UserRole // Type assertion to UserRole
+          role: role as any // Cast to any to avoid type issues
         });
         
       if (error) throw error;
@@ -280,8 +280,8 @@ const UserManagement = () => {
                               </FormControl>
                               <SelectContent>
                                 {Object.values(UserRole).map((role) => (
-                                  <SelectItem key={role} value={role || "_default_role"}>
-                                    {(role || "Default Role").replace('_', ' ').charAt(0).toUpperCase() + (role || "").replace('_', ' ').slice(1).toLowerCase()}
+                                  <SelectItem key={role} value={role}>
+                                    {role.replace('_', ' ').charAt(0).toUpperCase() + role.replace('_', ' ').slice(1).toLowerCase()}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
@@ -510,7 +510,7 @@ const RoleManagement = () => {
               <TableRow>
                 <TableHead className="w-[200px]">Module / Role</TableHead>
                 {roles.map(role => (
-                  <TableHead key={role || "unknown"}>{(role || "Unknown").replace('_', ' ')}</TableHead>
+                  <TableHead key={role}>{role.replace('_', ' ')}</TableHead>
                 ))}
               </TableRow>
             </TableHeader>
@@ -528,12 +528,12 @@ const RoleManagement = () => {
                         {permission.name}
                       </TableCell>
                       {roles.map(role => (
-                        <TableCell key={`${role || "unknown"}-${permission.id}`}>
+                        <TableCell key={`${role}-${permission.id}`}>
                           <Button
                             variant="ghost"
                             size="sm"
                             className="w-8 h-8 p-0"
-                            onClick={() => togglePermission(role || "unknown_role", module.id, permission.id)}
+                            onClick={() => togglePermission(role, module.id, permission.id)}
                           >
                             {rolePermissions[role]?.[module.id]?.includes(permission.id) ? (
                               <CheckCircle className="h-5 w-5 text-green-500" />

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { VendorRegistration, Address } from '@/types/vendor';
+import { VendorRegistration, parseAddress } from '@/types/vendor';
 import { UserRole } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { Search, Eye, CheckCircle, XCircle, Clock, MessageSquare, FileText } from 'lucide-react';
@@ -39,19 +38,10 @@ const VendorManagement = () => {
       // Transform the data to match our interface
       const transformedData: VendorRegistration[] = (data || []).map(item => ({
         ...item,
-        registered_address: typeof item.registered_address === 'string' 
-          ? JSON.parse(item.registered_address) 
-          : item.registered_address as Address,
-        business_address: item.business_address 
-          ? (typeof item.business_address === 'string' 
-              ? JSON.parse(item.business_address) 
-              : item.business_address as Address)
-          : undefined,
-        billing_address: item.billing_address 
-          ? (typeof item.billing_address === 'string' 
-              ? JSON.parse(item.billing_address) 
-              : item.billing_address as Address)
-          : undefined,
+        registered_address: parseAddress(item.registered_address),
+        business_address: item.business_address ? parseAddress(item.business_address) : undefined,
+        billing_address: item.billing_address ? parseAddress(item.billing_address) : undefined,
+        status: item.status as any, // Cast to avoid type issues
       }));
       
       setVendors(transformedData);

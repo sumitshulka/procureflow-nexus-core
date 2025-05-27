@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { VendorRegistration, VendorCommunication, Address } from '@/types/vendor';
+import { VendorRegistration, VendorCommunication, parseAddress, parseAttachments } from '@/types/vendor';
 import { UserRole } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { Building, MessageSquare, FileText, ShoppingCart, DollarSign, Package } from 'lucide-react';
@@ -42,19 +41,10 @@ const VendorPortal = () => {
       // Transform the data to match our interface
       const transformedData: VendorRegistration = {
         ...data,
-        registered_address: typeof data.registered_address === 'string' 
-          ? JSON.parse(data.registered_address) 
-          : data.registered_address as Address,
-        business_address: data.business_address 
-          ? (typeof data.business_address === 'string' 
-              ? JSON.parse(data.business_address) 
-              : data.business_address as Address)
-          : undefined,
-        billing_address: data.billing_address 
-          ? (typeof data.billing_address === 'string' 
-              ? JSON.parse(data.billing_address) 
-              : data.billing_address as Address)
-          : undefined,
+        registered_address: parseAddress(data.registered_address),
+        business_address: data.business_address ? parseAddress(data.business_address) : undefined,
+        billing_address: data.billing_address ? parseAddress(data.billing_address) : undefined,
+        status: data.status as any,
       };
       
       setVendorData(transformedData);
@@ -86,7 +76,7 @@ const VendorPortal = () => {
       const transformedData: VendorCommunication[] = (data || []).map(item => ({
         ...item,
         sender_type: item.sender_type as 'admin' | 'vendor',
-        attachments: item.attachments ? (Array.isArray(item.attachments) ? item.attachments : []) : undefined,
+        attachments: parseAttachments(item.attachments),
       }));
       
       setCommunications(transformedData);

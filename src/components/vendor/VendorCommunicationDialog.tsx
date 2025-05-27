@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
-import { VendorRegistration, VendorCommunication } from '@/types/vendor';
+import { VendorRegistration, VendorCommunication, parseAttachments } from '@/types/vendor';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -57,7 +57,7 @@ const VendorCommunicationDialog: React.FC<VendorCommunicationDialogProps> = ({
       const transformedData: VendorCommunication[] = (data || []).map(item => ({
         ...item,
         sender_type: item.sender_type as 'admin' | 'vendor',
-        attachments: item.attachments ? (Array.isArray(item.attachments) ? item.attachments : []) : undefined,
+        attachments: parseAttachments(item.attachments),
       }));
       
       setCommunications(transformedData);
