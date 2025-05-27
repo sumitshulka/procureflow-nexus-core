@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -8,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
@@ -59,6 +59,7 @@ const VendorRegistrationPage = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [sameAsRegistered, setSameAsRegistered] = useState(false);
   const [sameAsBusiness, setSameAsBusiness] = useState(false);
+  const [uploadedDocuments, setUploadedDocuments] = useState<File[]>([]);
 
   const form = useForm<VendorRegistrationForm>({
     resolver: zodResolver(vendorRegistrationSchema),
@@ -159,6 +160,17 @@ const VendorRegistrationPage = () => {
   const copyAddress = (from: 'registered' | 'business', to: 'business' | 'billing') => {
     const fromAddress = form.getValues(`${from}_address`);
     form.setValue(`${to}_address`, fromAddress);
+  };
+
+  const handleDocumentUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (files) {
+      setUploadedDocuments(prev => [...prev, ...Array.from(files)]);
+    }
+  };
+
+  const removeDocument = (index: number) => {
+    setUploadedDocuments(prev => prev.filter((_, i) => i !== index));
   };
 
   const steps = [
@@ -425,6 +437,498 @@ const VendorRegistrationPage = () => {
                       </FormItem>
                     )}
                   />
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Step 3: Addresses */}
+            {currentStep === 3 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <MapPin className="w-5 h-5" />
+                    Address Information
+                  </CardTitle>
+                  <CardDescription>Registered, business, and billing addresses</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Registered Address */}
+                  <div className="space-y-4">
+                    <h4 className="font-medium text-gray-900">Registered Address *</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="registered_address.street"
+                        render={({ field }) => (
+                          <FormItem className="md:col-span-2">
+                            <FormLabel>Street Address</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Enter street address" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="registered_address.city"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>City</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Enter city" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="registered_address.state"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>State</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Enter state" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="registered_address.postal_code"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Postal Code</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Enter postal code" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="registered_address.country"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Country</FormLabel>
+                            <FormControl>
+                              <Input placeholder="India" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Business Address */}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-medium text-gray-900">Business Address</h4>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="same-as-registered"
+                          checked={sameAsRegistered}
+                          onCheckedChange={(checked) => {
+                            setSameAsRegistered(checked as boolean);
+                            if (checked) {
+                              copyAddress('registered', 'business');
+                            }
+                          }}
+                        />
+                        <label htmlFor="same-as-registered" className="text-sm">
+                          Same as registered address
+                        </label>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="business_address.street"
+                        render={({ field }) => (
+                          <FormItem className="md:col-span-2">
+                            <FormLabel>Street Address</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Enter street address" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="business_address.city"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>City</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Enter city" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="business_address.state"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>State</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Enter state" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="business_address.postal_code"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Postal Code</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Enter postal code" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="business_address.country"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Country</FormLabel>
+                            <FormControl>
+                              <Input placeholder="India" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Billing Address */}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-medium text-gray-900">Billing Address</h4>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="same-as-business"
+                          checked={sameAsBusiness}
+                          onCheckedChange={(checked) => {
+                            setSameAsBusiness(checked as boolean);
+                            if (checked) {
+                              copyAddress('business', 'billing');
+                            }
+                          }}
+                        />
+                        <label htmlFor="same-as-business" className="text-sm">
+                          Same as business address
+                        </label>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="billing_address.street"
+                        render={({ field }) => (
+                          <FormItem className="md:col-span-2">
+                            <FormLabel>Street Address</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Enter street address" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="billing_address.city"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>City</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Enter city" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="billing_address.state"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>State</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Enter state" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="billing_address.postal_code"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Postal Code</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Enter postal code" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="billing_address.country"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Country</FormLabel>
+                            <FormControl>
+                              <Input placeholder="India" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Step 4: Signatory Details */}
+            {currentStep === 4 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <User className="w-5 h-5" />
+                    Authorized Signatory Details
+                  </CardTitle>
+                  <CardDescription>Information about the authorized signatory</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="signatory_name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Signatory Name *</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter signatory name" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="signatory_designation"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Designation</FormLabel>
+                          <FormControl>
+                            <Input placeholder="e.g., Director, CEO" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="signatory_email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email</FormLabel>
+                          <FormControl>
+                            <Input type="email" placeholder="signatory@example.com" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="signatory_phone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Phone</FormLabel>
+                          <FormControl>
+                            <Input placeholder="+91 9876543210" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <FormField
+                    control={form.control}
+                    name="signatory_pan"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>PAN Number</FormLabel>
+                        <FormControl>
+                          <Input placeholder="ABCDE1234F" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Step 5: Bank Details */}
+            {currentStep === 5 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <CreditCard className="w-5 h-5" />
+                    Bank Details
+                  </CardTitle>
+                  <CardDescription>Banking information for payments</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="bank_name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Bank Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter bank name" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="bank_branch"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Branch</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter branch name" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="account_number"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Account Number</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter account number" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="ifsc_code"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>IFSC Code</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter IFSC code" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <FormField
+                    control={form.control}
+                    name="account_holder_name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Account Holder Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Enter account holder name" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Document Upload Section */}
+                  <div className="space-y-4 pt-6 border-t">
+                    <h4 className="font-medium text-gray-900 flex items-center gap-2">
+                      <FileText className="w-4 h-4" />
+                      Document Upload
+                    </h4>
+                    <p className="text-sm text-gray-600">
+                      Upload required documents (Incorporation Certificate, PAN Card, GST Certificate, Cancelled Cheque, etc.)
+                    </p>
+                    
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
+                      <div className="text-center">
+                        <Upload className="mx-auto h-12 w-12 text-gray-400" />
+                        <div className="mt-4">
+                          <label htmlFor="file-upload" className="cursor-pointer">
+                            <span className="mt-2 block text-sm font-medium text-gray-900">
+                              Click to upload files
+                            </span>
+                            <input
+                              id="file-upload"
+                              name="file-upload"
+                              type="file"
+                              multiple
+                              accept=".pdf,.jpg,.jpeg,.png"
+                              className="sr-only"
+                              onChange={handleDocumentUpload}
+                            />
+                          </label>
+                          <p className="mt-1 text-xs text-gray-500">
+                            PDF, JPG, PNG up to 10MB each
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Uploaded Documents List */}
+                    {uploadedDocuments.length > 0 && (
+                      <div className="space-y-2">
+                        <h5 className="font-medium text-sm">Uploaded Documents:</h5>
+                        {uploadedDocuments.map((file, index) => (
+                          <div key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                            <span className="text-sm text-gray-700">{file.name}</span>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => removeDocument(index)}
+                            >
+                              Remove
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             )}

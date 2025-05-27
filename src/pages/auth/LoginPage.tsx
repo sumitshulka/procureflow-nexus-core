@@ -1,6 +1,7 @@
+
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { Eye, EyeOff, LogIn, ArrowRight } from "lucide-react";
+import { Eye, EyeOff, LogIn, ArrowRight, Building } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -221,13 +222,30 @@ const LoginPage = () => {
             </form>
           </Card>
 
-          <div className="text-center mt-6">
+          <div className="text-center mt-6 space-y-4">
             <p className="text-sm text-gray-600">
               Don't have an account?{" "}
               <Link to="/signup" className="text-procurement-600 hover:text-procurement-500 hover:underline">
                 Create an account
               </Link>
             </p>
+            
+            {/* Vendor Registration Link */}
+            <div className="pt-4 border-t border-gray-200">
+              <p className="text-sm text-gray-600 mb-3">
+                Are you a vendor?
+              </p>
+              <Link to="/vendor-register">
+                <Button
+                  variant="outline"
+                  className="w-full h-11 border-procurement-600 text-procurement-600 hover:bg-procurement-50 transition-all duration-300 group"
+                >
+                  <Building className="h-4 w-4 mr-2" />
+                  <span className="mr-1">Register as Vendor</span>
+                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
       </div>
