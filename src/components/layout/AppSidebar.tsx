@@ -1,189 +1,249 @@
-
 import React from "react";
-import { NavLink, useLocation } from "react-router-dom";
 import {
-  Archive,
-  BookText,
-  ClipboardCheck,
-  CreditCard,
-  FileText,
-  Home,
-  ListFilter,
-  Package,
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import { Separator } from "@/components/ui/separator";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import {
+  BarChart,
+  Building2,
+  Category,
+  ClipboardList,
+  LayoutDashboard,
+  ListChecks,
   Settings,
-  ShoppingCart,
+  ShoppingBag,
+  Store,
+  User,
   Users,
-  Warehouse,
+  Menu,
 } from "lucide-react";
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarTrigger,
-  useSidebar,
-} from "@/components/ui/sidebar";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { UserRole } from "@/types";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import ApprovalMenuItem from "./ApprovalMenuItem";
+import { cn } from "@/lib/utils";
 
-interface SystemModule {
-  id: string;
-  name: string;
-  url: string;
-  icon: React.ElementType;
-  adminOnly?: boolean;
-}
-
-const AppSidebar: React.FC = () => {
-  const { state } = useSidebar();
-  const collapsed = state === "collapsed";
+const AppSidebar = () => {
+  const { hasRole } = useAuth();
   const location = useLocation();
-  const currentPath = location.pathname;
-  const { userData } = useAuth();
 
-  const isActive = (path: string) => currentPath === path;
-  const getNavCls = ({ isActive }: { isActive: boolean }) =>
-    isActive
-      ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-      : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground";
-
-  // Check if user has admin role
-  const isAdmin = userData?.roles?.includes(UserRole.ADMIN);
-
-  // Define our standard menu items
-  const standardMenuItems: SystemModule[] = [
-    { id: "dashboard", name: "Dashboard", url: "/", icon: Home },
+  const menuItems = [
     {
-      id: "user_management",
-      name: "User Management",
-      url: "/users",
+      title: "Dashboard",
+      icon: LayoutDashboard,
+      href: "/",
+      roles: ["admin", "procurement_officer", "requester", "approver", "vendor"],
+    },
+    {
+      title: "Product Catalog",
+      icon: ShoppingBag,
+      href: "/catalog",
+      roles: ["admin", "procurement_officer", "requester", "approver", "vendor"],
+    },
+    {
+      title: "Inventory Management",
+      icon: Category,
+      href: "/inventory",
+      roles: ["admin", "procurement_officer"],
+      subItems: [
+        {
+          title: "Inventory Items",
+          href: "/inventory/items",
+        },
+        {
+          title: "Inventory Transactions",
+          href: "/inventory/transactions",
+        },
+        {
+          title: "Warehouses",
+          href: "/inventory/warehouses",
+        },
+        {
+          title: "Inventory Reports",
+          href: "/inventory/reports",
+        },
+      ],
+    },
+    {
+      title: "Procurement Requests",
+      icon: ListChecks,
+      href: "/requests",
+      roles: ["admin", "procurement_officer", "requester", "approver"],
+    },
+    {
+      title: "Approvals",
+      icon: ClipboardList,
+      href: "/approvals",
+      roles: ["admin", "procurement_officer", "approver"],
+    },
+    {
+      title: "Vendor Management",
+      icon: Building2,
+      href: "/vendors",
+      roles: ["admin", "procurement_officer"],
+    },
+    {
+      title: "Vendor Portal",
+      icon: Store,
+      href: "/vendor-portal",
+      roles: ["vendor"],
+    },
+    {
+      title: "Settings",
+      icon: Settings,
+      href: "/settings",
+      roles: ["admin"],
+    },
+    {
+      title: "User Management",
       icon: Users,
-      adminOnly: true,
+      href: "/users",
+      roles: ["admin"],
     },
-    {
-      id: "catalog",
-      name: "Product Catalog",
-      url: "/catalog",
-      icon: ListFilter,
-    },
-    {
-      id: "requests",
-      name: "Procurement Requests",
-      url: "/requests",
-      icon: ShoppingCart,
-    },
-    {
-      id: "inventory",
-      name: "Inventory",
-      url: "/inventory",
-      icon: Warehouse,
-    },
-    {
-      id: "vendors",
-      name: "Vendor Management",
-      url: "/vendors",
-      icon: BookText,
-    },
-    {
-      id: "rfps",
-      name: "RFP Management",
-      url: "/rfps",
-      icon: FileText,
-    },
-    {
-      id: "purchase_orders",
-      name: "Purchase Orders",
-      url: "/purchase-orders",
-      icon: ClipboardCheck,
-    },
-    {
-      id: "invoices",
-      name: "Invoices & Payments",
-      url: "/invoices",
-      icon: CreditCard,
-    },
-    {
-      id: "reports",
-      name: "Reports",
-      url: "/reports",
-      icon: Archive,
-    },
-    // Only show settings for admin users
-    ...(isAdmin ? [
-      {
-        id: "settings",
-        name: "Settings",
-        url: "/settings",
-        icon: Settings,
-      }
-    ] : []),
   ];
 
-  // Fetch any system modules from the database
-  const { data: systemModules = [] } = useQuery({
-    queryKey: ["system_modules"],
-    queryFn: async () => {
-      // This would be used to fetch dynamic modules if needed
-      // Currently using the standard menu items above
-      return [] as SystemModule[];
-    },
-    enabled: false, // We're not using this query for now, but it's here for future expansion
-  });
-
-  // Combine standard menu items with system modules
-  // For now, just use standard menu items
-  const allMenuItems = [...standardMenuItems];
-
-  // Filter items based on admin status and permissions
-  const filteredItems = allMenuItems.filter(item => !item.adminOnly || isAdmin);
-
   return (
-    <Sidebar
-      className={`border-r ${collapsed ? "w-16" : "w-64"}`}
-      collapsible="icon"
-    >
-      <SidebarTrigger className="m-2 self-end" />
-      <SidebarContent>
-        <ScrollArea className="h-[calc(100vh-4rem)]">
-          <SidebarGroup>
-            <SidebarGroupLabel className={`${collapsed && "sr-only"} pt-6 pb-2 px-2`}>
-              Main Navigation
-            </SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {filteredItems.map((item) => (
-                  <SidebarMenuItem key={item.id}>
-                    <SidebarMenuButton asChild>
-                      <NavLink
-                        to={item.url}
-                        end={item.url === "/"}
-                        className={getNavCls}
-                      >
-                        <item.icon className="mr-2 h-4 w-4" />
-                        {!collapsed && <span>{item.name}</span>}
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-                
-                {/* Add the Approvals menu item */}
-                <SidebarMenuItem>
-                  <ApprovalMenuItem />
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        </ScrollArea>
-      </SidebarContent>
-    </Sidebar>
+    <>
+      <aside className="fixed left-0 top-0 z-20 flex h-full w-64 flex-col border-r bg-white pt-16 shadow-sm">
+        <div className="flex-1 overflow-y-auto px-3 pb-4">
+          <ul className="space-y-2">
+            {menuItems.map((item) => {
+              if (item.roles && !item.roles.some((role) => hasRole(role))) {
+                return null;
+              }
+
+              if (item.subItems) {
+                return (
+                  <Accordion type="single" collapsible key={item.title}>
+                    <AccordionItem value={item.title}>
+                      <AccordionTrigger className="flex items-center justify-between py-2 font-medium">
+                        <div className="flex items-center space-x-3">
+                          <item.icon className="h-4 w-4" />
+                          <span>{item.title}</span>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <ul className="mt-2 space-y-1 pl-5">
+                          {item.subItems.map((subItem) => (
+                            <li key={subItem.title}>
+                              <NavLink
+                                to={subItem.href}
+                                className={({ isActive }) =>
+                                  cn(
+                                    "block rounded-md px-3 py-2 text-sm font-medium hover:bg-gray-100",
+                                    isActive ? "bg-gray-100" : "text-gray-700"
+                                  )
+                                }
+                              >
+                                {subItem.title}
+                              </NavLink>
+                            </li>
+                          ))}
+                        </ul>
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
+                );
+              }
+
+              return (
+                <li key={item.title}>
+                  <NavLink
+                    to={item.href}
+                    className={({ isActive }) =>
+                      cn(
+                        "flex items-center space-x-3 rounded-md px-3 py-2 text-sm font-medium hover:bg-gray-100",
+                        isActive ? "bg-gray-100" : "text-gray-700"
+                      )
+                    }
+                  >
+                    <item.icon className="h-4 w-4" />
+                    <span>{item.title}</span>
+                  </NavLink>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      </aside>
+
+      <Sheet>
+        <SheetTrigger className="absolute left-4 top-4 z-50 lg:hidden">
+          <Menu className="h-6 w-6" />
+        </SheetTrigger>
+        <SheetContent side="left" className="w-64 pt-16">
+          <div className="flex-1 overflow-y-auto px-3 pb-4">
+            <ul className="space-y-2">
+              {menuItems.map((item) => {
+                if (item.roles && !item.roles.some((role) => hasRole(role))) {
+                  return null;
+                }
+
+                if (item.subItems) {
+                  return (
+                    <Accordion type="single" collapsible key={item.title}>
+                      <AccordionItem value={item.title}>
+                        <AccordionTrigger className="flex items-center justify-between py-2 font-medium">
+                          <div className="flex items-center space-x-3">
+                            <item.icon className="h-4 w-4" />
+                            <span>{item.title}</span>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          <ul className="mt-2 space-y-1 pl-5">
+                            {item.subItems.map((subItem) => (
+                              <li key={subItem.title}>
+                                <NavLink
+                                  to={subItem.href}
+                                  className={({ isActive }) =>
+                                    cn(
+                                      "block rounded-md px-3 py-2 text-sm font-medium hover:bg-gray-100",
+                                      isActive ? "bg-gray-100" : "text-gray-700"
+                                    )
+                                  }
+                                >
+                                  {subItem.title}
+                                </NavLink>
+                              </li>
+                            ))}
+                          </ul>
+                        </AccordionContent>
+                      </AccordionItem>
+                    </Accordion>
+                  );
+                }
+
+                return (
+                  <li key={item.title}>
+                    <NavLink
+                      to={item.href}
+                      className={({ isActive }) =>
+                        cn(
+                          "flex items-center space-x-3 rounded-md px-3 py-2 text-sm font-medium hover:bg-gray-100",
+                          isActive ? "bg-gray-100" : "text-gray-700"
+                        )
+                      }
+                    >
+                      <item.icon className="h-4 w-4" />
+                      <span>{item.title}</span>
+                    </NavLink>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        </SheetContent>
+      </Sheet>
+    </>
   );
 };
 

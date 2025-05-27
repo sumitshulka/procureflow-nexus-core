@@ -1,4 +1,3 @@
-
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import Dashboard from "@/pages/Dashboard";
@@ -14,6 +13,10 @@ import ProcurementRequestDetail from "@/pages/ProcurementRequestDetail";
 import Settings from "@/pages/Settings";
 import Approvals from "@/pages/Approvals";
 import UserManagement from "@/pages/UserManagement";
+import VendorRegistration from "@/pages/VendorRegistration";
+import VendorRegistrationSuccess from "@/pages/VendorRegistrationSuccess";
+import VendorManagement from "@/pages/VendorManagement";
+import VendorPortal from "@/pages/VendorPortal";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { Toaster } from "@/components/ui/toaster";
 import NotFoundPage from "@/components/common/NotFoundPage";
@@ -27,6 +30,8 @@ function App() {
         <Routes>
           {/* Public routes */}
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/vendor-register" element={<VendorRegistration />} />
+          <Route path="/vendor-registration-success" element={<VendorRegistrationSuccess />} />
           
           {/* Protected routes */}
           <Route element={<ProtectedRoute />}>
@@ -46,6 +51,8 @@ function App() {
               <Route path="/approvals" element={<Approvals />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/users" element={<UserManagement />} />
+              <Route path="/vendors" element={<VendorManagement />} />
+              <Route path="/vendor-portal" element={<VendorPortal />} />
               {/* Catch-all route for undefined paths */}
               <Route path="*" element={<NotFoundPage />} />
             </Route>

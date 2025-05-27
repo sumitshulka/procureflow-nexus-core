@@ -728,6 +728,290 @@ export type Database = {
         }
         Relationships: []
       }
+      vendor_communications: {
+        Row: {
+          attachments: Json | null
+          created_at: string | null
+          id: string
+          is_read: boolean | null
+          message: string
+          parent_id: string | null
+          receiver_id: string | null
+          sender_id: string
+          sender_type: string
+          subject: string
+          vendor_id: string
+        }
+        Insert: {
+          attachments?: Json | null
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          message: string
+          parent_id?: string | null
+          receiver_id?: string | null
+          sender_id: string
+          sender_type: string
+          subject: string
+          vendor_id: string
+        }
+        Update: {
+          attachments?: Json | null
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          message?: string
+          parent_id?: string | null
+          receiver_id?: string | null
+          sender_id?: string
+          sender_type?: string
+          subject?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_communications_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_communications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_communications_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_registration_details"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_communications_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_registrations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vendor_documents: {
+        Row: {
+          document_name: string
+          document_type: string
+          file_size: number | null
+          file_url: string
+          id: string
+          is_verified: boolean | null
+          mime_type: string | null
+          uploaded_at: string | null
+          vendor_id: string
+          verification_notes: string | null
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          document_name: string
+          document_type: string
+          file_size?: number | null
+          file_url: string
+          id?: string
+          is_verified?: boolean | null
+          mime_type?: string | null
+          uploaded_at?: string | null
+          vendor_id: string
+          verification_notes?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          document_name?: string
+          document_type?: string
+          file_size?: number | null
+          file_url?: string
+          id?: string
+          is_verified?: boolean | null
+          mime_type?: string | null
+          uploaded_at?: string | null
+          vendor_id?: string
+          verification_notes?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_documents_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_registration_details"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_documents_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_registrations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vendor_product_categories: {
+        Row: {
+          category_id: string
+          created_at: string | null
+          id: string
+          vendor_id: string
+        }
+        Insert: {
+          category_id: string
+          created_at?: string | null
+          id?: string
+          vendor_id: string
+        }
+        Update: {
+          category_id?: string
+          created_at?: string | null
+          id?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_product_categories_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_product_categories_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_registration_details"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_product_categories_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_registrations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vendor_registrations: {
+        Row: {
+          account_holder_name: string | null
+          account_number: string | null
+          annual_turnover: number | null
+          approval_comments: string | null
+          bank_branch: string | null
+          bank_name: string | null
+          billing_address: Json | null
+          business_address: Json | null
+          business_description: string | null
+          company_name: string
+          company_type: string | null
+          created_at: string | null
+          gst_number: string | null
+          id: string
+          ifsc_code: string | null
+          incorporation_date: string | null
+          pan_number: string | null
+          primary_email: string
+          primary_phone: string
+          registered_address: Json
+          registration_number: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          secondary_email: string | null
+          secondary_phone: string | null
+          signatory_designation: string | null
+          signatory_email: string | null
+          signatory_name: string
+          signatory_pan: string | null
+          signatory_phone: string | null
+          status: Database["public"]["Enums"]["vendor_status"] | null
+          tan_number: string | null
+          updated_at: string | null
+          user_id: string | null
+          website: string | null
+          years_in_business: number | null
+        }
+        Insert: {
+          account_holder_name?: string | null
+          account_number?: string | null
+          annual_turnover?: number | null
+          approval_comments?: string | null
+          bank_branch?: string | null
+          bank_name?: string | null
+          billing_address?: Json | null
+          business_address?: Json | null
+          business_description?: string | null
+          company_name: string
+          company_type?: string | null
+          created_at?: string | null
+          gst_number?: string | null
+          id?: string
+          ifsc_code?: string | null
+          incorporation_date?: string | null
+          pan_number?: string | null
+          primary_email: string
+          primary_phone: string
+          registered_address: Json
+          registration_number?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          secondary_email?: string | null
+          secondary_phone?: string | null
+          signatory_designation?: string | null
+          signatory_email?: string | null
+          signatory_name: string
+          signatory_pan?: string | null
+          signatory_phone?: string | null
+          status?: Database["public"]["Enums"]["vendor_status"] | null
+          tan_number?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          website?: string | null
+          years_in_business?: number | null
+        }
+        Update: {
+          account_holder_name?: string | null
+          account_number?: string | null
+          annual_turnover?: number | null
+          approval_comments?: string | null
+          bank_branch?: string | null
+          bank_name?: string | null
+          billing_address?: Json | null
+          business_address?: Json | null
+          business_description?: string | null
+          company_name?: string
+          company_type?: string | null
+          created_at?: string | null
+          gst_number?: string | null
+          id?: string
+          ifsc_code?: string | null
+          incorporation_date?: string | null
+          pan_number?: string | null
+          primary_email?: string
+          primary_phone?: string
+          registered_address?: Json
+          registration_number?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          secondary_email?: string | null
+          secondary_phone?: string | null
+          signatory_designation?: string | null
+          signatory_email?: string | null
+          signatory_name?: string
+          signatory_pan?: string | null
+          signatory_phone?: string | null
+          status?: Database["public"]["Enums"]["vendor_status"] | null
+          tan_number?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          website?: string | null
+          years_in_business?: number | null
+        }
+        Relationships: []
+      }
       warehouse_locations: {
         Row: {
           created_at: string | null
@@ -837,6 +1121,51 @@ export type Database = {
         }
         Relationships: []
       }
+      vendor_registration_details: {
+        Row: {
+          account_holder_name: string | null
+          account_number: string | null
+          annual_turnover: number | null
+          approval_comments: string | null
+          avatar_url: string | null
+          bank_branch: string | null
+          bank_name: string | null
+          billing_address: Json | null
+          business_address: Json | null
+          business_description: string | null
+          company_name: string | null
+          company_type: string | null
+          created_at: string | null
+          gst_number: string | null
+          id: string | null
+          ifsc_code: string | null
+          incorporation_date: string | null
+          pan_number: string | null
+          primary_email: string | null
+          primary_phone: string | null
+          registered_address: Json | null
+          registration_number: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          reviewer_name: string | null
+          secondary_email: string | null
+          secondary_phone: string | null
+          signatory_designation: string | null
+          signatory_email: string | null
+          signatory_full_name: string | null
+          signatory_name: string | null
+          signatory_pan: string | null
+          signatory_phone: string | null
+          status: Database["public"]["Enums"]["vendor_status"] | null
+          tan_number: string | null
+          updated_at: string | null
+          user_email: string | null
+          user_id: string | null
+          website: string | null
+          years_in_business: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       begin_transaction: {
@@ -897,6 +1226,12 @@ export type Database = {
         | "finance_officer"
         | "vendor"
         | "evaluation_committee"
+      vendor_status:
+        | "pending"
+        | "under_review"
+        | "approved"
+        | "rejected"
+        | "suspended"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1030,6 +1365,13 @@ export const Constants = {
         "finance_officer",
         "vendor",
         "evaluation_committee",
+      ],
+      vendor_status: [
+        "pending",
+        "under_review",
+        "approved",
+        "rejected",
+        "suspended",
       ],
     },
   },

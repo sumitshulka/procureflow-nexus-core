@@ -11,12 +11,10 @@ export interface User {
 
 export enum UserRole {
   ADMIN = "admin",
+  PROCUREMENT_OFFICER = "procurement_officer", 
   REQUESTER = "requester",
-  PROCUREMENT_OFFICER = "procurement_officer",
-  INVENTORY_MANAGER = "inventory_manager",
-  FINANCE_OFFICER = "finance_officer",
-  VENDOR = "vendor",
-  EVALUATION_COMMITTEE = "evaluation_committee"
+  APPROVER = "approver",
+  VENDOR = "vendor", // Add vendor role
 }
 
 // Product & Catalog Types
