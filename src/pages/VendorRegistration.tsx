@@ -90,38 +90,41 @@ const VendorRegistrationPage = () => {
         throw new Error('Failed to create user account');
       }
 
-      // Create proper vendor data with all required fields
+      // Prepare vendor data for database insertion
       const vendorData = {
-        ...values,
+        company_name: values.company_name,
+        company_type: values.company_type || null,
+        registration_number: values.registration_number || null,
+        pan_number: values.pan_number,
+        gst_number: values.gst_number,
+        primary_email: values.primary_email,
+        secondary_email: values.secondary_email || null,
+        primary_phone: values.primary_phone,
+        secondary_phone: values.secondary_phone || null,
+        website: values.website || null,
+        registered_address: JSON.stringify(values.registered_address),
+        business_address: values.business_address ? JSON.stringify(values.business_address) : null,
+        billing_address: values.billing_address ? JSON.stringify(values.billing_address) : null,
+        signatory_name: values.signatory_name,
+        signatory_designation: values.signatory_designation || null,
+        signatory_email: values.signatory_email || null,
+        signatory_phone: values.signatory_phone || null,
+        signatory_pan: values.signatory_pan || null,
+        bank_name: values.bank_name || null,
+        bank_branch: values.bank_branch || null,
+        account_number: values.account_number || null,
+        ifsc_code: values.ifsc_code || null,
+        account_holder_name: values.account_holder_name || null,
+        business_description: values.business_description || null,
+        years_in_business: values.years_in_business || null,
+        annual_turnover: values.annual_turnover || null,
         user_id: authData.user.id,
         status: 'pending' as const,
-        // Ensure addresses are properly formatted
-        registered_address: {
-          street: values.registered_address.street,
-          city: values.registered_address.city,
-          state: values.registered_address.state,
-          postal_code: values.registered_address.postal_code,
-          country: values.registered_address.country,
-        },
-        business_address: values.business_address ? {
-          street: values.business_address.street || '',
-          city: values.business_address.city || '',
-          state: values.business_address.state || '',
-          postal_code: values.business_address.postal_code || '',
-          country: values.business_address.country || 'India',
-        } : undefined,
-        billing_address: values.billing_address ? {
-          street: values.billing_address.street || '',
-          city: values.billing_address.city || '',
-          state: values.billing_address.state || '',
-          postal_code: values.billing_address.postal_code || '',
-          country: values.billing_address.country || 'India',
-        } : undefined,
       };
 
       const { error: insertError } = await supabase
         .from('vendor_registrations')
-        .insert([vendorData]);
+        .insert(vendorData);
 
       if (insertError) throw insertError;
 
