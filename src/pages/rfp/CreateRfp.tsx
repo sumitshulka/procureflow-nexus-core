@@ -120,7 +120,7 @@ const CreateRfp = () => {
           warranty_requirements: data.warranty_requirements,
           created_by: user.id,
           status: "draft",
-        })
+        } as any)
         .select()
         .single();
 

@@ -167,7 +167,7 @@ const CreatePurchaseOrder = () => {
           created_by: user.id,
           status: "draft",
           ...orderTotals,
-        })
+        } as any)
         .select()
         .single();
 
