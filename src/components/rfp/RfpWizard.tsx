@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -73,23 +74,13 @@ const RfpWizard = () => {
           onUpdate={updateWizardData}
         />
       );
-    } else if (currentStep === 4) {
-      // Terms step needs data, onUpdate, and onNext
-      return (
-        <CurrentStepComponent
-          data={wizardData}
-          onUpdate={updateWizardData}
-          onNext={handleNext}
-        />
-      );
     } else {
-      // Other steps need all props
+      // All other steps need data, onUpdate, and onNext
       return (
         <CurrentStepComponent
           data={wizardData}
           onUpdate={updateWizardData}
           onNext={handleNext}
-          onPrevious={handlePrevious}
         />
       );
     }
