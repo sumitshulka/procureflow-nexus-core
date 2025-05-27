@@ -252,9 +252,9 @@ const AppSidebar = () => {
 
   return (
     <Sidebar collapsible="icon" className="border-r">
-      <SidebarContent>
-        <ScrollArea className="flex-1">
-          <SidebarGroup>
+      <SidebarContent className="p-0">
+        <ScrollArea className="h-full w-full">
+          <SidebarGroup className="p-2">
             <SidebarGroupContent>
               <SidebarMenu>
                 {menuItems.map((item) => {
