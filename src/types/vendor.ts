@@ -31,6 +31,11 @@ export interface VendorRegistration {
   annual_turnover?: number;
   status?: 'pending' | 'under_review' | 'approved' | 'rejected' | 'suspended';
   user_id?: string;
+  created_at?: string;
+  updated_at?: string;
+  reviewed_by?: string;
+  reviewed_at?: string;
+  approval_comments?: string;
 }
 
 export interface Address {
@@ -51,6 +56,9 @@ export interface VendorDocument {
   mime_type?: string;
   is_verified?: boolean;
   verification_notes?: string;
+  uploaded_at?: string;
+  verified_by?: string;
+  verified_at?: string;
 }
 
 export interface VendorCommunication {

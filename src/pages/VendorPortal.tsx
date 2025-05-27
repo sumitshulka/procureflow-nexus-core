@@ -5,7 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { VendorRegistration, VendorCommunication } from '@/types/vendor';
+import { VendorRegistration, VendorCommunication, Address } from '@/types/vendor';
+import { UserRole } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { Building, MessageSquare, FileText, ShoppingCart, DollarSign, Package } from 'lucide-react';
 
@@ -17,11 +18,16 @@ const VendorPortal = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (hasRole('vendor')) {
+    if (hasRole(UserRole.VENDOR)) {
       fetchVendorData();
-      fetchCommunications();
     }
   }, [hasRole, user]);
+
+  useEffect(() => {
+    if (vendorData?.id) {
+      fetchCommunications();
+    }
+  }, [vendorData]);
 
   const fetchVendorData = async () => {
     try {
@@ -32,7 +38,26 @@ const VendorPortal = () => {
         .single();
 
       if (error) throw error;
-      setVendorData(data);
+      
+      // Transform the data to match our interface
+      const transformedData: VendorRegistration = {
+        ...data,
+        registered_address: typeof data.registered_address === 'string' 
+          ? JSON.parse(data.registered_address) 
+          : data.registered_address as Address,
+        business_address: data.business_address 
+          ? (typeof data.business_address === 'string' 
+              ? JSON.parse(data.business_address) 
+              : data.business_address as Address)
+          : undefined,
+        billing_address: data.billing_address 
+          ? (typeof data.billing_address === 'string' 
+              ? JSON.parse(data.billing_address) 
+              : data.billing_address as Address)
+          : undefined,
+      };
+      
+      setVendorData(transformedData);
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -56,7 +81,15 @@ const VendorPortal = () => {
         .limit(5);
 
       if (error) throw error;
-      setCommunications(data || []);
+      
+      // Transform the data to match our interface
+      const transformedData: VendorCommunication[] = (data || []).map(item => ({
+        ...item,
+        sender_type: item.sender_type as 'admin' | 'vendor',
+        attachments: item.attachments ? (Array.isArray(item.attachments) ? item.attachments : []) : undefined,
+      }));
+      
+      setCommunications(transformedData);
     } catch (error: any) {
       console.error('Error fetching communications:', error);
     }
@@ -75,7 +108,7 @@ const VendorPortal = () => {
     return <Badge className={config.color}>{config.text}</Badge>;
   };
 
-  if (!hasRole('vendor')) {
+  if (!hasRole(UserRole.VENDOR)) {
     return (
       <div className="p-6">
         <Card>
@@ -327,7 +360,7 @@ const VendorPortal = () => {
                       </div>
                       <p className="text-sm text-gray-600 mb-2">{comm.message}</p>
                       <p className="text-xs text-gray-400">
-                        {new Date(comm.created_at!).toLocaleDateString()}
+                        {comm.created_at ? new Date(comm.created_at).toLocaleDateString() : ''}
                       </p>
                     </div>
                   ))}

@@ -1,3 +1,4 @@
+
 // User Types
 export interface User {
   id: string;
@@ -14,7 +15,10 @@ export enum UserRole {
   PROCUREMENT_OFFICER = "procurement_officer", 
   REQUESTER = "requester",
   APPROVER = "approver",
-  VENDOR = "vendor", // Add vendor role
+  VENDOR = "vendor",
+  INVENTORY_MANAGER = "inventory_manager",
+  FINANCE_OFFICER = "finance_officer",
+  EVALUATION_COMMITTEE = "evaluation_committee",
 }
 
 // Product & Catalog Types

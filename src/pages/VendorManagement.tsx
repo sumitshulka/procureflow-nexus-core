@@ -7,7 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { VendorRegistration } from '@/types/vendor';
+import { VendorRegistration, Address } from '@/types/vendor';
+import { UserRole } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { Search, Eye, CheckCircle, XCircle, Clock, MessageSquare, FileText } from 'lucide-react';
 import VendorDetailDialog from '@/components/vendor/VendorDetailDialog';
@@ -34,7 +35,26 @@ const VendorManagement = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setVendors(data || []);
+      
+      // Transform the data to match our interface
+      const transformedData: VendorRegistration[] = (data || []).map(item => ({
+        ...item,
+        registered_address: typeof item.registered_address === 'string' 
+          ? JSON.parse(item.registered_address) 
+          : item.registered_address as Address,
+        business_address: item.business_address 
+          ? (typeof item.business_address === 'string' 
+              ? JSON.parse(item.business_address) 
+              : item.business_address as Address)
+          : undefined,
+        billing_address: item.billing_address 
+          ? (typeof item.billing_address === 'string' 
+              ? JSON.parse(item.billing_address) 
+              : item.billing_address as Address)
+          : undefined,
+      }));
+      
+      setVendors(transformedData);
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -47,7 +67,7 @@ const VendorManagement = () => {
   };
 
   useEffect(() => {
-    if (hasRole('admin') || hasRole('procurement_officer')) {
+    if (hasRole(UserRole.ADMIN) || hasRole(UserRole.PROCUREMENT_OFFICER)) {
       fetchVendors();
     }
   }, [hasRole]);
@@ -73,7 +93,7 @@ const VendorManagement = () => {
     setFilteredVendors(filtered);
   }, [vendors, activeTab, searchTerm]);
 
-  const updateVendorStatus = async (vendorId: string, status: string, comments?: string) => {
+  const updateVendorStatus = async (vendorId: string, status: 'pending' | 'under_review' | 'approved' | 'rejected' | 'suspended', comments?: string) => {
     try {
       const { error } = await supabase
         .from('vendor_registrations')
@@ -134,7 +154,7 @@ const VendorManagement = () => {
 
   const statusCounts = getStatusCounts();
 
-  if (!hasRole('admin') && !hasRole('procurement_officer')) {
+  if (!hasRole(UserRole.ADMIN) && !hasRole(UserRole.PROCUREMENT_OFFICER)) {
     return (
       <div className="p-6">
         <Card>
@@ -271,14 +291,15 @@ const VendorManagement = () => {
                               Review
                             </Button>
                             <Button
-                              variant="approve"
+                              variant="default"
                               size="sm"
                               onClick={() => updateVendorStatus(vendor.id!, 'approved')}
+                              className="bg-green-600 hover:bg-green-700"
                             >
                               Approve
                             </Button>
                             <Button
-                              variant="reject"
+                              variant="destructive"
                               size="sm"
                               onClick={() => updateVendorStatus(vendor.id!, 'rejected')}
                             >

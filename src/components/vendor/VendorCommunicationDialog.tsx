@@ -47,16 +47,20 @@ const VendorCommunicationDialog: React.FC<VendorCommunicationDialogProps> = ({
       setIsLoading(true);
       const { data, error } = await supabase
         .from('vendor_communications')
-        .select(`
-          *,
-          sender:sender_id(id, email),
-          receiver:receiver_id(id, email)
-        `)
+        .select('*')
         .eq('vendor_id', vendor.id!)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setCommunications(data || []);
+      
+      // Transform the data to match our interface
+      const transformedData: VendorCommunication[] = (data || []).map(item => ({
+        ...item,
+        sender_type: item.sender_type as 'admin' | 'vendor',
+        attachments: item.attachments ? (Array.isArray(item.attachments) ? item.attachments : []) : undefined,
+      }));
+      
+      setCommunications(transformedData);
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -155,7 +159,7 @@ const VendorCommunicationDialog: React.FC<VendorCommunicationDialogProps> = ({
                         </div>
                         <div className="flex items-center gap-1 text-xs text-gray-500">
                           <Clock className="w-3 h-3" />
-                          {formatDistanceToNow(new Date(comm.created_at!), { addSuffix: true })}
+                          {comm.created_at && formatDistanceToNow(new Date(comm.created_at), { addSuffix: true })}
                         </div>
                       </div>
                       

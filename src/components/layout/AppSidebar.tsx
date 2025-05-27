@@ -1,3 +1,4 @@
+
 import React from "react";
 import {
   Sheet,
@@ -17,7 +18,7 @@ import {
 import {
   BarChart,
   Building2,
-  Category,
+  Package,
   ClipboardList,
   LayoutDashboard,
   ListChecks,
@@ -51,7 +52,7 @@ const AppSidebar = () => {
     },
     {
       title: "Inventory Management",
-      icon: Category,
+      icon: Package,
       href: "/inventory",
       roles: ["admin", "procurement_officer"],
       subItems: [
@@ -117,7 +118,7 @@ const AppSidebar = () => {
         <div className="flex-1 overflow-y-auto px-3 pb-4">
           <ul className="space-y-2">
             {menuItems.map((item) => {
-              if (item.roles && !item.roles.some((role) => hasRole(role))) {
+              if (item.roles && !item.roles.some((role) => hasRole(role as any))) {
                 return null;
               }
 
@@ -184,7 +185,7 @@ const AppSidebar = () => {
           <div className="flex-1 overflow-y-auto px-3 pb-4">
             <ul className="space-y-2">
               {menuItems.map((item) => {
-                if (item.roles && !item.roles.some((role) => hasRole(role))) {
+                if (item.roles && !item.roles.some((role) => hasRole(role as any))) {
                   return null;
                 }
 
