@@ -104,7 +104,7 @@ const Dashboard = () => {
   ];
 
   return (
-    <div className="page-container">
+    <div className="space-y-6">
       <PageHeader
         title="Procurement Dashboard"
         description="Overview of procurement activities and key metrics"
