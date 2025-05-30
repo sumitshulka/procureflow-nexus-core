@@ -6,10 +6,6 @@ import { format } from "date-fns";
 import { useToast } from "@/components/ui/use-toast";
 import PageHeader from "@/components/common/PageHeader";
 import { 
-  CheckInForm, 
-  CheckOutForm, 
-  CheckOutRequestForm, 
-  TransferForm,
   DeliveryRecordDialog,
   ProductTransactionHistory
 } from "@/components/inventory";
@@ -27,13 +23,12 @@ import {
   Card,
   CardContent,
 } from "@/components/ui/card";
-import { ArrowDownToLine, ArrowUpFromLine, MoveRight, Search, Filter, Trash2, PackageCheck } from "lucide-react";
+import { Search, Filter, Trash2, PackageCheck } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { InventoryTransaction, UserRole } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface EnhancedInventoryTransaction extends InventoryTransaction {
   // These fields should already exist in the InventoryTransaction interface
@@ -43,7 +38,6 @@ const InventoryTransactions = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { hasRole } = useAuth();
-  const [activeTab, setActiveTab] = useState<string>("transactions");
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
@@ -374,10 +368,10 @@ const InventoryTransactions = () => {
   ];
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6">
       <PageHeader
         title="Inventory Transactions"
-        description="Manage inventory check-ins, check-outs, and transfers"
+        description="View and manage all inventory transactions"
       />
 
       {/* Delivery Details Dialog */}
@@ -420,138 +414,59 @@ const InventoryTransactions = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-6">
-        <TabsList className="grid grid-cols-4 w-full">
-          <TabsTrigger value="transactions">All Transactions</TabsTrigger>
-          <TabsTrigger value="check_in">
-            <ArrowDownToLine className="w-4 h-4 mr-2" />
-            Check In
-          </TabsTrigger>
-          <TabsTrigger value="check_out">
-            <ArrowUpFromLine className="w-4 h-4 mr-2" />
-            Check Out
-          </TabsTrigger>
-          <TabsTrigger value="transfer">
-            <MoveRight className="w-4 h-4 mr-2" />
-            Transfer
-          </TabsTrigger>
-        </TabsList>
+      <div className="flex flex-col md:flex-row gap-4 mb-6">
+        <div className="relative flex-1">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search by product or reference..."
+            className="pl-8"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <Filter className="h-4 w-4 text-muted-foreground" />
+          <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Filter by type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Types</SelectItem>
+              <SelectItem value="check_in">Check In</SelectItem>
+              <SelectItem value="check_out">Check Out</SelectItem>
+              <SelectItem value="transfer">Transfer</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Filter by status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Statuses</SelectItem>
+              <SelectItem value="approved">Approved</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="rejected">Rejected</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
 
-        <TabsContent value="transactions" className="space-y-6">
-          <div className="flex flex-col md:flex-row gap-4 mb-6">
-            <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by product or reference..."
-                className="pl-8"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-muted-foreground" />
-              <Select value={typeFilter} onValueChange={setTypeFilter}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Filter by type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="check_in">Check In</SelectItem>
-                  <SelectItem value="check_out">Check Out</SelectItem>
-                  <SelectItem value="transfer">Transfer</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Filter by status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="approved">Approved</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="rejected">Rejected</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <Card>
-            <CardContent className="pt-6">
-              {isLoading ? (
-                <div className="flex justify-center py-8">Loading transactions...</div>
-              ) : (
-                <DataTable
-                  columns={columns}
-                  data={filteredTransactions}
-                  emptyMessage="No inventory transactions found."
-                  showDetailPanel={showTransactionHistory}
-                  detailPanelTitle="Transaction History"
-                  detailPanelDescription="View all transactions for this product"
-                />
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="check_in">
-          <Card>
-            <CardContent className="pt-6">
-              <CheckInForm
-                onSuccess={() => {
-                  toast({
-                    title: "Success",
-                    description: "Inventory check-in completed successfully",
-                  });
-                  queryClient.invalidateQueries({
-                    queryKey: ["inventory_transactions"],
-                  });
-                  queryClient.invalidateQueries({
-                    queryKey: ["inventory_items"],
-                  });
-                  setActiveTab("transactions");
-                }}
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="check_out">
-          <Card>
-            <CardContent className="pt-6">
-              <CheckOutRequestForm
-                onSuccess={() => {
-                  queryClient.invalidateQueries({
-                    queryKey: ["inventory_transactions"],
-                  });
-                  setActiveTab("transactions");
-                }}
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="transfer">
-          <Card>
-            <CardContent className="pt-6">
-              <TransferForm
-                onSuccess={() => {
-                  toast({
-                    title: "Success",
-                    description: "Inventory transfer completed successfully",
-                  });
-                  queryClient.invalidateQueries({
-                    queryKey: ["inventory_transactions"],
-                  });
-                  queryClient.invalidateQueries({
-                    queryKey: ["inventory_items"],
-                  });
-                  setActiveTab("transactions");
-                }}
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+      <Card>
+        <CardContent className="pt-6">
+          {isLoading ? (
+            <div className="flex justify-center py-8">Loading transactions...</div>
+          ) : (
+            <DataTable
+              columns={columns}
+              data={filteredTransactions}
+              emptyMessage="No inventory transactions found."
+              showDetailPanel={showTransactionHistory}
+              detailPanelTitle="Transaction History"
+              detailPanelDescription="View all transactions for this product"
+            />
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };

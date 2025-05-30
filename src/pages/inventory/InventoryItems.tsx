@@ -260,7 +260,7 @@ const InventoryItems = () => {
   };
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6">
       <PageHeader
         title="Inventory Items"
         description="View and manage inventory across all warehouses"
