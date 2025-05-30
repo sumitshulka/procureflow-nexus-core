@@ -10,7 +10,7 @@ import {
   Card,
   CardContent,
 } from "@/components/ui/card";
-import { AlertTriangle, CheckCircle2 } from "lucide-react";
+import { ArrowUpDown, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -260,7 +260,7 @@ const InventoryItems = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="page-container">
       <PageHeader
         title="Inventory Items"
         description="View and manage inventory across all warehouses"

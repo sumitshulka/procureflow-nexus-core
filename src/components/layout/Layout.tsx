@@ -3,6 +3,7 @@ import { Outlet } from "react-router-dom";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import AppHeader from "@/components/layout/AppHeader";
 import AppSidebar from "@/components/layout/AppSidebar";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const Layout = () => {
   return (
@@ -12,11 +13,11 @@ const Layout = () => {
         <div className="flex flex-1">
           <AppSidebar />
           <SidebarInset className="flex-1 bg-gray-50">
-            <main className="h-[calc(100vh-4rem)] overflow-y-auto scroll-smooth">
-              <div className="min-h-full p-6">
+            <ScrollArea className="h-[calc(100vh-4rem)]">
+              <div className="p-6 pt-20">
                 <Outlet />
               </div>
-            </main>
+            </ScrollArea>
           </SidebarInset>
         </div>
       </div>
