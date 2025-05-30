@@ -13,11 +13,11 @@ const Layout = () => {
         <div className="flex flex-1">
           <AppSidebar />
           <SidebarInset className="flex-1 bg-gray-50">
-            <ScrollArea className="h-[calc(100vh-4rem)]">
+            <div className="h-[calc(100vh-4rem)] overflow-auto">
               <main className="p-6">
                 <Outlet />
               </main>
-            </ScrollArea>
+            </div>
           </SidebarInset>
         </div>
       </div>
