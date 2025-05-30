@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,7 +13,6 @@ import {
   DeliveryRecordDialog,
   ProductTransactionHistory
 } from "@/components/inventory";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,6 +33,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { InventoryTransaction, UserRole } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface EnhancedInventoryTransaction extends InventoryTransaction {
   // These fields should already exist in the InventoryTransaction interface
@@ -375,7 +374,7 @@ const InventoryTransactions = () => {
   ];
 
   return (
-    <div className="page-container">
+    <div className="space-y-6 p-6">
       <PageHeader
         title="Inventory Transactions"
         description="Manage inventory check-ins, check-outs, and transfers"
