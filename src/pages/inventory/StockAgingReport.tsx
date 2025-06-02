@@ -388,7 +388,7 @@ const StockAgingReport = () => {
                     <SelectItem value="Fresh">Fresh (≤30 days)</SelectItem>
                     <SelectItem value="Normal">Normal (31-90 days)</SelectItem>
                     <SelectItem value="Slow Moving">Slow Moving (91-180 days)</SelectItem>
-                    <SelectItem value="Stagnant">Stagnant (>180 days)</SelectItem>
+                    <SelectItem value="Stagnant">Stagnant ({">"}180 days)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
