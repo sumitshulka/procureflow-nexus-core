@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -93,9 +92,10 @@ const InventoryValuationReport = () => {
         query = query.lte("last_updated", filters.endDate + "T23:59:59");
       }
 
-      const { data, error } = await query.order("product.name");
+      const { data, error } = await query;
 
       if (error) {
+        console.error("Database query error:", error);
         toast({
           title: "Error",
           description: "Failed to fetch inventory valuation data",
@@ -138,6 +138,9 @@ const InventoryValuationReport = () => {
           item.category_name === filters.categoryId
         );
       }
+
+      // Sort by product name
+      transformedData.sort((a, b) => a.product_name.localeCompare(b.product_name));
 
       return transformedData as ValuationReportData[];
     },
