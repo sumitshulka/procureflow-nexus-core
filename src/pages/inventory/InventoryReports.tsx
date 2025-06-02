@@ -1,9 +1,9 @@
 
 import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import PageHeader from "@/components/common/PageHeader";
 import InventoryValuationReport from "./InventoryValuationReport";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import StockMovementReport from "./StockMovementReport";
+import StockAgingReport from "./StockAgingReport";
 
 const InventoryReports = () => {
   return (
@@ -27,35 +27,11 @@ const InventoryReports = () => {
         </TabsContent>
         
         <TabsContent value="movement">
-          <Card>
-            <CardHeader>
-              <CardTitle>Stock Movement Report</CardTitle>
-              <CardDescription>
-                Track inventory movements and transactions over time
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                Stock movement report coming soon...
-              </div>
-            </CardContent>
-          </Card>
+          <StockMovementReport />
         </TabsContent>
         
         <TabsContent value="aging">
-          <Card>
-            <CardHeader>
-              <CardTitle>Stock Aging Report</CardTitle>
-              <CardDescription>
-                Analyze inventory aging and identify slow-moving items
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                Stock aging report coming soon...
-              </div>
-            </CardContent>
-          </Card>
+          <StockAgingReport />
         </TabsContent>
       </Tabs>
     </div>
