@@ -58,8 +58,8 @@ const InventoryValuationReport = () => {
   const [filters, setFilters] = useState<FilterState>({
     startDate: "",
     endDate: "",
-    classificationId: "",
-    categoryId: "",
+    classificationId: "all",
+    categoryId: "all",
     productName: "",
   });
 
@@ -127,13 +127,13 @@ const InventoryValuationReport = () => {
         );
       }
 
-      if (filters.classificationId) {
+      if (filters.classificationId && filters.classificationId !== "all") {
         transformedData = transformedData.filter((item: ValuationReportData) =>
           item.classification_name === filters.classificationId
         );
       }
 
-      if (filters.categoryId) {
+      if (filters.categoryId && filters.categoryId !== "all") {
         transformedData = transformedData.filter((item: ValuationReportData) =>
           item.category_name === filters.categoryId
         );
@@ -181,8 +181,8 @@ const InventoryValuationReport = () => {
     setFilters({
       startDate: "",
       endDate: "",
-      classificationId: "",
-      categoryId: "",
+      classificationId: "all",
+      categoryId: "all",
       productName: "",
     });
   };
@@ -330,7 +330,7 @@ const InventoryValuationReport = () => {
                     <SelectValue placeholder="All Classifications" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Classifications</SelectItem>
+                    <SelectItem value="all">All Classifications</SelectItem>
                     {classifications.map((classification) => (
                       <SelectItem key={classification.id} value={classification.name}>
                         {classification.name}
@@ -350,7 +350,7 @@ const InventoryValuationReport = () => {
                     <SelectValue placeholder="All Categories" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Categories</SelectItem>
+                    <SelectItem value="all">All Categories</SelectItem>
                     {categories.map((category) => (
                       <SelectItem key={category.id} value={category.name}>
                         {category.name}
