@@ -490,6 +490,36 @@ export type Database = {
         }
         Relationships: []
       }
+      product_classifications: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       product_history: {
         Row: {
           changed_at: string
@@ -532,6 +562,7 @@ export type Database = {
         Row: {
           category_id: string
           classification: string
+          classification_id: string | null
           created_at: string | null
           created_by: string | null
           current_price: number | null
@@ -546,6 +577,7 @@ export type Database = {
         Insert: {
           category_id: string
           classification: string
+          classification_id?: string | null
           created_at?: string | null
           created_by?: string | null
           current_price?: number | null
@@ -560,6 +592,7 @@ export type Database = {
         Update: {
           category_id?: string
           classification?: string
+          classification_id?: string | null
           created_at?: string | null
           created_by?: string | null
           current_price?: number | null
@@ -577,6 +610,13 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_classification_id_fkey"
+            columns: ["classification_id"]
+            isOneToOne: false
+            referencedRelation: "product_classifications"
             referencedColumns: ["id"]
           },
           {
