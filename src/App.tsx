@@ -1,8 +1,10 @@
+
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import Dashboard from "@/pages/Dashboard";
 import ProductCatalog from "@/pages/ProductCatalog";
 import ProductDetail from "@/pages/ProductDetail";
+import AddProduct from "@/pages/AddProduct";
 import InventoryItems from "@/pages/inventory/InventoryItems";
 import InventoryTransactions from "@/pages/inventory/InventoryTransactions";
 import InventoryIndex from "@/pages/inventory/InventoryIndex";
@@ -45,6 +47,7 @@ function App() {
             <Route path="/" element={<Layout />}>
               <Route index element={<Dashboard />} />
               <Route path="/catalog" element={<ProductCatalog />} />
+              <Route path="/add-product" element={<AddProduct />} />
               <Route path="/product/:id" element={<ProductDetail />} />
               <Route path="/inventory" element={<InventoryIndex />}>
                 <Route index element={<InventoryItems />} />
