@@ -28,7 +28,7 @@ interface Product {
   };
   created_by?: {
     full_name: string;
-  };
+  } | null;
   created_at: string;
 }
 
@@ -62,7 +62,20 @@ const ProductDetail = () => {
         throw error;
       }
 
-      return data as Product;
+      // Transform the data to match our interface
+      return {
+        id: data.id,
+        name: data.name,
+        description: data.description,
+        classification: data.classification,
+        current_price: data.current_price,
+        currency: data.currency,
+        tags: data.tags || [],
+        category: data.category,
+        unit: data.unit,
+        created_by: data.created_by,
+        created_at: data.created_at,
+      } as Product;
     },
     enabled: !!id,
   });

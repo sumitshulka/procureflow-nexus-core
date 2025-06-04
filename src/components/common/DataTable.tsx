@@ -17,7 +17,7 @@ export interface DataTableProps {
   columns: Array<{
     id: string;
     header: string;
-    cell: (row: any) => React.ReactNode;
+    cell: (row: any, index?: number) => React.ReactNode;
   }>;
   data: Array<any>;
   emptyMessage?: string;
@@ -85,7 +85,7 @@ const DataTable = ({
               <TableRow key={`row-${i}`}>
                 {columns.map((column) => (
                   <TableCell key={`${i}-${column.id}`}>
-                    {column.cell(row)}
+                    {column.cell(row, i)}
                   </TableCell>
                 ))}
                 {showDetailPanel && (
