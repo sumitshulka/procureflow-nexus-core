@@ -66,10 +66,8 @@ const ProductDetail = () => {
       const createdByData = data.created_by;
       let createdBy: { full_name: string } | null = null;
       
-      if (createdByData !== null && 
-          createdByData !== undefined &&
-          typeof createdByData === 'object' && 
-          'full_name' in createdByData) {
+      // Properly handle null check with explicit type narrowing
+      if (createdByData && typeof createdByData === 'object' && 'full_name' in createdByData) {
         createdBy = { full_name: createdByData.full_name };
       }
 
