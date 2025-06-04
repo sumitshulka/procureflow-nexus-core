@@ -1,3 +1,4 @@
+
 import React from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -63,6 +64,15 @@ const ProductDetail = () => {
 
       // Transform the data to match our interface
       const createdByData = data.created_by;
+      let createdBy: { full_name: string } | null = null;
+      
+      if (createdByData !== null && 
+          typeof createdByData === 'object' && 
+          createdByData !== undefined &&
+          'full_name' in createdByData) {
+        createdBy = { full_name: createdByData.full_name };
+      }
+
       const transformedProduct: Product = {
         id: data.id,
         name: data.name,
@@ -73,12 +83,7 @@ const ProductDetail = () => {
         tags: data.tags || [],
         category: data.category,
         unit: data.unit,
-        created_by: createdByData !== null && 
-                   typeof createdByData === 'object' && 
-                   createdByData !== undefined &&
-                   'full_name' in createdByData 
-          ? { full_name: createdByData.full_name } 
-          : null,
+        created_by: createdBy,
         created_at: data.created_at,
       };
 
