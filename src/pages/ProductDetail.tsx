@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -62,8 +61,8 @@ const ProductDetail = () => {
         throw error;
       }
 
-      // Transform the data to match our interface
-      return {
+      // Transform the data to match our interface, handling potential null values
+      const transformedProduct: Product = {
         id: data.id,
         name: data.name,
         description: data.description,
@@ -73,9 +72,13 @@ const ProductDetail = () => {
         tags: data.tags || [],
         category: data.category,
         unit: data.unit,
-        created_by: data.created_by,
+        created_by: data.created_by && typeof data.created_by === 'object' && 'full_name' in data.created_by 
+          ? data.created_by 
+          : null,
         created_at: data.created_at,
-      } as Product;
+      };
+
+      return transformedProduct;
     },
     enabled: !!id,
   });
