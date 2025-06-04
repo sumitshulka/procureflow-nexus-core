@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import DataTable from "@/components/common/DataTable";
 import { format } from "date-fns";
-import { Search, TrendingUp } from "lucide-react";
+import { Search } from "lucide-react";
 
 interface PriceHistoryData {
   id: string;
@@ -142,7 +142,6 @@ const ProductPriceHistory = () => {
       <PageHeader
         title="Product Price History"
         description="Track price changes and procurement history for all products"
-        icon={<TrendingUp className="h-6 w-6" />}
       />
 
       <div className="flex flex-col md:flex-row gap-4 mb-6">
