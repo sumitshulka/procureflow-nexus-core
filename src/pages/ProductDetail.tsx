@@ -73,8 +73,9 @@ const ProductDetail = () => {
         tags: data.tags || [],
         category: data.category,
         unit: data.unit,
-        created_by: createdByData && 
+        created_by: createdByData !== null && 
                    typeof createdByData === 'object' && 
+                   createdByData !== undefined &&
                    'full_name' in createdByData 
           ? { full_name: createdByData.full_name } 
           : null,
