@@ -275,6 +275,7 @@ export type Database = {
       inventory_transactions: {
         Row: {
           approval_status: string | null
+          currency: string | null
           delivery_details: Json | null
           delivery_status: string | null
           id: string
@@ -287,11 +288,13 @@ export type Database = {
           target_warehouse_id: string | null
           transaction_date: string | null
           type: string
+          unit_price: number | null
           updated_at: string | null
           user_id: string
         }
         Insert: {
           approval_status?: string | null
+          currency?: string | null
           delivery_details?: Json | null
           delivery_status?: string | null
           id?: string
@@ -304,11 +307,13 @@ export type Database = {
           target_warehouse_id?: string | null
           transaction_date?: string | null
           type: string
+          unit_price?: number | null
           updated_at?: string | null
           user_id: string
         }
         Update: {
           approval_status?: string | null
+          currency?: string | null
           delivery_details?: Json | null
           delivery_status?: string | null
           id?: string
@@ -321,6 +326,7 @@ export type Database = {
           target_warehouse_id?: string | null
           transaction_date?: string | null
           type?: string
+          unit_price?: number | null
           updated_at?: string | null
           user_id?: string
         }

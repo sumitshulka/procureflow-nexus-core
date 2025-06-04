@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
@@ -37,6 +37,8 @@ const checkInSchema = z.object({
   }, "Quantity must be a positive number"),
   reference: z.string().optional(),
   notes: z.string().optional(),
+  unit_price: z.string().optional(),
+  currency: z.string().default("USD"),
 });
 
 type CheckInFormValues = z.infer<typeof checkInSchema>;
@@ -58,6 +60,7 @@ interface CheckInFormProps {
 const CheckInForm: React.FC<CheckInFormProps> = ({ onSuccess }) => {
   const { toast } = useToast();
   const { userData } = useAuth();
+  const [showPriceFields, setShowPriceFields] = useState(false);
 
   // Define form
   const form = useForm<CheckInFormValues>({
@@ -68,8 +71,18 @@ const CheckInForm: React.FC<CheckInFormProps> = ({ onSuccess }) => {
       quantity: "",
       reference: "",
       notes: "",
+      unit_price: "",
+      currency: "USD",
     },
   });
+
+  // Watch reference field to show/hide price fields
+  const referenceValue = form.watch("reference");
+  
+  React.useEffect(() => {
+    // Show price fields if no reference is provided or reference is empty
+    setShowPriceFields(!referenceValue || referenceValue.trim() === "");
+  }, [referenceValue]);
 
   // Fetch products
   const { data: products = [], isLoading: isLoadingProducts } = useQuery({
@@ -117,11 +130,33 @@ const CheckInForm: React.FC<CheckInFormProps> = ({ onSuccess }) => {
     },
   });
 
+  // Fetch organization settings for default currency
+  const { data: orgSettings } = useQuery({
+    queryKey: ["organization_settings"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("organization_settings")
+        .select("base_currency")
+        .single();
+      
+      if (error && error.code !== 'PGRST116') {
+        throw error;
+      }
+      
+      return data;
+    },
+  });
+
   // Create inventory check-in mutation
   const checkInMutation = useMutation({
     mutationFn: async (values: CheckInFormValues) => {
       if (!userData?.id) {
         throw new Error("User not authenticated");
+      }
+      
+      // Validate price input if no reference is provided
+      if (showPriceFields && (!values.unit_price || parseFloat(values.unit_price) <= 0)) {
+        throw new Error("Unit price is required when no purchase order reference is provided");
       }
       
       // Create the inventory transaction
@@ -133,6 +168,8 @@ const CheckInForm: React.FC<CheckInFormProps> = ({ onSuccess }) => {
         reference: values.reference || null,
         notes: values.notes || null,
         user_id: userData.id,
+        unit_price: showPriceFields && values.unit_price ? parseFloat(values.unit_price) : null,
+        currency: values.currency || orgSettings?.base_currency || "USD",
       };
       
       const { data: transactionData, error: transactionError } = await supabase
@@ -286,11 +323,64 @@ const CheckInForm: React.FC<CheckInFormProps> = ({ onSuccess }) => {
                   value={field.value || ""}
                 />
               </FormControl>
-              <FormDescription>Optional reference information</FormDescription>
+              <FormDescription>Optional reference information (PO number, invoice, etc.)</FormDescription>
               <FormMessage />
             </FormItem>
           )}
         />
+        
+        {showPriceFields && (
+          <>
+            <FormField
+              control={form.control}
+              name="unit_price"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Unit Price *</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      placeholder="Enter unit price"
+                      {...field}
+                      value={field.value || ""}
+                    />
+                  </FormControl>
+                  <FormDescription>Required when no purchase order reference is provided</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="currency"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Currency</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select currency" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="USD">USD</SelectItem>
+                      <SelectItem value="EUR">EUR</SelectItem>
+                      <SelectItem value="GBP">GBP</SelectItem>
+                      <SelectItem value="INR">INR</SelectItem>
+                      <SelectItem value="JPY">JPY</SelectItem>
+                      <SelectItem value="CNY">CNY</SelectItem>
+                      <SelectItem value="CAD">CAD</SelectItem>
+                      <SelectItem value="AUD">AUD</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </>
+        )}
+        
         <FormField
           control={form.control}
           name="notes"

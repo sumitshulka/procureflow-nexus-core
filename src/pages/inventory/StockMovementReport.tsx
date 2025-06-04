@@ -1,150 +1,39 @@
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
-import PageHeader from "@/components/common/PageHeader";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Download, Filter, TrendingUp, TrendingDown } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import DataTable from "@/components/common/DataTable";
 import { format } from "date-fns";
+import { Search, Download, ArrowUpRight, ArrowDownRight, ArrowLeftRight } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
-interface StockMovementData {
+interface StockMovement {
   id: string;
-  transaction_date: string;
   type: string;
   product_name: string;
-  warehouse_name: string;
   quantity: number;
+  transaction_date: string;
   reference: string;
-  user_email: string;
+  source_warehouse: string;
+  target_warehouse: string;
+  user_name: string;
   notes: string;
-  approval_status: string;
-}
-
-interface MovementFilterState {
-  startDate: string;
-  endDate: string;
-  transactionType: string;
-  warehouseId: string;
-  productName: string;
 }
 
 const StockMovementReport = () => {
   const { toast } = useToast();
-  const [filters, setFilters] = useState<MovementFilterState>({
-    startDate: "",
-    endDate: "",
-    transactionType: "all",
-    warehouseId: "all",
-    productName: "",
-  });
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedWarehouse, setSelectedWarehouse] = useState("all");
+  const [selectedProduct, setSelectedProduct] = useState("all");
+  const [movementType, setMovementType] = useState("all");
 
-  // Fetch stock movement data
-  const { data: movementData = [], isLoading: isLoadingMovement, refetch } = useQuery({
-    queryKey: ["stock_movement_report", filters],
-    queryFn: async () => {
-      let query = supabase
-        .from("inventory_transactions")
-        .select(`
-          id,
-          transaction_date,
-          type,
-          quantity,
-          reference,
-          notes,
-          approval_status,
-          product:product_id(name),
-          source_warehouse:source_warehouse_id(name),
-          target_warehouse:target_warehouse_id(name),
-          user:user_id(email)
-        `)
-        .order("transaction_date", { ascending: false });
-
-      // Apply date filters
-      if (filters.startDate) {
-        query = query.gte("transaction_date", filters.startDate);
-      }
-      if (filters.endDate) {
-        query = query.lte("transaction_date", filters.endDate + "T23:59:59");
-      }
-
-      // Apply transaction type filter
-      if (filters.transactionType && filters.transactionType !== "all") {
-        query = query.eq("type", filters.transactionType);
-      }
-
-      const { data, error } = await query;
-
-      if (error) {
-        console.error("Database query error:", error);
-        toast({
-          title: "Error",
-          description: "Failed to fetch stock movement data",
-          variant: "destructive",
-        });
-        throw error;
-      }
-
-      // Transform data
-      let transformedData = data
-        .filter((item: any) => item.product)
-        .map((item: any) => ({
-          id: item.id,
-          transaction_date: item.transaction_date,
-          type: item.type,
-          product_name: item.product.name,
-          warehouse_name: item.source_warehouse?.name || item.target_warehouse?.name || "N/A",
-          quantity: item.quantity,
-          reference: item.reference || "",
-          user_email: item.user?.email || "System",
-          notes: item.notes || "",
-          approval_status: item.approval_status || "N/A",
-        }));
-
-      // Apply additional filters
-      if (filters.productName) {
-        transformedData = transformedData.filter((item: StockMovementData) =>
-          item.product_name.toLowerCase().includes(filters.productName.toLowerCase())
-        );
-      }
-
-      if (filters.warehouseId && filters.warehouseId !== "all") {
-        transformedData = transformedData.filter((item: StockMovementData) =>
-          item.warehouse_name === filters.warehouseId
-        );
-      }
-
-      return transformedData as StockMovementData[];
-    },
-  });
-
-  // Fetch warehouses for filter
+  // Fetch warehouses for filtering
   const { data: warehouses = [] } = useQuery({
-    queryKey: ["warehouses_for_filter"],
+    queryKey: ["warehouses_for_movement_report"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("warehouses")
@@ -157,266 +46,299 @@ const StockMovementReport = () => {
     },
   });
 
-  const handleFilterChange = (key: keyof MovementFilterState, value: string) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
+  // Fetch products for filtering
+  const { data: products = [] } = useQuery({
+    queryKey: ["products_for_movement_report"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("products")
+        .select("id, name")
+        .eq("is_active", true)
+        .order("name");
+      
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Fetch stock movements
+  const { data: stockMovements = [], isLoading, error } = useQuery({
+    queryKey: ["stock_movements"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("inventory_transactions")
+        .select(`
+          id,
+          type,
+          quantity,
+          transaction_date,
+          reference,
+          notes,
+          product:product_id(name),
+          source_warehouse:source_warehouse_id(name),
+          target_warehouse:target_warehouse_id(name),
+          user:user_id(full_name)
+        `)
+        .order("transaction_date", { ascending: false });
+
+      if (error) {
+        console.error("Error fetching stock movements:", error);
+        throw error;
+      }
+
+      // Transform the data to match our interface
+      return (data || []).map((item: any) => ({
+        id: item.id,
+        type: item.type,
+        product_name: item.product?.name || "Unknown Product",
+        quantity: item.quantity,
+        transaction_date: item.transaction_date,
+        reference: item.reference || "-",
+        source_warehouse: item.source_warehouse?.name || "-",
+        target_warehouse: item.target_warehouse?.name || "-",
+        user_name: item.user?.full_name || "Unknown User",
+        notes: item.notes || "-",
+      })) as StockMovement[];
+    },
+    retry: 1,
+    staleTime: 30000, // Cache for 30 seconds to prevent frequent refetches
+  });
+
+  // Filter stock movements based on search criteria
+  const filteredMovements = useMemo(() => {
+    if (!stockMovements) return [];
+    
+    return stockMovements.filter((movement) => {
+      const matchesSearch = !searchTerm || 
+        movement.product_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        movement.reference.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesWarehouse = selectedWarehouse === "all" || 
+        movement.source_warehouse.includes(selectedWarehouse) ||
+        movement.target_warehouse.includes(selectedWarehouse);
+      
+      const matchesProduct = selectedProduct === "all" || 
+        movement.product_name === selectedProduct;
+      
+      const matchesType = movementType === "all" || movement.type === movementType;
+      
+      return matchesSearch && matchesWarehouse && matchesProduct && matchesType;
+    });
+  }, [stockMovements, searchTerm, selectedWarehouse, selectedProduct, movementType]);
+
+  const getMovementIcon = (type: string) => {
+    switch (type) {
+      case "check_in":
+        return <ArrowDownRight className="h-4 w-4 text-green-600" />;
+      case "check_out":
+        return <ArrowUpRight className="h-4 w-4 text-red-600" />;
+      case "transfer":
+        return <ArrowLeftRight className="h-4 w-4 text-blue-600" />;
+      default:
+        return <ArrowLeftRight className="h-4 w-4 text-gray-600" />;
+    }
   };
 
-  const clearFilters = () => {
-    setFilters({
-      startDate: "",
-      endDate: "",
-      transactionType: "all",
-      warehouseId: "all",
-      productName: "",
+  const columns = [
+    {
+      id: "transaction_date",
+      header: "Date",
+      cell: (row: StockMovement) => (
+        <div>{format(new Date(row.transaction_date), "MMM dd, yyyy HH:mm")}</div>
+      ),
+    },
+    {
+      id: "type",
+      header: "Type",
+      cell: (row: StockMovement) => (
+        <div className="flex items-center gap-2">
+          {getMovementIcon(row.type)}
+          <span className="capitalize">{row.type.replace("_", " ")}</span>
+        </div>
+      ),
+    },
+    {
+      id: "product_name",
+      header: "Product",
+      cell: (row: StockMovement) => <div className="font-medium">{row.product_name}</div>,
+    },
+    {
+      id: "quantity",
+      header: "Quantity",
+      cell: (row: StockMovement) => <div className="text-center">{row.quantity}</div>,
+    },
+    {
+      id: "warehouses",
+      header: "Movement",
+      cell: (row: StockMovement) => (
+        <div className="text-sm">
+          {row.type === "check_in" && (
+            <span>→ {row.target_warehouse}</span>
+          )}
+          {row.type === "check_out" && (
+            <span>{row.source_warehouse} →</span>
+          )}
+          {row.type === "transfer" && (
+            <span>{row.source_warehouse} → {row.target_warehouse}</span>
+          )}
+        </div>
+      ),
+    },
+    {
+      id: "reference",
+      header: "Reference",
+      cell: (row: StockMovement) => <div>{row.reference}</div>,
+    },
+    {
+      id: "user_name",
+      header: "User",
+      cell: (row: StockMovement) => <div>{row.user_name}</div>,
+    },
+    {
+      id: "notes",
+      header: "Notes",
+      cell: (row: StockMovement) => (
+        <div className="max-w-xs truncate">{row.notes}</div>
+      ),
+    },
+  ];
+
+  const exportToCSV = () => {
+    if (filteredMovements.length === 0) {
+      toast({
+        title: "No Data",
+        description: "No stock movements to export",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const headers = ["Date", "Type", "Product", "Quantity", "From", "To", "Reference", "User", "Notes"];
+    const csvContent = [
+      headers.join(","),
+      ...filteredMovements.map(movement => [
+        format(new Date(movement.transaction_date), "yyyy-MM-dd HH:mm"),
+        movement.type,
+        `"${movement.product_name}"`,
+        movement.quantity,
+        `"${movement.source_warehouse}"`,
+        `"${movement.target_warehouse}"`,
+        `"${movement.reference}"`,
+        `"${movement.user_name}"`,
+        `"${movement.notes}"`
+      ].join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `stock-movement-report-${format(new Date(), "yyyy-MM-dd")}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+
+    toast({
+      title: "Success",
+      description: "Stock movement report exported successfully",
     });
   };
 
-  const applyFilters = () => {
-    refetch();
-  };
-
-  const getTransactionIcon = (type: string) => {
-    switch (type) {
-      case 'stock_in':
-      case 'check_in':
-        return <TrendingUp className="h-4 w-4 text-green-600" />;
-      case 'stock_out':
-      case 'check_out':
-        return <TrendingDown className="h-4 w-4 text-red-600" />;
-      default:
-        return <div className="h-4 w-4" />;
-    }
-  };
-
-  const getTransactionBadgeVariant = (type: string) => {
-    switch (type) {
-      case 'stock_in':
-      case 'check_in':
-        return "default";
-      case 'stock_out':
-      case 'check_out':
-        return "destructive";
-      case 'transfer':
-        return "secondary";
-      default:
-        return "outline";
-    }
-  };
-
-  const exportToCSV = () => {
-    try {
-      const headers = ["Date", "Type", "Product", "Warehouse", "Quantity", "Reference", "User", "Status", "Notes"];
-      const csvContent = [
-        headers.join(","),
-        ...movementData.map(item => [
-          format(new Date(item.transaction_date), "yyyy-MM-dd HH:mm:ss"),
-          item.type,
-          `"${item.product_name}"`,
-          `"${item.warehouse_name}"`,
-          item.quantity,
-          `"${item.reference}"`,
-          `"${item.user_email}"`,
-          item.approval_status,
-          `"${item.notes}"`
-        ].join(","))
-      ].join("\n");
-
-      const blob = new Blob([csvContent], { type: "text/csv" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `stock-movement-report-${format(new Date(), "yyyy-MM-dd")}.csv`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-
-      toast({
-        title: "Success",
-        description: "Report exported successfully",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to export report",
-        variant: "destructive",
-      });
-    }
-  };
+  if (error) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Stock Movement Report</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8 text-red-600">
+            Error loading stock movements. Please try again later.
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
-    <div className="page-container">
-      <PageHeader
-        title="Stock Movement Report"
-        description="Track inventory movements and transactions over time"
-        actions={
-          <Button onClick={exportToCSV} disabled={movementData.length === 0}>
-            <Download className="mr-2 h-4 w-4" />
+    <Card>
+      <CardHeader>
+        <CardTitle>Stock Movement Report</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Filters */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search products, references..."
+              className="pl-8"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          
+          <Select value={movementType} onValueChange={setMovementType}>
+            <SelectTrigger>
+              <SelectValue placeholder="Movement Type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Types</SelectItem>
+              <SelectItem value="check_in">Check In</SelectItem>
+              <SelectItem value="check_out">Check Out</SelectItem>
+              <SelectItem value="transfer">Transfer</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={selectedWarehouse} onValueChange={setSelectedWarehouse}>
+            <SelectTrigger>
+              <SelectValue placeholder="Warehouse" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Warehouses</SelectItem>
+              {warehouses.map((warehouse) => (
+                <SelectItem key={warehouse.id} value={warehouse.name}>
+                  {warehouse.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={selectedProduct} onValueChange={setSelectedProduct}>
+            <SelectTrigger>
+              <SelectValue placeholder="Product" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Products</SelectItem>
+              {products.map((product) => (
+                <SelectItem key={product.id} value={product.name}>
+                  {product.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Button onClick={exportToCSV} variant="outline" className="w-full">
+            <Download className="h-4 w-4 mr-2" />
             Export CSV
           </Button>
-        }
-      />
-
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Filters Sidebar */}
-        <div className="lg:col-span-1">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Filter className="mr-2 h-4 w-4" />
-                Filters
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="startDate">Start Date</Label>
-                <Input
-                  id="startDate"
-                  type="date"
-                  value={filters.startDate}
-                  onChange={(e) => handleFilterChange("startDate", e.target.value)}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="endDate">End Date</Label>
-                <Input
-                  id="endDate"
-                  type="date"
-                  value={filters.endDate}
-                  onChange={(e) => handleFilterChange("endDate", e.target.value)}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="transactionType">Transaction Type</Label>
-                <Select
-                  value={filters.transactionType}
-                  onValueChange={(value) => handleFilterChange("transactionType", value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="All Types" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Types</SelectItem>
-                    <SelectItem value="stock_in">Stock In</SelectItem>
-                    <SelectItem value="stock_out">Stock Out</SelectItem>
-                    <SelectItem value="check_in">Check In</SelectItem>
-                    <SelectItem value="check_out">Check Out</SelectItem>
-                    <SelectItem value="transfer">Transfer</SelectItem>
-                    <SelectItem value="adjustment">Adjustment</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="warehouse">Warehouse</Label>
-                <Select
-                  value={filters.warehouseId}
-                  onValueChange={(value) => handleFilterChange("warehouseId", value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="All Warehouses" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Warehouses</SelectItem>
-                    {warehouses.map((warehouse) => (
-                      <SelectItem key={warehouse.id} value={warehouse.name}>
-                        {warehouse.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="productName">Product Name</Label>
-                <Input
-                  id="productName"
-                  placeholder="Search products..."
-                  value={filters.productName}
-                  onChange={(e) => handleFilterChange("productName", e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-2 pt-4">
-                <Button onClick={applyFilters} className="w-full">
-                  Apply Filters
-                </Button>
-                <Button onClick={clearFilters} variant="outline" className="w-full">
-                  Clear Filters
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
         </div>
 
-        {/* Report Content */}
-        <div className="lg:col-span-3">
-          <Card>
-            <CardHeader>
-              <CardTitle>Stock Movement Summary</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isLoadingMovement ? (
-                <div className="flex justify-center py-8">Loading movement data...</div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Product</TableHead>
-                        <TableHead>Warehouse</TableHead>
-                        <TableHead className="text-right">Quantity</TableHead>
-                        <TableHead>Reference</TableHead>
-                        <TableHead>User</TableHead>
-                        <TableHead>Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {movementData.map((item) => (
-                        <TableRow key={item.id}>
-                          <TableCell>
-                            {format(new Date(item.transaction_date), "MMM dd, yyyy HH:mm")}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              {getTransactionIcon(item.type)}
-                              <Badge variant={getTransactionBadgeVariant(item.type)}>
-                                {item.type.replace('_', ' ').toUpperCase()}
-                              </Badge>
-                            </div>
-                          </TableCell>
-                          <TableCell className="font-medium">{item.product_name}</TableCell>
-                          <TableCell>{item.warehouse_name}</TableCell>
-                          <TableCell className="text-right font-mono">
-                            {item.quantity}
-                          </TableCell>
-                          <TableCell>{item.reference}</TableCell>
-                          <TableCell>{item.user_email}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline">
-                              {item.approval_status}
-                            </Badge>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                  {movementData.length === 0 && (
-                    <div className="text-center py-8 text-muted-foreground">
-                      No stock movement data found matching the selected filters.
-                    </div>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+        {/* Results Summary */}
+        <div className="text-sm text-muted-foreground">
+          Showing {filteredMovements.length} of {stockMovements.length} movements
         </div>
-      </div>
-    </div>
+
+        {/* Data Table */}
+        {isLoading ? (
+          <div className="flex justify-center py-8">Loading stock movements...</div>
+        ) : (
+          <DataTable
+            columns={columns}
+            data={filteredMovements}
+            emptyMessage="No stock movements found matching your criteria."
+          />
+        )}
+      </CardContent>
+    </Card>
   );
 };
 
