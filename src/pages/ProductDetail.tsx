@@ -62,6 +62,7 @@ const ProductDetail = () => {
       }
 
       // Transform the data to match our interface
+      const createdByData = data.created_by;
       const transformedProduct: Product = {
         id: data.id,
         name: data.name,
@@ -72,11 +73,10 @@ const ProductDetail = () => {
         tags: data.tags || [],
         category: data.category,
         unit: data.unit,
-        created_by: data.created_by && 
-                   data.created_by !== null && 
-                   typeof data.created_by === 'object' && 
-                   'full_name' in data.created_by 
-          ? { full_name: data.created_by.full_name } 
+        created_by: createdByData && 
+                   typeof createdByData === 'object' && 
+                   'full_name' in createdByData 
+          ? { full_name: createdByData.full_name } 
           : null,
         created_at: data.created_at,
       };
