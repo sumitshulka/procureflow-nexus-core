@@ -72,11 +72,11 @@ const ProductDetail = () => {
         tags: data.tags || [],
         category: data.category,
         unit: data.unit,
-        created_by: data.created_by && 
+        created_by: (data.created_by && 
                     typeof data.created_by === 'object' && 
                     data.created_by !== null &&
-                    'full_name' in data.created_by 
-          ? data.created_by 
+                    'full_name' in data.created_by) 
+          ? data.created_by as { full_name: string }
           : null,
         created_at: data.created_at,
       };
