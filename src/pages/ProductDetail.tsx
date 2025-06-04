@@ -1,3 +1,4 @@
+
 import React from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -65,9 +66,10 @@ const ProductDetail = () => {
       const createdByData = data.created_by;
       let createdBy: { full_name: string } | null = null;
       
-      // Use proper type guard to handle the null check
-      if (createdByData != null && typeof createdByData === 'object' && 'full_name' in createdByData) {
-        createdBy = { full_name: (createdByData as { full_name: string }).full_name };
+      // Use explicit null check and type narrowing
+      if (createdByData !== null && typeof createdByData === 'object' && 'full_name' in createdByData) {
+        const typedCreatedBy = createdByData as { full_name: string };
+        createdBy = { full_name: typedCreatedBy.full_name };
       }
 
       const transformedProduct: Product = {
