@@ -1,4 +1,3 @@
-
 // User Types
 export interface User {
   id: string;
@@ -336,6 +335,31 @@ export enum PaymentMethod {
   CREDIT_CARD = "credit_card",
   CASH = "cash",
   ONLINE = "online",
+}
+
+// Product Price History Types
+export interface ProductPriceHistory {
+  id: string;
+  productId: string;
+  price: number;
+  currency: string;
+  purchaseOrderId?: string;
+  inventoryTransactionId?: string;
+  effectiveDate: string;
+  createdBy?: string;
+  createdAt: string;
+  sourceType: 'purchase_order' | 'inventory_checkin' | 'manual';
+  notes?: string;
+}
+
+// Organization Settings Types
+export interface OrganizationSettings {
+  id: string;
+  baseCurrency: string;
+  organizationName?: string;
+  createdAt: string;
+  updatedAt: string;
+  createdBy?: string;
 }
 
 // Notification & Audit Types

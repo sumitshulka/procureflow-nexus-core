@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,14 +7,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { toast } from "sonner";
+import { useToast } from "@/hooks/use-toast";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 const formSchema = z.object({
   organizationName: z.string().min(2, {
     message: "Organization name must be at least 2 characters.",
   }),
-  currency: z.string().min(1, { 
-    message: "Please select a currency." 
+  baseCurrency: z.string().min(1, { 
+    message: "Please select a base currency." 
   }),
   dateFormat: z.string().min(1, {
     message: "Please select a date format.",
@@ -30,11 +31,31 @@ const formSchema = z.object({
 });
 
 const OrganizationSettings = () => {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Fetch current organization settings
+  const { data: orgSettings } = useQuery({
+    queryKey: ["organization_settings"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("organization_settings")
+        .select("*")
+        .single();
+      
+      if (error && error.code !== 'PGRST116') {
+        throw error;
+      }
+      
+      return data;
+    },
+  });
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      organizationName: "Acme Corporation",
-      currency: "USD",
+      organizationName: orgSettings?.organization_name || "Acme Corporation",
+      baseCurrency: orgSettings?.base_currency || "USD",
       dateFormat: "MM/DD/YYYY",
       fiscalYearStart: "January",
       timeZone: "UTC",
@@ -42,10 +63,31 @@ const OrganizationSettings = () => {
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    // In a real application, this would save to the database
-    console.log(values);
-    toast.success("Organization settings updated successfully");
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    try {
+      const { error } = await supabase
+        .from("organization_settings")
+        .upsert({
+          organization_name: values.organizationName,
+          base_currency: values.baseCurrency,
+          updated_at: new Date().toISOString(),
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Organization settings updated successfully",
+      });
+
+      queryClient.invalidateQueries({ queryKey: ["organization_settings"] });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update organization settings",
+        variant: "destructive",
+      });
+    }
   }
 
   return (
@@ -101,14 +143,14 @@ const OrganizationSettings = () => {
 
                 <FormField
                   control={form.control}
-                  name="currency"
+                  name="baseCurrency"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Default Currency</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormLabel>Base Currency *</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select currency" />
+                            <SelectValue placeholder="Select base currency" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -118,8 +160,13 @@ const OrganizationSettings = () => {
                           <SelectItem value="JPY">Japanese Yen (JPY)</SelectItem>
                           <SelectItem value="CNY">Chinese Yuan (CNY)</SelectItem>
                           <SelectItem value="INR">Indian Rupee (INR)</SelectItem>
+                          <SelectItem value="CAD">Canadian Dollar (CAD)</SelectItem>
+                          <SelectItem value="AUD">Australian Dollar (AUD)</SelectItem>
                         </SelectContent>
                       </Select>
+                      <FormDescription>
+                        This will be the default currency for all transactions and pricing.
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}

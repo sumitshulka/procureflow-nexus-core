@@ -387,6 +387,41 @@ export type Database = {
         }
         Relationships: []
       }
+      organization_settings: {
+        Row: {
+          base_currency: string
+          created_at: string
+          created_by: string | null
+          id: string
+          organization_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          base_currency?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          organization_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          base_currency?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          organization_name?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_settings_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       procurement_request_items: {
         Row: {
           created_at: string | null
@@ -558,6 +593,77 @@ export type Database = {
           },
         ]
       }
+      product_price_history: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          currency: string
+          effective_date: string
+          id: string
+          inventory_transaction_id: string | null
+          notes: string | null
+          price: number
+          product_id: string
+          purchase_order_id: string | null
+          source_type: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          effective_date?: string
+          id?: string
+          inventory_transaction_id?: string | null
+          notes?: string | null
+          price: number
+          product_id: string
+          purchase_order_id?: string | null
+          source_type: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          effective_date?: string
+          id?: string
+          inventory_transaction_id?: string | null
+          notes?: string | null
+          price?: number
+          product_id?: string
+          purchase_order_id?: string | null
+          source_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_price_history_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_price_history_inventory_transaction_id_fkey"
+            columns: ["inventory_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_price_history_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_price_history_purchase_order_id_fkey"
+            columns: ["purchase_order_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           category_id: string
@@ -565,6 +671,7 @@ export type Database = {
           classification_id: string | null
           created_at: string | null
           created_by: string | null
+          currency: string | null
           current_price: number | null
           description: string | null
           id: string
@@ -580,6 +687,7 @@ export type Database = {
           classification_id?: string | null
           created_at?: string | null
           created_by?: string | null
+          currency?: string | null
           current_price?: number | null
           description?: string | null
           id?: string
@@ -595,6 +703,7 @@ export type Database = {
           classification_id?: string | null
           created_at?: string | null
           created_by?: string | null
+          currency?: string | null
           current_price?: number | null
           description?: string | null
           id?: string
@@ -1728,6 +1837,14 @@ export type Database = {
       delete_procurement_request: {
         Args: { p_request_id: string }
         Returns: Json
+      }
+      get_latest_product_price: {
+        Args: { p_product_id: string }
+        Returns: {
+          price: number
+          currency: string
+          effective_date: string
+        }[]
       }
       has_role: {
         Args: {
