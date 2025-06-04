@@ -1,3 +1,4 @@
+
 import React from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -63,9 +64,9 @@ const ProductDetail = () => {
 
       // Handle created_by field more explicitly
       let createdBy: { full_name: string } | null = null;
-      if (data.created_by && 
+      if (data.created_by !== null && 
+          data.created_by !== undefined &&
           typeof data.created_by === 'object' && 
-          data.created_by !== null &&
           'full_name' in data.created_by) {
         createdBy = data.created_by as { full_name: string };
       }
