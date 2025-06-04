@@ -61,6 +61,15 @@ const ProductDetail = () => {
         throw error;
       }
 
+      // Handle created_by field more explicitly
+      let createdBy: { full_name: string } | null = null;
+      if (data.created_by && 
+          typeof data.created_by === 'object' && 
+          data.created_by !== null &&
+          'full_name' in data.created_by) {
+        createdBy = data.created_by as { full_name: string };
+      }
+
       // Transform the data to match our interface, handling potential null values
       const transformedProduct: Product = {
         id: data.id,
@@ -72,12 +81,7 @@ const ProductDetail = () => {
         tags: data.tags || [],
         category: data.category,
         unit: data.unit,
-        created_by: (data.created_by && 
-                    typeof data.created_by === 'object' && 
-                    data.created_by !== null &&
-                    'full_name' in data.created_by) 
-          ? data.created_by as { full_name: string }
-          : null,
+        created_by: createdBy,
         created_at: data.created_at,
       };
 
