@@ -56,7 +56,7 @@ const ProductDetail = () => {
           *,
           category:category_id(name),
           unit:unit_id(name, abbreviation),
-          created_by:created_by(full_name)
+          created_by_profile:created_by(full_name)
         `)
         .eq("id", id)
         .single();
@@ -81,7 +81,7 @@ const ProductDetail = () => {
       console.log("Raw product data from Supabase:", data);
 
       // Transform the data to match our interface
-      const createdByData = data.created_by;
+      const createdByData = data.created_by_profile;
       let createdBy: { full_name: string } | null = null;
       
       // Use a type guard function to properly narrow the type
