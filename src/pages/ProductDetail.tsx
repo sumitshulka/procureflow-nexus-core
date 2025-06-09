@@ -1,3 +1,4 @@
+
 import React from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -36,11 +37,19 @@ const ProductDetail = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const { data: product, isLoading } = useQuery({
+  console.log("ProductDetail component - Product ID:", id);
+
+  const { data: product, isLoading, error } = useQuery({
     queryKey: ["product", id],
     queryFn: async () => {
-      if (!id) throw new Error("Product ID is required");
+      console.log("Starting product fetch for ID:", id);
       
+      if (!id) {
+        console.error("Product ID is missing");
+        throw new Error("Product ID is required");
+      }
+      
+      console.log("Executing Supabase query...");
       const { data, error } = await supabase
         .from("products")
         .select(`
@@ -52,7 +61,10 @@ const ProductDetail = () => {
         .eq("id", id)
         .single();
 
+      console.log("Supabase query result:", { data, error });
+
       if (error) {
+        console.error("Supabase error:", error);
         toast({
           title: "Error",
           description: "Failed to fetch product details",
@@ -60,6 +72,13 @@ const ProductDetail = () => {
         });
         throw error;
       }
+
+      if (!data) {
+        console.error("No product data returned");
+        throw new Error("Product not found");
+      }
+
+      console.log("Raw product data from Supabase:", data);
 
       // Transform the data to match our interface
       const createdByData = data.created_by;
@@ -88,6 +107,7 @@ const ProductDetail = () => {
         created_at: data.created_at,
       };
 
+      console.log("Transformed product data:", transformedProduct);
       return transformedProduct;
     },
     enabled: !!id,
@@ -114,10 +134,27 @@ const ProductDetail = () => {
     enabled: !!id,
   });
 
+  console.log("Component state:", { isLoading, error, product });
+
   if (isLoading) {
     return (
       <div className="page-container">
         <div className="flex justify-center py-8">Loading product details...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    console.error("Query error:", error);
+    return (
+      <div className="page-container">
+        <div className="text-center py-8">
+          <p className="text-red-600 mb-4">Error loading product details</p>
+          <p className="text-sm text-gray-600">{error.message}</p>
+          <Button onClick={() => navigate("/catalog")} className="mt-4">
+            Back to Catalog
+          </Button>
+        </div>
       </div>
     );
   }
