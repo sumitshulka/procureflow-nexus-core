@@ -1,4 +1,5 @@
-import React from "react";
+
+import React, { useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -10,6 +11,7 @@ import * as z from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { logDatabaseError, checkAuthentication } from "@/utils/supabaseHelpers";
 
 const formSchema = z.object({
   organizationName: z.string().min(2, {
@@ -34,16 +36,31 @@ const OrganizationSettings = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  console.log("[OrganizationSettings] Component mounted");
+
   // Fetch current organization settings
-  const { data: orgSettings } = useQuery({
+  const { data: orgSettings, isLoading, error } = useQuery({
     queryKey: ["organization_settings"],
     queryFn: async () => {
+      console.log("[OrganizationSettings] Starting to fetch organization settings");
+      
+      // Check authentication first
+      const user = await checkAuthentication();
+      if (!user) {
+        throw new Error("User not authenticated");
+      }
+
+      console.log("[OrganizationSettings] User authenticated, fetching settings");
+      
       const { data, error } = await supabase
         .from("organization_settings")
         .select("*")
-        .single();
+        .maybeSingle();
       
-      if (error && error.code !== 'PGRST116') {
+      console.log("[OrganizationSettings] Query result:", { data, error });
+      
+      if (error) {
+        logDatabaseError(error, "fetch organization settings");
         throw error;
       }
       
@@ -54,8 +71,8 @@ const OrganizationSettings = () => {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      organizationName: orgSettings?.organization_name || "Acme Corporation",
-      baseCurrency: orgSettings?.base_currency || "USD",
+      organizationName: "Acme Corporation",
+      baseCurrency: "USD",
       dateFormat: "MM/DD/YYYY",
       fiscalYearStart: "January",
       timeZone: "UTC",
@@ -63,25 +80,70 @@ const OrganizationSettings = () => {
     },
   });
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
-    try {
-      const { error } = await supabase
-        .from("organization_settings")
-        .upsert({
-          organization_name: values.organizationName,
-          base_currency: values.baseCurrency,
-          updated_at: new Date().toISOString(),
-        });
+  // Update form values when data is loaded
+  useEffect(() => {
+    if (orgSettings) {
+      console.log("[OrganizationSettings] Updating form with fetched data:", orgSettings);
+      form.reset({
+        organizationName: orgSettings.organization_name || "Acme Corporation",
+        baseCurrency: orgSettings.base_currency || "USD",
+        dateFormat: "MM/DD/YYYY",
+        fiscalYearStart: "January",
+        timeZone: "UTC",
+        logoUrl: "",
+      });
+    }
+  }, [orgSettings, form]);
 
-      if (error) throw error;
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    console.log("[OrganizationSettings] Form submission started with values:", values);
+    
+    try {
+      // Check authentication before proceeding
+      const user = await checkAuthentication();
+      if (!user) {
+        console.error("[OrganizationSettings] User not authenticated, cannot save settings");
+        return;
+      }
+
+      console.log("[OrganizationSettings] User authenticated, proceeding with save");
+
+      const settingsData = {
+        organization_name: values.organizationName,
+        base_currency: values.baseCurrency,
+        created_by: user.id,
+      };
+
+      console.log("[OrganizationSettings] Preparing to upsert data:", settingsData);
+
+      const { data, error } = await supabase
+        .from("organization_settings")
+        .upsert(settingsData, {
+          onConflict: 'id'
+        })
+        .select()
+        .single();
+
+      console.log("[OrganizationSettings] Upsert result:", { data, error });
+
+      if (error) {
+        logDatabaseError(error, "save organization settings");
+        throw error;
+      }
+
+      console.log("[OrganizationSettings] Settings saved successfully:", data);
 
       toast({
         title: "Success",
         description: "Organization settings updated successfully",
       });
 
+      // Invalidate and refetch
       queryClient.invalidateQueries({ queryKey: ["organization_settings"] });
+      
     } catch (error: any) {
+      console.error("[OrganizationSettings] Error saving settings:", error);
+      
       toast({
         title: "Error",
         description: error.message || "Failed to update organization settings",
@@ -89,6 +151,18 @@ const OrganizationSettings = () => {
       });
     }
   }
+
+  if (isLoading) {
+    console.log("[OrganizationSettings] Loading organization settings...");
+    return <div>Loading organization settings...</div>;
+  }
+
+  if (error) {
+    console.error("[OrganizationSettings] Error loading settings:", error);
+    return <div>Error loading organization settings</div>;
+  }
+
+  console.log("[OrganizationSettings] Rendering component with current form values");
 
   return (
     <div className="space-y-6">
@@ -178,7 +252,7 @@ const OrganizationSettings = () => {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Date Format</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select date format" />
@@ -202,7 +276,7 @@ const OrganizationSettings = () => {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Fiscal Year Start</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select month" />
@@ -234,7 +308,7 @@ const OrganizationSettings = () => {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Time Zone</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select time zone" />
