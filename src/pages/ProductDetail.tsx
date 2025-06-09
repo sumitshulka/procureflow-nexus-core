@@ -50,13 +50,14 @@ const ProductDetail = () => {
       }
       
       console.log("Executing Supabase query...");
+      
+      // First fetch the product with its category and unit
       const { data, error } = await supabase
         .from("products")
         .select(`
           *,
           category:category_id(name),
-          unit:unit_id(name, abbreviation),
-          created_by_profile:created_by(full_name)
+          unit:unit_id(name, abbreviation)
         `)
         .eq("id", id)
         .single();
@@ -80,17 +81,22 @@ const ProductDetail = () => {
 
       console.log("Raw product data from Supabase:", data);
 
-      // Transform the data to match our interface
-      const createdByData = data.created_by_profile;
+      // Fetch creator profile separately if created_by exists
       let createdBy: { full_name: string } | null = null;
       
-      // Use a type guard function to properly narrow the type
-      const isValidCreatedBy = (obj: any): obj is { full_name: string } => {
-        return obj !== null && typeof obj === 'object' && typeof obj.full_name === 'string';
-      };
-
-      if (isValidCreatedBy(createdByData)) {
-        createdBy = { full_name: createdByData.full_name };
+      if (data.created_by) {
+        console.log("Fetching creator profile for ID:", data.created_by);
+        const { data: profileData, error: profileError } = await supabase
+          .from("profiles")
+          .select("full_name")
+          .eq("id", data.created_by)
+          .single();
+          
+        if (!profileError && profileData) {
+          createdBy = { full_name: profileData.full_name || "Unknown User" };
+        } else {
+          console.log("Could not fetch creator profile:", profileError);
+        }
       }
 
       const transformedProduct: Product = {
