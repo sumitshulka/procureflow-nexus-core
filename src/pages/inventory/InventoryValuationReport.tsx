@@ -63,6 +63,28 @@ const InventoryValuationReport = () => {
     productName: "",
   });
 
+  // Fetch organization settings to get base currency
+  const { data: organizationSettings } = useQuery({
+    queryKey: ["organization_settings"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("organization_settings")
+        .select("base_currency")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single();
+
+      if (error) {
+        console.error("Error fetching organization settings:", error);
+        return { base_currency: "USD" }; // fallback to USD
+      }
+
+      return data;
+    },
+  });
+
+  const baseCurrency = organizationSettings?.base_currency || "USD";
+
   // Fetch report data based on filters
   const { data: reportData = [], isLoading: isLoadingReport, refetch } = useQuery({
     queryKey: ["inventory_valuation_report", filters],
@@ -220,7 +242,7 @@ const InventoryValuationReport = () => {
           </div>
           <div class="summary">
             <p><strong>Total Items:</strong> ${reportData.length}</p>
-            <p><strong>Total Value:</strong> $${reportData.reduce((sum, item) => sum + item.total_value, 0).toLocaleString()}</p>
+            <p><strong>Total Value:</strong> ${baseCurrency} ${reportData.reduce((sum, item) => sum + item.total_value, 0).toLocaleString()}</p>
           </div>
           <table>
             <thead>
@@ -243,8 +265,8 @@ const InventoryValuationReport = () => {
                   <td>${item.classification_name}</td>
                   <td>${item.warehouse_name}</td>
                   <td>${item.quantity} ${item.unit_abbreviation}</td>
-                  <td>$${item.current_price.toLocaleString()}</td>
-                  <td>$${item.total_value.toLocaleString()}</td>
+                  <td>${baseCurrency} ${item.current_price.toLocaleString()}</td>
+                  <td>${baseCurrency} ${item.total_value.toLocaleString()}</td>
                   <td>${format(new Date(item.last_updated), "PPP")}</td>
                 </tr>
               `).join('')}
@@ -393,7 +415,7 @@ const InventoryValuationReport = () => {
               <div className="flex justify-between items-center">
                 <CardTitle>Inventory Valuation Summary</CardTitle>
                 <Badge variant="outline" className="text-lg px-3 py-1">
-                  Total Value: ${totalValue.toLocaleString()}
+                  Total Value: {baseCurrency} {totalValue.toLocaleString()}
                 </Badge>
               </div>
             </CardHeader>
@@ -428,10 +450,10 @@ const InventoryValuationReport = () => {
                             {item.quantity} {item.unit_abbreviation}
                           </TableCell>
                           <TableCell className="text-right">
-                            ${item.current_price.toLocaleString()}
+                            {baseCurrency} {item.current_price.toLocaleString()}
                           </TableCell>
                           <TableCell className="text-right font-medium">
-                            ${item.total_value.toLocaleString()}
+                            {baseCurrency} {item.total_value.toLocaleString()}
                           </TableCell>
                           <TableCell>
                             {format(new Date(item.last_updated), "PPP")}
