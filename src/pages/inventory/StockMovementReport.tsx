@@ -65,7 +65,8 @@ const StockMovementReport = () => {
   const { data: stockMovements = [], isLoading, error } = useQuery({
     queryKey: ["stock_movements"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // First, fetch inventory transactions
+      const { data: transactions, error: transactionsError } = await supabase
         .from("inventory_transactions")
         .select(`
           id,
@@ -74,20 +75,40 @@ const StockMovementReport = () => {
           transaction_date,
           reference,
           notes,
+          user_id,
           product:product_id(name),
           source_warehouse:source_warehouse_id(name),
-          target_warehouse:target_warehouse_id(name),
-          user:user_id(full_name)
+          target_warehouse:target_warehouse_id(name)
         `)
         .order("transaction_date", { ascending: false });
 
-      if (error) {
-        console.error("Error fetching stock movements:", error);
-        throw error;
+      if (transactionsError) {
+        console.error("Error fetching inventory transactions:", transactionsError);
+        throw transactionsError;
       }
 
+      // Get unique user IDs
+      const userIds = [...new Set(transactions?.map(t => t.user_id).filter(Boolean))];
+      
+      // Fetch user profiles
+      const { data: profiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .in("id", userIds);
+
+      if (profilesError) {
+        console.error("Error fetching user profiles:", profilesError);
+        // Continue without user names rather than failing completely
+      }
+
+      // Create a map of user IDs to full names
+      const userMap = new Map();
+      profiles?.forEach(profile => {
+        userMap.set(profile.id, profile.full_name);
+      });
+
       // Transform the data to match our interface
-      return (data || []).map((item: any) => ({
+      return (transactions || []).map((item: any) => ({
         id: item.id,
         type: item.type,
         product_name: item.product?.name || "Unknown Product",
@@ -96,7 +117,7 @@ const StockMovementReport = () => {
         reference: item.reference || "-",
         source_warehouse: item.source_warehouse?.name || "-",
         target_warehouse: item.target_warehouse?.name || "-",
-        user_name: item.user?.full_name || "Unknown User",
+        user_name: userMap.get(item.user_id) || "Unknown User",
         notes: item.notes || "-",
       })) as StockMovement[];
     },
