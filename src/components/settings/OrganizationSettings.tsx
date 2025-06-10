@@ -38,7 +38,7 @@ const OrganizationSettings = () => {
 
   console.log("[OrganizationSettings] Component mounted");
 
-  // Fetch current organization settings
+  // Fetch current organization settings - get the first record if multiple exist
   const { data: orgSettings, isLoading, error } = useQuery({
     queryKey: ["organization_settings"],
     queryFn: async () => {
@@ -55,7 +55,8 @@ const OrganizationSettings = () => {
       const { data, error } = await supabase
         .from("organization_settings")
         .select("*")
-        .maybeSingle();
+        .order('created_at', { ascending: false })
+        .limit(1);
       
       console.log("[OrganizationSettings] Query result:", { data, error });
       
@@ -64,7 +65,8 @@ const OrganizationSettings = () => {
         throw error;
       }
       
-      return data;
+      // Return the first record if it exists, null otherwise
+      return data && data.length > 0 ? data[0] : null;
     },
   });
 
@@ -108,30 +110,54 @@ const OrganizationSettings = () => {
 
       console.log("[OrganizationSettings] User authenticated, proceeding with save");
 
-      const settingsData = {
-        organization_name: values.organizationName,
-        base_currency: values.baseCurrency,
-        created_by: user.id,
-      };
+      // If we have existing settings, update them. Otherwise, create new.
+      if (orgSettings?.id) {
+        console.log("[OrganizationSettings] Updating existing settings with ID:", orgSettings.id);
+        
+        const { data, error } = await supabase
+          .from("organization_settings")
+          .update({
+            organization_name: values.organizationName,
+            base_currency: values.baseCurrency,
+          })
+          .eq('id', orgSettings.id)
+          .select()
+          .single();
 
-      console.log("[OrganizationSettings] Preparing to upsert data:", settingsData);
+        console.log("[OrganizationSettings] Update result:", { data, error });
 
-      const { data, error } = await supabase
-        .from("organization_settings")
-        .upsert(settingsData, {
-          onConflict: 'id'
-        })
-        .select()
-        .single();
+        if (error) {
+          logDatabaseError(error, "update organization settings");
+          throw error;
+        }
 
-      console.log("[OrganizationSettings] Upsert result:", { data, error });
+        console.log("[OrganizationSettings] Settings updated successfully:", data);
+      } else {
+        console.log("[OrganizationSettings] Creating new settings record");
+        
+        const settingsData = {
+          organization_name: values.organizationName,
+          base_currency: values.baseCurrency,
+          created_by: user.id,
+        };
 
-      if (error) {
-        logDatabaseError(error, "save organization settings");
-        throw error;
+        console.log("[OrganizationSettings] Preparing to insert data:", settingsData);
+
+        const { data, error } = await supabase
+          .from("organization_settings")
+          .insert(settingsData)
+          .select()
+          .single();
+
+        console.log("[OrganizationSettings] Insert result:", { data, error });
+
+        if (error) {
+          logDatabaseError(error, "create organization settings");
+          throw error;
+        }
+
+        console.log("[OrganizationSettings] Settings created successfully:", data);
       }
-
-      console.log("[OrganizationSettings] Settings saved successfully:", data);
 
       toast({
         title: "Success",
