@@ -5,6 +5,7 @@ import Dashboard from "@/pages/Dashboard";
 import ProductCatalog from "@/pages/ProductCatalog";
 import ProductDetail from "@/pages/ProductDetail";
 import AddProduct from "@/pages/AddProduct";
+import EditProduct from "@/pages/EditProduct";
 import InventoryItems from "@/pages/inventory/InventoryItems";
 import InventoryTransactions from "@/pages/inventory/InventoryTransactions";
 import InventoryIndex from "@/pages/inventory/InventoryIndex";
@@ -49,6 +50,7 @@ function App() {
               <Route path="/catalog" element={<ProductCatalog />} />
               <Route path="/add-product" element={<AddProduct />} />
               <Route path="/product/:id" element={<ProductDetail />} />
+              <Route path="/products/:id/edit" element={<EditProduct />} />
               <Route path="/inventory" element={<InventoryIndex />}>
                 <Route index element={<InventoryItems />} />
                 <Route path="items" element={<InventoryItems />} />
