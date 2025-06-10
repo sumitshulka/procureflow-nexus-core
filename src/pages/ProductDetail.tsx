@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -176,9 +175,9 @@ const ProductDetail = () => {
   return (
     <div className="page-container">
       <div className="flex items-center gap-4 mb-6">
-        <Button variant="ghost" onClick={() => navigate("/products")}>
+        <Button variant="ghost" onClick={() => navigate("/catalog")}>
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Products
+          Back to Catalog
         </Button>
         <div className="flex-1">
           <h1 className="text-2xl font-bold">{product.name}</h1>

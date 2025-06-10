@@ -60,6 +60,7 @@ interface Product {
     abbreviation?: string;
   } | null;
   current_price: number | null;
+  currency: string | null;
   tags: string[];
 }
 
@@ -91,6 +92,7 @@ const ProductCatalog = () => {
           description, 
           classification,
           current_price,
+          currency,
           tags,
           category:category_id(id, name),
           unit:unit_id(id, name, abbreviation)
@@ -289,10 +291,7 @@ const ProductCatalog = () => {
       header: "Current Price",
       cell: (row: any) =>
         row.current_price != null 
-          ? new Intl.NumberFormat("en-US", {
-              style: "currency",
-              currency: "USD",
-            }).format(row.current_price)
+          ? `${row.currency || 'USD'} ${row.current_price.toLocaleString()}`
           : "N/A",
     },
     {
@@ -529,10 +528,7 @@ const ProductCatalog = () => {
                       <div className="mt-3 flex items-center justify-between">
                         <p className="font-medium text-lg">
                           {product.current_price != null ? 
-                            new Intl.NumberFormat("en-US", {
-                              style: "currency",
-                              currency: "USD",
-                            }).format(product.current_price) : 
+                            `${product.currency || 'USD'} ${product.current_price.toLocaleString()}` : 
                             "Price not set"
                           }
                         </p>
