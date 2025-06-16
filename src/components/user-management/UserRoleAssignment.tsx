@@ -82,22 +82,43 @@ const UserRoleAssignment = () => {
     },
   });
 
-  // Fetch role assignments
+  // Fetch role assignments with proper joins
   const { data: assignments = [], isLoading: assignmentsLoading } = useQuery({
     queryKey: ["user_role_assignments"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("user_role_assignments")
         .select(`
-          *,
-          user:user_id(id, full_name),
-          role:custom_role_id(id, name, description)
+          id,
+          user_id,
+          custom_role_id,
+          assigned_at,
+          is_active,
+          profiles!user_role_assignments_user_id_fkey(id, full_name),
+          custom_roles!user_role_assignments_custom_role_id_fkey(id, name, description)
         `)
         .eq("is_active", true)
         .order("assigned_at", { ascending: false });
       
       if (error) throw error;
-      return data as AssignmentData[];
+      
+      // Transform the data to match our interface
+      return data.map(assignment => ({
+        id: assignment.id,
+        user_id: assignment.user_id,
+        custom_role_id: assignment.custom_role_id,
+        assigned_at: assignment.assigned_at,
+        is_active: assignment.is_active,
+        user: assignment.profiles ? {
+          id: assignment.profiles.id,
+          full_name: assignment.profiles.full_name
+        } : undefined,
+        role: assignment.custom_roles ? {
+          id: assignment.custom_roles.id,
+          name: assignment.custom_roles.name,
+          description: assignment.custom_roles.description
+        } : undefined
+      })) as AssignmentData[];
     },
   });
 
