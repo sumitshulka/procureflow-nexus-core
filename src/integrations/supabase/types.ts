@@ -393,6 +393,53 @@ export type Database = {
         }
         Relationships: []
       }
+      menu_items: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          display_order: number | null
+          icon_name: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          parent_id: string | null
+          route_path: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          display_order?: number | null
+          icon_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          parent_id?: string | null
+          route_path?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          display_order?: number | null
+          icon_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          parent_id?: string | null
+          route_path?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menu_items_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "menu_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_settings: {
         Row: {
           base_currency: string
@@ -1289,6 +1336,7 @@ export type Database = {
           created_at: string
           id: string
           module_id: string
+          module_uuid: string | null
           permission: string
           role_id: string
         }
@@ -1296,6 +1344,7 @@ export type Database = {
           created_at?: string
           id?: string
           module_id: string
+          module_uuid?: string | null
           permission: string
           role_id: string
         }
@@ -1303,10 +1352,18 @@ export type Database = {
           created_at?: string
           id?: string
           module_id?: string
+          module_uuid?: string | null
           permission?: string
           role_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "role_permissions_module_uuid_fkey"
+            columns: ["module_uuid"]
+            isOneToOne: false
+            referencedRelation: "system_modules"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "role_permissions_role_id_fkey"
             columns: ["role_id"]
@@ -1321,21 +1378,38 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          is_active: boolean | null
+          menu_item_id: string | null
           name: string
+          updated_at: string | null
         }
         Insert: {
           created_at?: string
           description?: string | null
           id?: string
+          is_active?: boolean | null
+          menu_item_id?: string | null
           name: string
+          updated_at?: string | null
         }
         Update: {
           created_at?: string
           description?: string | null
           id?: string
+          is_active?: boolean | null
+          menu_item_id?: string | null
           name?: string
+          updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "system_modules_menu_item_id_fkey"
+            columns: ["menu_item_id"]
+            isOneToOne: false
+            referencedRelation: "menu_items"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       units: {
         Row: {
@@ -1363,6 +1437,79 @@ export type Database = {
           name?: string
         }
         Relationships: []
+      }
+      user_module_permissions: {
+        Row: {
+          granted_at: string | null
+          granted_by: string | null
+          id: string
+          is_active: boolean | null
+          module_id: string
+          permission: string
+          user_id: string
+        }
+        Insert: {
+          granted_at?: string | null
+          granted_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          module_id: string
+          permission: string
+          user_id: string
+        }
+        Update: {
+          granted_at?: string | null
+          granted_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          module_id?: string
+          permission?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_module_permissions_module_id_fkey"
+            columns: ["module_id"]
+            isOneToOne: false
+            referencedRelation: "system_modules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_role_assignments: {
+        Row: {
+          assigned_at: string | null
+          assigned_by: string | null
+          custom_role_id: string
+          id: string
+          is_active: boolean | null
+          user_id: string
+        }
+        Insert: {
+          assigned_at?: string | null
+          assigned_by?: string | null
+          custom_role_id: string
+          id?: string
+          is_active?: boolean | null
+          user_id: string
+        }
+        Update: {
+          assigned_at?: string | null
+          assigned_by?: string | null
+          custom_role_id?: string
+          id?: string
+          is_active?: boolean | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_role_assignments_custom_role_id_fkey"
+            columns: ["custom_role_id"]
+            isOneToOne: false
+            referencedRelation: "custom_roles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
@@ -1874,6 +2021,10 @@ export type Database = {
       update_transaction_delivery_details: {
         Args: { transaction_id: string; p_delivery_details: Json }
         Returns: Json
+      }
+      user_has_module_permission: {
+        Args: { p_user_id: string; p_module_name: string; p_permission: string }
+        Returns: boolean
       }
     }
     Enums: {

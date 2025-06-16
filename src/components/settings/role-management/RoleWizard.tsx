@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2, ChevronRight, ChevronLeft, Check } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 
 // Step schemas
 const createRoleSchema = z.object({
@@ -40,13 +42,17 @@ const RoleWizard = () => {
     },
   });
 
-  // Fetch modules
+  // Fetch modules with menu item info
   const { data: modules = [], isLoading: modulesLoading, error: modulesError } = useQuery({
-    queryKey: ["system_modules"],
+    queryKey: ["system_modules_wizard"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("system_modules")
-        .select("*");
+        .select(`
+          *,
+          menu_item:menu_item_id(name, route_path)
+        `)
+        .eq("is_active", true);
 
       if (error) throw error;
       return data || [];
@@ -91,14 +97,15 @@ const RoleWizard = () => {
       if (!roleId) return null;
       
       // Prepare permissions to save
-      const permissionsToSave: { role_id: string; module_id: string; permission: string }[] = [];
+      const permissionsToSave: { role_id: string; module_id: string; module_uuid: string; permission: string }[] = [];
       
       Object.entries(selectedModules).forEach(([moduleId, isSelected]) => {
         if (isSelected && modulePermissions[moduleId]) {
           modulePermissions[moduleId].forEach(permission => {
             permissionsToSave.push({
               role_id: roleId,
-              module_id: moduleId,
+              module_id: "legacy", // Keep for backward compatibility
+              module_uuid: moduleId,
               permission: permission,
             });
           });
@@ -200,7 +207,13 @@ const RoleWizard = () => {
   };
 
   // Available permissions
-  const availablePermissions = ["view", "create", "edit", "delete"];
+  const availablePermissions = [
+    { id: "view", name: "View", description: "Can view the module" },
+    { id: "create", name: "Create", description: "Can create new items" },
+    { id: "edit", name: "Edit", description: "Can modify existing items" },
+    { id: "delete", name: "Delete", description: "Can delete items" },
+    { id: "admin", name: "Full Control", description: "Complete access to the module" },
+  ];
 
   // Render step content based on current step
   const renderStepContent = () => {
@@ -276,18 +289,23 @@ const RoleWizard = () => {
             ) : (
               <div className="grid gap-4">
                 {modules.map((module) => (
-                  <div key={module.id} className="flex items-start space-x-3 p-2 border rounded-md">
+                  <div key={module.id} className="flex items-start space-x-3 p-3 border rounded-md">
                     <Checkbox 
                       id={`module-${module.id}`} 
                       checked={selectedModules[module.id] || false}
                       onCheckedChange={() => toggleModule(module.id)}
                     />
-                    <div>
+                    <div className="flex-1">
                       <label 
                         htmlFor={`module-${module.id}`} 
-                        className="font-medium cursor-pointer"
+                        className="font-medium cursor-pointer flex items-center gap-2"
                       >
                         {module.name}
+                        {module.menu_item && (
+                          <Badge variant="outline" className="text-xs">
+                            {module.menu_item.route_path}
+                          </Badge>
+                        )}
                       </label>
                       <p className="text-sm text-muted-foreground">
                         {module.description || 'No description available'}
@@ -336,21 +354,33 @@ const RoleWizard = () => {
               <div className="space-y-6">
                 {selectedModulesList.map((module) => (
                   <div key={module.id} className="border rounded-md p-4">
-                    <h4 className="font-medium mb-3">{module.name || "Unnamed Module"}</h4>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="flex items-center gap-2 mb-3">
+                      <h4 className="font-medium">{module.name || "Unnamed Module"}</h4>
+                      {module.menu_item && (
+                        <Badge variant="outline" className="text-xs">
+                          {module.menu_item.route_path}
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-1 gap-3">
                       {availablePermissions.map(permission => (
-                        <div key={`${module.id}-${permission}`} className="flex items-center space-x-2">
+                        <div key={`${module.id}-${permission.id}`} className="flex items-start space-x-3 p-2 border rounded">
                           <Checkbox 
-                            id={`perm-${module.id}-${permission}`}
-                            checked={(modulePermissions[module.id] || []).includes(permission)}
-                            onCheckedChange={() => togglePermission(module.id, permission)}
+                            id={`perm-${module.id}-${permission.id}`}
+                            checked={(modulePermissions[module.id] || []).includes(permission.id)}
+                            onCheckedChange={() => togglePermission(module.id, permission.id)}
                           />
-                          <label
-                            htmlFor={`perm-${module.id}-${permission}`}
-                            className="text-sm capitalize cursor-pointer"
-                          >
-                            {permission || "Unknown"}
-                          </label>
+                          <div>
+                            <label
+                              htmlFor={`perm-${module.id}-${permission.id}`}
+                              className="text-sm font-medium cursor-pointer"
+                            >
+                              {permission.name}
+                            </label>
+                            <p className="text-xs text-muted-foreground">
+                              {permission.description}
+                            </p>
+                          </div>
                         </div>
                       ))}
                     </div>
