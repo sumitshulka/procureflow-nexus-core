@@ -82,43 +82,50 @@ const UserRoleAssignment = () => {
     },
   });
 
-  // Fetch role assignments with proper joins
+  // Fetch role assignments with manual joins
   const { data: assignments = [], isLoading: assignmentsLoading } = useQuery({
     queryKey: ["user_role_assignments"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // First get the assignments
+      const { data: assignmentsData, error: assignmentsError } = await supabase
         .from("user_role_assignments")
-        .select(`
-          id,
-          user_id,
-          custom_role_id,
-          assigned_at,
-          is_active,
-          profiles!user_role_assignments_user_id_fkey(id, full_name),
-          custom_roles!user_role_assignments_custom_role_id_fkey(id, name, description)
-        `)
+        .select("*")
         .eq("is_active", true)
         .order("assigned_at", { ascending: false });
       
-      if (error) throw error;
+      if (assignmentsError) throw assignmentsError;
+      if (!assignmentsData || assignmentsData.length === 0) return [];
+
+      // Get user data
+      const userIds = [...new Set(assignmentsData.map(a => a.user_id))];
+      const { data: usersData, error: usersError } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .in("id", userIds);
       
-      // Transform the data to match our interface
-      return data.map(assignment => ({
+      if (usersError) throw usersError;
+
+      // Get role data
+      const roleIds = [...new Set(assignmentsData.map(a => a.custom_role_id))];
+      const { data: rolesData, error: rolesError } = await supabase
+        .from("custom_roles")
+        .select("id, name, description")
+        .in("id", roleIds);
+      
+      if (rolesError) throw rolesError;
+
+      // Combine the data
+      const result = assignmentsData.map(assignment => ({
         id: assignment.id,
         user_id: assignment.user_id,
         custom_role_id: assignment.custom_role_id,
         assigned_at: assignment.assigned_at,
         is_active: assignment.is_active,
-        user: assignment.profiles ? {
-          id: assignment.profiles.id,
-          full_name: assignment.profiles.full_name
-        } : undefined,
-        role: assignment.custom_roles ? {
-          id: assignment.custom_roles.id,
-          name: assignment.custom_roles.name,
-          description: assignment.custom_roles.description
-        } : undefined
-      })) as AssignmentData[];
+        user: usersData?.find(u => u.id === assignment.user_id) || undefined,
+        role: rolesData?.find(r => r.id === assignment.custom_role_id) || undefined
+      }));
+
+      return result as AssignmentData[];
     },
   });
 
