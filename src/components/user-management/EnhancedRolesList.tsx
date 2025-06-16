@@ -93,12 +93,12 @@ const EnhancedRolesList = () => {
 
   const moduleForm = useForm({
     resolver: zodResolver(moduleSchema),
-    defaultValues: { name: "", description: "", menu_item_id: "" },
+    defaultValues: { name: "", description: "", menu_item_id: "none" },
   });
 
   const moduleEditForm = useForm({
     resolver: zodResolver(moduleSchema),
-    defaultValues: { name: "", description: "", menu_item_id: "" },
+    defaultValues: { name: "", description: "", menu_item_id: "none" },
   });
 
   // Fetch roles
@@ -206,7 +206,7 @@ const EnhancedRolesList = () => {
         .insert({
           name: values.name,
           description: values.description || null,
-          menu_item_id: values.menu_item_id || null,
+          menu_item_id: values.menu_item_id === "none" ? null : values.menu_item_id,
         })
         .select();
       
@@ -623,7 +623,7 @@ const EnhancedRolesList = () => {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="">No menu item</SelectItem>
+                              <SelectItem value="none">No menu item</SelectItem>
                               {menuItems.map((item) => (
                                 <SelectItem key={item.id} value={item.id}>
                                   {item.name} ({item.route_path})
@@ -703,7 +703,7 @@ const EnhancedRolesList = () => {
                                   moduleEditForm.reset({
                                     name: module.name,
                                     description: module.description || "",
-                                    menu_item_id: module.menu_item_id || "",
+                                    menu_item_id: module.menu_item_id || "none",
                                   });
                                   setIsModuleEditOpen(true);
                                 }}
@@ -772,7 +772,7 @@ const EnhancedRolesList = () => {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="">No menu item</SelectItem>
+                              <SelectItem value="none">No menu item</SelectItem>
                               {menuItems.map((item) => (
                                 <SelectItem key={item.id} value={item.id}>
                                   {item.name} ({item.route_path})
