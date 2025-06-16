@@ -15,10 +15,11 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Plus, Pencil, Trash2, Shield, Link } from "lucide-react";
+import { Loader2, Plus, Pencil, Trash2, Shield, Link, Wand2 } from "lucide-react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import RoleWizard from "@/components/settings/role-management/RoleWizard";
 
 // Role schema for form validation
 const roleSchema = z.object({
@@ -231,6 +232,43 @@ const EnhancedRolesList = () => {
     },
   });
 
+  // Update module mutation
+  const updateModuleMutation = useMutation({
+    mutationFn: async (values: z.infer<typeof moduleSchema>) => {
+      if (!currentModule) throw new Error("No module selected");
+      
+      const { data, error } = await supabase
+        .from("system_modules")
+        .update({
+          name: values.name,
+          description: values.description || null,
+          menu_item_id: values.menu_item_id === "none" ? null : values.menu_item_id,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", currentModule.id)
+        .select();
+      
+      if (error) throw error;
+      return data[0];
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["system_modules_with_menu"] });
+      toast({
+        title: "Module updated",
+        description: "The module has been successfully updated.",
+      });
+      setIsModuleEditOpen(false);
+      setCurrentModule(null);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error updating module",
+        description: error.message || "There was a problem updating the module.",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Update permissions mutation
   const updatePermissionsMutation = useMutation({
     mutationFn: async ({ 
@@ -290,6 +328,11 @@ const EnhancedRolesList = () => {
   // Handle module form submission
   const onModuleSubmit = (values: z.infer<typeof moduleSchema>) => {
     createModuleMutation.mutate(values);
+  };
+
+  // Handle module update form submission
+  const onModuleUpdateSubmit = (values: z.infer<typeof moduleSchema>) => {
+    updateModuleMutation.mutate(values);
   };
 
   // Open permissions dialog
@@ -363,6 +406,7 @@ const EnhancedRolesList = () => {
       <TabsList>
         <TabsTrigger value="roles">Roles</TabsTrigger>
         <TabsTrigger value="modules">Modules</TabsTrigger>
+        <TabsTrigger value="wizard">Role Wizard</TabsTrigger>
       </TabsList>
       
       <TabsContent value="roles" className="mt-6">
@@ -374,64 +418,73 @@ const EnhancedRolesList = () => {
                 Manage roles and their permissions across modules.
               </CardDescription>
             </div>
-            <Dialog open={isRoleCreateOpen} onOpenChange={setIsRoleCreateOpen}>
-              <DialogTrigger asChild>
-                <Button size="sm">
-                  <Plus className="mr-2 h-4 w-4" /> Add Role
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Add New Role</DialogTitle>
-                </DialogHeader>
-                <Form {...roleForm}>
-                  <form onSubmit={roleForm.handleSubmit(onRoleSubmit)} className="space-y-4">
-                    <FormField
-                      control={roleForm.control}
-                      name="name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Name</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Role name" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={roleForm.control}
-                      name="description"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Description</FormLabel>
-                          <FormControl>
-                            <Textarea placeholder="Role description" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <DialogFooter>
-                      <DialogClose asChild>
-                        <Button type="button" variant="outline">Cancel</Button>
-                      </DialogClose>
-                      <Button 
-                        type="submit" 
-                        disabled={createRoleMutation.isPending}
-                      >
-                        {createRoleMutation.isPending && (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setActiveTab("wizard")}
+              >
+                <Wand2 className="mr-2 h-4 w-4" /> Role Wizard
+              </Button>
+              <Dialog open={isRoleCreateOpen} onOpenChange={setIsRoleCreateOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm">
+                    <Plus className="mr-2 h-4 w-4" /> Add Role
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Add New Role</DialogTitle>
+                  </DialogHeader>
+                  <Form {...roleForm}>
+                    <form onSubmit={roleForm.handleSubmit(onRoleSubmit)} className="space-y-4">
+                      <FormField
+                        control={roleForm.control}
+                        name="name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Name</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Role name" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
                         )}
-                        Create Role
-                      </Button>
-                    </DialogFooter>
-                  </form>
-                </Form>
-              </DialogContent>
-            </Dialog>
+                      />
+                      
+                      <FormField
+                        control={roleForm.control}
+                        name="description"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Description</FormLabel>
+                            <FormControl>
+                              <Textarea placeholder="Role description" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <DialogFooter>
+                        <DialogClose asChild>
+                          <Button type="button" variant="outline">Cancel</Button>
+                        </DialogClose>
+                        <Button 
+                          type="submit" 
+                          disabled={createRoleMutation.isPending}
+                        >
+                          {createRoleMutation.isPending && (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          )}
+                          Create Role
+                        </Button>
+                      </DialogFooter>
+                    </form>
+                  </Form>
+                </DialogContent>
+              </Dialog>
+            </div>
           </CardHeader>
           <CardContent>
             {rolesLoading ? (
@@ -479,16 +532,16 @@ const EnhancedRolesList = () => {
               </div>
             )}
 
-            {/* Permissions Dialog */}
+            {/* Enhanced Permissions Dialog with better scrolling */}
             <Dialog open={isPermissionsOpen} onOpenChange={setIsPermissionsOpen}>
-              <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
-                <DialogHeader>
+              <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
+                <DialogHeader className="flex-shrink-0">
                   <DialogTitle>
                     Manage Permissions: {currentRole?.name}
                   </DialogTitle>
                 </DialogHeader>
                 
-                <div className="flex-1 overflow-y-auto">
+                <div className="flex-1 overflow-y-auto px-1">
                   {modules.length === 0 ? (
                     <div className="text-center py-6 text-muted-foreground">
                       No modules found. Add modules first to configure permissions.
@@ -547,7 +600,7 @@ const EnhancedRolesList = () => {
                   )}
                 </div>
                 
-                <DialogFooter>
+                <DialogFooter className="flex-shrink-0 border-t pt-4">
                   <DialogClose asChild>
                     <Button type="button" variant="outline">Cancel</Button>
                   </DialogClose>
@@ -720,17 +773,14 @@ const EnhancedRolesList = () => {
               </div>
             )}
 
-            {/* Module Edit Dialog */}
+            {/* Fixed Module Edit Dialog */}
             <Dialog open={isModuleEditOpen} onOpenChange={setIsModuleEditOpen}>
               <DialogContent>
                 <DialogHeader>
                   <DialogTitle>Edit Module</DialogTitle>
                 </DialogHeader>
                 <Form {...moduleEditForm}>
-                  <form onSubmit={moduleEditForm.handleSubmit((values) => {
-                    // Handle module edit
-                    console.log("Edit module:", values);
-                  })} className="space-y-4">
+                  <form onSubmit={moduleEditForm.handleSubmit(onModuleUpdateSubmit)} className="space-y-4">
                     <FormField
                       control={moduleEditForm.control}
                       name="name"
@@ -789,7 +839,13 @@ const EnhancedRolesList = () => {
                       <DialogClose asChild>
                         <Button type="button" variant="outline">Cancel</Button>
                       </DialogClose>
-                      <Button type="submit">
+                      <Button 
+                        type="submit" 
+                        disabled={updateModuleMutation.isPending}
+                      >
+                        {updateModuleMutation.isPending && (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        )}
                         Update Module
                       </Button>
                     </DialogFooter>
@@ -799,6 +855,10 @@ const EnhancedRolesList = () => {
             </Dialog>
           </CardContent>
         </Card>
+      </TabsContent>
+
+      <TabsContent value="wizard" className="mt-6">
+        <RoleWizard />
       </TabsContent>
     </Tabs>
   );

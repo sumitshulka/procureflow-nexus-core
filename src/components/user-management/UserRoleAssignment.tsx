@@ -7,141 +7,123 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose, DialogTrigger } from "@/components/ui/dialog";
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Loader2, Plus, UserPlus, Settings, Trash2 } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Loader2, Plus, UserPlus, Settings, Info } from "lucide-react";
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 
-interface User {
+const assignmentSchema = z.object({
+  user_id: z.string().min(1, "Please select a user"),
+  custom_role_id: z.string().min(1, "Please select a role"),
+});
+
+interface UserData {
   id: string;
   full_name: string | null;
-  email: string;
-  roles: string[];
-  custom_roles: Array<{
-    id: string;
-    name: string;
-  }>;
+  email?: string;
 }
 
-interface CustomRole {
+interface RoleData {
   id: string;
   name: string;
   description: string | null;
 }
 
-interface ModulePermission {
+interface AssignmentData {
   id: string;
-  name: string;
-  description: string | null;
-  user_permissions: string[];
+  user_id: string;
+  custom_role_id: string;
+  assigned_at: string;
+  is_active: boolean;
+  user?: UserData;
+  role?: RoleData;
 }
 
 const UserRoleAssignment = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [isAssignRoleOpen, setIsAssignRoleOpen] = useState(false);
-  const [isUserPermissionsOpen, setIsUserPermissionsOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [selectedRole, setSelectedRole] = useState<string>("");
-  const [userModulePermissions, setUserModulePermissions] = useState<Record<string, string[]>>({});
+  const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
-  // Fetch users with their roles
+  const assignmentForm = useForm({
+    resolver: zodResolver(assignmentSchema),
+    defaultValues: { user_id: "", custom_role_id: "" },
+  });
+
+  // Fetch users
   const { data: users = [], isLoading: usersLoading } = useQuery({
-    queryKey: ["users_with_roles"],
+    queryKey: ["profiles_for_assignment"],
     queryFn: async () => {
-      // Get profiles with user roles (system roles)
-      const { data: profiles, error: profilesError } = await supabase
+      const { data, error } = await supabase
         .from("profiles")
-        .select(`
-          id,
-          full_name,
-          user_roles!inner(role)
-        `);
-
-      if (profilesError) throw profilesError;
-
-      // Get user role assignments (custom roles)
-      const { data: roleAssignments, error: roleAssignmentsError } = await supabase
-        .from("user_role_assignments")
-        .select(`
-          user_id,
-          custom_role:custom_role_id(id, name)
-        `)
-        .eq("is_active", true);
-
-      if (roleAssignmentsError) throw roleAssignmentsError;
-
-      // Group custom roles by user
-      const customRolesByUser: Record<string, Array<{id: string; name: string}>> = {};
-      roleAssignments.forEach((assignment: any) => {
-        if (!customRolesByUser[assignment.user_id]) {
-          customRolesByUser[assignment.user_id] = [];
-        }
-        if (assignment.custom_role) {
-          customRolesByUser[assignment.user_id].push(assignment.custom_role);
-        }
-      });
-
-      // Combine data
-      return profiles.map((profile: any) => ({
-        id: profile.id,
-        full_name: profile.full_name,
-        email: `${profile.id.substring(0, 8)}@example.com`, // Placeholder
-        roles: profile.user_roles.map((ur: any) => ur.role),
-        custom_roles: customRolesByUser[profile.id] || [],
-      }));
+        .select("id, full_name")
+        .eq("status", "active");
+      
+      if (error) throw error;
+      return data as UserData[];
     },
   });
 
-  // Fetch available custom roles
-  const { data: customRoles = [] } = useQuery({
-    queryKey: ["custom_roles"],
+  // Fetch custom roles
+  const { data: customRoles = [], isLoading: rolesLoading } = useQuery({
+    queryKey: ["custom_roles_for_assignment"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("custom_roles")
-        .select("*");
+        .select("*")
+        .order("name");
       
       if (error) throw error;
-      return data as CustomRole[];
+      return data as RoleData[];
     },
   });
 
-  // Fetch modules for user permissions
-  const { data: modules = [] } = useQuery({
-    queryKey: ["modules_for_permissions"],
+  // Fetch role assignments
+  const { data: assignments = [], isLoading: assignmentsLoading } = useQuery({
+    queryKey: ["user_role_assignments"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("system_modules")
-        .select("*")
-        .eq("is_active", true);
+        .from("user_role_assignments")
+        .select(`
+          *,
+          user:user_id(id, full_name),
+          role:custom_role_id(id, name, description)
+        `)
+        .eq("is_active", true)
+        .order("assigned_at", { ascending: false });
       
       if (error) throw error;
-      return data;
+      return data as AssignmentData[];
     },
   });
 
   // Assign role mutation
   const assignRoleMutation = useMutation({
-    mutationFn: async ({ userId, roleId }: { userId: string; roleId: string }) => {
-      const { error } = await supabase
+    mutationFn: async (values: z.infer<typeof assignmentSchema>) => {
+      const { data, error } = await supabase
         .from("user_role_assignments")
         .insert({
-          user_id: userId,
-          custom_role_id: roleId,
-        });
+          user_id: values.user_id,
+          custom_role_id: values.custom_role_id,
+          assigned_by: null, // Would be current user in real app
+        })
+        .select();
       
       if (error) throw error;
+      return data[0];
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["users_with_roles"] });
+      queryClient.invalidateQueries({ queryKey: ["user_role_assignments"] });
       toast({
-        title: "Role assigned",
-        description: "The role has been successfully assigned to the user.",
+        title: "Role assigned successfully",
+        description: "The user has been assigned the selected role.",
       });
-      setIsAssignRoleOpen(false);
-      setSelectedUser(null);
-      setSelectedRole("");
+      setIsAssignDialogOpen(false);
+      assignmentForm.reset();
     },
     onError: (error) => {
       toast({
@@ -152,388 +134,270 @@ const UserRoleAssignment = () => {
     },
   });
 
-  // Remove role mutation
-  const removeRoleMutation = useMutation({
-    mutationFn: async ({ userId, roleId }: { userId: string; roleId: string }) => {
+  // Remove assignment mutation
+  const removeAssignmentMutation = useMutation({
+    mutationFn: async (assignmentId: string) => {
       const { error } = await supabase
         .from("user_role_assignments")
-        .delete()
-        .eq("user_id", userId)
-        .eq("custom_role_id", roleId);
+        .update({ is_active: false })
+        .eq("id", assignmentId);
       
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["users_with_roles"] });
+      queryClient.invalidateQueries({ queryKey: ["user_role_assignments"] });
       toast({
-        title: "Role removed",
-        description: "The role has been successfully removed from the user.",
+        title: "Role assignment removed",
+        description: "The role assignment has been removed successfully.",
       });
     },
     onError: (error) => {
       toast({
-        title: "Error removing role",
-        description: error.message || "There was a problem removing the role.",
+        title: "Error removing assignment",
+        description: error.message || "There was a problem removing the assignment.",
         variant: "destructive",
       });
     },
   });
 
-  // Fetch user specific permissions
-  const fetchUserPermissions = async (userId: string) => {
-    const { data, error } = await supabase
-      .from("user_module_permissions")
-      .select("*")
-      .eq("user_id", userId)
-      .eq("is_active", true);
-    
-    if (error) throw error;
-    
-    const permissionsByModule: Record<string, string[]> = {};
-    data.forEach((perm: any) => {
-      if (!permissionsByModule[perm.module_id]) {
-        permissionsByModule[perm.module_id] = [];
-      }
-      permissionsByModule[perm.module_id].push(perm.permission);
-    });
-    
-    return permissionsByModule;
+  const handleAssignRole = (values: z.infer<typeof assignmentSchema>) => {
+    assignRoleMutation.mutate(values);
   };
 
-  // Update user permissions mutation
-  const updateUserPermissionsMutation = useMutation({
-    mutationFn: async ({ 
-      userId, 
-      moduleId, 
-      permissions 
-    }: { userId: string; moduleId: string; permissions: string[] }) => {
-      // First, delete existing permissions for this user-module combination
-      const { error: deleteError } = await supabase
-        .from("user_module_permissions")
-        .delete()
-        .eq("user_id", userId)
-        .eq("module_id", moduleId);
-      
-      if (deleteError) throw deleteError;
-      
-      // If no permissions to add, just return
-      if (permissions.length === 0) return;
-      
-      // Then insert the new permissions
-      const permissionObjects = permissions.map(permission => ({
-        user_id: userId,
-        module_id: moduleId,
-        permission,
-      }));
-      
-      const { error: insertError } = await supabase
-        .from("user_module_permissions")
-        .insert(permissionObjects);
-      
-      if (insertError) throw insertError;
-    },
-    onSuccess: () => {
-      toast({
-        title: "User permissions updated",
-        description: "The user-specific permissions have been successfully updated.",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Error updating permissions",
-        description: error.message || "There was a problem updating the permissions.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Handle assign role
-  const handleAssignRole = () => {
-    if (!selectedUser || !selectedRole) return;
-    assignRoleMutation.mutate({ userId: selectedUser.id, roleId: selectedRole });
-  };
-
-  // Handle remove role
-  const handleRemoveRole = (userId: string, roleId: string) => {
-    if (window.confirm("Are you sure you want to remove this role from the user?")) {
-      removeRoleMutation.mutate({ userId, roleId });
+  const handleRemoveAssignment = (assignmentId: string) => {
+    if (confirm("Are you sure you want to remove this role assignment?")) {
+      removeAssignmentMutation.mutate(assignmentId);
     }
   };
 
-  // Open user permissions dialog
-  const handleManageUserPermissions = async (user: User) => {
-    setSelectedUser(user);
-    try {
-      const permissions = await fetchUserPermissions(user.id);
-      setUserModulePermissions(permissions);
-      setIsUserPermissionsOpen(true);
-    } catch (error: any) {
-      toast({
-        title: "Error loading permissions",
-        description: error.message || "Failed to load user permissions",
-        variant: "destructive",
-      });
-    }
+  // Get user's current roles
+  const getUserRoles = (userId: string) => {
+    return assignments.filter(assignment => 
+      assignment.user_id === userId && assignment.is_active
+    );
   };
-
-  // Toggle user permission
-  const toggleUserPermission = (moduleId: string, permission: string) => {
-    setUserModulePermissions(prevState => {
-      const modulePermissions = [...(prevState[moduleId] || [])];
-      
-      if (permission === "admin") {
-        if (modulePermissions.includes("admin")) {
-          return { ...prevState, [moduleId]: [] };
-        } else {
-          return { ...prevState, [moduleId]: ["admin"] };
-        }
-      } else {
-        if (modulePermissions.includes("admin")) {
-          const withoutAdmin = modulePermissions.filter(p => p !== "admin");
-          withoutAdmin.push(permission);
-          return { ...prevState, [moduleId]: withoutAdmin };
-        }
-        
-        const permissionIndex = modulePermissions.indexOf(permission);
-        if (permissionIndex !== -1) {
-          modulePermissions.splice(permissionIndex, 1);
-        } else {
-          modulePermissions.push(permission);
-        }
-        
-        return { ...prevState, [moduleId]: modulePermissions };
-      }
-    });
-  };
-
-  // Save user permissions
-  const saveUserPermissions = async () => {
-    if (!selectedUser) return;
-    
-    try {
-      const updates = Object.entries(userModulePermissions).map(([moduleId, permissions]) => 
-        updateUserPermissionsMutation.mutateAsync({ 
-          userId: selectedUser.id, 
-          moduleId, 
-          permissions 
-        })
-      );
-      
-      await Promise.all(updates);
-      setIsUserPermissionsOpen(false);
-    } catch (error) {
-      console.error("Error saving user permissions:", error);
-    }
-  };
-
-  const permissionTypes = [
-    { id: "view", name: "View" },
-    { id: "create", name: "Create" },
-    { id: "edit", name: "Edit" },
-    { id: "delete", name: "Delete" },
-    { id: "admin", name: "Full Control" },
-  ];
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>User Role Assignments</CardTitle>
-        <CardDescription>
-          Assign custom roles to users and manage user-specific permissions.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        {usersLoading ? (
-          <div className="flex justify-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          </div>
-        ) : (
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>User</TableHead>
-                  <TableHead>System Roles</TableHead>
-                  <TableHead>Custom Roles</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {users.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">
-                      No users found.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  users.map((user) => (
-                    <TableRow key={user.id}>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">{user.full_name || "Unnamed User"}</div>
-                          <div className="text-sm text-muted-foreground">{user.email}</div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                          {user.roles.map((role, idx) => (
-                            <Badge key={idx} variant="secondary">
-                              {role}
-                            </Badge>
-                          ))}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                          {user.custom_roles.map((role) => (
-                            <Badge 
-                              key={role.id} 
-                              variant="default"
-                              className="cursor-pointer"
-                              onClick={() => handleRemoveRole(user.id, role.id)}
-                            >
-                              {role.name}
-                              <Trash2 className="h-3 w-3 ml-1" />
-                            </Badge>
-                          ))}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => {
-                              setSelectedUser(user);
-                              setIsAssignRoleOpen(true);
-                            }}
-                          >
-                            <UserPlus className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleManageUserPermissions(user)}
-                          >
-                            <Settings className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        )}
+    <div className="space-y-6">
+      {/* Navigation and Setup Alert */}
+      <Alert>
+        <Info className="h-4 w-4" />
+        <AlertDescription className="flex items-center justify-between">
+          <span>
+            Before assigning roles, make sure you have configured your roles and their module permissions.
+          </span>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => window.location.hash = "#roles"}
+          >
+            <Settings className="mr-2 h-4 w-4" />
+            Configure Roles & Modules
+          </Button>
+        </AlertDescription>
+      </Alert>
 
-        {/* Assign Role Dialog */}
-        <Dialog open={isAssignRoleOpen} onOpenChange={setIsAssignRoleOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Assign Role to {selectedUser?.full_name}</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-medium">Select Role</label>
-                <Select value={selectedRole} onValueChange={setSelectedRole}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose a role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {customRoles.map((role) => (
-                      <SelectItem key={role.id} value={role.id}>
-                        {role.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <DialogFooter>
-              <DialogClose asChild>
-                <Button variant="outline">Cancel</Button>
-              </DialogClose>
-              <Button 
-                onClick={handleAssignRole}
-                disabled={!selectedRole || assignRoleMutation.isPending}
-              >
-                {assignRoleMutation.isPending && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                )}
-                Assign Role
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>User Role Assignments</CardTitle>
+            <CardDescription>
+              Assign custom roles to users to grant them specific permissions across system modules.
+            </CardDescription>
+          </div>
+          <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm">
+                <UserPlus className="mr-2 h-4 w-4" /> Assign Role
               </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Assign Role to User</DialogTitle>
+              </DialogHeader>
+              <Form {...assignmentForm}>
+                <form onSubmit={assignmentForm.handleSubmit(handleAssignRole)} className="space-y-4">
+                  <FormField
+                    control={assignmentForm.control}
+                    name="user_id"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>User</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a user" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {users.map((user) => (
+                              <SelectItem key={user.id} value={user.id}>
+                                {user.full_name || "Unnamed User"}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-        {/* User Permissions Dialog */}
-        <Dialog open={isUserPermissionsOpen} onOpenChange={setIsUserPermissionsOpen}>
-          <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
-            <DialogHeader>
-              <DialogTitle>
-                User-Specific Permissions: {selectedUser?.full_name}
-              </DialogTitle>
-            </DialogHeader>
-            
-            <div className="flex-1 overflow-y-auto">
-              {modules.length === 0 ? (
-                <div className="text-center py-6 text-muted-foreground">
-                  No modules found.
-                </div>
-              ) : (
-                <Accordion type="multiple" className="w-full">
-                  {modules.map((module) => (
-                    <AccordionItem key={module.id} value={module.id}>
-                      <AccordionTrigger className="px-4">
-                        <div className="flex items-center justify-between w-full mr-4">
-                          <span>{module.name}</span>
-                          {userModulePermissions[module.id]?.length > 0 && (
-                            <Badge variant="secondary" className="ml-2">
-                              {userModulePermissions[module.id]?.includes("admin") 
-                                ? "Full Control" 
-                                : `${userModulePermissions[module.id]?.length} permissions`}
-                            </Badge>
-                          )}
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent className="px-4 pt-2">
-                        <div className="grid grid-cols-1 gap-4">
-                          {permissionTypes.map((permType) => (
-                            <div key={permType.id} className="flex items-center space-x-3 p-2 border rounded">
-                              <Checkbox 
-                                id={`${module.id}-${permType.id}`}
-                                checked={(userModulePermissions[module.id] || []).includes(permType.id)}
-                                onCheckedChange={() => toggleUserPermission(module.id, permType.id)}
-                              />
-                              <label
-                                htmlFor={`${module.id}-${permType.id}`}
-                                className="text-sm font-medium leading-none cursor-pointer"
-                              >
-                                {permType.name}
-                              </label>
-                            </div>
-                          ))}
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  ))}
-                </Accordion>
+                  <FormField
+                    control={assignmentForm.control}
+                    name="custom_role_id"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Role</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a role" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {customRoles.map((role) => (
+                              <SelectItem key={role.id} value={role.id}>
+                                <div className="flex flex-col">
+                                  <span className="font-medium">{role.name}</span>
+                                  {role.description && (
+                                    <span className="text-xs text-muted-foreground">
+                                      {role.description}
+                                    </span>
+                                  )}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <DialogFooter>
+                    <DialogClose asChild>
+                      <Button type="button" variant="outline">Cancel</Button>
+                    </DialogClose>
+                    <Button 
+                      type="submit" 
+                      disabled={assignRoleMutation.isPending}
+                    >
+                      {assignRoleMutation.isPending && (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      )}
+                      Assign Role
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
+        </CardHeader>
+
+        <CardContent>
+          {assignmentsLoading || usersLoading || rolesLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <>
+              {customRoles.length === 0 && (
+                <Alert className="mb-4">
+                  <Info className="h-4 w-4" />
+                  <AlertDescription>
+                    No custom roles found. Create roles first in the "Roles & Modules" tab before assigning them to users.
+                  </AlertDescription>
+                </Alert>
               )}
-            </div>
-            
-            <DialogFooter>
-              <DialogClose asChild>
-                <Button type="button" variant="outline">Cancel</Button>
-              </DialogClose>
-              <Button onClick={saveUserPermissions}>
-                Save Permissions
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </CardContent>
-    </Card>
+
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>User</TableHead>
+                      <TableHead>Assigned Roles</TableHead>
+                      <TableHead>Last Assignment</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {users.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">
+                          No users found.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      users.map((user) => {
+                        const userRoles = getUserRoles(user.id);
+                        const latestAssignment = userRoles[0];
+                        
+                        return (
+                          <TableRow key={user.id}>
+                            <TableCell className="font-medium">
+                              {user.full_name || "Unnamed User"}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-wrap gap-1">
+                                {userRoles.length === 0 ? (
+                                  <span className="text-muted-foreground text-sm">No roles assigned</span>
+                                ) : (
+                                  userRoles.map((assignment) => (
+                                    <Badge key={assignment.id} variant="secondary">
+                                      {assignment.role?.name}
+                                    </Badge>
+                                  ))
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {latestAssignment ? (
+                                new Date(latestAssignment.assigned_at).toLocaleDateString()
+                              ) : (
+                                "-"
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    assignmentForm.reset({ 
+                                      user_id: user.id, 
+                                      custom_role_id: "" 
+                                    });
+                                    setIsAssignDialogOpen(true);
+                                  }}
+                                >
+                                  <Plus className="h-4 w-4 mr-1" />
+                                  Assign
+                                </Button>
+                                {userRoles.map((assignment) => (
+                                  <Button
+                                    key={assignment.id}
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleRemoveAssignment(assignment.id)}
+                                    disabled={removeAssignmentMutation.isPending}
+                                  >
+                                    Remove {assignment.role?.name}
+                                  </Button>
+                                ))}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 
