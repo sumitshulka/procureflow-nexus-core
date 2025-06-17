@@ -82,7 +82,7 @@ const CustomReports = () => {
   const [selectedTable, setSelectedTable] = useState<string>("");
   const [selectedFields, setSelectedFields] = useState<string[]>([]);
   const [filters, setFilters] = useState<FilterCondition[]>([]);
-  const [groupBy, setGroupBy] = useState<string>("");
+  const [groupBy, setGroupBy] = useState<string>("none");
   const [chartType, setChartType] = useState<'bar' | 'line' | 'pie'>('bar');
   const [dateRange, setDateRange] = useState<CustomDateRange>({
     from: addDays(new Date(), -30),
@@ -383,7 +383,7 @@ const CustomReports = () => {
                   <SelectValue placeholder="Select field to group by" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No Grouping</SelectItem>
+                  <SelectItem value="none">No Grouping</SelectItem>
                   {currentFields.map(field => (
                     <SelectItem key={field.name} value={field.name}>
                       {field.label}
