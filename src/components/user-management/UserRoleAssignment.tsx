@@ -14,7 +14,7 @@ import { Loader2, Plus, UserPlus, Settings, Info } from "lucide-react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const assignmentSchema = z.object({
   user_id: z.string().min(1, "Please select a user"),
@@ -54,6 +54,7 @@ const UserRoleAssignment = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const location = useLocation();
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
@@ -243,7 +244,8 @@ const UserRoleAssignment = () => {
   };
 
   const handleConfigureRoles = () => {
-    navigate('/users#roles');
+    // Navigate to the roles tab in the current user management page
+    navigate('/users#roles', { replace: true });
   };
 
   return (

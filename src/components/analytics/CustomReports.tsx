@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -83,7 +82,7 @@ const CustomReports = () => {
   const [selectedFields, setSelectedFields] = useState<string[]>([]);
   const [filters, setFilters] = useState<FilterCondition[]>([]);
   const [groupBy, setGroupBy] = useState<string>("none");
-  const [chartType, setChartType] = useState<'bar' | 'line' | 'pie'>('bar');
+  const [displayType, setDisplayType] = useState<'bar' | 'line' | 'pie' | 'table'>('table');
   const [dateRange, setDateRange] = useState<CustomDateRange>({
     from: addDays(new Date(), -30),
     to: new Date()
@@ -201,7 +200,7 @@ const CustomReports = () => {
 
     const data = reportData.slice(0, 10); // Limit for better visualization
 
-    switch (chartType) {
+    switch (displayType) {
       case 'bar':
         return (
           <ResponsiveContainer width="100%" height={300}>
@@ -251,6 +250,38 @@ const CustomReports = () => {
               <Tooltip />
             </PieChart>
           </ResponsiveContainer>
+        );
+      case 'table':
+        return (
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse border border-gray-300">
+              <thead>
+                <tr className="bg-gray-50">
+                  {selectedFields.map(field => (
+                    <th key={field} className="border border-gray-300 px-4 py-2 text-left">
+                      {currentFields.find(f => f.name === field)?.label || field}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {reportData.slice(0, 100).map((row, index) => (
+                  <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                    {selectedFields.map(field => (
+                      <td key={field} className="border border-gray-300 px-4 py-2">
+                        {row[field]?.toString() || ''}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {reportData.length > 100 && (
+              <p className="text-sm text-gray-500 mt-2">
+                Showing first 100 rows of {reportData.length} total rows
+              </p>
+            )}
+          </div>
         );
       default:
         return null;
@@ -394,14 +425,15 @@ const CustomReports = () => {
             </div>
           )}
 
-          {/* Chart Type */}
+          {/* Data Display Type */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Chart Type</label>
-            <Select value={chartType} onValueChange={(value: 'bar' | 'line' | 'pie') => setChartType(value)}>
+            <label className="text-sm font-medium">Data Display Type</label>
+            <Select value={displayType} onValueChange={(value: 'bar' | 'line' | 'pie' | 'table') => setDisplayType(value)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="table">Table Display</SelectItem>
                 <SelectItem value="bar">Bar Chart</SelectItem>
                 <SelectItem value="line">Line Chart</SelectItem>
                 <SelectItem value="pie">Pie Chart</SelectItem>
@@ -430,51 +462,13 @@ const CustomReports = () => {
       {/* Results */}
       {reportData && (
         <div className="space-y-6">
-          {/* Chart */}
+          {/* Visualization */}
           <Card>
             <CardHeader>
-              <CardTitle>Visualization</CardTitle>
+              <CardTitle>Data Visualization</CardTitle>
             </CardHeader>
             <CardContent>
               {renderChart()}
-            </CardContent>
-          </Card>
-
-          {/* Data Table */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Data Results ({reportData.length} rows)</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse border border-gray-300">
-                  <thead>
-                    <tr className="bg-gray-50">
-                      {selectedFields.map(field => (
-                        <th key={field} className="border border-gray-300 px-4 py-2 text-left">
-                          {currentFields.find(f => f.name === field)?.label || field}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {reportData.slice(0, 100).map((row, index) => (
-                      <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                        {selectedFields.map(field => (
-                          <td key={field} className="border border-gray-300 px-4 py-2">
-                            {row[field]?.toString() || ''}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              {reportData.length > 100 && (
-                <p className="text-sm text-gray-500 mt-2">
-                  Showing first 100 rows of {reportData.length} total rows
-                </p>
-              )}
             </CardContent>
           </Card>
         </div>
