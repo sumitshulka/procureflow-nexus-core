@@ -41,6 +41,13 @@ interface Department {
   name: string;
 }
 
+// Interface for user email data from Edge Function
+interface UserEmailData {
+  id: string;
+  email: string;
+  full_name?: string;
+}
+
 // Form schema for user creation/editing
 const userFormSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -80,6 +87,7 @@ const UsersList = () => {
         .select("id, full_name, created_at, department");
 
       if (error) throw error;
+      if (!profiles || profiles.length === 0) return [];
 
       // Get user roles
       const { data: userRoles, error: rolesError } = await supabase
@@ -99,10 +107,15 @@ const UsersList = () => {
         console.error('Error fetching user emails:', emailsError);
       }
 
-      // Create emails map
-      const emailsMap = new Map(
-        emailsResponse?.users?.map((user: any) => [user.id, user.email]) || []
-      );
+      // Create emails map with proper typing
+      const emailsMap = new Map<string, string>();
+      if (emailsResponse?.users && Array.isArray(emailsResponse.users)) {
+        emailsResponse.users.forEach((user: UserEmailData) => {
+          if (user.id && user.email) {
+            emailsMap.set(user.id, user.email);
+          }
+        });
+      }
 
       // Group roles by user
       const rolesByUser = userRoles.reduce((acc, { user_id, role }) => {

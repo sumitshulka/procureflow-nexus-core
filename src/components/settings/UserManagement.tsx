@@ -35,6 +35,13 @@ const userSchema = z.object({
   role: z.string().min(1, "Role is required"),
 });
 
+// Interface for user email data from Edge Function
+interface UserEmailData {
+  id: string;
+  email: string;
+  full_name?: string;
+}
+
 // Interface for user data display
 interface UserData {
   id: string;
@@ -72,6 +79,7 @@ const UserManagement = () => {
         .select("id, full_name, created_at");
         
       if (profilesError) throw profilesError;
+      if (!profiles || profiles.length === 0) return [];
       
       // Get user roles
       const { data: userRoles, error: rolesError } = await supabase
@@ -91,10 +99,15 @@ const UserManagement = () => {
         console.error('Error fetching user emails:', emailsError);
       }
 
-      // Create emails map
-      const emailsMap = new Map(
-        emailsResponse?.users?.map((user: any) => [user.id, user.email]) || []
-      );
+      // Create emails map with proper typing
+      const emailsMap = new Map<string, string>();
+      if (emailsResponse?.users && Array.isArray(emailsResponse.users)) {
+        emailsResponse.users.forEach((user: UserEmailData) => {
+          if (user.id && user.email) {
+            emailsMap.set(user.id, user.email);
+          }
+        });
+      }
       
       // Group roles by user
       const rolesByUser: Record<string, string[]> = {};
