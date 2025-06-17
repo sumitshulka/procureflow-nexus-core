@@ -1,13 +1,14 @@
 
-import { Navigate, Outlet, useLocation } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { UserRole } from "@/types";
 
 interface ProtectedRouteProps {
+  children: React.ReactNode;
   requiredRoles?: UserRole[];
 }
 
-const ProtectedRoute = ({ requiredRoles }: ProtectedRouteProps) => {
+const ProtectedRoute = ({ children, requiredRoles }: ProtectedRouteProps) => {
   const { user, userData, isLoading } = useAuth();
   const location = useLocation();
 
@@ -42,7 +43,7 @@ const ProtectedRoute = ({ requiredRoles }: ProtectedRouteProps) => {
       role.toLowerCase() === UserRole.ADMIN.toLowerCase()
     ))) {
     console.log("User has ADMIN role - granting access to all routes");
-    return <Outlet />;
+    return <>{children}</>;
   }
 
   // If specific roles are required, check if user has at least one of them
@@ -81,9 +82,9 @@ const ProtectedRoute = ({ requiredRoles }: ProtectedRouteProps) => {
     }
   }
 
-  // If authenticated and has required role (or no roles required), render the outlet
+  // If authenticated and has required role (or no roles required), render the children
   console.log("Access granted to path:", location.pathname);
-  return <Outlet />;
+  return <>{children}</>;
 };
 
 export default ProtectedRoute;

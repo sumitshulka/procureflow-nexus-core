@@ -1,210 +1,241 @@
 
 import React, { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { DatePickerWithRange } from "@/components/ui/date-picker";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from "recharts";
-import { Plus, Play, Save, Download, Edit, Trash2, BarChart3 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { Download, Play, Save } from "lucide-react";
+import { addDays } from "date-fns";
 
-interface ReportConfig {
-  id?: string;
-  name: string;
-  description: string;
-  dataSource: string;
-  fields: string[];
-  filters: Record<string, any>;
-  groupBy?: string;
-  chartType: string;
-  dateRange: {
-    from: string;
-    to: string;
-  };
+interface CustomDateRange {
+  from: Date;
+  to: Date;
 }
 
-type ValidTableName = "procurement_requests" | "purchase_orders" | "inventory_transactions" | "vendor_registrations";
+interface ReportField {
+  name: string;
+  label: string;
+  type: 'string' | 'number' | 'date' | 'boolean';
+}
+
+interface FilterCondition {
+  field: string;
+  operator: 'eq' | 'neq' | 'gt' | 'lt' | 'gte' | 'lte' | 'like' | 'in';
+  value: string;
+}
+
+const AVAILABLE_TABLES = [
+  { value: 'purchase_orders', label: 'Purchase Orders' },
+  { value: 'procurement_requests', label: 'Procurement Requests' },
+  { value: 'vendors', label: 'Vendors' },
+  { value: 'products', label: 'Products' },
+  { value: 'inventory_items', label: 'Inventory Items' },
+  { value: 'categories', label: 'Categories' },
+];
+
+const FIELD_MAPPINGS: Record<string, ReportField[]> = {
+  purchase_orders: [
+    { name: 'po_number', label: 'PO Number', type: 'string' },
+    { name: 'final_amount', label: 'Final Amount', type: 'number' },
+    { name: 'po_date', label: 'PO Date', type: 'date' },
+    { name: 'status', label: 'Status', type: 'string' },
+    { name: 'vendor_id', label: 'Vendor ID', type: 'string' },
+  ],
+  procurement_requests: [
+    { name: 'title', label: 'Title', type: 'string' },
+    { name: 'status', label: 'Status', type: 'string' },
+    { name: 'priority', label: 'Priority', type: 'string' },
+    { name: 'created_at', label: 'Created At', type: 'date' },
+    { name: 'total_estimated_cost', label: 'Estimated Cost', type: 'number' },
+  ],
+  vendors: [
+    { name: 'name', label: 'Name', type: 'string' },
+    { name: 'email', label: 'Email', type: 'string' },
+    { name: 'status', label: 'Status', type: 'string' },
+    { name: 'created_at', label: 'Created At', type: 'date' },
+  ],
+  products: [
+    { name: 'name', label: 'Product Name', type: 'string' },
+    { name: 'price', label: 'Price', type: 'number' },
+    { name: 'category_id', label: 'Category ID', type: 'string' },
+    { name: 'created_at', label: 'Created At', type: 'date' },
+  ],
+  inventory_items: [
+    { name: 'product_id', label: 'Product ID', type: 'string' },
+    { name: 'quantity', label: 'Quantity', type: 'number' },
+    { name: 'location', label: 'Location', type: 'string' },
+    { name: 'last_updated', label: 'Last Updated', type: 'date' },
+  ],
+  categories: [
+    { name: 'name', label: 'Category Name', type: 'string' },
+    { name: 'description', label: 'Description', type: 'string' },
+    { name: 'created_at', label: 'Created At', type: 'date' },
+  ],
+};
 
 const CustomReports = () => {
-  const { toast } = useToast();
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [selectedReport, setSelectedReport] = useState<ReportConfig | null>(null);
-  const [reportResults, setReportResults] = useState<any[]>([]);
-  
-  // Form state for report configuration
-  const [reportConfig, setReportConfig] = useState<ReportConfig>({
-    name: "",
-    description: "",
-    dataSource: "procurement_requests",
-    fields: [],
-    filters: {},
-    chartType: "bar",
-    dateRange: {
-      from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      to: new Date().toISOString().split('T')[0]
+  const [selectedTable, setSelectedTable] = useState<string>("");
+  const [selectedFields, setSelectedFields] = useState<string[]>([]);
+  const [filters, setFilters] = useState<FilterCondition[]>([]);
+  const [groupBy, setGroupBy] = useState<string>("");
+  const [chartType, setChartType] = useState<'bar' | 'line' | 'pie'>('bar');
+  const [dateRange, setDateRange] = useState<CustomDateRange>({
+    from: addDays(new Date(), -30),
+    to: new Date()
+  });
+  const [reportName, setReportName] = useState<string>("");
+
+  const generateReport = async () => {
+    if (!selectedTable || selectedFields.length === 0) {
+      throw new Error("Please select a table and at least one field");
     }
+
+    let query = supabase.from(selectedTable as any).select(selectedFields.join(','));
+
+    // Apply filters
+    filters.forEach(filter => {
+      if (filter.field && filter.operator && filter.value) {
+        switch (filter.operator) {
+          case 'eq':
+            query = query.eq(filter.field, filter.value);
+            break;
+          case 'neq':
+            query = query.neq(filter.field, filter.value);
+            break;
+          case 'gt':
+            query = query.gt(filter.field, filter.value);
+            break;
+          case 'lt':
+            query = query.lt(filter.field, filter.value);
+            break;
+          case 'gte':
+            query = query.gte(filter.field, filter.value);
+            break;
+          case 'lte':
+            query = query.lte(filter.field, filter.value);
+            break;
+          case 'like':
+            query = query.like(filter.field, `%${filter.value}%`);
+            break;
+        }
+      }
+    });
+
+    // Apply date range if applicable
+    const hasDateField = selectedFields.some(field => 
+      FIELD_MAPPINGS[selectedTable]?.find(f => f.name === field && f.type === 'date')
+    );
+    
+    if (hasDateField) {
+      const dateField = selectedFields.find(field => 
+        FIELD_MAPPINGS[selectedTable]?.find(f => f.name === field && f.type === 'date')
+      );
+      if (dateField) {
+        query = query.gte(dateField, dateRange.from.toISOString())
+                  .lte(dateField, dateRange.to.toISOString());
+      }
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    return data || [];
+  };
+
+  const { data: reportData, isLoading, refetch } = useQuery({
+    queryKey: ["custom_report", selectedTable, selectedFields, filters, dateRange],
+    queryFn: generateReport,
+    enabled: false, // Only run when triggered
   });
 
-  // Available data sources and their fields
-  const dataSources = {
-    procurement_requests: {
-      name: "Procurement Requests",
-      fields: ["id", "title", "status", "department", "estimated_value", "created_at", "date_needed", "priority"]
-    },
-    purchase_orders: {
-      name: "Purchase Orders", 
-      fields: ["id", "po_number", "final_amount", "status", "po_date", "expected_delivery_date", "currency"]
-    },
-    inventory_transactions: {
-      name: "Inventory Transactions",
-      fields: ["id", "type", "quantity", "transaction_date", "approval_status", "delivery_status"]
-    },
-    vendor_registrations: {
-      name: "Vendors",
-      fields: ["id", "company_name", "status", "created_at", "primary_email", "annual_turnover"]
-    }
+  const addFilter = () => {
+    setFilters([...filters, { field: '', operator: 'eq', value: '' }]);
   };
 
-  // Execute custom report
-  const executeReport = async (config: ReportConfig) => {
-    try {
-      // Type assertion to ensure we use a valid table name
-      const tableName = config.dataSource as ValidTableName;
-      
-      let query = supabase.from(tableName);
-      
-      // Select specified fields
-      if (config.fields.length > 0) {
-        query = query.select(config.fields.join(", "));
-      } else {
-        query = query.select("*");
-      }
-
-      // Apply date filters
-      if (config.dateRange.from && config.dateRange.to) {
-        const dateField = config.dataSource === "procurement_requests" ? "created_at" : 
-                         config.dataSource === "purchase_orders" ? "po_date" :
-                         config.dataSource === "inventory_transactions" ? "transaction_date" : "created_at";
-        
-        query = query
-          .gte(dateField, config.dateRange.from)
-          .lte(dateField, config.dateRange.to);
-      }
-
-      // Apply additional filters
-      Object.entries(config.filters).forEach(([field, value]) => {
-        if (value) {
-          query = query.eq(field, value);
-        }
-      });
-
-      const { data, error } = await query;
-      if (error) throw error;
-
-      // Process data for charts
-      let processedData = data || [];
-      
-      if (config.groupBy) {
-        const grouped = processedData.reduce((acc, item) => {
-          const key = item[config.groupBy];
-          if (!acc[key]) acc[key] = [];
-          acc[key].push(item);
-          return acc;
-        }, {});
-
-        processedData = Object.entries(grouped).map(([key, items]: [string, any[]]) => ({
-          name: key,
-          value: items.length,
-          total: items.reduce((sum, item) => {
-            const numericField = config.fields.find(f => 
-              f.includes('amount') || f.includes('value') || f.includes('price')
-            );
-            return sum + (numericField ? (item[numericField] || 0) : 0);
-          }, 0)
-        }));
-      }
-
-      setReportResults(processedData);
-      setSelectedReport(config);
-      
-      toast({
-        title: "Report executed successfully",
-        description: `Generated ${processedData.length} records`
-      });
-
-    } catch (error) {
-      console.error("Error executing report:", error);
-      toast({
-        title: "Error executing report",
-        description: error.message,
-        variant: "destructive"
-      });
-    }
+  const updateFilter = (index: number, updates: Partial<FilterCondition>) => {
+    const newFilters = [...filters];
+    newFilters[index] = { ...newFilters[index], ...updates };
+    setFilters(newFilters);
   };
 
-  const handleFieldToggle = (field: string, checked: boolean | string) => {
-    const isChecked = typeof checked === 'boolean' ? checked : checked === 'true';
-    setReportConfig(prev => ({
-      ...prev,
-      fields: isChecked 
-        ? [...prev.fields, field]
-        : prev.fields.filter(f => f !== field)
-    }));
+  const removeFilter = (index: number) => {
+    setFilters(filters.filter((_, i) => i !== index));
   };
 
-  const handleFilterChange = (field: string, value: string) => {
-    setReportConfig(prev => ({
-      ...prev,
-      filters: { ...prev.filters, [field]: value }
-    }));
+  const toggleField = (fieldName: string) => {
+    setSelectedFields(prev => 
+      prev.includes(fieldName) 
+        ? prev.filter(f => f !== fieldName)
+        : [...prev, fieldName]
+    );
+  };
+
+  const runReport = () => {
+    refetch();
+  };
+
+  const exportReport = () => {
+    if (!reportData) return;
+    
+    const csv = [
+      selectedFields.join(','),
+      ...reportData.map(row => selectedFields.map(field => row[field] || '').join(','))
+    ].join('\n');
+    
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${reportName || 'custom_report'}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   const renderChart = () => {
-    if (!reportResults.length) return null;
+    if (!reportData || reportData.length === 0) return null;
 
-    const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
+    const data = reportData.slice(0, 10); // Limit for better visualization
 
-    switch (selectedReport?.chartType) {
-      case "bar":
+    switch (chartType) {
+      case 'bar':
         return (
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={reportResults}>
+            <BarChart data={data}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
+              <XAxis dataKey={selectedFields[0]} />
               <YAxis />
               <Tooltip />
-              <Bar dataKey="value" fill="#8884d8" />
+              <Bar dataKey={selectedFields[1] || selectedFields[0]} fill="#8884d8" />
             </BarChart>
           </ResponsiveContainer>
         );
-      
-      case "line":
+      case 'line':
         return (
           <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={reportResults}>
+            <LineChart data={data}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
+              <XAxis dataKey={selectedFields[0]} />
               <YAxis />
               <Tooltip />
-              <Line type="monotone" dataKey="value" stroke="#8884d8" />
+              <Line type="monotone" dataKey={selectedFields[1] || selectedFields[0]} stroke="#8884d8" />
             </LineChart>
           </ResponsiveContainer>
         );
-      
-      case "pie":
+      case 'pie':
+        const pieData = data.map((item, index) => ({
+          name: item[selectedFields[0]] || `Item ${index + 1}`,
+          value: parseFloat(item[selectedFields[1] || selectedFields[0]]) || 1
+        }));
         return (
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
-                data={reportResults}
+                data={pieData}
                 cx="50%"
                 cy="50%"
                 labelLine={false}
@@ -213,325 +244,241 @@ const CustomReports = () => {
                 fill="#8884d8"
                 dataKey="value"
               >
-                {reportResults.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                {pieData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={`hsl(${index * 45}, 70%, 50%)`} />
                 ))}
               </Pie>
               <Tooltip />
             </PieChart>
           </ResponsiveContainer>
         );
-      
       default:
-        return <div>Unsupported chart type</div>;
+        return null;
     }
   };
 
+  const currentFields = selectedTable ? FIELD_MAPPINGS[selectedTable] || [] : [];
+
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold">Custom Reports</h2>
-          <p className="text-muted-foreground">Create and run dynamic reports with flexible configurations</p>
-        </div>
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Create Report
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-4xl">
-            <DialogHeader>
-              <DialogTitle>Create Custom Report</DialogTitle>
-            </DialogHeader>
-            
-            <div className="grid grid-cols-2 gap-6">
-              {/* Basic Configuration */}
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="name">Report Name</Label>
-                  <Input
-                    id="name"
-                    value={reportConfig.name}
-                    onChange={(e) => setReportConfig(prev => ({ ...prev, name: e.target.value }))}
-                    placeholder="Enter report name"
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    value={reportConfig.description}
-                    onChange={(e) => setReportConfig(prev => ({ ...prev, description: e.target.value }))}
-                    placeholder="Describe your report"
-                  />
-                </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Custom Report Builder</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Report Name */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Report Name</label>
+            <Input
+              placeholder="Enter report name"
+              value={reportName}
+              onChange={(e) => setReportName(e.target.value)}
+            />
+          </div>
 
-                <div>
-                  <Label>Data Source</Label>
-                  <Select 
-                    value={reportConfig.dataSource} 
-                    onValueChange={(value) => setReportConfig(prev => ({ ...prev, dataSource: value, fields: [] }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(dataSources).map(([key, source]) => (
-                        <SelectItem key={key} value={key}>{source.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+          {/* Data Source Selection */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Data Source</label>
+            <Select value={selectedTable} onValueChange={setSelectedTable}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a table" />
+              </SelectTrigger>
+              <SelectContent>
+                {AVAILABLE_TABLES.map(table => (
+                  <SelectItem key={table.value} value={table.value}>
+                    {table.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-                <div>
-                  <Label>Chart Type</Label>
-                  <Select 
-                    value={reportConfig.chartType} 
-                    onValueChange={(value) => setReportConfig(prev => ({ ...prev, chartType: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="bar">Bar Chart</SelectItem>
-                      <SelectItem value="line">Line Chart</SelectItem>
-                      <SelectItem value="pie">Pie Chart</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Field Selection */}
-              <div className="space-y-4">
-                <div>
-                  <Label>Select Fields</Label>
-                  <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto border rounded p-2">
-                    {dataSources[reportConfig.dataSource as ValidTableName]?.fields.map(field => (
-                      <div key={field} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={field}
-                          checked={reportConfig.fields.includes(field)}
-                          onCheckedChange={(checked) => handleFieldToggle(field, checked)}
-                        />
-                        <Label htmlFor={field} className="text-sm">{field}</Label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <Label>Date Range</Label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Input
-                      type="date"
-                      value={reportConfig.dateRange.from}
-                      onChange={(e) => setReportConfig(prev => ({
-                        ...prev,
-                        dateRange: { ...prev.dateRange, from: e.target.value }
-                      }))}
+          {/* Field Selection */}
+          {selectedTable && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Select Fields</label>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                {currentFields.map(field => (
+                  <div key={field.name} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={field.name}
+                      checked={selectedFields.includes(field.name)}
+                      onCheckedChange={() => toggleField(field.name)}
                     />
-                    <Input
-                      type="date"
-                      value={reportConfig.dateRange.to}
-                      onChange={(e) => setReportConfig(prev => ({
-                        ...prev,
-                        dateRange: { ...prev.dateRange, to: e.target.value }
-                      }))}
-                    />
+                    <label htmlFor={field.name} className="text-sm">
+                      {field.label}
+                    </label>
                   </div>
-                </div>
-
-                {reportConfig.dataSource && (
-                  <div>
-                    <Label>Group By (for charts)</Label>
-                    <Select 
-                      value={reportConfig.groupBy || ""} 
-                      onValueChange={(value) => setReportConfig(prev => ({ ...prev, groupBy: value }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select field to group by" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {dataSources[reportConfig.dataSource as ValidTableName]?.fields.map(field => (
-                          <SelectItem key={field} value={field}>{field}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
+                ))}
               </div>
             </div>
+          )}
 
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={() => executeReport(reportConfig)}>
-                <Play className="h-4 w-4 mr-2" />
-                Run Report
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
+          {/* Filters */}
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <label className="text-sm font-medium">Filters</label>
+              <Button size="sm" onClick={addFilter}>Add Filter</Button>
+            </div>
+            {filters.map((filter, index) => (
+              <div key={index} className="flex gap-2 items-center">
+                <Select value={filter.field} onValueChange={(value) => updateFilter(index, { field: value })}>
+                  <SelectTrigger className="w-40">
+                    <SelectValue placeholder="Field" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {currentFields.map(field => (
+                      <SelectItem key={field.name} value={field.name}>
+                        {field.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={filter.operator} onValueChange={(value: FilterCondition['operator']) => updateFilter(index, { operator: value })}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="eq">Equals</SelectItem>
+                    <SelectItem value="neq">Not Equals</SelectItem>
+                    <SelectItem value="gt">Greater Than</SelectItem>
+                    <SelectItem value="lt">Less Than</SelectItem>
+                    <SelectItem value="gte">Greater or Equal</SelectItem>
+                    <SelectItem value="lte">Less or Equal</SelectItem>
+                    <SelectItem value="like">Contains</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Input
+                  placeholder="Value"
+                  value={filter.value}
+                  onChange={(e) => updateFilter(index, { value: e.target.value })}
+                  className="flex-1"
+                />
+                <Button size="sm" variant="outline" onClick={() => removeFilter(index)}>
+                  Remove
+                </Button>
+              </div>
+            ))}
+          </div>
 
-      {/* Report Results */}
-      {selectedReport && reportResults.length > 0 && (
+          {/* Date Range */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Date Range</label>
+            <DatePickerWithRange 
+              date={dateRange} 
+              onDateChange={(range) => {
+                if (range?.from && range?.to) {
+                  setDateRange({ from: range.from, to: range.to });
+                }
+              }} 
+            />
+          </div>
+
+          {/* Group By */}
+          {selectedTable && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Group By</label>
+              <Select value={groupBy} onValueChange={setGroupBy}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select field to group by" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">No Grouping</SelectItem>
+                  {currentFields.map(field => (
+                    <SelectItem key={field.name} value={field.name}>
+                      {field.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Chart Type */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Chart Type</label>
+            <Select value={chartType} onValueChange={(value: 'bar' | 'line' | 'pie') => setChartType(value)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="bar">Bar Chart</SelectItem>
+                <SelectItem value="line">Line Chart</SelectItem>
+                <SelectItem value="pie">Pie Chart</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-2">
+            <Button onClick={runReport} disabled={!selectedTable || selectedFields.length === 0 || isLoading}>
+              <Play className="h-4 w-4 mr-2" />
+              {isLoading ? 'Running...' : 'Run Report'}
+            </Button>
+            <Button variant="outline" onClick={exportReport} disabled={!reportData}>
+              <Download className="h-4 w-4 mr-2" />
+              Export CSV
+            </Button>
+            <Button variant="outline">
+              <Save className="h-4 w-4 mr-2" />
+              Save Report
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Results */}
+      {reportData && (
         <div className="space-y-6">
+          {/* Chart */}
           <Card>
             <CardHeader>
-              <div className="flex justify-between items-center">
-                <div>
-                  <CardTitle>{selectedReport.name}</CardTitle>
-                  <p className="text-muted-foreground">{selectedReport.description}</p>
-                </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm">
-                    <Download className="h-4 w-4 mr-2" />
-                    Export
-                  </Button>
-                  <Button variant="outline" size="sm">
-                    <Save className="h-4 w-4 mr-2" />
-                    Save Report
-                  </Button>
-                </div>
-              </div>
+              <CardTitle>Visualization</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-6">
-                {/* Chart */}
-                <div>
-                  <h3 className="text-lg font-semibold mb-4">Visualization</h3>
-                  {renderChart()}
-                </div>
+              {renderChart()}
+            </CardContent>
+          </Card>
 
-                {/* Data Table */}
-                <div>
-                  <h3 className="text-lg font-semibold mb-4">Raw Data ({reportResults.length} records)</h3>
-                  <div className="border rounded-md overflow-hidden">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          {Object.keys(reportResults[0] || {}).map(key => (
-                            <TableHead key={key}>{key}</TableHead>
-                          ))}
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {reportResults.slice(0, 50).map((row, index) => (
-                          <TableRow key={index}>
-                            {Object.values(row).map((value, cellIndex) => (
-                              <TableCell key={cellIndex}>
-                                {typeof value === 'number' ? value.toLocaleString() : String(value)}
-                              </TableCell>
-                            ))}
-                          </TableRow>
+          {/* Data Table */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Data Results ({reportData.length} rows)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse border border-gray-300">
+                  <thead>
+                    <tr className="bg-gray-50">
+                      {selectedFields.map(field => (
+                        <th key={field} className="border border-gray-300 px-4 py-2 text-left">
+                          {currentFields.find(f => f.name === field)?.label || field}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {reportData.slice(0, 100).map((row, index) => (
+                      <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                        {selectedFields.map(field => (
+                          <td key={field} className="border border-gray-300 px-4 py-2">
+                            {row[field]?.toString() || ''}
+                          </td>
                         ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                  {reportResults.length > 50 && (
-                    <p className="text-sm text-muted-foreground mt-2">
-                      Showing first 50 records. Export to see all data.
-                    </p>
-                  )}
-                </div>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
+              {reportData.length > 100 && (
+                <p className="text-sm text-gray-500 mt-2">
+                  Showing first 100 rows of {reportData.length} total rows
+                </p>
+              )}
             </CardContent>
           </Card>
         </div>
       )}
-
-      {/* Quick Reports */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Quick Reports</CardTitle>
-          <p className="text-muted-foreground">Pre-configured reports for common use cases</p>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[
-              {
-                name: "Monthly Procurement Trends",
-                description: "Track procurement request volumes by month",
-                config: {
-                  name: "Monthly Procurement Trends",
-                  description: "Procurement requests grouped by month",
-                  dataSource: "procurement_requests",
-                  fields: ["id", "created_at", "status"],
-                  filters: {},
-                  groupBy: "status",
-                  chartType: "line",
-                  dateRange: {
-                    from: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-                    to: new Date().toISOString().split('T')[0]
-                  }
-                }
-              },
-              {
-                name: "Department Spending",
-                description: "Analyze spending patterns by department",
-                config: {
-                  name: "Department Spending Analysis",
-                  description: "Purchase orders grouped by department",
-                  dataSource: "purchase_orders",
-                  fields: ["id", "final_amount", "po_date"],
-                  filters: {},
-                  groupBy: "status",
-                  chartType: "pie",
-                  dateRange: {
-                    from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-                    to: new Date().toISOString().split('T')[0]
-                  }
-                }
-              },
-              {
-                name: "Vendor Status Overview",
-                description: "Current status of all registered vendors",
-                config: {
-                  name: "Vendor Status Report",
-                  description: "Overview of vendor registration statuses",
-                  dataSource: "vendor_registrations",
-                  fields: ["id", "company_name", "status", "created_at"],
-                  filters: {},
-                  groupBy: "status",
-                  chartType: "bar",
-                  dateRange: {
-                    from: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-                    to: new Date().toISOString().split('T')[0]
-                  }
-                }
-              }
-            ].map((quickReport, index) => (
-              <Card key={index} className="cursor-pointer hover:shadow-md transition-shadow">
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <h3 className="font-semibold">{quickReport.name}</h3>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {quickReport.description}
-                      </p>
-                    </div>
-                    <BarChart3 className="h-5 w-5 text-muted-foreground" />
-                  </div>
-                  <Button 
-                    size="sm" 
-                    className="w-full mt-3"
-                    onClick={() => executeReport(quickReport.config)}
-                  >
-                    <Play className="h-4 w-4 mr-2" />
-                    Run Report
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 };
