@@ -64,14 +64,34 @@ const UserRoleAssignment = () => {
         .eq("status", "active");
       
       if (profilesError) throw profilesError;
+      if (!profiles || profiles.length === 0) return [];
+
+      // Get user emails using Edge Function
+      const userIds = profiles.map(profile => profile.id);
       
-      // Get auth user data for emails (this requires admin privileges or specific RLS policies)
-      // Since we can't directly access auth.users from client, we'll need to handle this differently
-      // For now, we'll use the profiles data and note that email should be handled via edge function
+      const { data: emailsResponse, error: emailsError } = await supabase.functions.invoke('get-user-emails', {
+        body: { userIds }
+      });
+
+      if (emailsError) {
+        console.error('Error fetching user emails:', emailsError);
+        // Continue without emails if the function fails
+        return profiles.map(profile => ({
+          id: profile.id,
+          full_name: profile.full_name,
+          email: undefined
+        })) as UserData[];
+      }
+
+      // Combine profile data with email data
+      const emailsMap = new Map(
+        emailsResponse.users?.map((user: any) => [user.id, user.email]) || []
+      );
+
       return profiles.map(profile => ({
         id: profile.id,
         full_name: profile.full_name,
-        email: undefined // Email will need to be fetched via edge function or server-side
+        email: emailsMap.get(profile.id)
       })) as UserData[];
     },
   });

@@ -62,7 +62,7 @@ const UserManagement = () => {
     },
   });
   
-  // Fetch users with their roles
+  // Fetch users with their roles and real emails
   const { data: users = [], isLoading, error } = useQuery({
     queryKey: ["users"],
     queryFn: async () => {
@@ -73,13 +73,28 @@ const UserManagement = () => {
         
       if (profilesError) throw profilesError;
       
-      // Get user emails from auth.users - this needs to be done in an edge function
-      // For now we'll just mock it by extracting from user roles
+      // Get user roles
       const { data: userRoles, error: rolesError } = await supabase
         .from("user_roles")
         .select("user_id, role");
         
       if (rolesError) throw rolesError;
+
+      // Get user emails using Edge Function
+      const userIds = profiles.map(profile => profile.id);
+      
+      const { data: emailsResponse, error: emailsError } = await supabase.functions.invoke('get-user-emails', {
+        body: { userIds }
+      });
+
+      if (emailsError) {
+        console.error('Error fetching user emails:', emailsError);
+      }
+
+      // Create emails map
+      const emailsMap = new Map(
+        emailsResponse?.users?.map((user: any) => [user.id, user.email]) || []
+      );
       
       // Group roles by user
       const rolesByUser: Record<string, string[]> = {};
@@ -95,7 +110,7 @@ const UserManagement = () => {
         const userRoles = rolesByUser[profile.id] || [];
         return {
           id: profile.id,
-          email: `user-${profile.id.substring(0, 8)}@example.com`, // Placeholder since we can't access auth.users
+          email: emailsMap.get(profile.id) || "No email found",
           fullName: profile.full_name,
           roles: userRoles,
           createdAt: profile.created_at,

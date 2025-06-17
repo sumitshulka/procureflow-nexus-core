@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -72,7 +71,7 @@ const UsersList = () => {
     fetchDepartments();
   }, []);
 
-  // Fetch users
+  // Fetch users with real emails
   const { data: users, isLoading, refetch } = useQuery({
     queryKey: ["users"],
     queryFn: async () => {
@@ -89,6 +88,22 @@ const UsersList = () => {
 
       if (rolesError) throw rolesError;
 
+      // Get user emails using Edge Function
+      const userIds = profiles.map(profile => profile.id);
+      
+      const { data: emailsResponse, error: emailsError } = await supabase.functions.invoke('get-user-emails', {
+        body: { userIds }
+      });
+
+      if (emailsError) {
+        console.error('Error fetching user emails:', emailsError);
+      }
+
+      // Create emails map
+      const emailsMap = new Map(
+        emailsResponse?.users?.map((user: any) => [user.id, user.email]) || []
+      );
+
       // Group roles by user
       const rolesByUser = userRoles.reduce((acc, { user_id, role }) => {
         if (!acc[user_id]) acc[user_id] = [];
@@ -96,14 +111,14 @@ const UsersList = () => {
         return acc;
       }, {});
 
-      // Join profiles with roles
+      // Join profiles with roles and emails
       return profiles.map(profile => ({
         id: profile.id,
         fullName: profile.full_name || "Unnamed User",
         department: profile.department || "No Department",
         roles: rolesByUser[profile.id] || [],
         createdAt: new Date(profile.created_at).toLocaleDateString(),
-        email: `user-${profile.id.slice(0, 8)}@example.com` // Mock email
+        email: emailsMap.get(profile.id) || "No email found"
       }));
     },
   });
