@@ -22,6 +22,9 @@ import Approvals from "@/pages/Approvals";
 import Settings from "@/pages/Settings";
 import UserManagement from "@/pages/UserManagement";
 import PerformanceAnalytics from "@/pages/analytics/PerformanceAnalytics";
+import SpendAnalysisPage from "@/pages/analytics/SpendAnalysis";
+import VendorPerformancePage from "@/pages/analytics/VendorPerformance";
+import CustomReportsPage from "@/pages/analytics/CustomReports";
 
 // Auth pages
 import LoginPage from "@/pages/auth/LoginPage";
@@ -88,6 +91,9 @@ function App() {
             <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
             <Route path="/users" element={<ProtectedRoute><Layout><UserManagement /></Layout></ProtectedRoute>} />
             <Route path="/analytics/performance" element={<ProtectedRoute><Layout><PerformanceAnalytics /></Layout></ProtectedRoute>} />
+            <Route path="/analytics/spend" element={<ProtectedRoute><Layout><SpendAnalysisPage /></Layout></ProtectedRoute>} />
+            <Route path="/analytics/vendor-performance" element={<ProtectedRoute><Layout><VendorPerformancePage /></Layout></ProtectedRoute>} />
+            <Route path="/analytics/custom" element={<ProtectedRoute><Layout><CustomReportsPage /></Layout></ProtectedRoute>} />
 
             {/* Inventory routes */}
             <Route path="/inventory" element={<ProtectedRoute><Layout><InventoryIndex /></Layout></ProtectedRoute>} />

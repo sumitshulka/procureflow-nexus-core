@@ -5,7 +5,6 @@ import PageHeader from "@/components/common/PageHeader";
 import PerformanceReports from "@/components/analytics/PerformanceReports";
 import SpendAnalysis from "@/components/analytics/SpendAnalysis";
 import VendorPerformance from "@/components/analytics/VendorPerformance";
-import CustomReports from "@/components/analytics/CustomReports";
 import { useNavigate, useLocation } from "react-router-dom";
 
 const PerformanceAnalytics = () => {
@@ -26,11 +25,10 @@ const PerformanceAnalytics = () => {
       
       <div className="space-y-6">
         <Tabs defaultValue={defaultTab} className="w-full" onValueChange={handleTabChange}>
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="performance">Performance Analytics</TabsTrigger>
             <TabsTrigger value="spend">Spend Analysis</TabsTrigger>
             <TabsTrigger value="vendor">Vendor Performance</TabsTrigger>
-            <TabsTrigger value="custom">Custom Reports</TabsTrigger>
           </TabsList>
           
           <TabsContent value="performance" className="mt-6">
@@ -43,10 +41,6 @@ const PerformanceAnalytics = () => {
           
           <TabsContent value="vendor" className="mt-6">
             <VendorPerformance />
-          </TabsContent>
-          
-          <TabsContent value="custom" className="mt-6">
-            <CustomReports />
           </TabsContent>
         </Tabs>
       </div>
