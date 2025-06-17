@@ -14,6 +14,7 @@ import { Loader2, Plus, UserPlus, Settings, Info } from "lucide-react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useNavigate } from "react-router-dom";
 
 const assignmentSchema = z.object({
   user_id: z.string().min(1, "Please select a user"),
@@ -42,9 +43,17 @@ interface AssignmentData {
   role?: RoleData;
 }
 
+// Interface for user email data from Edge Function
+interface UserEmailData {
+  id: string;
+  email: string;
+  full_name?: string;
+}
+
 const UserRoleAssignment = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
@@ -233,6 +242,10 @@ const UserRoleAssignment = () => {
     );
   };
 
+  const handleConfigureRoles = () => {
+    navigate('/users#roles');
+  };
+
   return (
     <div className="space-y-6">
       {/* Navigation and Setup Alert */}
@@ -245,7 +258,7 @@ const UserRoleAssignment = () => {
           <Button 
             variant="outline" 
             size="sm"
-            onClick={() => window.location.hash = "#roles"}
+            onClick={handleConfigureRoles}
           >
             <Settings className="mr-2 h-4 w-4" />
             Configure Roles & Modules
