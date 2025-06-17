@@ -31,6 +31,8 @@ interface ReportConfig {
   };
 }
 
+type ValidTableName = "procurement_requests" | "purchase_orders" | "inventory_transactions" | "vendor_registrations";
+
 const CustomReports = () => {
   const { toast } = useToast();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -58,7 +60,7 @@ const CustomReports = () => {
       fields: ["id", "title", "status", "department", "estimated_value", "created_at", "date_needed", "priority"]
     },
     purchase_orders: {
-      name: "Purchase Orders",
+      name: "Purchase Orders", 
       fields: ["id", "po_number", "final_amount", "status", "po_date", "expected_delivery_date", "currency"]
     },
     inventory_transactions: {
@@ -74,7 +76,10 @@ const CustomReports = () => {
   // Execute custom report
   const executeReport = async (config: ReportConfig) => {
     try {
-      let query = supabase.from(config.dataSource);
+      // Type assertion to ensure we use a valid table name
+      const tableName = config.dataSource as ValidTableName;
+      
+      let query = supabase.from(tableName);
       
       // Select specified fields
       if (config.fields.length > 0) {
@@ -145,10 +150,11 @@ const CustomReports = () => {
     }
   };
 
-  const handleFieldToggle = (field: string, checked: boolean) => {
+  const handleFieldToggle = (field: string, checked: boolean | string) => {
+    const isChecked = typeof checked === 'boolean' ? checked : checked === 'true';
     setReportConfig(prev => ({
       ...prev,
-      fields: checked 
+      fields: isChecked 
         ? [...prev.fields, field]
         : prev.fields.filter(f => f !== field)
     }));
@@ -304,7 +310,7 @@ const CustomReports = () => {
                 <div>
                   <Label>Select Fields</Label>
                   <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto border rounded p-2">
-                    {dataSources[reportConfig.dataSource]?.fields.map(field => (
+                    {dataSources[reportConfig.dataSource as ValidTableName]?.fields.map(field => (
                       <div key={field} className="flex items-center space-x-2">
                         <Checkbox
                           id={field}
@@ -350,7 +356,7 @@ const CustomReports = () => {
                         <SelectValue placeholder="Select field to group by" />
                       </SelectTrigger>
                       <SelectContent>
-                        {dataSources[reportConfig.dataSource]?.fields.map(field => (
+                        {dataSources[reportConfig.dataSource as ValidTableName]?.fields.map(field => (
                           <SelectItem key={field} value={field}>{field}</SelectItem>
                         ))}
                       </SelectContent>

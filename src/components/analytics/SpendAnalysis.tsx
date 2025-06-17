@@ -9,18 +9,28 @@ import { DatePickerWithRange } from "@/components/ui/date-picker";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, Area, AreaChart } from "recharts";
 import { DollarSign, TrendingDown, TrendingUp, Target } from "lucide-react";
 import { addDays, format } from "date-fns";
+import { DateRange } from "react-day-picker";
 
-interface DateRange {
+interface CustomDateRange {
   from: Date;
   to: Date;
 }
 
 const SpendAnalysis = () => {
-  const [dateRange, setDateRange] = useState<DateRange>({
+  const [dateRange, setDateRange] = useState<CustomDateRange>({
     from: addDays(new Date(), -90),
     to: new Date()
   });
   const [category, setCategory] = useState<string>("all");
+
+  const handleDateChange = (range: DateRange | undefined) => {
+    if (range?.from && range?.to) {
+      setDateRange({
+        from: range.from,
+        to: range.to
+      });
+    }
+  };
 
   const { data: spendData, isLoading } = useQuery({
     queryKey: ["spend_analysis", dateRange, category],
@@ -104,7 +114,7 @@ const SpendAnalysis = () => {
               <label className="text-sm font-medium">Date Range</label>
               <DatePickerWithRange 
                 date={dateRange} 
-                onDateChange={(range) => range && setDateRange(range)} 
+                onDateChange={handleDateChange} 
               />
             </div>
             <div className="space-y-2">

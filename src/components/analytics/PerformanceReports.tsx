@@ -10,18 +10,28 @@ import { Badge } from "@/components/ui/badge";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from "recharts";
 import { Calendar, Download, Filter, TrendingUp, Clock, CheckCircle, AlertCircle } from "lucide-react";
 import { addDays, format } from "date-fns";
+import { DateRange } from "react-day-picker";
 
-interface DateRange {
+interface CustomDateRange {
   from: Date;
   to: Date;
 }
 
 const PerformanceReports = () => {
-  const [dateRange, setDateRange] = useState<DateRange>({
+  const [dateRange, setDateRange] = useState<CustomDateRange>({
     from: addDays(new Date(), -30),
     to: new Date()
   });
   const [department, setDepartment] = useState<string>("all");
+
+  const handleDateChange = (range: DateRange | undefined) => {
+    if (range?.from && range?.to) {
+      setDateRange({
+        from: range.from,
+        to: range.to
+      });
+    }
+  };
 
   // Fetch procurement performance data
   const { data: performanceData, isLoading } = useQuery({
@@ -69,7 +79,7 @@ const PerformanceReports = () => {
       // Calculate metrics
       const totalRequests = data?.length || 0;
       const completedRequests = data?.filter(req => req.status === "completed").length || 0;
-      const pendingRequests = data?.filter(req => req.status === "pending" || req.status === "submitted").length || 0;
+      const pendingRequests = data?.filter(req => req.status === "submitted" || req.status === "in_review").length || 0;
       const avgProcessingTime = data?.length ? 
         data.reduce((acc, req) => {
           const created = new Date(req.created_at);
@@ -116,7 +126,7 @@ const PerformanceReports = () => {
               <label className="text-sm font-medium">Date Range</label>
               <DatePickerWithRange 
                 date={dateRange} 
-                onDateChange={(range) => range && setDateRange(range)} 
+                onDateChange={handleDateChange} 
               />
             </div>
             <div className="space-y-2">

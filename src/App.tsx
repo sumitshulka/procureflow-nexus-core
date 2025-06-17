@@ -60,8 +60,8 @@ const queryClient = new QueryClient();
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <Router>
+      <Router>
+        <AuthProvider>
           <Routes>
             {/* Public routes */}
             <Route path="/" element={<Index />} />
@@ -75,57 +75,46 @@ function App() {
             <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
             {/* Protected routes */}
-            <Route
-              path="/*"
-              element={
-                <ProtectedRoute>
-                  <Layout>
-                    <Routes>
-                      <Route path="/dashboard" element={<Dashboard />} />
-                      <Route path="/products" element={<ProductCatalog />} />
-                      <Route path="/products/add" element={<AddProduct />} />
-                      <Route path="/products/:id/edit" element={<EditProduct />} />
-                      <Route path="/products/:id" element={<ProductDetail />} />
-                      <Route path="/products/:id/price-history" element={<ProductPriceHistory />} />
-                      <Route path="/procurement-requests" element={<ProcurementRequests />} />
-                      <Route path="/procurement-requests/:id" element={<ProcurementRequestDetail />} />
-                      <Route path="/vendors" element={<VendorManagement />} />
-                      <Route path="/approvals" element={<Approvals />} />
-                      <Route path="/settings" element={<Settings />} />
-                      <Route path="/users" element={<UserManagement />} />
-                      <Route path="/analytics/performance" element={<PerformanceAnalytics />} />
+            <Route path="/dashboard" element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
+            <Route path="/products" element={<ProtectedRoute><Layout><ProductCatalog /></Layout></ProtectedRoute>} />
+            <Route path="/products/add" element={<ProtectedRoute><Layout><AddProduct /></Layout></ProtectedRoute>} />
+            <Route path="/products/:id/edit" element={<ProtectedRoute><Layout><EditProduct /></Layout></ProtectedRoute>} />
+            <Route path="/products/:id" element={<ProtectedRoute><Layout><ProductDetail /></Layout></ProtectedRoute>} />
+            <Route path="/products/:id/price-history" element={<ProtectedRoute><Layout><ProductPriceHistory /></Layout></ProtectedRoute>} />
+            <Route path="/procurement-requests" element={<ProtectedRoute><Layout><ProcurementRequests /></Layout></ProtectedRoute>} />
+            <Route path="/procurement-requests/:id" element={<ProtectedRoute><Layout><ProcurementRequestDetail /></Layout></ProtectedRoute>} />
+            <Route path="/vendors" element={<ProtectedRoute><Layout><VendorManagement /></Layout></ProtectedRoute>} />
+            <Route path="/approvals" element={<ProtectedRoute><Layout><Approvals /></Layout></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
+            <Route path="/users" element={<ProtectedRoute><Layout><UserManagement /></Layout></ProtectedRoute>} />
+            <Route path="/analytics/performance" element={<ProtectedRoute><Layout><PerformanceAnalytics /></Layout></ProtectedRoute>} />
 
-                      {/* Inventory routes */}
-                      <Route path="/inventory" element={<InventoryIndex />} />
-                      <Route path="/inventory/items" element={<InventoryItems />} />
-                      <Route path="/inventory/warehouses" element={<Warehouses />} />
-                      <Route path="/inventory/transactions" element={<InventoryTransactions />} />
-                      <Route path="/inventory/reports" element={<InventoryReports />} />
-                      <Route path="/inventory/reports/valuation" element={<InventoryValuationReport />} />
-                      <Route path="/inventory/reports/stock-movement" element={<StockMovementReport />} />
-                      <Route path="/inventory/reports/stock-aging" element={<StockAgingReport />} />
+            {/* Inventory routes */}
+            <Route path="/inventory" element={<ProtectedRoute><Layout><InventoryIndex /></Layout></ProtectedRoute>} />
+            <Route path="/inventory/items" element={<ProtectedRoute><Layout><InventoryItems /></Layout></ProtectedRoute>} />
+            <Route path="/inventory/warehouses" element={<ProtectedRoute><Layout><Warehouses /></Layout></ProtectedRoute>} />
+            <Route path="/inventory/transactions" element={<ProtectedRoute><Layout><InventoryTransactions /></Layout></ProtectedRoute>} />
+            <Route path="/inventory/reports" element={<ProtectedRoute><Layout><InventoryReports /></Layout></ProtectedRoute>} />
+            <Route path="/inventory/reports/valuation" element={<ProtectedRoute><Layout><InventoryValuationReport /></Layout></ProtectedRoute>} />
+            <Route path="/inventory/reports/stock-movement" element={<ProtectedRoute><Layout><StockMovementReport /></Layout></ProtectedRoute>} />
+            <Route path="/inventory/reports/stock-aging" element={<ProtectedRoute><Layout><StockAgingReport /></Layout></ProtectedRoute>} />
 
-                      {/* RFP routes */}
-                      <Route path="/rfp/create" element={<CreateRfp />} />
-                      <Route path="/rfp/create-wizard" element={<CreateRfpWizard />} />
-                      <Route path="/rfp/active" element={<ActiveRfps />} />
-                      <Route path="/rfp/responses" element={<RfpResponses />} />
+            {/* RFP routes */}
+            <Route path="/rfp/create" element={<ProtectedRoute><Layout><CreateRfp /></Layout></ProtectedRoute>} />
+            <Route path="/rfp/create-wizard" element={<ProtectedRoute><Layout><CreateRfpWizard /></Layout></ProtectedRoute>} />
+            <Route path="/rfp/active" element={<ProtectedRoute><Layout><ActiveRfps /></Layout></ProtectedRoute>} />
+            <Route path="/rfp/responses" element={<ProtectedRoute><Layout><RfpResponses /></Layout></ProtectedRoute>} />
 
-                      {/* Purchase Order routes */}
-                      <Route path="/purchase-orders/create" element={<CreatePurchaseOrder />} />
-                      <Route path="/purchase-orders/active" element={<ActivePurchaseOrders />} />
-                      <Route path="/purchase-orders/pending" element={<PendingPurchaseOrders />} />
+            {/* Purchase Order routes */}
+            <Route path="/purchase-orders/create" element={<ProtectedRoute><Layout><CreatePurchaseOrder /></Layout></ProtectedRoute>} />
+            <Route path="/purchase-orders/active" element={<ProtectedRoute><Layout><ActivePurchaseOrders /></Layout></ProtectedRoute>} />
+            <Route path="/purchase-orders/pending" element={<ProtectedRoute><Layout><PendingPurchaseOrders /></Layout></ProtectedRoute>} />
 
-                      <Route path="*" element={<NotFound />} />
-                    </Routes>
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
+            <Route path="*" element={<ProtectedRoute><Layout><NotFound /></Layout></ProtectedRoute>} />
           </Routes>
           <Toaster />
-        </Router>
-      </AuthProvider>
+        </AuthProvider>
+      </Router>
     </QueryClientProvider>
   );
 }
