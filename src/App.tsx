@@ -1,4 +1,3 @@
-
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -48,11 +47,13 @@ import CreateRfp from "@/pages/rfp/CreateRfp";
 import CreateRfpWizard from "@/pages/rfp/CreateRfpWizard";
 import ActiveRfps from "@/pages/rfp/ActiveRfps";
 import RfpResponses from "@/pages/rfp/RfpResponses";
+import RfpTemplates from "@/pages/rfp/RfpTemplates";
 
 // Purchase Order pages
 import CreatePurchaseOrder from "@/pages/purchase-orders/CreatePurchaseOrder";
 import ActivePurchaseOrders from "@/pages/purchase-orders/ActivePurchaseOrders";
 import PendingPurchaseOrders from "@/pages/purchase-orders/PendingPurchaseOrders";
+import PurchaseOrderHistory from "@/pages/purchase-orders/PurchaseOrderHistory";
 
 // Budget Management pages
 import BudgetOverviewPage from "@/pages/budget/BudgetOverview";
@@ -67,6 +68,9 @@ import PolicyManagementPage from "@/pages/compliance/PolicyManagement";
 import ProductPriceHistory from "@/pages/ProductPriceHistory";
 import NotFound from "@/pages/NotFound";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
+
+import RiskAssessment from "@/pages/risk/RiskAssessment";
+import RiskMonitoring from "@/pages/risk/RiskMonitoring";
 
 const queryClient = new QueryClient();
 
@@ -128,11 +132,14 @@ function App() {
             <Route path="/rfp/create-wizard" element={<ProtectedRoute><Layout><CreateRfpWizard /></Layout></ProtectedRoute>} />
             <Route path="/rfp/active" element={<ProtectedRoute><Layout><ActiveRfps /></Layout></ProtectedRoute>} />
             <Route path="/rfp/responses" element={<ProtectedRoute><Layout><RfpResponses /></Layout></ProtectedRoute>} />
+            <Route path="/rfp/:rfpId/responses" element={<ProtectedRoute><Layout><RfpResponses /></Layout></ProtectedRoute>} />
+            <Route path="/rfp/templates" element={<ProtectedRoute><Layout><RfpTemplates /></Layout></ProtectedRoute>} />
 
             {/* Purchase Order routes */}
             <Route path="/purchase-orders/create" element={<ProtectedRoute><Layout><CreatePurchaseOrder /></Layout></ProtectedRoute>} />
             <Route path="/purchase-orders/active" element={<ProtectedRoute><Layout><ActivePurchaseOrders /></Layout></ProtectedRoute>} />
             <Route path="/purchase-orders/pending" element={<ProtectedRoute><Layout><PendingPurchaseOrders /></Layout></ProtectedRoute>} />
+            <Route path="/purchase-orders/history" element={<ProtectedRoute><Layout><PurchaseOrderHistory /></Layout></ProtectedRoute>} />
 
             {/* Budget Management routes */}
             <Route path="/budget/overview" element={<ProtectedRoute><Layout><BudgetOverviewPage /></Layout></ProtectedRoute>} />
@@ -143,6 +150,10 @@ function App() {
             <Route path="/compliance/audit-trail" element={<ProtectedRoute><Layout><AuditTrailPage /></Layout></ProtectedRoute>} />
             <Route path="/compliance/reports" element={<ProtectedRoute><Layout><ComplianceReportsPage /></Layout></ProtectedRoute>} />
             <Route path="/compliance/policies" element={<ProtectedRoute><Layout><PolicyManagementPage /></Layout></ProtectedRoute>} />
+
+            {/* Risk Management routes */}
+            <Route path="/risk/assessment" element={<ProtectedRoute><Layout><RiskAssessment /></Layout></ProtectedRoute>} />
+            <Route path="/risk/monitoring" element={<ProtectedRoute><Layout><RiskMonitoring /></Layout></ProtectedRoute>} />
 
             <Route path="*" element={<ProtectedRoute><Layout><NotFound /></Layout></ProtectedRoute>} />
           </Routes>
