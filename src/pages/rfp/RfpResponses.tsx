@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,6 +40,12 @@ interface RFPResponse {
     brand_model: string;
     specifications: string;
   }>;
+}
+
+interface EvaluatedRFPResponse extends RFPResponse {
+  finalScore: number;
+  rank: number;
+  recommendedStatus: string;
 }
 
 interface RFP {
@@ -88,7 +95,7 @@ const RfpResponses = () => {
       // Mock RFPs data
       const mockRfps: RFP[] = [
         {
-          id: "rfp-2024-001",
+          id: "550e8400-e29b-41d4-a716-446655440001",
           title: "IT Equipment Procurement",
           rfp_number: "RFP-2024-001",
           status: "active",
@@ -100,7 +107,7 @@ const RfpResponses = () => {
           }
         },
         {
-          id: "rfp-2024-002",
+          id: "550e8400-e29b-41d4-a716-446655440002",
           title: "Office Furniture Supply",
           rfp_number: "RFP-2024-002",
           status: "completed",
@@ -110,7 +117,7 @@ const RfpResponses = () => {
           }
         },
         {
-          id: "rfp-2023-015",
+          id: "550e8400-e29b-41d4-a716-446655440003",
           title: "Security Services",
           rfp_number: "RFP-2023-015",
           status: "awarded",
@@ -151,7 +158,7 @@ const RfpResponses = () => {
       // Mock responses with multiple vendors for evaluation
       const mockResponses: RFPResponse[] = [
         {
-          id: "response-001",
+          id: "660e8400-e29b-41d4-a716-446655440001",
           response_number: "RFP-RESP-001",
           submitted_at: "2024-01-15T10:00:00Z",
           status: "submitted",
@@ -181,7 +188,7 @@ const RfpResponses = () => {
           ]
         },
         {
-          id: "response-002",
+          id: "660e8400-e29b-41d4-a716-446655440002",
           response_number: "RFP-RESP-002",
           submitted_at: "2024-01-18T14:00:00Z",
           status: "under_evaluation",
@@ -211,7 +218,7 @@ const RfpResponses = () => {
           ]
         },
         {
-          id: "response-003",
+          id: "660e8400-e29b-41d4-a716-446655440003",
           response_number: "RFP-RESP-003",
           submitted_at: "2024-01-20T16:00:00Z",
           status: "submitted",
@@ -297,8 +304,13 @@ const RfpResponses = () => {
     }
   };
 
-  const getEvaluationRanking = () => {
-    if (!rfp?.evaluation_criteria || responses.length === 0) return responses;
+  const getEvaluationRanking = (): EvaluatedRFPResponse[] => {
+    if (!rfp?.evaluation_criteria || responses.length === 0) return responses.map(r => ({
+      ...r,
+      finalScore: r.total_score,
+      rank: 1,
+      recommendedStatus: "Under Review"
+    }));
 
     const { type, technical_weight = 70, commercial_weight = 30 } = rfp.evaluation_criteria;
     
@@ -322,7 +334,7 @@ const RfpResponses = () => {
           finalScore = response.total_score;
       }
 
-      return { ...response, finalScore, recommendedStatus };
+      return { ...response, finalScore, rank, recommendedStatus };
     }).sort((a, b) => b.finalScore - a.finalScore)
       .map((response, index) => ({
         ...response,
