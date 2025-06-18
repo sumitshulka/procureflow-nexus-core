@@ -15,7 +15,7 @@ const AppLayout = () => {
         <div className="flex flex-1 pt-16">
           <AppSidebar />
           <SidebarInset className="flex-1 bg-gray-50">
-            <ScrollArea className="h-[calc(100vh-4rem)]">
+            <ScrollArea className="h-[calc(100vh-4rem)] w-full">
               <div className="p-6">
                 <Outlet />
               </div>

@@ -71,6 +71,7 @@ import ProtectedRoute from "@/components/auth/ProtectedRoute";
 
 import RiskAssessment from "@/pages/risk/RiskAssessment";
 import RiskMonitoring from "@/pages/risk/RiskMonitoring";
+import RiskReports from "@/pages/risk/RiskReports";
 
 const queryClient = new QueryClient();
 
@@ -154,6 +155,7 @@ function App() {
             {/* Risk Management routes */}
             <Route path="/risk/assessment" element={<ProtectedRoute><Layout><RiskAssessment /></Layout></ProtectedRoute>} />
             <Route path="/risk/monitoring" element={<ProtectedRoute><Layout><RiskMonitoring /></Layout></ProtectedRoute>} />
+            <Route path="/risk/reports" element={<ProtectedRoute><Layout><RiskReports /></Layout></ProtectedRoute>} />
 
             <Route path="*" element={<ProtectedRoute><Layout><NotFound /></Layout></ProtectedRoute>} />
           </Routes>

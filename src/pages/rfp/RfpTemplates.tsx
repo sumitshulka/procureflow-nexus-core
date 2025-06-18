@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -43,8 +42,22 @@ const RfpTemplates = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<RfpTemplate | null>(null);
 
   const form = useForm({
+    defaultValues: {
+      name: "",
+      description: "",
+      category: "",
+      title: "",
+      content_description: "",
+      terms_and_conditions: "",
+      submission_requirements: "",
+    },
+  });
+
+  const editForm = useForm({
     defaultValues: {
       name: "",
       description: "",
@@ -144,12 +157,18 @@ const RfpTemplates = () => {
     setFilteredTemplates(filtered);
   };
 
-  const handleDeleteTemplate = (templateId: string) => {
-    setTemplates(templates.filter(t => t.id !== templateId));
-    toast({
-      title: "Success",
-      description: "Template deleted successfully",
+  const handleEditTemplate = (template: RfpTemplate) => {
+    setEditingTemplate(template);
+    editForm.reset({
+      name: template.name,
+      description: template.description,
+      category: template.category,
+      title: template.content.title,
+      content_description: template.content.description,
+      terms_and_conditions: template.content.terms_and_conditions,
+      submission_requirements: template.content.submission_requirements.join('\n'),
     });
+    setIsEditDialogOpen(true);
   };
 
   const handleDuplicateTemplate = (template: RfpTemplate) => {
@@ -167,6 +186,14 @@ const RfpTemplates = () => {
     toast({
       title: "Success",
       description: "Template duplicated successfully",
+    });
+  };
+
+  const handleDeleteTemplate = (templateId: string) => {
+    setTemplates(templates.filter(t => t.id !== templateId));
+    toast({
+      title: "Success",
+      description: "Template deleted successfully",
     });
   };
 
@@ -196,6 +223,35 @@ const RfpTemplates = () => {
     toast({
       title: "Success",
       description: "RFP template created successfully",
+    });
+  };
+
+  const onEditSubmit = (data: any) => {
+    if (!editingTemplate) return;
+
+    const updatedTemplate: RfpTemplate = {
+      ...editingTemplate,
+      name: data.name,
+      description: data.description,
+      category: data.category,
+      content: {
+        ...editingTemplate.content,
+        title: data.title,
+        description: data.content_description,
+        terms_and_conditions: data.terms_and_conditions,
+        submission_requirements: data.submission_requirements.split('\n').filter((req: string) => req.trim())
+      },
+      updated_at: new Date().toISOString(),
+    };
+
+    setTemplates(templates.map(t => t.id === editingTemplate.id ? updatedTemplate : t));
+    setIsEditDialogOpen(false);
+    setEditingTemplate(null);
+    editForm.reset();
+    
+    toast({
+      title: "Success",
+      description: "RFP template updated successfully",
     });
   };
 
@@ -271,6 +327,64 @@ const RfpTemplates = () => {
         </Dialog>
       </div>
 
+      {/* Edit Template Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit RFP Template</DialogTitle>
+          </DialogHeader>
+          <Form {...editForm}>
+            <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-4">
+              <FormField
+                control={editForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Template Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter template name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={editForm.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Template description" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={editForm.control}
+                name="category"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Category</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., IT, General, Services" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="flex gap-4">
+                <Button type="submit">Update Template</Button>
+                <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
       {/* Filters */}
       <Card className="mb-6">
         <CardContent className="p-4">
@@ -322,7 +436,7 @@ const RfpTemplates = () => {
             <CardContent>
               <div className="space-y-3">
                 <div className="text-sm">
-                  <span className="font-medium">Used:</span> {template.usage_count} times
+                  <span className="font-medium">Used:</span>  {template.usage_count} times
                 </div>
                 <div className="text-sm">
                   <span className="font-medium">Last updated:</span>{" "}
@@ -333,7 +447,7 @@ const RfpTemplates = () => {
                     <Copy className="h-3 w-3 mr-1" />
                     Duplicate
                   </Button>
-                  <Button size="sm" variant="outline">
+                  <Button size="sm" variant="outline" onClick={() => handleEditTemplate(template)}>
                     <Edit className="h-3 w-3 mr-1" />
                     Edit
                   </Button>

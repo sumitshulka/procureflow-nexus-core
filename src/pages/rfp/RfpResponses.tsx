@@ -55,57 +55,82 @@ const RfpResponses = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (rfpId) {
+    // If no rfpId is provided, show all responses
+    if (!rfpId) {
+      fetchAllResponses();
+    } else {
       fetchRfpData();
       fetchResponses();
     }
   }, [rfpId]);
 
-  const fetchRfpData = async () => {
+  const fetchAllResponses = async () => {
     try {
-      const { data, error } = await supabase
-        .from("rfps")
-        .select("*")
-        .eq("id", rfpId)
-        .single();
+      // Mock data for all RFP responses when no specific RFP is selected
+      const mockResponses: RFPResponse[] = [
+        {
+          id: "1",
+          response_number: "RFP-RESP-001",
+          submitted_at: "2024-01-15T10:00:00Z",
+          status: "submitted",
+          technical_score: 85,
+          commercial_score: 90,
+          total_score: 87.5,
+          total_bid_amount: 125000,
+          currency: "USD",
+          delivery_timeline: "4-6 weeks",
+          warranty_period: "2 years",
+          vendor_id: "vendor-1",
+          vendor_registrations: {
+            company_name: "Tech Solutions Inc",
+            primary_email: "contact@techsolutions.com",
+            primary_phone: "+1-555-0123"
+          },
+          rfp_response_items: [
+            {
+              id: "item-1",
+              description: "Laptop Computers",
+              quantity: 50,
+              unit_price: 1200,
+              total_price: 60000,
+              brand_model: "Dell Latitude 5520",
+              specifications: "Intel i7, 16GB RAM, 512GB SSD"
+            }
+          ]
+        },
+        {
+          id: "2",
+          response_number: "RFP-RESP-002",
+          submitted_at: "2024-01-18T14:00:00Z",
+          status: "under_evaluation",
+          technical_score: 78,
+          commercial_score: 85,
+          total_score: 81.5,
+          total_bid_amount: 140000,
+          currency: "USD",
+          delivery_timeline: "6-8 weeks",
+          warranty_period: "3 years",
+          vendor_id: "vendor-2",
+          vendor_registrations: {
+            company_name: "Global IT Corp",
+            primary_email: "sales@globalit.com",
+            primary_phone: "+1-555-0456"
+          },
+          rfp_response_items: [
+            {
+              id: "item-2",
+              description: "Desktop Workstations",
+              quantity: 25,
+              unit_price: 1800,
+              total_price: 45000,
+              brand_model: "HP Z440",
+              specifications: "Intel Xeon, 32GB RAM, 1TB SSD"
+            }
+          ]
+        }
+      ];
 
-      if (error) throw error;
-      setRfp(data);
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to fetch RFP data",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const fetchResponses = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("rfp_responses")
-        .select(`
-          *,
-          vendor_registrations:vendor_id (
-            company_name,
-            primary_email,
-            primary_phone
-          ),
-          rfp_response_items (
-            id,
-            description,
-            quantity,
-            unit_price,
-            total_price,
-            brand_model,
-            specifications
-          )
-        `)
-        .eq("rfp_id", rfpId)
-        .order("submitted_at", { ascending: false });
-
-      if (error) throw error;
-      setResponses(data || []);
+      setResponses(mockResponses);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -174,7 +199,7 @@ const RfpResponses = () => {
 
   return (
     <div className="container mx-auto py-6">
-      {rfp && (
+      {rfp ? (
         <div className="mb-6">
           <h1 className="text-2xl font-bold mb-2">RFP Responses</h1>
           <Card>
@@ -199,6 +224,11 @@ const RfpResponses = () => {
               </div>
             </CardContent>
           </Card>
+        </div>
+      ) : (
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold">All RFP Responses</h1>
+          <p className="text-muted-foreground">View all submitted RFP responses across all projects</p>
         </div>
       )}
 
