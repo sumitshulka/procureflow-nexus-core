@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import DataTable from "@/components/common/DataTable";
@@ -105,7 +104,7 @@ const BudgetAllocation = () => {
       id: "utilizationRate",
       header: "Utilization",
       cell: (row: any) => (
-        <Badge variant={row.utilizationRate > 80 ? "destructive" : row.utilizationRate > 60 ? "warning" : "default"}>
+        <Badge variant={row.utilizationRate > 80 ? "destructive" : row.utilizationRate > 60 ? "secondary" : "default"}>
           {row.utilizationRate}%
         </Badge>
       ),

@@ -145,7 +145,7 @@ const BudgetOverview = () => {
                     <div className="flex justify-between items-center">
                       <span className="font-medium">{dept.department}</span>
                       <div className="flex items-center space-x-2">
-                        <Badge variant={dept.utilization > 80 ? "destructive" : dept.utilization > 60 ? "warning" : "default"}>
+                        <Badge variant={dept.utilization > 80 ? "destructive" : dept.utilization > 60 ? "secondary" : "default"}>
                           {dept.utilization}%
                         </Badge>
                         <span className="text-sm text-muted-foreground">
