@@ -64,6 +64,75 @@ const RfpResponses = () => {
     }
   }, [rfpId]);
 
+  const fetchRfpData = async () => {
+    try {
+      // Mock RFP data for when specific RFP ID is provided
+      const mockRfp: RFP = {
+        id: rfpId!,
+        title: "IT Equipment Procurement",
+        rfp_number: "RFP-2024-001",
+        status: "active",
+        submission_deadline: "2024-03-01T23:59:59Z"
+      };
+      
+      setRfp(mockRfp);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to fetch RFP data",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const fetchResponses = async () => {
+    try {
+      // Mock responses specific to the RFP
+      const mockResponses: RFPResponse[] = [
+        {
+          id: "1",
+          response_number: "RFP-RESP-001",
+          submitted_at: "2024-01-15T10:00:00Z",
+          status: "submitted",
+          technical_score: 85,
+          commercial_score: 90,
+          total_score: 87.5,
+          total_bid_amount: 125000,
+          currency: "USD",
+          delivery_timeline: "4-6 weeks",
+          warranty_period: "2 years",
+          vendor_id: "vendor-1",
+          vendor_registrations: {
+            company_name: "Tech Solutions Inc",
+            primary_email: "contact@techsolutions.com",
+            primary_phone: "+1-555-0123"
+          },
+          rfp_response_items: [
+            {
+              id: "item-1",
+              description: "Laptop Computers",
+              quantity: 50,
+              unit_price: 1200,
+              total_price: 60000,
+              brand_model: "Dell Latitude 5520",
+              specifications: "Intel i7, 16GB RAM, 512GB SSD"
+            }
+          ]
+        }
+      ];
+
+      setResponses(mockResponses);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to fetch responses",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const fetchAllResponses = async () => {
     try {
       // Mock data for all RFP responses when no specific RFP is selected
@@ -182,8 +251,12 @@ const RfpResponses = () => {
         description: "Response awarded successfully",
       });
 
-      fetchResponses();
-      fetchRfpData();
+      if (rfpId) {
+        fetchResponses();
+        fetchRfpData();
+      } else {
+        fetchAllResponses();
+      }
     } catch (error: any) {
       toast({
         title: "Error",
