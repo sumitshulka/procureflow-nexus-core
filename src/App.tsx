@@ -54,6 +54,16 @@ import CreatePurchaseOrder from "@/pages/purchase-orders/CreatePurchaseOrder";
 import ActivePurchaseOrders from "@/pages/purchase-orders/ActivePurchaseOrders";
 import PendingPurchaseOrders from "@/pages/purchase-orders/PendingPurchaseOrders";
 
+// Budget Management pages
+import BudgetOverviewPage from "@/pages/budget/BudgetOverview";
+import BudgetAllocationPage from "@/pages/budget/BudgetAllocation";
+import BudgetReportsPage from "@/pages/budget/BudgetReports";
+
+// Compliance & Audit pages
+import AuditTrailPage from "@/pages/compliance/AuditTrail";
+import ComplianceReportsPage from "@/pages/compliance/ComplianceReports";
+import PolicyManagementPage from "@/pages/compliance/PolicyManagement";
+
 import ProductPriceHistory from "@/pages/ProductPriceHistory";
 import NotFound from "@/pages/NotFound";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
@@ -123,6 +133,16 @@ function App() {
             <Route path="/purchase-orders/create" element={<ProtectedRoute><Layout><CreatePurchaseOrder /></Layout></ProtectedRoute>} />
             <Route path="/purchase-orders/active" element={<ProtectedRoute><Layout><ActivePurchaseOrders /></Layout></ProtectedRoute>} />
             <Route path="/purchase-orders/pending" element={<ProtectedRoute><Layout><PendingPurchaseOrders /></Layout></ProtectedRoute>} />
+
+            {/* Budget Management routes */}
+            <Route path="/budget/overview" element={<ProtectedRoute><Layout><BudgetOverviewPage /></Layout></ProtectedRoute>} />
+            <Route path="/budget/allocation" element={<ProtectedRoute><Layout><BudgetAllocationPage /></Layout></ProtectedRoute>} />
+            <Route path="/budget/reports" element={<ProtectedRoute><Layout><BudgetReportsPage /></Layout></ProtectedRoute>} />
+
+            {/* Compliance & Audit routes */}
+            <Route path="/compliance/audit-trail" element={<ProtectedRoute><Layout><AuditTrailPage /></Layout></ProtectedRoute>} />
+            <Route path="/compliance/reports" element={<ProtectedRoute><Layout><ComplianceReportsPage /></Layout></ProtectedRoute>} />
+            <Route path="/compliance/policies" element={<ProtectedRoute><Layout><PolicyManagementPage /></Layout></ProtectedRoute>} />
 
             <Route path="*" element={<ProtectedRoute><Layout><NotFound /></Layout></ProtectedRoute>} />
           </Routes>
