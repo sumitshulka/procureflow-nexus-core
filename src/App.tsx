@@ -79,13 +79,21 @@ function App() {
 
             {/* Protected routes */}
             <Route path="/dashboard" element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
+            
+            {/* Product Catalog routes - supporting both /products and /catalog */}
             <Route path="/products" element={<ProtectedRoute><Layout><ProductCatalog /></Layout></ProtectedRoute>} />
+            <Route path="/catalog" element={<ProtectedRoute><Layout><ProductCatalog /></Layout></ProtectedRoute>} />
             <Route path="/products/add" element={<ProtectedRoute><Layout><AddProduct /></Layout></ProtectedRoute>} />
             <Route path="/products/:id/edit" element={<ProtectedRoute><Layout><EditProduct /></Layout></ProtectedRoute>} />
             <Route path="/products/:id" element={<ProtectedRoute><Layout><ProductDetail /></Layout></ProtectedRoute>} />
             <Route path="/products/:id/price-history" element={<ProtectedRoute><Layout><ProductPriceHistory /></Layout></ProtectedRoute>} />
+            
+            {/* Procurement routes - supporting both formats */}
             <Route path="/procurement-requests" element={<ProtectedRoute><Layout><ProcurementRequests /></Layout></ProtectedRoute>} />
+            <Route path="/requests" element={<ProtectedRoute><Layout><ProcurementRequests /></Layout></ProtectedRoute>} />
             <Route path="/procurement-requests/:id" element={<ProtectedRoute><Layout><ProcurementRequestDetail /></Layout></ProtectedRoute>} />
+            <Route path="/requests/:id" element={<ProtectedRoute><Layout><ProcurementRequestDetail /></Layout></ProtectedRoute>} />
+            
             <Route path="/vendors" element={<ProtectedRoute><Layout><VendorManagement /></Layout></ProtectedRoute>} />
             <Route path="/approvals" element={<ProtectedRoute><Layout><Approvals /></Layout></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
