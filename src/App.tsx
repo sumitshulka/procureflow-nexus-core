@@ -53,6 +53,7 @@ import NotificationsList from "@/pages/NotificationsList";
 import Settings from "@/pages/Settings";
 import UserManagement from "@/pages/UserManagement";
 import AppLayout from "@/layouts/AppLayout";
+import TemplateCreationWizard from "@/components/rfp/TemplateCreationWizard";
 
 function App() {
   return (

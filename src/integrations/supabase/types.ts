@@ -1235,6 +1235,140 @@ export type Database = {
           },
         ]
       }
+      rfp_template_fields: {
+        Row: {
+          created_at: string
+          description: string | null
+          display_order: number
+          field_label: string
+          field_name: string
+          field_options: Json | null
+          field_type: string
+          id: string
+          is_required: boolean
+          template_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          field_label: string
+          field_name: string
+          field_options?: Json | null
+          field_type: string
+          id?: string
+          is_required?: boolean
+          template_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          field_label?: string
+          field_name?: string
+          field_options?: Json | null
+          field_type?: string
+          id?: string
+          is_required?: boolean
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rfp_template_fields_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "rfp_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rfp_template_values: {
+        Row: {
+          created_at: string
+          field_name: string
+          field_value: Json | null
+          id: string
+          rfp_id: string
+          template_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          field_name: string
+          field_value?: Json | null
+          id?: string
+          rfp_id: string
+          template_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          field_name?: string
+          field_value?: Json | null
+          id?: string
+          rfp_id?: string
+          template_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rfp_template_values_rfp_id_fkey"
+            columns: ["rfp_id"]
+            isOneToOne: false
+            referencedRelation: "rfps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rfp_template_values_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "rfp_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rfp_templates: {
+        Row: {
+          category: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          is_default: boolean
+          name: string
+          template_data: Json
+          updated_at: string
+          usage_count: number
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          name: string
+          template_data?: Json
+          updated_at?: string
+          usage_count?: number
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          name?: string
+          template_data?: Json
+          updated_at?: string
+          usage_count?: number
+        }
+        Relationships: []
+      }
       rfps: {
         Row: {
           attachments: Json | null
