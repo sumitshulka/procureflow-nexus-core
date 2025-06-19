@@ -1,3 +1,4 @@
+
 import { Routes, Route } from "react-router-dom";
 import Index from "@/pages/Index";
 import LoginPage from "@/pages/auth/LoginPage";
@@ -82,6 +83,7 @@ function App() {
           <Route path="rfp/create" element={<CreateRfp />} />
           <Route path="rfp/create-wizard" element={<CreateRfpWizard />} />
           <Route path="rfp/templates" element={<RfpTemplates />} />
+          <Route path="rfp/templates/create" element={<TemplateCreationWizard />} />
           <Route path="rfp/:rfpId/responses" element={<RfpResponses />} />
           
           {/* Purchase Order Routes */}
