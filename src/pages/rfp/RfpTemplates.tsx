@@ -1,48 +1,52 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Plus, Search, Edit, Copy, Trash2, FileText } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Plus, Search, Copy, Edit, Trash2, FileText, Star } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
+import { format } from "date-fns";
 
 interface RfpTemplate {
   id: string;
   name: string;
   description: string;
   category: string;
-  content: {
-    title: string;
-    description: string;
-    terms_and_conditions: string;
-    evaluation_criteria: Array<{
-      name: string;
-      weight: number;
-      description: string;
-    }>;
-    submission_requirements: string[];
-  };
+  template_data: any;
+  created_by?: string;
   created_at: string;
   updated_at: string;
+  is_active: boolean;
   is_default: boolean;
   usage_count: number;
 }
 
+interface TemplateField {
+  name: string;
+  label: string;
+  type: 'text' | 'textarea' | 'select' | 'number' | 'date';
+  required: boolean;
+  options?: string[];
+  description?: string;
+}
+
 const RfpTemplates = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [templates, setTemplates] = useState<RfpTemplate[]>([]);
   const [filteredTemplates, setFilteredTemplates] = useState<RfpTemplate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<RfpTemplate | null>(null);
 
   const form = useForm({
@@ -51,22 +55,13 @@ const RfpTemplates = () => {
       description: "",
       category: "",
       title: "",
-      content_description: "",
+      templateDescription: "",
       terms_and_conditions: "",
-      submission_requirements: "",
-    },
-  });
-
-  const editForm = useForm({
-    defaultValues: {
-      name: "",
-      description: "",
-      category: "",
-      title: "",
-      content_description: "",
-      terms_and_conditions: "",
-      submission_requirements: "",
-    },
+      evaluation_type: "qcbs",
+      technical_weight: 70,
+      commercial_weight: 30,
+      fields: [] as TemplateField[]
+    }
   });
 
   useEffect(() => {
@@ -78,182 +73,235 @@ const RfpTemplates = () => {
   }, [templates, searchTerm, categoryFilter]);
 
   const fetchTemplates = async () => {
-    // Mock data - replace with actual database queries
-    const mockTemplates: RfpTemplate[] = [
-      {
-        id: "1",
-        name: "IT Equipment Procurement",
-        description: "Standard template for procuring IT equipment and hardware",
-        category: "IT",
-        content: {
-          title: "Request for Proposal - IT Equipment",
-          description: "We are seeking proposals for the procurement of IT equipment including computers, servers, and networking equipment.",
-          terms_and_conditions: "Standard terms and conditions for IT procurement",
-          evaluation_criteria: [
-            { name: "Technical Compliance", weight: 40, description: "Technical specifications compliance" },
-            { name: "Price", weight: 35, description: "Commercial evaluation" },
-            { name: "Delivery Timeline", weight: 15, description: "Delivery schedule" },
-            { name: "Warranty & Support", weight: 10, description: "Post-sale support" }
-          ],
-          submission_requirements: [
-            "Technical specifications document",
-            "Commercial proposal",
-            "Company registration certificate",
-            "Tax compliance certificate"
-          ]
+    try {
+      // Mock templates data based on our database design
+      const mockTemplates: RfpTemplate[] = [
+        {
+          id: "1",
+          name: "IT Equipment Standard",
+          description: "Standard template for IT equipment procurement with technical specifications",
+          category: "IT",
+          template_data: {
+            title: "Request for Proposal - IT Equipment",
+            description: "We are seeking proposals for the procurement of IT equipment including computers, servers, and networking equipment.",
+            terms_and_conditions: "Standard terms and conditions for IT procurement",
+            evaluation_criteria: {
+              type: "qcbs",
+              technical_weight: 70,
+              commercial_weight: 30
+            },
+            fields: [
+              {
+                name: "technical_specifications",
+                label: "Technical Specifications",
+                type: "textarea",
+                required: true,
+                description: "Detailed technical requirements"
+              },
+              {
+                name: "warranty_period",
+                label: "Warranty Period",
+                type: "select",
+                options: ["1 year", "2 years", "3 years"],
+                required: true
+              },
+              {
+                name: "delivery_timeline",
+                label: "Required Delivery Timeline",
+                type: "text",
+                required: true
+              }
+            ]
+          },
+          created_at: "2024-06-15T10:00:00Z",
+          updated_at: "2024-06-15T10:00:00Z",
+          is_active: true,
+          is_default: true,
+          usage_count: 15
         },
-        created_at: "2024-01-15T10:00:00Z",
-        updated_at: "2024-01-20T15:30:00Z",
-        is_default: true,
-        usage_count: 15
-      },
-      {
-        id: "2",
-        name: "Office Supplies",
-        description: "Template for office supplies and stationery procurement",
-        category: "General",
-        content: {
-          title: "Request for Proposal - Office Supplies",
-          description: "We are seeking proposals for the supply of office supplies and stationery items.",
-          terms_and_conditions: "Standard terms and conditions for supplies procurement",
-          evaluation_criteria: [
-            { name: "Price", weight: 50, description: "Commercial evaluation" },
-            { name: "Quality", weight: 25, description: "Product quality" },
-            { name: "Delivery", weight: 25, description: "Delivery capability" }
-          ],
-          submission_requirements: [
-            "Product catalog",
-            "Price list",
-            "Delivery schedule",
-            "Quality certificates"
-          ]
+        {
+          id: "2",
+          name: "Services Procurement",
+          description: "Template for procuring professional services",
+          category: "Services",
+          template_data: {
+            title: "Request for Proposal - Professional Services",
+            description: "We are seeking proposals for professional services.",
+            terms_and_conditions: "Standard terms and conditions for services procurement",
+            evaluation_criteria: {
+              type: "technical_l1"
+            },
+            fields: [
+              {
+                name: "service_description",
+                label: "Service Description",
+                type: "textarea",
+                required: true
+              },
+              {
+                name: "team_composition",
+                label: "Team Composition",
+                type: "textarea",
+                required: true
+              },
+              {
+                name: "project_timeline",
+                label: "Project Timeline",
+                type: "text",
+                required: true
+              }
+            ]
+          },
+          created_at: "2024-06-10T14:30:00Z",
+          updated_at: "2024-06-10T14:30:00Z",
+          is_active: true,
+          is_default: false,
+          usage_count: 8
         },
-        created_at: "2024-01-10T08:00:00Z",
-        updated_at: "2024-01-18T12:00:00Z",
-        is_default: false,
-        usage_count: 8
-      }
-    ];
+        {
+          id: "3",
+          name: "Construction Works",
+          description: "Template for construction and infrastructure projects",
+          category: "Construction",
+          template_data: {
+            title: "Request for Proposal - Construction Works",
+            description: "We are seeking proposals for construction works.",
+            terms_and_conditions: "Standard terms and conditions for construction procurement",
+            evaluation_criteria: {
+              type: "qcbs",
+              technical_weight: 60,
+              commercial_weight: 40
+            },
+            fields: [
+              {
+                name: "project_scope",
+                label: "Project Scope",
+                type: "textarea",
+                required: true
+              },
+              {
+                name: "completion_timeline",
+                label: "Completion Timeline",
+                type: "text",
+                required: true
+              },
+              {
+                name: "safety_requirements",
+                label: "Safety Requirements",
+                type: "textarea",
+                required: true
+              }
+            ]
+          },
+          created_at: "2024-06-05T09:15:00Z",
+          updated_at: "2024-06-05T09:15:00Z",
+          is_active: true,
+          is_default: false,
+          usage_count: 3
+        }
+      ];
 
-    setTemplates(mockTemplates);
-    setIsLoading(false);
+      setTemplates(mockTemplates);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to fetch templates",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const filterTemplates = () => {
-    let filtered = templates;
+    let filtered = templates.filter(t => t.is_active);
 
     if (searchTerm) {
-      filtered = filtered.filter(
-        (template) =>
-          template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          template.description.toLowerCase().includes(searchTerm.toLowerCase())
+      filtered = filtered.filter(t =>
+        t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        t.description.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
     if (categoryFilter !== "all") {
-      filtered = filtered.filter((template) => template.category === categoryFilter);
+      filtered = filtered.filter(t => t.category === categoryFilter);
     }
 
     setFilteredTemplates(filtered);
   };
 
-  const handleEditTemplate = (template: RfpTemplate) => {
-    setEditingTemplate(template);
-    editForm.reset({
-      name: template.name,
-      description: template.description,
-      category: template.category,
-      title: template.content.title,
-      content_description: template.content.description,
-      terms_and_conditions: template.content.terms_and_conditions,
-      submission_requirements: template.content.submission_requirements.join('\n'),
-    });
-    setIsEditDialogOpen(true);
+  const handleCreateTemplate = async (data: any) => {
+    try {
+      const templateData = {
+        title: data.title,
+        description: data.templateDescription,
+        terms_and_conditions: data.terms_and_conditions,
+        evaluation_criteria: {
+          type: data.evaluation_type,
+          ...(data.evaluation_type === 'qcbs' && {
+            technical_weight: data.technical_weight,
+            commercial_weight: data.commercial_weight
+          })
+        },
+        fields: data.fields
+      };
+
+      const newTemplate: RfpTemplate = {
+        id: Date.now().toString(),
+        name: data.name,
+        description: data.description,
+        category: data.category,
+        template_data: templateData,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        is_active: true,
+        is_default: false,
+        usage_count: 0
+      };
+
+      setTemplates(prev => [newTemplate, ...prev]);
+      setIsCreateDialogOpen(false);
+      form.reset();
+      
+      toast({
+        title: "Success",
+        description: "Template created successfully",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to create template",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleUseTemplate = (template: RfpTemplate) => {
+    // Navigate to RFP creation with template data
+    const templateData = encodeURIComponent(JSON.stringify(template));
+    navigate(`/rfp/create-wizard?template=${templateData}`);
   };
 
   const handleDuplicateTemplate = (template: RfpTemplate) => {
-    const duplicatedTemplate = {
+    const duplicatedTemplate: RfpTemplate = {
       ...template,
       id: Date.now().toString(),
       name: `${template.name} (Copy)`,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      usage_count: 0,
-      is_default: false
-    };
-    
-    setTemplates([duplicatedTemplate, ...templates]);
-    toast({
-      title: "Success",
-      description: "Template duplicated successfully",
-    });
-  };
-
-  const handleDeleteTemplate = (templateId: string) => {
-    setTemplates(templates.filter(t => t.id !== templateId));
-    toast({
-      title: "Success",
-      description: "Template deleted successfully",
-    });
-  };
-
-  const onSubmit = (data: any) => {
-    const newTemplate: RfpTemplate = {
-      id: Date.now().toString(),
-      name: data.name,
-      description: data.description,
-      category: data.category,
-      content: {
-        title: data.title,
-        description: data.content_description,
-        terms_and_conditions: data.terms_and_conditions,
-        evaluation_criteria: [],
-        submission_requirements: data.submission_requirements.split('\n').filter((req: string) => req.trim())
-      },
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       is_default: false,
       usage_count: 0
     };
 
-    setTemplates([newTemplate, ...templates]);
-    setIsCreateDialogOpen(false);
-    form.reset();
+    setTemplates(prev => [duplicatedTemplate, ...prev]);
     
     toast({
       title: "Success",
-      description: "RFP template created successfully",
+      description: "Template duplicated successfully",
     });
   };
 
-  const onEditSubmit = (data: any) => {
-    if (!editingTemplate) return;
-
-    const updatedTemplate: RfpTemplate = {
-      ...editingTemplate,
-      name: data.name,
-      description: data.description,
-      category: data.category,
-      content: {
-        ...editingTemplate.content,
-        title: data.title,
-        description: data.content_description,
-        terms_and_conditions: data.terms_and_conditions,
-        submission_requirements: data.submission_requirements.split('\n').filter((req: string) => req.trim())
-      },
-      updated_at: new Date().toISOString(),
-    };
-
-    setTemplates(templates.map(t => t.id === editingTemplate.id ? updatedTemplate : t));
-    setIsEditDialogOpen(false);
-    setEditingTemplate(null);
-    editForm.reset();
-    
-    toast({
-      title: "Success",
-      description: "RFP template updated successfully",
-    });
-  };
+  const categories = [...new Set(templates.map(t => t.category))];
 
   if (isLoading) {
     return <div className="container mx-auto py-6">Loading...</div>;
@@ -262,7 +310,10 @@ const RfpTemplates = () => {
   return (
     <div className="container mx-auto py-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">RFP Templates</h1>
+        <div className="flex items-center gap-2">
+          <FileText className="h-6 w-6" />
+          <h1 className="text-2xl font-bold">RFP Templates</h1>
+        </div>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
             <Button>
@@ -270,12 +321,12 @@ const RfpTemplates = () => {
               Create Template
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Create RFP Template</DialogTitle>
+              <DialogTitle>Create New RFP Template</DialogTitle>
             </DialogHeader>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <form onSubmit={form.handleSubmit(handleCreateTemplate)} className="space-y-4">
                 <FormField
                   control={form.control}
                   name="name"
@@ -289,6 +340,7 @@ const RfpTemplates = () => {
                     </FormItem>
                   )}
                 />
+                
                 <FormField
                   control={form.control}
                   name="description"
@@ -296,12 +348,13 @@ const RfpTemplates = () => {
                     <FormItem>
                       <FormLabel>Description</FormLabel>
                       <FormControl>
-                        <Textarea placeholder="Template description" {...field} />
+                        <Textarea placeholder="Enter template description" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+                
                 <FormField
                   control={form.control}
                   name="category"
@@ -309,13 +362,65 @@ const RfpTemplates = () => {
                     <FormItem>
                       <FormLabel>Category</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., IT, General, Services" {...field} />
+                        <Input placeholder="e.g., IT, Services, Construction" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                <div className="flex gap-4">
+                
+                <FormField
+                  control={form.control}
+                  name="title"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Default RFP Title</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter default RFP title" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="templateDescription"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Default RFP Description</FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="Enter default RFP description" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="evaluation_type"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Evaluation Method</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select evaluation method" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="qcbs">QCBS (Quality & Cost Based)</SelectItem>
+                          <SelectItem value="price_l1">Price L1 (Lowest Price)</SelectItem>
+                          <SelectItem value="technical_l1">Technical L1 (Highest Technical Score)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <div className="flex gap-2 pt-4">
                   <Button type="submit">Create Template</Button>
                   <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
                     Cancel
@@ -326,64 +431,6 @@ const RfpTemplates = () => {
           </DialogContent>
         </Dialog>
       </div>
-
-      {/* Edit Template Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Edit RFP Template</DialogTitle>
-          </DialogHeader>
-          <Form {...editForm}>
-            <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-4">
-              <FormField
-                control={editForm.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Template Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter template name" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={editForm.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description</FormLabel>
-                    <FormControl>
-                      <Textarea placeholder="Template description" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={editForm.control}
-                name="category"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Category</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., IT, General, Services" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <div className="flex gap-4">
-                <Button type="submit">Update Template</Button>
-                <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-                  Cancel
-                </Button>
-              </div>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
 
       {/* Filters */}
       <Card className="mb-6">
@@ -406,9 +453,9 @@ const RfpTemplates = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Categories</SelectItem>
-                <SelectItem value="IT">IT</SelectItem>
-                <SelectItem value="General">General</SelectItem>
-                <SelectItem value="Services">Services</SelectItem>
+                {categories.map(category => (
+                  <SelectItem key={category} value={category}>{category}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -418,48 +465,48 @@ const RfpTemplates = () => {
       {/* Templates Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredTemplates.map((template) => (
-          <Card key={template.id}>
+          <Card key={template.id} className="relative">
             <CardHeader>
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <CardTitle className="text-lg">{template.name}</CardTitle>
-                  <p className="text-sm text-muted-foreground mt-1">{template.description}</p>
+                  <CardTitle className="text-lg mb-2 flex items-center gap-2">
+                    {template.name}
+                    {template.is_default && (
+                      <Star className="h-4 w-4 text-yellow-500 fill-current" />
+                    )}
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground">{template.description}</p>
                 </div>
-                <div className="flex items-center gap-1">
-                  {template.is_default && (
-                    <Badge variant="secondary">Default</Badge>
-                  )}
-                  <Badge variant="outline">{template.category}</Badge>
-                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline">{template.category}</Badge>
+                <Badge variant="secondary">Used {template.usage_count} times</Badge>
               </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                <div className="text-sm">
-                  <span className="font-medium">Used:</span>  {template.usage_count} times
+                <div className="text-sm text-muted-foreground">
+                  <p>Created: {format(new Date(template.created_at), "PPP")}</p>
+                  <p>Evaluation: {template.template_data.evaluation_criteria?.type?.toUpperCase().replace('_', ' ')}</p>
+                  <p>Fields: {template.template_data.fields?.length || 0} custom fields</p>
                 </div>
-                <div className="text-sm">
-                  <span className="font-medium">Last updated:</span>{" "}
-                  {new Date(template.updated_at).toLocaleDateString()}
-                </div>
-                <div className="flex gap-2">
-                  <Button size="sm" variant="outline" onClick={() => handleDuplicateTemplate(template)}>
-                    <Copy className="h-3 w-3 mr-1" />
-                    Duplicate
+                
+                <div className="flex gap-2 pt-4">
+                  <Button 
+                    size="sm" 
+                    onClick={() => handleUseTemplate(template)}
+                    className="flex-1"
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    Use Template
                   </Button>
-                  <Button size="sm" variant="outline" onClick={() => handleEditTemplate(template)}>
-                    <Edit className="h-3 w-3 mr-1" />
-                    Edit
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => handleDuplicateTemplate(template)}
+                  >
+                    <Copy className="h-4 w-4" />
                   </Button>
-                  {!template.is_default && (
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      onClick={() => handleDeleteTemplate(template.id)}
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  )}
                 </div>
               </div>
             </CardContent>
@@ -470,11 +517,8 @@ const RfpTemplates = () => {
       {filteredTemplates.length === 0 && (
         <Card>
           <CardContent className="p-8 text-center">
-            <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-muted-foreground">No RFP templates found.</p>
-            <p className="text-sm text-muted-foreground mt-2">
-              Create your first template to get started.
-            </p>
+            <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <p className="text-muted-foreground">No templates found matching your criteria.</p>
           </CardContent>
         </Card>
       )}

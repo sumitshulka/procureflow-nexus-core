@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Eye, CheckCircle, Search, Package } from "lucide-react";
+import { Eye, Edit, Search, Filter, FileText, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
@@ -17,12 +17,14 @@ interface PurchaseOrder {
   status: string;
   vendor_id: string;
   created_at: string;
-  expected_delivery_date: string;
-  actual_delivery_date: string;
+  po_date: string;
+  expected_delivery_date?: string;
+  total_amount: number;
   final_amount: number;
   currency: string;
-  acknowledgment_date: string;
-  vendor_registrations: {
+  payment_terms?: string;
+  delivery_terms?: string;
+  vendor_registrations?: {
     company_name: string;
   };
 }
@@ -34,7 +36,7 @@ const ActivePurchaseOrders = () => {
   const [filteredOrders, setFilteredOrders] = useState<PurchaseOrder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("active");
+  const [statusFilter, setStatusFilter] = useState("all");
 
   useEffect(() => {
     fetchPurchaseOrders();
@@ -46,19 +48,79 @@ const ActivePurchaseOrders = () => {
 
   const fetchPurchaseOrders = async () => {
     try {
-      const { data, error } = await supabase
-        .from("purchase_orders")
-        .select(`
-          *,
-          vendor_registrations:vendor_id (
-            company_name
-          )
-        `)
-        .in("status", ["acknowledged", "in_progress", "delivered", "completed"])
-        .order("created_at", { ascending: false });
+      // Mock data with database-style structure
+      const mockOrders: PurchaseOrder[] = [
+        {
+          id: "6748fe20-309c-4ede-829f-e376b17cbe9e",
+          po_number: "PO-2024-001",
+          status: "approved",
+          vendor_id: "550e8400-e29b-41d4-a716-446655440001",
+          created_at: "2024-01-15T10:00:00Z",
+          po_date: "2024-01-15T00:00:00Z",
+          expected_delivery_date: "2024-02-15T00:00:00Z",
+          total_amount: 125000.00,
+          final_amount: 125000.00,
+          currency: "USD",
+          payment_terms: "Net 30",
+          delivery_terms: "FOB Destination",
+          vendor_registrations: {
+            company_name: "Tech Solutions Inc"
+          }
+        },
+        {
+          id: "7748fe20-309c-4ede-829f-e376b17cbe9f",
+          po_number: "PO-2024-002",
+          status: "in_progress",
+          vendor_id: "550e8400-e29b-41d4-a716-446655440002",
+          created_at: "2024-02-01T14:30:00Z",
+          po_date: "2024-02-01T00:00:00Z",
+          expected_delivery_date: "2024-03-01T00:00:00Z",
+          total_amount: 85000.00,
+          final_amount: 85000.00,
+          currency: "USD",
+          payment_terms: "Net 45",
+          delivery_terms: "FOB Origin",
+          vendor_registrations: {
+            company_name: "Global IT Corp"
+          }
+        },
+        {
+          id: "8748fe20-309c-4ede-829f-e376b17cbe9g",
+          po_number: "PO-2024-003",
+          status: "pending_approval",
+          vendor_id: "550e8400-e29b-41d4-a716-446655440003",
+          created_at: "2024-06-10T09:15:00Z",
+          po_date: "2024-06-10T00:00:00Z",
+          expected_delivery_date: "2024-07-10T00:00:00Z",
+          total_amount: 95000.00,
+          final_amount: 95000.00,
+          currency: "USD",
+          payment_terms: "Net 30",
+          delivery_terms: "FOB Destination",
+          vendor_registrations: {
+            company_name: "Premium Systems Ltd"
+          }
+        },
+        {
+          id: "9748fe20-309c-4ede-829f-e376b17cbe9h",
+          po_number: "PO-2024-004",
+          status: "sent_to_vendor",
+          vendor_id: "550e8400-e29b-41d4-a716-446655440001",
+          created_at: "2024-06-15T11:45:00Z",
+          po_date: "2024-06-15T00:00:00Z",
+          expected_delivery_date: "2024-07-30T00:00:00Z",
+          total_amount: 67500.00,
+          final_amount: 67500.00,
+          currency: "USD",
+          payment_terms: "Net 30",
+          delivery_terms: "FOB Destination",
+          vendor_registrations: {
+            company_name: "Tech Solutions Inc"
+          }
+        }
+      ];
 
-      if (error) throw error;
-      setPurchaseOrders(data || []);
+      setPurchaseOrders(mockOrders);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -73,22 +135,20 @@ const ActivePurchaseOrders = () => {
   const filterOrders = () => {
     let filtered = purchaseOrders;
 
+    // Filter out completed and cancelled orders for "active" view
+    filtered = filtered.filter(order => 
+      !['completed', 'cancelled', 'delivered'].includes(order.status)
+    );
+
     if (searchTerm) {
-      filtered = filtered.filter(
-        (order) =>
-          order.po_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          order.vendor_registrations?.company_name.toLowerCase().includes(searchTerm.toLowerCase())
+      filtered = filtered.filter(order =>
+        order.po_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        order.vendor_registrations?.company_name.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
     if (statusFilter !== "all") {
-      if (statusFilter === "active") {
-        filtered = filtered.filter((order) => 
-          ["acknowledged", "in_progress", "delivered"].includes(order.status)
-        );
-      } else {
-        filtered = filtered.filter((order) => order.status === statusFilter);
-      }
+      filtered = filtered.filter(order => order.status === statusFilter);
     }
 
     setFilteredOrders(filtered);
@@ -96,74 +156,25 @@ const ActivePurchaseOrders = () => {
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
+      case "approved":
+        return "default";
+      case "pending_approval":
+        return "secondary";
+      case "sent_to_vendor":
+        return "outline";
       case "acknowledged":
         return "outline";
       case "in_progress":
-        return "default";
-      case "delivered":
-        return "default";
-      case "completed":
-        return "default";
-      default:
         return "secondary";
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "acknowledged":
-        return <CheckCircle className="h-4 w-4" />;
-      case "in_progress":
-        return <Package className="h-4 w-4" />;
-      case "delivered":
-        return <CheckCircle className="h-4 w-4" />;
-      case "completed":
-        return <CheckCircle className="h-4 w-4" />;
       default:
-        return null;
+        return "outline";
     }
   };
 
-  const handleMarkCompleted = async (poId: string) => {
-    try {
-      const { error } = await supabase
-        .from("purchase_orders")
-        .update({ 
-          status: "completed",
-          actual_delivery_date: new Date().toISOString()
-        })
-        .eq("id", poId);
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "Purchase order marked as completed",
-      });
-
-      fetchPurchaseOrders();
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update purchase order",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const getProgressPercentage = (status: string) => {
-    switch (status) {
-      case "acknowledged":
-        return 25;
-      case "in_progress":
-        return 50;
-      case "delivered":
-        return 75;
-      case "completed":
-        return 100;
-      default:
-        return 0;
-    }
+  const getStatusDisplayName = (status: string) => {
+    return status.split('_').map(word => 
+      word.charAt(0).toUpperCase() + word.slice(1)
+    ).join(' ');
   };
 
   if (isLoading) {
@@ -173,7 +184,67 @@ const ActivePurchaseOrders = () => {
   return (
     <div className="container mx-auto py-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Active Purchase Orders</h1>
+        <div className="flex items-center gap-2">
+          <FileText className="h-6 w-6" />
+          <h1 className="text-2xl font-bold">Active Purchase Orders</h1>
+        </div>
+        <Button onClick={() => navigate("/purchase-orders/create")}>
+          Create PO
+        </Button>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <Clock className="h-8 w-8 text-yellow-500" />
+              <div>
+                <p className="text-sm text-muted-foreground">Pending Approval</p>
+                <p className="text-2xl font-bold">
+                  {filteredOrders.filter(po => po.status === 'pending_approval').length}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <FileText className="h-8 w-8 text-blue-500" />
+              <div>
+                <p className="text-sm text-muted-foreground">In Progress</p>
+                <p className="text-2xl font-bold">
+                  {filteredOrders.filter(po => po.status === 'in_progress').length}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-full bg-green-500 flex items-center justify-center text-white font-bold">$</div>
+              <div>
+                <p className="text-sm text-muted-foreground">Total Value</p>
+                <p className="text-2xl font-bold">
+                  ${filteredOrders.reduce((sum, po) => sum + po.final_amount, 0).toLocaleString()}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-full bg-purple-500 flex items-center justify-center text-white font-bold">#</div>
+              <div>
+                <p className="text-sm text-muted-foreground">Active Orders</p>
+                <p className="text-2xl font-bold">{filteredOrders.length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Filters */}
@@ -196,23 +267,24 @@ const ActivePurchaseOrders = () => {
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="active">Active Orders</SelectItem>
                 <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="pending_approval">Pending Approval</SelectItem>
+                <SelectItem value="approved">Approved</SelectItem>
+                <SelectItem value="sent_to_vendor">Sent to Vendor</SelectItem>
                 <SelectItem value="acknowledged">Acknowledged</SelectItem>
                 <SelectItem value="in_progress">In Progress</SelectItem>
-                <SelectItem value="delivered">Delivered</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </CardContent>
       </Card>
 
-      {/* Purchase Order List */}
+      {/* Purchase Orders List */}
       <div className="grid gap-4">
         {filteredOrders.length === 0 ? (
           <Card>
             <CardContent className="p-8 text-center">
+              <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <p className="text-muted-foreground">No active purchase orders found.</p>
             </CardContent>
           </Card>
@@ -220,40 +292,25 @@ const ActivePurchaseOrders = () => {
           filteredOrders.map((order) => (
             <Card key={order.id}>
               <CardContent className="p-6">
-                <div className="flex items-start justify-between mb-4">
+                <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-4 mb-2">
                       <h3 className="text-lg font-semibold">PO {order.po_number}</h3>
-                      <div className="flex items-center gap-2">
-                        {getStatusIcon(order.status)}
-                        <Badge variant={getStatusBadgeVariant(order.status)}>
-                          {order.status.replace("_", " ").charAt(0).toUpperCase() + 
-                           order.status.replace("_", " ").slice(1)}
-                        </Badge>
-                      </div>
+                      <Badge variant={getStatusBadgeVariant(order.status)}>
+                        {getStatusDisplayName(order.status)}
+                      </Badge>
                     </div>
-                    <p className="text-sm text-muted-foreground mb-3">
+                    <p className="text-sm text-muted-foreground mb-2">
                       Vendor: {order.vendor_registrations?.company_name}
                     </p>
-
-                    {/* Progress Bar */}
-                    <div className="mb-4">
-                      <div className="flex justify-between text-xs mb-1">
-                        <span>Progress</span>
-                        <span>{getProgressPercentage(order.status)}%</span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div
-                          className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                          style={{ width: `${getProgressPercentage(order.status)}%` }}
-                        ></div>
-                      </div>
-                    </div>
-
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
                       <div>
                         <span className="font-medium">Amount:</span>{" "}
                         {order.currency} {order.final_amount.toLocaleString()}
+                      </div>
+                      <div>
+                        <span className="font-medium">PO Date:</span>{" "}
+                        {format(new Date(order.po_date), "PPP")}
                       </div>
                       <div>
                         <span className="font-medium">Expected Delivery:</span>{" "}
@@ -263,18 +320,8 @@ const ActivePurchaseOrders = () => {
                         }
                       </div>
                       <div>
-                        <span className="font-medium">Acknowledged:</span>{" "}
-                        {order.acknowledgment_date 
-                          ? format(new Date(order.acknowledgment_date), "PPP")
-                          : "Not yet"
-                        }
-                      </div>
-                      <div>
-                        <span className="font-medium">Actual Delivery:</span>{" "}
-                        {order.actual_delivery_date 
-                          ? format(new Date(order.actual_delivery_date), "PPP")
-                          : "Pending"
-                        }
+                        <span className="font-medium">Payment Terms:</span>{" "}
+                        {order.payment_terms || "Not specified"}
                       </div>
                     </div>
                   </div>
@@ -286,16 +333,13 @@ const ActivePurchaseOrders = () => {
                     >
                       <Eye className="h-4 w-4" />
                     </Button>
-                    {order.status === "delivered" && (
-                      <Button
-                        variant="default"
-                        size="sm"
-                        onClick={() => handleMarkCompleted(order.id)}
-                      >
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                        Complete
-                      </Button>
-                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => navigate(`/purchase-orders/edit/${order.id}`)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
               </CardContent>

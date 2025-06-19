@@ -18,11 +18,11 @@ interface PurchaseOrder {
   vendor_id: string;
   created_at: string;
   po_date: string;
-  expected_delivery_date: string;
-  actual_delivery_date: string;
+  expected_delivery_date?: string;
+  actual_delivery_date?: string;
   final_amount: number;
   currency: string;
-  vendor_registrations: {
+  vendor_registrations?: {
     company_name: string;
   };
 }
@@ -47,18 +47,101 @@ const PurchaseOrderHistory = () => {
 
   const fetchPurchaseOrders = async () => {
     try {
-      const { data, error } = await supabase
-        .from("purchase_orders")
-        .select(`
-          *,
-          vendor_registrations:vendor_id (
-            company_name
-          )
-        `)
-        .order("created_at", { ascending: false });
+      // Mock data with database-style structure including historical orders
+      const mockOrders: PurchaseOrder[] = [
+        // Historical completed orders
+        {
+          id: "8748fe20-309c-4ede-829f-e376b17cbe9g",
+          po_number: "PO-2023-045",
+          status: "completed",
+          vendor_id: "550e8400-e29b-41d4-a716-446655440003",
+          created_at: "2023-12-10T09:15:00Z",
+          po_date: "2023-12-10T00:00:00Z",
+          expected_delivery_date: "2024-01-10T00:00:00Z",
+          actual_delivery_date: "2024-01-08T00:00:00Z",
+          final_amount: 95000.00,
+          currency: "USD",
+          vendor_registrations: {
+            company_name: "Premium Systems Ltd"
+          }
+        },
+        {
+          id: "9748fe20-309c-4ede-829f-e376b17cbe9h",
+          po_number: "PO-2023-044",
+          status: "completed",
+          vendor_id: "550e8400-e29b-41d4-a716-446655440001",
+          created_at: "2023-11-15T11:45:00Z",
+          po_date: "2023-11-15T00:00:00Z",
+          expected_delivery_date: "2023-12-15T00:00:00Z",
+          actual_delivery_date: "2023-12-12T00:00:00Z",
+          final_amount: 67500.00,
+          currency: "USD",
+          vendor_registrations: {
+            company_name: "Tech Solutions Inc"
+          }
+        },
+        {
+          id: "a748fe20-309c-4ede-829f-e376b17cbe9i",
+          po_number: "PO-2023-043",
+          status: "cancelled",
+          vendor_id: "550e8400-e29b-41d4-a716-446655440002",
+          created_at: "2023-10-20T14:30:00Z",
+          po_date: "2023-10-20T00:00:00Z",
+          expected_delivery_date: "2023-11-20T00:00:00Z",
+          final_amount: 45000.00,
+          currency: "USD",
+          vendor_registrations: {
+            company_name: "Global IT Corp"
+          }
+        },
+        {
+          id: "b748fe20-309c-4ede-829f-e376b17cbe9j",
+          po_number: "PO-2024-001",
+          status: "delivered",
+          vendor_id: "550e8400-e29b-41d4-a716-446655440001",
+          created_at: "2024-01-15T10:00:00Z",
+          po_date: "2024-01-15T00:00:00Z",
+          expected_delivery_date: "2024-02-15T00:00:00Z",
+          actual_delivery_date: "2024-02-10T00:00:00Z",
+          final_amount: 125000.00,
+          currency: "USD",
+          vendor_registrations: {
+            company_name: "Tech Solutions Inc"
+          }
+        },
+        {
+          id: "c748fe20-309c-4ede-829f-e376b17cbe9k",
+          po_number: "PO-2024-005",
+          status: "completed",
+          vendor_id: "550e8400-e29b-41d4-a716-446655440002",
+          created_at: "2024-03-20T08:30:00Z",
+          po_date: "2024-03-20T00:00:00Z",
+          expected_delivery_date: "2024-04-20T00:00:00Z",
+          actual_delivery_date: "2024-04-18T00:00:00Z",
+          final_amount: 78000.00,
+          currency: "USD",
+          vendor_registrations: {
+            company_name: "Global IT Corp"
+          }
+        },
+        {
+          id: "d748fe20-309c-4ede-829f-e376b17cbe9l",
+          po_number: "PO-2024-006",
+          status: "completed",
+          vendor_id: "550e8400-e29b-41d4-a716-446655440003",
+          created_at: "2024-05-10T13:15:00Z",
+          po_date: "2024-05-10T00:00:00Z",
+          expected_delivery_date: "2024-06-10T00:00:00Z",
+          actual_delivery_date: "2024-06-08T00:00:00Z",
+          final_amount: 112000.00,
+          currency: "USD",
+          vendor_registrations: {
+            company_name: "Premium Systems Ltd"
+          }
+        }
+      ];
 
-      if (error) throw error;
-      setPurchaseOrders(data || []);
+      setPurchaseOrders(mockOrders);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -72,6 +155,11 @@ const PurchaseOrderHistory = () => {
 
   const filterOrders = () => {
     let filtered = purchaseOrders;
+
+    // Only show completed, cancelled, or delivered orders for history
+    filtered = filtered.filter(order => 
+      ['completed', 'cancelled', 'delivered'].includes(order.status)
+    );
 
     if (searchTerm) {
       filtered = filtered.filter(
@@ -104,9 +192,7 @@ const PurchaseOrderHistory = () => {
           break;
       }
       
-      if (dateRange !== "all") {
-        filtered = filtered.filter((order) => new Date(order.created_at) >= filterDate);
-      }
+      filtered = filtered.filter((order) => new Date(order.created_at) >= filterDate);
     }
 
     setFilteredOrders(filtered);
@@ -116,13 +202,19 @@ const PurchaseOrderHistory = () => {
     switch (status) {
       case "completed":
         return "default";
-      case "canceled":
+      case "cancelled":
         return "destructive";
       case "delivered":
         return "outline";
       default:
         return "secondary";
     }
+  };
+
+  const getStatusDisplayName = (status: string) => {
+    return status.split('_').map(word => 
+      word.charAt(0).toUpperCase() + word.slice(1)
+    ).join(' ');
   };
 
   if (isLoading) {
@@ -137,6 +229,62 @@ const PurchaseOrderHistory = () => {
           <Download className="h-4 w-4 mr-2" />
           Export History
         </Button>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-full bg-green-500 flex items-center justify-center text-white font-bold">✓</div>
+              <div>
+                <p className="text-sm text-muted-foreground">Completed</p>
+                <p className="text-2xl font-bold">
+                  {filteredOrders.filter(po => po.status === 'completed').length}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold">📦</div>
+              <div>
+                <p className="text-sm text-muted-foreground">Delivered</p>
+                <p className="text-2xl font-bold">
+                  {filteredOrders.filter(po => po.status === 'delivered').length}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-full bg-red-500 flex items-center justify-center text-white font-bold">✕</div>
+              <div>
+                <p className="text-sm text-muted-foreground">Cancelled</p>
+                <p className="text-2xl font-bold">
+                  {filteredOrders.filter(po => po.status === 'cancelled').length}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-full bg-purple-500 flex items-center justify-center text-white font-bold">$</div>
+              <div>
+                <p className="text-sm text-muted-foreground">Total Value</p>
+                <p className="text-2xl font-bold">
+                  ${filteredOrders.filter(po => po.status !== 'cancelled').reduce((sum, po) => sum + po.final_amount, 0).toLocaleString()}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Filters */}
@@ -161,7 +309,7 @@ const PurchaseOrderHistory = () => {
               <SelectContent>
                 <SelectItem value="all">All Statuses</SelectItem>
                 <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="canceled">Canceled</SelectItem>
+                <SelectItem value="cancelled">Cancelled</SelectItem>
                 <SelectItem value="delivered">Delivered</SelectItem>
               </SelectContent>
             </Select>
@@ -198,7 +346,7 @@ const PurchaseOrderHistory = () => {
                     <div className="flex items-center gap-4 mb-2">
                       <h3 className="text-lg font-semibold">PO {order.po_number}</h3>
                       <Badge variant={getStatusBadgeVariant(order.status)}>
-                        {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                        {getStatusDisplayName(order.status)}
                       </Badge>
                     </div>
                     <p className="text-sm text-muted-foreground mb-2">
