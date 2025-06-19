@@ -1,4 +1,4 @@
-import { Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "@/pages/Index";
 import LoginPage from "@/pages/auth/LoginPage";
 import SignupPage from "@/pages/auth/SignupPage";
@@ -7,13 +7,13 @@ import UpdatePasswordPage from "@/pages/auth/UpdatePasswordPage";
 import UnauthorizedPage from "@/pages/auth/UnauthorizedPage";
 import NotFound from "@/pages/NotFound";
 import Dashboard from "@/pages/Dashboard";
-import ProcurementRequests from "@/pages/procurement/ProcurementRequests";
-import ProcurementRequestDetail from "@/pages/procurement/ProcurementRequestDetail";
-import ProductCatalog from "@/pages/products/ProductCatalog";
-import AddProduct from "@/pages/products/AddProduct";
-import ProductDetail from "@/pages/products/ProductDetail";
-import EditProduct from "@/pages/products/EditProduct";
-import ProductPriceHistory from "@/pages/products/ProductPriceHistory";
+import ProcurementRequests from "@/pages/ProcurementRequests";
+import ProcurementRequestDetail from "@/pages/ProcurementRequestDetail";
+import ProductCatalog from "@/pages/ProductCatalog";
+import AddProduct from "@/pages/AddProduct";
+import ProductDetail from "@/pages/ProductDetail";
+import EditProduct from "@/pages/EditProduct";
+import ProductPriceHistory from "@/pages/ProductPriceHistory";
 import ActiveRfps from "@/pages/rfp/ActiveRfps";
 import CreateRfp from "@/pages/CreateRfp";
 import CreateRfpWizard from "@/pages/rfp/CreateRfpWizard";
@@ -28,13 +28,13 @@ import InventoryItems from "@/pages/inventory/InventoryItems";
 import InventoryTransactions from "@/pages/inventory/InventoryTransactions";
 import Warehouses from "@/pages/inventory/Warehouses";
 import InventoryReports from "@/pages/inventory/InventoryReports";
-import StockMovementReport from "@/pages/inventory/reports/StockMovementReport";
-import StockAgingReport from "@/pages/inventory/reports/StockAgingReport";
-import InventoryValuationReport from "@/pages/inventory/reports/InventoryValuationReport";
-import VendorManagement from "@/pages/vendors/VendorManagement";
-import VendorPortal from "@/pages/vendors/VendorPortal";
-import VendorRegistration from "@/pages/vendors/VendorRegistration";
-import VendorRegistrationSuccess from "@/pages/vendors/VendorRegistrationSuccess";
+import StockMovementReport from "@/pages/inventory/StockMovementReport";
+import StockAgingReport from "@/pages/inventory/StockAgingReport";
+import InventoryValuationReport from "@/pages/inventory/InventoryValuationReport";
+import VendorManagement from "@/pages/VendorManagement";
+import VendorPortal from "@/pages/VendorPortal";
+import VendorRegistration from "@/pages/VendorRegistration";
+import VendorRegistrationSuccess from "@/pages/VendorRegistrationSuccess";
 import SpendAnalysis from "@/pages/analytics/SpendAnalysis";
 import VendorPerformance from "@/pages/analytics/VendorPerformance";
 import PerformanceAnalytics from "@/pages/analytics/PerformanceAnalytics";
@@ -56,7 +56,7 @@ import AppLayout from "@/layouts/AppLayout";
 
 function App() {
   return (
-    <Router>
+    <BrowserRouter>
       <div className="min-h-screen bg-background">
         <Routes>
           <Route path="/" element={<Index />} />
@@ -145,7 +145,7 @@ function App() {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </div>
-    </Router>
+    </BrowserRouter>
   );
 }
 
