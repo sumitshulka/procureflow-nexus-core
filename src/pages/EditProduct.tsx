@@ -30,18 +30,18 @@ interface Product {
 }
 
 const EditProduct = () => {
-  const { id } = useParams<{ id: string }>();
+  const { productId } = useParams<{ productId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  console.log("EditProduct component - Product ID:", id);
+  console.log("EditProduct component - Product ID:", productId);
 
   const { data: product, isLoading, error } = useQuery({
-    queryKey: ["product", id],
+    queryKey: ["product", productId],
     queryFn: async () => {
-      console.log("Starting product fetch for editing, ID:", id);
+      console.log("Starting product fetch for editing, ID:", productId);
       
-      if (!id) {
+      if (!productId) {
         console.error("Product ID is missing");
         throw new Error("Product ID is required");
       }
@@ -55,7 +55,7 @@ const EditProduct = () => {
           category:category_id(name),
           unit:unit_id(name, abbreviation)
         `)
-        .eq("id", id)
+        .eq("id", productId)
         .single();
 
       console.log("Supabase query result for edit:", { data, error });
@@ -95,7 +95,7 @@ const EditProduct = () => {
       console.log("Transformed product data for edit:", transformedProduct);
       return transformedProduct;
     },
-    enabled: !!id,
+    enabled: !!productId,
   });
 
   console.log("EditProduct component state:", { isLoading, error, product });
@@ -115,7 +115,7 @@ const EditProduct = () => {
         <div className="text-center py-8">
           <p className="text-red-600 mb-4">Error loading product for editing</p>
           <p className="text-sm text-gray-600">{error.message}</p>
-          <Button onClick={() => navigate("/catalog")} className="mt-4">
+          <Button onClick={() => navigate("/products")} className="mt-4">
             Back to Catalog
           </Button>
         </div>
@@ -134,7 +134,7 @@ const EditProduct = () => {
   return (
     <div className="page-container">
       <div className="flex items-center gap-4 mb-6">
-        <Button variant="ghost" onClick={() => navigate(`/product/${id}`)}>
+        <Button variant="ghost" onClick={() => navigate(`/products/${productId}`)}>
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Product Details
         </Button>

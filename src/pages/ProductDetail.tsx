@@ -1,3 +1,4 @@
+
 import React from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -32,18 +33,18 @@ interface Product {
 }
 
 const ProductDetail = () => {
-  const { id } = useParams<{ id: string }>();
+  const { productId } = useParams<{ productId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  console.log("ProductDetail component - Product ID:", id);
+  console.log("ProductDetail component - Product ID:", productId);
 
   const { data: product, isLoading, error } = useQuery({
-    queryKey: ["product", id],
+    queryKey: ["product", productId],
     queryFn: async () => {
-      console.log("Starting product fetch for ID:", id);
+      console.log("Starting product fetch for ID:", productId);
       
-      if (!id) {
+      if (!productId) {
         console.error("Product ID is missing");
         throw new Error("Product ID is required");
       }
@@ -58,7 +59,7 @@ const ProductDetail = () => {
           category:category_id(name),
           unit:unit_id(name, abbreviation)
         `)
-        .eq("id", id)
+        .eq("id", productId)
         .single();
 
       console.log("Supabase query result:", { data, error });
@@ -115,18 +116,18 @@ const ProductDetail = () => {
       console.log("Transformed product data:", transformedProduct);
       return transformedProduct;
     },
-    enabled: !!id,
+    enabled: !!productId,
   });
 
   const { data: hasPrice } = useQuery({
-    queryKey: ["product_has_price", id],
+    queryKey: ["product_has_price", productId],
     queryFn: async () => {
-      if (!id) return false;
+      if (!productId) return false;
       
       const { data, error } = await supabase
         .from("product_price_history")
         .select("id")
-        .eq("product_id", id)
+        .eq("product_id", productId)
         .limit(1);
 
       if (error) {
@@ -136,7 +137,7 @@ const ProductDetail = () => {
 
       return data && data.length > 0;
     },
-    enabled: !!id,
+    enabled: !!productId,
   });
 
   console.log("Component state:", { isLoading, error, product });
@@ -156,7 +157,7 @@ const ProductDetail = () => {
         <div className="text-center py-8">
           <p className="text-red-600 mb-4">Error loading product details</p>
           <p className="text-sm text-gray-600">{error.message}</p>
-          <Button onClick={() => navigate("/catalog")} className="mt-4">
+          <Button onClick={() => navigate("/products")} className="mt-4">
             Back to Catalog
           </Button>
         </div>
@@ -175,14 +176,14 @@ const ProductDetail = () => {
   return (
     <div className="page-container">
       <div className="flex items-center gap-4 mb-6">
-        <Button variant="ghost" onClick={() => navigate("/catalog")}>
+        <Button variant="ghost" onClick={() => navigate("/products")}>
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Catalog
         </Button>
         <div className="flex-1">
           <h1 className="text-2xl font-bold">{product.name}</h1>
         </div>
-        <Button onClick={() => navigate(`/products/${id}/edit`)}>
+        <Button onClick={() => navigate(`/products/${productId}/edit`)}>
           <Edit className="h-4 w-4 mr-2" />
           Edit Product
         </Button>

@@ -78,6 +78,9 @@ function App() {
           <Route path="products/:productId/edit" element={<EditProduct />} />
           <Route path="products/:productId/price-history" element={<ProductPriceHistory />} />
           
+          {/* Additional route to handle legacy /product/:id links */}
+          <Route path="product/:productId" element={<ProductDetail />} />
+          
           {/* RFP Routes */}
           <Route path="rfp/active" element={<ActiveRfps />} />
           <Route path="rfp/create" element={<CreateRfp />} />
