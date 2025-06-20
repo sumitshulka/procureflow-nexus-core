@@ -52,7 +52,7 @@ const AppSidebar = () => {
     {
       title: "Product Catalog",
       icon: ShoppingBag,
-      href: "/catalog",
+      href: "/products",
       roles: ["admin", "procurement_officer", "requester", "approver", "vendor"],
     },
     {
