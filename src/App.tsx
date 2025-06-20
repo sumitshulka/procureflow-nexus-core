@@ -68,8 +68,8 @@ function App() {
           <Route path="dashboard" element={<Dashboard />} />
           
           {/* Procurement Routes */}
-          <Route path="procurement" element={<ProcurementRequests />} />
-          <Route path="procurement/:requestId" element={<ProcurementRequestDetail />} />
+          <Route path="requests" element={<ProcurementRequests />} />
+          <Route path="requests/:requestId" element={<ProcurementRequestDetail />} />
           
           {/* Product Routes */}
           <Route path="products" element={<ProductCatalog />} />
@@ -84,6 +84,7 @@ function App() {
           <Route path="rfp/create-wizard" element={<CreateRfpWizard />} />
           <Route path="rfp/templates" element={<RfpTemplates />} />
           <Route path="rfp/templates/create" element={<TemplateCreationWizard />} />
+          <Route path="rfp/responses" element={<RfpResponses />} />
           <Route path="rfp/:rfpId/responses" element={<RfpResponses />} />
           
           {/* Purchase Order Routes */}
@@ -112,7 +113,7 @@ function App() {
           <Route path="analytics/spend" element={<SpendAnalysis />} />
           <Route path="analytics/vendor-performance" element={<VendorPerformance />} />
           <Route path="analytics/performance" element={<PerformanceAnalytics />} />
-          <Route path="analytics/reports" element={<CustomReports />} />
+          <Route path="analytics/custom" element={<CustomReports />} />
           
           {/* Budget Routes */}
           <Route path="budget/overview" element={<BudgetOverview />} />
@@ -125,7 +126,7 @@ function App() {
           <Route path="risk/reports" element={<RiskReports />} />
           
           {/* Compliance Routes */}
-          <Route path="compliance/audit" element={<AuditTrail />} />
+          <Route path="compliance/audit-trail" element={<AuditTrail />} />
           <Route path="compliance/policies" element={<PolicyManagement />} />
           <Route path="compliance/reports" element={<ComplianceReports />} />
           

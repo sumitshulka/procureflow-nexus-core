@@ -8,7 +8,7 @@ const Index = () => {
     document.title = "Procurement Management System";
   }, []);
 
-  return <Navigate to="/" replace />;
+  return <Navigate to="/dashboard" replace />;
 };
 
 export default Index;
