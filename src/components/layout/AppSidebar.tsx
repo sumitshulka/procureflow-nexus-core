@@ -1,4 +1,3 @@
-
 import React from "react";
 import {
   Sidebar,
@@ -262,8 +261,8 @@ const AppSidebar = () => {
 
   return (
     <Sidebar collapsible="icon" className="border-r mt-16">
-      <SidebarContent className="h-[calc(100vh-4rem)]">
-        <ScrollArea className="flex-1 h-full">
+      <SidebarContent>
+        <ScrollArea className="flex-1 px-2">
           <SidebarGroup className="pt-4">
             <SidebarGroupContent>
               <SidebarMenu>
