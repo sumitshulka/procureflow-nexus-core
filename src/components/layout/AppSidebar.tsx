@@ -1,3 +1,4 @@
+
 import React from "react";
 import {
   Sidebar,
@@ -48,12 +49,6 @@ const AppSidebar = () => {
       title: "Dashboard",
       icon: LayoutDashboard,
       href: "/dashboard",
-      roles: ["admin", "procurement_officer", "requester", "approver", "vendor"],
-    },
-    {
-      title: "Feature Documentation",
-      icon: BookOpen,
-      href: "/documentation/features",
       roles: ["admin", "procurement_officer", "requester", "approver", "vendor"],
     },
     {
@@ -256,6 +251,15 @@ const AppSidebar = () => {
     },
   ];
 
+  const documentationItems = [
+    {
+      title: "Feature Documentation",
+      icon: BookOpen,
+      href: "/documentation/features",
+      roles: ["admin", "procurement_officer", "requester", "approver", "vendor"],
+    },
+  ];
+
   return (
     <Sidebar collapsible="icon" className="border-r mt-16">
       <SidebarContent className="h-[calc(100vh-4rem)]">
@@ -304,6 +308,40 @@ const AppSidebar = () => {
                         </Accordion>
                       </SidebarMenuItem>
                     );
+                  }
+
+                  return (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton asChild>
+                        <NavLink
+                          to={item.href}
+                          className={({ isActive }) =>
+                            cn(
+                              "flex items-center space-x-3 rounded-md px-2 py-2 text-sm font-medium transition-colors",
+                              isActive 
+                                ? "bg-sidebar-accent text-sidebar-accent-foreground" 
+                                : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                            )
+                          }
+                        >
+                          <item.icon className="h-4 w-4" />
+                          {state === "expanded" && <span>{item.title}</span>}
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+
+          {/* Documentation Section - Below Activity Log area */}
+          <SidebarGroup className="mt-6 pt-4 border-t border-sidebar-border">
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {documentationItems.map((item) => {
+                  if (item.roles && !item.roles.some((role) => hasRole(role as any))) {
+                    return null;
                   }
 
                   return (
