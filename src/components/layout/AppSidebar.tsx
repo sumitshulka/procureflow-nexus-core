@@ -32,6 +32,7 @@ import {
   Calculator,
   Shield,
   AlertTriangle,
+  BookOpen,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -46,7 +47,13 @@ const AppSidebar = () => {
     {
       title: "Dashboard",
       icon: LayoutDashboard,
-      href: "/",
+      href: "/dashboard",
+      roles: ["admin", "procurement_officer", "requester", "approver", "vendor"],
+    },
+    {
+      title: "Feature Documentation",
+      icon: BookOpen,
+      href: "/documentation/features",
       roles: ["admin", "procurement_officer", "requester", "approver", "vendor"],
     },
     {

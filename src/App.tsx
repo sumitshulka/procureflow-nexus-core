@@ -53,6 +53,7 @@ import Approvals from "@/pages/Approvals";
 import NotificationsList from "@/pages/NotificationsList";
 import Settings from "@/pages/Settings";
 import UserManagement from "@/pages/UserManagement";
+import FeatureDocumentation from "@/pages/FeatureDocumentation";
 import AppLayout from "@/layouts/AppLayout";
 import TemplateCreationWizard from "@/components/rfp/TemplateCreationWizard";
 
@@ -66,6 +67,9 @@ function App() {
         {/* Layout routes */}
         <Route path="/" element={<AppLayout />}>
           <Route path="dashboard" element={<Dashboard />} />
+          
+          {/* Documentation Routes */}
+          <Route path="documentation/features" element={<FeatureDocumentation />} />
           
           {/* Procurement Routes */}
           <Route path="requests" element={<ProcurementRequests />} />
