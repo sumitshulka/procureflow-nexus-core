@@ -24,6 +24,13 @@ import AddProduct from '@/pages/AddProduct';
 import EditProduct from '@/pages/EditProduct';
 import ProductPriceHistory from '@/pages/ProductPriceHistory';
 
+// Vendor pages
+import VendorProfile from '@/pages/vendor/VendorProfile';
+import VendorRfps from '@/pages/vendor/VendorRfps';
+import VendorPurchaseOrders from '@/pages/vendor/VendorPurchaseOrders';
+import VendorFinances from '@/pages/vendor/VendorFinances';
+import VendorSettings from '@/pages/vendor/VendorSettings';
+
 // Procurement pages
 import ProcurementRequests from '@/pages/ProcurementRequests';
 import ProcurementRequestDetail from '@/pages/ProcurementRequestDetail';
@@ -135,6 +142,36 @@ function App() {
         <Route path="/vendor-dashboard" element={
           <ProtectedRoute requiredRole={UserRole.VENDOR}>
             <VendorDashboard />
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/vendor/profile" element={
+          <ProtectedRoute requiredRole={UserRole.VENDOR}>
+            <VendorProfile />
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/vendor/rfps" element={
+          <ProtectedRoute requiredRole={UserRole.VENDOR}>
+            <VendorRfps />
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/vendor/purchase-orders" element={
+          <ProtectedRoute requiredRole={UserRole.VENDOR}>
+            <VendorPurchaseOrders />
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/vendor/finances" element={
+          <ProtectedRoute requiredRole={UserRole.VENDOR}>
+            <VendorFinances />
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/vendor/settings" element={
+          <ProtectedRoute requiredRole={UserRole.VENDOR}>
+            <VendorSettings />
           </ProtectedRoute>
         } />
         
