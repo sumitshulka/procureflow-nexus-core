@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Edit, Save } from 'lucide-react';
+import { Edit, Save, RotateCcw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { COUNTRIES, CURRENCIES, getCurrencyForCountry } from '@/utils/currencyUtils';
@@ -55,6 +55,8 @@ const VendorEditDialog = ({ vendorProfile, onUpdate }: VendorEditDialogProps) =>
           primary_email: formData.primary_email,
           primary_phone: formData.primary_phone,
           annual_turnover: formData.annual_turnover ? parseFloat(formData.annual_turnover) : null,
+          // Reset status to pending if profile was previously approved/rejected
+          ...(vendorProfile?.status === 'approved' || vendorProfile?.status === 'rejected' ? { status: 'pending' } : {}),
         })
         .eq('id', vendorProfile.id);
 
@@ -62,7 +64,9 @@ const VendorEditDialog = ({ vendorProfile, onUpdate }: VendorEditDialogProps) =>
 
       toast({
         title: "Success",
-        description: "Profile updated successfully",
+        description: vendorProfile?.status === 'approved' || vendorProfile?.status === 'rejected' 
+          ? "Profile updated and resubmitted for approval" 
+          : "Profile updated successfully",
       });
 
       setOpen(false);
@@ -202,8 +206,17 @@ const VendorEditDialog = ({ vendorProfile, onUpdate }: VendorEditDialogProps) =>
                 <>Updating...</>
               ) : (
                 <>
-                  <Save className="w-4 h-4 mr-2" />
-                  Update Profile
+                  {vendorProfile?.status === 'approved' || vendorProfile?.status === 'rejected' ? (
+                    <>
+                      <RotateCcw className="w-4 h-4 mr-2" />
+                      Update & Resubmit
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4 mr-2" />
+                      Update Profile
+                    </>
+                  )}
                 </>
               )}
             </Button>

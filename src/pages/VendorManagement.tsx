@@ -29,7 +29,7 @@ const VendorManagement = () => {
     try {
       setIsLoading(true);
       const { data, error } = await supabase
-        .from('vendor_registration_details')
+        .from('vendor_registrations')
         .select('*')
         .order('created_at', { ascending: false });
 
