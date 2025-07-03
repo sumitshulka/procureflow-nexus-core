@@ -23,6 +23,8 @@ const VendorMessages = () => {
   const [replyMessage, setReplyMessage] = useState('');
   const [replySubject, setReplySubject] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [inlineReply, setInlineReply] = useState<{ [key: string]: { message: string; visible: boolean } }>({});
+  const [sendingInlineReply, setSendingInlineReply] = useState<string | null>(null);
 
   useEffect(() => {
     fetchMessages();
@@ -36,19 +38,38 @@ const VendorMessages = () => {
       const { data, error } = await supabase
         .from('vendor_communications')
         .select('*')
-        .eq('receiver_id', user.id)
+        .or(`receiver_id.eq.${user.id},sender_id.eq.${user.id}`)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
       
-      // Transform the data to match our interface
+      // Transform the data to match our interface and group by conversation
       const transformedData: VendorCommunication[] = (data || []).map(item => ({
         ...item,
         sender_type: item.sender_type as 'admin' | 'vendor',
         attachments: parseAttachments(item.attachments),
       }));
       
-      setMessages(transformedData);
+      // Group messages by conversation (parent_id or id for root messages)
+      const groupedMessages = transformedData.reduce((acc, message) => {
+        const rootId = message.parent_id || message.id;
+        if (!acc[rootId!]) {
+          acc[rootId!] = [];
+        }
+        acc[rootId!].push(message);
+        return acc;
+      }, {} as Record<string, VendorCommunication[]>);
+      
+      // Convert back to flat array with conversations sorted
+      const conversationMessages = Object.values(groupedMessages)
+        .map(conversation => {
+          conversation.sort((a, b) => new Date(a.created_at!).getTime() - new Date(b.created_at!).getTime());
+          return conversation;
+        })
+        .sort((a, b) => new Date(b[b.length - 1].created_at!).getTime() - new Date(a[a.length - 1].created_at!).getTime())
+        .flat();
+      
+      setMessages(conversationMessages);
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -136,11 +157,100 @@ const VendorMessages = () => {
     }
   };
 
-  const getMessageStatusBadge = (message: VendorCommunication) => {
-    if (!message.is_read) {
-      return <Badge variant="secondary" className="bg-blue-100 text-blue-800">New</Badge>;
+  const sendInlineReply = async (messageId: string) => {
+    const replyText = inlineReply[messageId]?.message;
+    if (!replyText || !user?.id) return;
+    
+    try {
+      setSendingInlineReply(messageId);
+      
+      // Get vendor registration details
+      const { data: vendorData, error: vendorError } = await supabase
+        .from('vendor_registrations')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (vendorError) throw vendorError;
+
+      // Find the original message to get subject and parent info
+      const originalMessage = messages.find(msg => msg.id === messageId || msg.parent_id === messageId);
+      if (!originalMessage) return;
+
+      const rootMessage = originalMessage.parent_id 
+        ? messages.find(msg => msg.id === originalMessage.parent_id)
+        : originalMessage;
+
+      const replyData = {
+        vendor_id: vendorData.id,
+        sender_id: user.id,
+        receiver_id: originalMessage.sender_type === 'vendor' ? originalMessage.receiver_id : originalMessage.sender_id,
+        sender_type: 'vendor',
+        subject: `Re: ${rootMessage?.subject || originalMessage.subject}`,
+        message: replyText.trim(),
+        parent_id: rootMessage?.id || originalMessage.id,
+      };
+
+      const { error } = await supabase
+        .from('vendor_communications')
+        .insert(replyData);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: 'Reply sent successfully',
+      });
+
+      // Clear inline reply
+      setInlineReply(prev => ({
+        ...prev,
+        [messageId]: { message: '', visible: false }
+      }));
+
+      fetchMessages();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: 'Failed to send reply',
+        variant: 'destructive',
+      });
+    } finally {
+      setSendingInlineReply(null);
     }
-    return null;
+  };
+
+  const toggleInlineReply = (messageId: string) => {
+    setInlineReply(prev => ({
+      ...prev,
+      [messageId]: {
+        message: prev[messageId]?.message || '',
+        visible: !prev[messageId]?.visible
+      }
+    }));
+  };
+
+  const updateInlineReply = (messageId: string, message: string) => {
+    setInlineReply(prev => ({
+      ...prev,
+      [messageId]: {
+        message,
+        visible: prev[messageId]?.visible || false
+      }
+    }));
+  };
+
+  const getRootMessageId = (message: VendorCommunication) => {
+    return message.parent_id || message.id;
+  };
+
+  const getConversationMessages = (rootId: string) => {
+    return messages.filter(msg => msg.id === rootId || msg.parent_id === rootId)
+      .sort((a, b) => new Date(a.created_at!).getTime() - new Date(b.created_at!).getTime());
+  };
+
+  const isRootMessage = (message: VendorCommunication) => {
+    return !message.parent_id;
   };
 
   return (
@@ -169,45 +279,125 @@ const VendorMessages = () => {
           </Card>
         ) : (
           <div className="grid gap-4">
-            {messages.map((message) => (
-              <Card 
-                key={message.id} 
-                className={`hover:shadow-md transition-shadow cursor-pointer ${
-                  !message.is_read ? 'border-l-4 border-l-blue-500' : ''
-                }`}
-                onClick={() => openMessage(message)}
-              >
-                <CardContent className="p-4">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="font-semibold">{message.subject}</h3>
-                        {getMessageStatusBadge(message)}
-                      </div>
-                      
-                      <p className="text-sm text-gray-600 mb-2 line-clamp-2">
-                        {message.message}
-                      </p>
-                      
-                      <div className="flex items-center gap-4 text-xs text-gray-500">
-                        <div className="flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          {message.created_at && format(new Date(message.created_at), 'MMM dd, yyyy hh:mm a')}
+            {/* Group messages by conversation */}
+            {messages
+              .filter(message => isRootMessage(message))
+              .map((rootMessage) => {
+                const conversationMessages = getConversationMessages(rootMessage.id!);
+                const latestMessage = conversationMessages[conversationMessages.length - 1];
+                const hasUnread = conversationMessages.some(msg => !msg.is_read && msg.receiver_id === user?.id);
+                
+                return (
+                  <Card 
+                    key={rootMessage.id} 
+                    className={`hover:shadow-md transition-shadow ${
+                      hasUnread ? 'border-l-4 border-l-blue-500' : ''
+                    }`}
+                  >
+                    <CardContent className="p-4">
+                      <div className="space-y-4">
+                        {/* Main message header */}
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <h3 className="font-semibold">{rootMessage.subject}</h3>
+                              {hasUnread && <Badge variant="secondary" className="bg-blue-100 text-blue-800">New</Badge>}
+                            </div>
+                            
+                            <div className="flex items-center gap-4 text-xs text-gray-500 mb-3">
+                              <div className="flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
+                                {rootMessage.created_at && format(new Date(rootMessage.created_at), 'MMM dd, yyyy hh:mm a')}
+                              </div>
+                              <span>From: {rootMessage.sender_type === 'admin' ? 'Procurement Team' : 'You'}</span>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center gap-2 ml-4">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => toggleInlineReply(rootMessage.id!)}
+                            >
+                              <Reply className="w-4 h-4 mr-1" />
+                              Reply
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => openMessage(rootMessage)}
+                            >
+                              <Eye className="w-4 h-4 mr-1" />
+                              View
+                            </Button>
+                          </div>
                         </div>
-                        <span>From: {message.sender_type === 'admin' ? 'Procurement Team' : 'You'}</span>
+
+                        {/* Conversation messages */}
+                        <div className="space-y-3">
+                          {conversationMessages.map((message, index) => (
+                            <div 
+                              key={message.id} 
+                              className={`p-3 rounded-lg ${
+                                message.sender_type === 'admin' 
+                                  ? 'bg-gray-50 border-l-2 border-l-gray-300' 
+                                  : 'bg-blue-50 border-l-2 border-l-blue-300 ml-8'
+                              }`}
+                            >
+                              <div className="flex justify-between items-start mb-2">
+                                <span className="text-sm font-medium">
+                                  {message.sender_type === 'admin' ? 'Procurement Team' : 'You'}
+                                </span>
+                                <span className="text-xs text-gray-500">
+                                  {message.created_at && format(new Date(message.created_at), 'MMM dd, hh:mm a')}
+                                </span>
+                              </div>
+                              <p className="text-sm whitespace-pre-wrap">{message.message}</p>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Inline reply form */}
+                        {inlineReply[rootMessage.id!]?.visible && (
+                          <div className="mt-4 p-4 bg-gray-50 rounded-lg border">
+                            <label className="text-sm font-medium mb-2 block">Quick Reply</label>
+                            <Textarea
+                              value={inlineReply[rootMessage.id!]?.message || ''}
+                              onChange={(e) => updateInlineReply(rootMessage.id!, e.target.value)}
+                              placeholder="Type your reply here..."
+                              rows={3}
+                              className="mb-3"
+                            />
+                            <div className="flex justify-end gap-2">
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => toggleInlineReply(rootMessage.id!)}
+                              >
+                                Cancel
+                              </Button>
+                              <Button 
+                                size="sm"
+                                onClick={() => sendInlineReply(rootMessage.id!)}
+                                disabled={sendingInlineReply === rootMessage.id || !inlineReply[rootMessage.id!]?.message?.trim()}
+                              >
+                                {sendingInlineReply === rootMessage.id ? (
+                                  <>Sending...</>
+                                ) : (
+                                  <>
+                                    <Send className="w-4 h-4 mr-1" />
+                                    Send Reply
+                                  </>
+                                )}
+                              </Button>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-2 ml-4">
-                      <Button variant="outline" size="sm">
-                        <Eye className="w-4 h-4 mr-1" />
-                        View
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                    </CardContent>
+                  </Card>
+                );
+              })}
           </div>
         )}
 
