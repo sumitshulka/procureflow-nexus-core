@@ -63,6 +63,8 @@ function App() {
       <Routes>
         <Route path="/" element={<Index />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/vendor-registration" element={<VendorRegistration />} />
+        <Route path="/vendor-registration/success" element={<VendorRegistrationSuccess />} />
         
         {/* Layout routes */}
         <Route path="/" element={<AppLayout />}>
@@ -113,8 +115,6 @@ function App() {
           {/* Vendor Routes */}
           <Route path="vendors" element={<VendorManagement />} />
           <Route path="vendor-portal" element={<VendorPortal />} />
-          <Route path="vendor-registration" element={<VendorRegistration />} />
-          <Route path="vendor-registration/success" element={<VendorRegistrationSuccess />} />
           
           {/* Analytics Routes */}
           <Route path="analytics/spend" element={<SpendAnalysis />} />
