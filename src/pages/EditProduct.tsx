@@ -30,7 +30,7 @@ interface Product {
 }
 
 const EditProduct = () => {
-  const { productId } = useParams<{ productId: string }>();
+  const { id: productId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -134,7 +134,7 @@ const EditProduct = () => {
   return (
     <div className="page-container">
       <div className="flex items-center gap-4 mb-6">
-        <Button variant="ghost" onClick={() => navigate(`/products/${productId}`)}>
+        <Button variant="ghost" onClick={() => navigate(`/product/${productId}`)}>
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Product Details
         </Button>
