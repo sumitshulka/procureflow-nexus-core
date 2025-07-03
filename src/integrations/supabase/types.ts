@@ -1836,6 +1836,52 @@ export type Database = {
           },
         ]
       }
+      vendor_products: {
+        Row: {
+          id: string
+          is_active: boolean
+          product_id: string
+          registered_at: string
+          vendor_id: string
+        }
+        Insert: {
+          id?: string
+          is_active?: boolean
+          product_id: string
+          registered_at?: string
+          vendor_id: string
+        }
+        Update: {
+          id?: string
+          is_active?: boolean
+          product_id?: string
+          registered_at?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_vendor_products_product"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_vendor_products_vendor"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_registration_details"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_vendor_products_vendor"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_registrations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vendor_registrations: {
         Row: {
           account_holder_name: string | null

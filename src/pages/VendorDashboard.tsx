@@ -188,6 +188,31 @@ const VendorDashboard = () => {
           </div>
         </div>
 
+        {/* Message Alert for Unapproved Vendors */}
+        {vendorProfile && vendorProfile.status !== 'approved' && messageCount > 0 && (
+          <Card className="border-amber-200 bg-amber-50">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <MessageSquare className="w-5 h-5 text-amber-600" />
+                  <div>
+                    <h3 className="font-medium text-amber-800">New Message from Procurement Team</h3>
+                    <p className="text-sm text-amber-700">
+                      You have {messageCount} unread message{messageCount > 1 ? 's' : ''} regarding your vendor registration.
+                    </p>
+                  </div>
+                </div>
+                <Button 
+                  onClick={() => navigate('/vendor/messages')}
+                  className="bg-amber-600 hover:bg-amber-700"
+                >
+                  View Messages
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Vendor Status Card */}
         <Card>
           <CardHeader>

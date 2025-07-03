@@ -30,6 +30,8 @@ import VendorRfps from '@/pages/vendor/VendorRfps';
 import VendorPurchaseOrders from '@/pages/vendor/VendorPurchaseOrders';
 import VendorFinances from '@/pages/vendor/VendorFinances';
 import VendorSettings from '@/pages/vendor/VendorSettings';
+import VendorMessages from '@/pages/vendor/VendorMessages';
+import VendorProducts from '@/pages/vendor/VendorProducts';
 
 // Procurement pages
 import ProcurementRequests from '@/pages/ProcurementRequests';
@@ -170,6 +172,24 @@ function App() {
         } />
         
         <Route path="/vendor/settings" element={
+          <ProtectedRoute requireVendor={true}>
+            <VendorSettings />
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/vendor/messages" element={
+          <ProtectedRoute requireVendor={true}>
+            <VendorMessages />
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/vendor/products" element={
+          <ProtectedRoute requireVendor={true}>
+            <VendorProducts />
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/vendor/analytics" element={
           <ProtectedRoute requireVendor={true}>
             <VendorSettings />
           </ProtectedRoute>

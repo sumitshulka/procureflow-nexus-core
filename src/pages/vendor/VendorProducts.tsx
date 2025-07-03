@@ -34,6 +34,7 @@ interface VendorProductRegistration {
   vendor_id: string;
   product_id: string;
   registered_at: string;
+  is_active: boolean;
   products?: Product;
 }
 
@@ -110,7 +111,7 @@ const VendorProducts = () => {
     
     try {
       const { data, error } = await supabase
-        .from('vendor_product_categories')
+        .from('vendor_products')
         .select(`
           *,
           products:product_id(
@@ -119,7 +120,8 @@ const VendorProducts = () => {
             units:unit_id(name, abbreviation)
           )
         `)
-        .eq('vendor_id', vendorId);
+        .eq('vendor_id', vendorId)
+        .eq('is_active', true);
 
       if (error) throw error;
       setRegisteredProducts(data || []);
@@ -137,7 +139,7 @@ const VendorProducts = () => {
     
     try {
       const { error } = await supabase
-        .from('vendor_product_categories')
+        .from('vendor_products')
         .insert({
           vendor_id: vendorId,
           product_id: productId,
@@ -163,7 +165,7 @@ const VendorProducts = () => {
   const unregisterFromProduct = async (registrationId: string) => {
     try {
       const { error } = await supabase
-        .from('vendor_product_categories')
+        .from('vendor_products')
         .delete()
         .eq('id', registrationId);
 

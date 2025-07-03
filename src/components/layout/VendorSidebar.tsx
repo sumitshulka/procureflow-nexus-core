@@ -9,6 +9,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { Badge } from "@/components/ui/badge";
 import {
   LayoutDashboard,
   User,
@@ -24,10 +25,33 @@ import {
 import { NavLink, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 const VendorSidebar = () => {
   const { state } = useSidebar();
   const location = useLocation();
+  const { user } = useAuth();
+
+  // Fetch unread message count for badge
+  const { data: messageCount } = useQuery({
+    queryKey: ["vendor_message_count", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return 0;
+      
+      const { count, error } = await supabase
+        .from("vendor_communications")
+        .select("*", { count: 'exact', head: true })
+        .eq("receiver_id", user.id)
+        .eq("is_read", false);
+      
+      if (error) throw error;
+      return count || 0;
+    },
+    enabled: !!user?.id,
+    refetchInterval: 30000, // Refetch every 30 seconds
+  });
 
   const menuItems = [
     {
@@ -86,6 +110,7 @@ const VendorSidebar = () => {
               <SidebarMenu>
                 {menuItems.map((item) => {
                   const isActive = location.pathname === item.href;
+                  const showBadge = item.href === '/vendor/messages' && messageCount && messageCount > 0;
                   
                   return (
                     <SidebarMenuItem key={item.title}>
@@ -93,14 +118,21 @@ const VendorSidebar = () => {
                         <NavLink
                           to={item.href}
                           className={cn(
-                            "flex items-center space-x-3 rounded-md px-2 py-2 text-sm font-medium transition-colors",
+                            "flex items-center justify-between space-x-3 rounded-md px-2 py-2 text-sm font-medium transition-colors",
                             isActive 
                               ? "bg-sidebar-accent text-sidebar-accent-foreground" 
                               : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
                           )}
                         >
-                          <item.icon className="h-4 w-4" />
-                          {state === "expanded" && <span>{item.title}</span>}
+                          <div className="flex items-center space-x-3">
+                            <item.icon className="h-4 w-4" />
+                            {state === "expanded" && <span>{item.title}</span>}
+                          </div>
+                          {state === "expanded" && showBadge && (
+                            <Badge variant="destructive" className="ml-auto h-5 w-5 p-0 text-xs">
+                              {messageCount}
+                            </Badge>
+                          )}
                         </NavLink>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
