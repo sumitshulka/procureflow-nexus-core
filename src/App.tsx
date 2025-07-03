@@ -248,13 +248,13 @@ function App() {
           </ProtectedRoute>
         } />
         
-        <Route path="/products/:id" element={
+        <Route path="/product/:id" element={
           <ProtectedRoute>
             <Layout><ProductDetail /></Layout>
           </ProtectedRoute>
         } />
         
-        <Route path="/products/add" element={
+        <Route path="/add-product" element={
           <ProtectedRoute>
             <Layout><AddProduct /></Layout>
           </ProtectedRoute>
@@ -279,7 +279,7 @@ function App() {
           </ProtectedRoute>
         } />
         
-        <Route path="/procurement-requests/:id" element={
+        <Route path="/requests/:id" element={
           <ProtectedRoute>
             <Layout><ProcurementRequestDetail /></Layout>
           </ProtectedRoute>
@@ -304,7 +304,7 @@ function App() {
           </ProtectedRoute>
         } />
         
-        <Route path="/rfp/wizard" element={
+        <Route path="/rfp/create-wizard" element={
           <ProtectedRoute>
             <Layout><CreateRfpWizard /></Layout>
           </ProtectedRoute>
@@ -317,6 +317,12 @@ function App() {
         } />
         
         <Route path="/rfp/templates" element={
+          <ProtectedRoute>
+            <Layout><RfpTemplates /></Layout>
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/rfp/templates/create" element={
           <ProtectedRoute>
             <Layout><RfpTemplates /></Layout>
           </ProtectedRoute>
@@ -495,6 +501,12 @@ function App() {
         <Route path="/settings" element={
           <ProtectedRoute>
             <Layout><Settings /></Layout>
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/users" element={
+          <ProtectedRoute>
+            <Layout><UserManagement /></Layout>
           </ProtectedRoute>
         } />
         
