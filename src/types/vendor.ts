@@ -29,6 +29,8 @@ export interface VendorRegistration {
   business_description?: string;
   years_in_business?: number;
   annual_turnover?: number;
+  country?: string;
+  currency?: string;
   status?: 'pending' | 'under_review' | 'approved' | 'rejected' | 'suspended';
   user_id?: string;
   created_at?: string;

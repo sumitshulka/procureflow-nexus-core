@@ -134,6 +134,18 @@ const VendorDetailDialog: React.FC<VendorDetailDialogProps> = ({
                     <span className="font-medium">Years in Business:</span>
                     <p>{vendor.years_in_business || '-'}</p>
                   </div>
+                  <div>
+                    <span className="font-medium">Country:</span>
+                    <p>{vendor.country || '-'}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium">Currency:</span>
+                    <p>{vendor.currency || '-'}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium">Annual Turnover:</span>
+                    <p>{vendor.annual_turnover ? `${vendor.currency || 'USD'} ${Number(vendor.annual_turnover).toLocaleString()}` : '-'}</p>
+                  </div>
                   <div className="md:col-span-2">
                     <span className="font-medium">Business Description:</span>
                     <p>{vendor.business_description || '-'}</p>

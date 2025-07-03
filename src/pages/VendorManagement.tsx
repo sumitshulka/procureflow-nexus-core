@@ -222,7 +222,7 @@ const VendorManagement = () => {
                           {getStatusBadge(vendor.status || 'pending')}
                         </div>
                         
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm text-gray-600">
                           <div>
                             <span className="font-medium">Email:</span> {vendor.primary_email}
                           </div>
@@ -231,6 +231,18 @@ const VendorManagement = () => {
                           </div>
                           <div>
                             <span className="font-medium">GST:</span> {vendor.gst_number}
+                          </div>
+                          <div>
+                            <span className="font-medium">Country:</span> {vendor.country || '-'}
+                          </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600 mt-2">
+                          <div>
+                            <span className="font-medium">Currency:</span> {vendor.currency || '-'}
+                          </div>
+                          <div>
+                            <span className="font-medium">Annual Turnover:</span> {vendor.annual_turnover ? `${vendor.currency || 'USD'} ${Number(vendor.annual_turnover).toLocaleString()}` : '-'}
                           </div>
                         </div>
                         
