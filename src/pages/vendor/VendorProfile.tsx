@@ -22,9 +22,11 @@ import {
   Clock,
   Calendar,
   DollarSign,
+  CreditCard,
 } from 'lucide-react';
 import VendorLayout from '@/components/layout/VendorLayout';
 import { Separator } from '@/components/ui/separator';
+import { getCurrencySymbol, getCurrencyName } from '@/utils/currencyUtils';
 
 const VendorProfile = () => {
   const { user } = useAuth();
@@ -164,6 +166,23 @@ const VendorProfile = () => {
                   <p className="font-medium">{vendorProfile?.website || 'Not provided'}</p>
                 </div>
                 <div>
+                  <Label className="text-sm text-muted-foreground">Country</Label>
+                  <p className="font-medium">{vendorProfile?.country || 'Not provided'}</p>
+                </div>
+                <div>
+                  <Label className="text-sm text-muted-foreground">Business Currency</Label>
+                  <p className="font-medium flex items-center gap-1">
+                    {vendorProfile?.currency ? (
+                      <>
+                        <CreditCard className="w-4 h-4" />
+                        {vendorProfile.currency} - {getCurrencyName(vendorProfile.currency)} ({getCurrencySymbol(vendorProfile.currency)})
+                      </>
+                    ) : (
+                      'Not provided'
+                    )}
+                  </p>
+                </div>
+                <div>
                   <Label className="text-sm text-muted-foreground">Business Description</Label>
                   <p className="text-sm">{vendorProfile?.business_description || 'Not provided'}</p>
                 </div>
@@ -244,12 +263,14 @@ const VendorProfile = () => {
                 <Label className="text-sm text-muted-foreground">Years in Business</Label>
                 <p className="font-medium">{vendorProfile?.years_in_business || 'Not provided'} years</p>
               </div>
-              <div>
-                <Label className="text-sm text-muted-foreground">Annual Turnover</Label>
-                <p className="font-medium">
-                  {vendorProfile?.annual_turnover ? `$${Number(vendorProfile.annual_turnover).toLocaleString()}` : 'Not provided'}
-                </p>
-              </div>
+                <div>
+                  <Label className="text-sm text-muted-foreground">Annual Turnover</Label>
+                  <p className="font-medium">
+                    {vendorProfile?.annual_turnover ? 
+                      `${getCurrencySymbol(vendorProfile?.currency || 'USD')}${Number(vendorProfile.annual_turnover).toLocaleString()}` : 
+                      'Not provided'}
+                  </p>
+                </div>
               
               <Separator />
               

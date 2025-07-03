@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -7,11 +7,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate, Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { Building, FileText, Upload, User, CreditCard, Phone, Mail, MapPin, ArrowLeft, Users, Building2 } from 'lucide-react';
+import { COUNTRIES, CURRENCIES, getCurrencyForCountry, getOrganizationCurrency } from '@/utils/currencyUtils';
 
 const addressSchema = z.object({
   street: z.string().min(1, 'Street address is required'),
@@ -32,6 +35,8 @@ const vendorRegistrationSchema = z.object({
   primary_phone: z.string().min(10, 'Phone number must be at least 10 digits'),
   secondary_phone: z.string().optional(),
   website: z.string().url().optional().or(z.literal('')),
+  country: z.string().min(1, 'Country is required'),
+  currency: z.string().min(3, 'Currency is required'),
   registered_address: addressSchema,
   business_address: addressSchema.optional(),
   billing_address: addressSchema.optional(),
@@ -66,14 +71,47 @@ const VendorRegistrationPage = () => {
   const [sameAsBusiness, setSameAsBusiness] = useState(false);
   const [uploadedDocuments, setUploadedDocuments] = useState<File[]>([]);
 
+  // Fetch organization settings for base currency
+  const { data: orgSettings } = useQuery({
+    queryKey: ["organization_settings"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("organization_settings")
+        .select("base_currency")
+        .limit(1)
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const form = useForm<VendorRegistrationForm>({
     resolver: zodResolver(vendorRegistrationSchema),
     defaultValues: {
+      country: 'India',
+      currency: getOrganizationCurrency(orgSettings),
       registered_address: { country: 'India', street: '', city: '', state: '', postal_code: '' },
       business_address: { country: 'India', street: '', city: '', state: '', postal_code: '' },
       billing_address: { country: 'India', street: '', city: '', state: '', postal_code: '' },
     },
   });
+
+  // Update currency when country changes
+  const watchedCountry = form.watch('country');
+  useEffect(() => {
+    if (watchedCountry) {
+      const countryCurrency = getCurrencyForCountry(watchedCountry);
+      form.setValue('currency', countryCurrency);
+    }
+  }, [watchedCountry, form]);
+
+  // Update currency when organization settings load
+  useEffect(() => {
+    if (orgSettings?.base_currency && !form.getValues('currency')) {
+      form.setValue('currency', orgSettings.base_currency);
+    }
+  }, [orgSettings, form]);
 
   const handleSubmit = async (values: VendorRegistrationForm) => {
     try {
@@ -192,6 +230,8 @@ const VendorRegistrationPage = () => {
         business_description: values.business_description || null,
         years_in_business: values.years_in_business || null,
         annual_turnover: values.annual_turnover || null,
+        country: values.country,
+        currency: values.currency,
         user_id: userId,
         status: 'pending' as const,
       };
@@ -415,6 +455,71 @@ const VendorRegistrationPage = () => {
                     />
                   </div>
 
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="country"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Country *</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select country" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {COUNTRIES.map((country) => (
+                                <SelectItem key={country.code} value={country.name}>
+                                  {country.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="currency"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Currency *</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select currency" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {CURRENCIES.map((currency) => (
+                                <SelectItem key={currency.code} value={currency.code}>
+                                  {currency.code} - {currency.name} ({currency.symbol})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <FormField
+                    control={form.control}
+                    name="website"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Website</FormLabel>
+                        <FormControl>
+                          <Input placeholder="https://www.yourcompany.com" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
                   <FormField
                     control={form.control}
                     name="business_description"
@@ -453,7 +558,7 @@ const VendorRegistrationPage = () => {
                       name="annual_turnover"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Annual Turnover (INR)</FormLabel>
+                          <FormLabel>Annual Turnover ({form.watch('currency') || 'USD'})</FormLabel>
                           <FormControl>
                             <Input 
                               type="number" 

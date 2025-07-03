@@ -1849,7 +1849,9 @@ export type Database = {
           business_description: string | null
           company_name: string
           company_type: string | null
+          country: string | null
           created_at: string | null
+          currency: string | null
           gst_number: string | null
           id: string
           ifsc_code: string | null
@@ -1888,7 +1890,9 @@ export type Database = {
           business_description?: string | null
           company_name: string
           company_type?: string | null
+          country?: string | null
           created_at?: string | null
+          currency?: string | null
           gst_number?: string | null
           id?: string
           ifsc_code?: string | null
@@ -1927,7 +1931,9 @@ export type Database = {
           business_description?: string | null
           company_name?: string
           company_type?: string | null
+          country?: string | null
           created_at?: string | null
+          currency?: string | null
           gst_number?: string | null
           id?: string
           ifsc_code?: string | null
@@ -2130,6 +2136,10 @@ export type Database = {
       }
       generate_vendor_number: {
         Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      get_currency_for_country: {
+        Args: { country_name: string }
         Returns: string
       }
       get_latest_product_price: {
