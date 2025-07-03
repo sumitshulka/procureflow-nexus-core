@@ -170,6 +170,12 @@ function App() {
         } />
         
         {/* Procurement */}
+        <Route path="/requests" element={
+          <ProtectedRoute>
+            <Layout><ProcurementRequests /></Layout>
+          </ProtectedRoute>
+        } />
+        
         <Route path="/procurement-requests" element={
           <ProtectedRoute>
             <Layout><ProcurementRequests /></Layout>
