@@ -4,31 +4,45 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { VendorCommunication, parseAttachments } from '@/types/vendor';
-import { MessageSquare, Send, Eye, Reply, Clock } from 'lucide-react';
+import { MessageSquare, Send, Eye, Reply, Clock, X, Filter, Calendar } from 'lucide-react';
 import VendorLayout from '@/components/layout/VendorLayout';
-import { format } from 'date-fns';
+import { format, startOfDay, endOfDay, subDays } from 'date-fns';
+
+interface ConversationGroup {
+  rootMessage: VendorCommunication;
+  messages: VendorCommunication[];
+  latestMessage: VendorCommunication;
+  hasUnread: boolean;
+}
 
 const VendorMessages = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const [messages, setMessages] = useState<VendorCommunication[]>([]);
+  const [conversations, setConversations] = useState<ConversationGroup[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedMessage, setSelectedMessage] = useState<VendorCommunication | null>(null);
-  const [showReplyDialog, setShowReplyDialog] = useState(false);
+  const [selectedConversation, setSelectedConversation] = useState<ConversationGroup | null>(null);
+  const [showConversationModal, setShowConversationModal] = useState(false);
   const [replyMessage, setReplyMessage] = useState('');
-  const [replySubject, setReplySubject] = useState('');
   const [isSending, setIsSending] = useState(false);
-  const [inlineReply, setInlineReply] = useState<{ [key: string]: { message: string; visible: boolean } }>({});
-  const [sendingInlineReply, setSendingInlineReply] = useState<string | null>(null);
+  
+  // Filters
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [dateFilter, setDateFilter] = useState<string>('all');
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     fetchMessages();
   }, [user?.id]);
+
+  useEffect(() => {
+    processConversations();
+  }, [messages, statusFilter, dateFilter, searchTerm]);
 
   const fetchMessages = async () => {
     if (!user?.id) return;
@@ -43,33 +57,14 @@ const VendorMessages = () => {
 
       if (error) throw error;
       
-      // Transform the data to match our interface and group by conversation
+      // Transform the data to match our interface
       const transformedData: VendorCommunication[] = (data || []).map(item => ({
         ...item,
         sender_type: item.sender_type as 'admin' | 'vendor',
         attachments: parseAttachments(item.attachments),
       }));
       
-      // Group messages by conversation (parent_id or id for root messages)
-      const groupedMessages = transformedData.reduce((acc, message) => {
-        const rootId = message.parent_id || message.id;
-        if (!acc[rootId!]) {
-          acc[rootId!] = [];
-        }
-        acc[rootId!].push(message);
-        return acc;
-      }, {} as Record<string, VendorCommunication[]>);
-      
-      // Convert back to flat array with conversations sorted
-      const conversationMessages = Object.values(groupedMessages)
-        .map(conversation => {
-          conversation.sort((a, b) => new Date(a.created_at!).getTime() - new Date(b.created_at!).getTime());
-          return conversation;
-        })
-        .sort((a, b) => new Date(b[b.length - 1].created_at!).getTime() - new Date(a[a.length - 1].created_at!).getTime())
-        .flat();
-      
-      setMessages(conversationMessages);
+      setMessages(transformedData);
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -79,6 +74,88 @@ const VendorMessages = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const processConversations = () => {
+    // Group messages by conversation
+    const groupedMessages = messages.reduce((acc, message) => {
+      const rootId = message.parent_id || message.id;
+      if (!acc[rootId!]) {
+        acc[rootId!] = [];
+      }
+      acc[rootId!].push(message);
+      return acc;
+    }, {} as Record<string, VendorCommunication[]>);
+
+    // Convert to conversation groups
+    let conversationList: ConversationGroup[] = Object.entries(groupedMessages).map(([rootId, msgs]) => {
+      const sortedMessages = msgs.sort((a, b) => new Date(a.created_at!).getTime() - new Date(b.created_at!).getTime());
+      const rootMessage = sortedMessages.find(msg => msg.id === rootId) || sortedMessages[0];
+      const latestMessage = sortedMessages[sortedMessages.length - 1];
+      const hasUnread = sortedMessages.some(msg => !msg.is_read && msg.receiver_id === user?.id);
+
+      return {
+        rootMessage,
+        messages: sortedMessages,
+        latestMessage,
+        hasUnread,
+      };
+    });
+
+    // Apply filters
+    if (statusFilter !== 'all') {
+      if (statusFilter === 'unread') {
+        conversationList = conversationList.filter(conv => conv.hasUnread);
+      } else if (statusFilter === 'read') {
+        conversationList = conversationList.filter(conv => !conv.hasUnread);
+      }
+    }
+
+    if (dateFilter !== 'all') {
+      const now = new Date();
+      let startDate: Date;
+      
+      switch (dateFilter) {
+        case 'today':
+          startDate = startOfDay(now);
+          break;
+        case 'week':
+          startDate = subDays(now, 7);
+          break;
+        case 'month':
+          startDate = subDays(now, 30);
+          break;
+        default:
+          startDate = new Date(0);
+      }
+
+      conversationList = conversationList.filter(conv => 
+        new Date(conv.latestMessage.created_at!) >= startDate
+      );
+    }
+
+    if (searchTerm) {
+      conversationList = conversationList.filter(conv =>
+        conv.rootMessage.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        conv.messages.some(msg => msg.message.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
+    }
+
+    // Sort by latest message
+    conversationList.sort((a, b) => 
+      new Date(b.latestMessage.created_at!).getTime() - new Date(a.latestMessage.created_at!).getTime()
+    );
+
+    setConversations(conversationList);
+  };
+
+  const openConversation = (conversation: ConversationGroup) => {
+    setSelectedConversation(conversation);
+    setShowConversationModal(true);
+    
+    // Mark unread messages as read
+    const unreadMessages = conversation.messages.filter(msg => !msg.is_read && msg.receiver_id === user?.id);
+    unreadMessages.forEach(msg => markAsRead(msg.id!));
   };
 
   const markAsRead = async (messageId: string) => {
@@ -100,7 +177,7 @@ const VendorMessages = () => {
   };
 
   const sendReply = async () => {
-    if (!selectedMessage || !user?.id) return;
+    if (!selectedConversation || !user?.id || !replyMessage.trim()) return;
     
     try {
       setIsSending(true);
@@ -114,14 +191,17 @@ const VendorMessages = () => {
 
       if (vendorError) throw vendorError;
 
+      const rootMessage = selectedConversation.rootMessage;
+      const lastMessage = selectedConversation.latestMessage;
+
       const replyData = {
         vendor_id: vendorData.id,
         sender_id: user.id,
-        receiver_id: selectedMessage.sender_id,
+        receiver_id: lastMessage.sender_type === 'vendor' ? lastMessage.receiver_id : lastMessage.sender_id,
         sender_type: 'vendor',
-        subject: replySubject.trim() || `Re: ${selectedMessage.subject}`,
+        subject: `Re: ${rootMessage.subject}`,
         message: replyMessage.trim(),
-        parent_id: selectedMessage.id,
+        parent_id: rootMessage.id,
       };
 
       const { error } = await supabase
@@ -136,8 +216,6 @@ const VendorMessages = () => {
       });
 
       setReplyMessage('');
-      setReplySubject('');
-      setShowReplyDialog(false);
       fetchMessages();
     } catch (error: any) {
       toast({
@@ -150,107 +228,10 @@ const VendorMessages = () => {
     }
   };
 
-  const openMessage = (message: VendorCommunication) => {
-    setSelectedMessage(message);
-    if (!message.is_read) {
-      markAsRead(message.id!);
-    }
-  };
-
-  const sendInlineReply = async (messageId: string) => {
-    const replyText = inlineReply[messageId]?.message;
-    if (!replyText || !user?.id) return;
-    
-    try {
-      setSendingInlineReply(messageId);
-      
-      // Get vendor registration details
-      const { data: vendorData, error: vendorError } = await supabase
-        .from('vendor_registrations')
-        .select('id')
-        .eq('user_id', user.id)
-        .single();
-
-      if (vendorError) throw vendorError;
-
-      // Find the original message to get subject and parent info
-      const originalMessage = messages.find(msg => msg.id === messageId || msg.parent_id === messageId);
-      if (!originalMessage) return;
-
-      const rootMessage = originalMessage.parent_id 
-        ? messages.find(msg => msg.id === originalMessage.parent_id)
-        : originalMessage;
-
-      const replyData = {
-        vendor_id: vendorData.id,
-        sender_id: user.id,
-        receiver_id: originalMessage.sender_type === 'vendor' ? originalMessage.receiver_id : originalMessage.sender_id,
-        sender_type: 'vendor',
-        subject: `Re: ${rootMessage?.subject || originalMessage.subject}`,
-        message: replyText.trim(),
-        parent_id: rootMessage?.id || originalMessage.id,
-      };
-
-      const { error } = await supabase
-        .from('vendor_communications')
-        .insert(replyData);
-
-      if (error) throw error;
-
-      toast({
-        title: 'Success',
-        description: 'Reply sent successfully',
-      });
-
-      // Clear inline reply
-      setInlineReply(prev => ({
-        ...prev,
-        [messageId]: { message: '', visible: false }
-      }));
-
-      fetchMessages();
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: 'Failed to send reply',
-        variant: 'destructive',
-      });
-    } finally {
-      setSendingInlineReply(null);
-    }
-  };
-
-  const toggleInlineReply = (messageId: string) => {
-    setInlineReply(prev => ({
-      ...prev,
-      [messageId]: {
-        message: prev[messageId]?.message || '',
-        visible: !prev[messageId]?.visible
-      }
-    }));
-  };
-
-  const updateInlineReply = (messageId: string, message: string) => {
-    setInlineReply(prev => ({
-      ...prev,
-      [messageId]: {
-        message,
-        visible: prev[messageId]?.visible || false
-      }
-    }));
-  };
-
-  const getRootMessageId = (message: VendorCommunication) => {
-    return message.parent_id || message.id;
-  };
-
-  const getConversationMessages = (rootId: string) => {
-    return messages.filter(msg => msg.id === rootId || msg.parent_id === rootId)
-      .sort((a, b) => new Date(a.created_at!).getTime() - new Date(b.created_at!).getTime());
-  };
-
-  const isRootMessage = (message: VendorCommunication) => {
-    return !message.parent_id;
+  const closeConversationModal = () => {
+    setShowConversationModal(false);
+    setSelectedConversation(null);
+    setReplyMessage('');
   };
 
   return (
@@ -263,12 +244,53 @@ const VendorMessages = () => {
           </div>
         </div>
 
+        {/* Filters */}
+        <div className="flex flex-wrap gap-4 items-center">
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-gray-500" />
+            <span className="text-sm font-medium text-gray-700">Filters:</span>
+          </div>
+          
+          <div className="relative flex-1 max-w-md">
+            <Input
+              placeholder="Search conversations..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-3"
+            />
+          </div>
+
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="unread">Unread</SelectItem>
+              <SelectItem value="read">Read</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={dateFilter} onValueChange={setDateFilter}>
+            <SelectTrigger className="w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Time</SelectItem>
+              <SelectItem value="today">Today</SelectItem>
+              <SelectItem value="week">Past Week</SelectItem>
+              <SelectItem value="month">Past Month</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Messages List */}
         {isLoading ? (
           <div className="text-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
             <p className="text-gray-500 mt-2">Loading messages...</p>
           </div>
-        ) : messages.length === 0 ? (
+        ) : conversations.length === 0 ? (
           <Card>
             <CardContent className="p-6">
               <div className="text-center py-8">
@@ -278,227 +300,158 @@ const VendorMessages = () => {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-4">
-            {/* Group messages by conversation */}
-            {messages
-              .filter(message => isRootMessage(message))
-              .map((rootMessage) => {
-                const conversationMessages = getConversationMessages(rootMessage.id!);
-                const latestMessage = conversationMessages[conversationMessages.length - 1];
-                const hasUnread = conversationMessages.some(msg => !msg.is_read && msg.receiver_id === user?.id);
-                
-                return (
-                  <Card 
-                    key={rootMessage.id} 
-                    className={`hover:shadow-md transition-shadow ${
-                      hasUnread ? 'border-l-4 border-l-blue-500' : ''
-                    }`}
-                  >
-                    <CardContent className="p-4">
-                      <div className="space-y-4">
-                        {/* Main message header */}
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-2">
-                              <h3 className="font-semibold">{rootMessage.subject}</h3>
-                              {hasUnread && <Badge variant="secondary" className="bg-blue-100 text-blue-800">New</Badge>}
-                            </div>
-                            
-                            <div className="flex items-center gap-4 text-xs text-gray-500 mb-3">
-                              <div className="flex items-center gap-1">
-                                <Clock className="w-3 h-3" />
-                                {rootMessage.created_at && format(new Date(rootMessage.created_at), 'MMM dd, yyyy hh:mm a')}
-                              </div>
-                              <span>From: {rootMessage.sender_type === 'admin' ? 'Procurement Team' : 'You'}</span>
-                            </div>
-                          </div>
-                          
-                          <div className="flex items-center gap-2 ml-4">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => toggleInlineReply(rootMessage.id!)}
-                            >
-                              <Reply className="w-4 h-4 mr-1" />
-                              Reply
-                            </Button>
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => openMessage(rootMessage)}
-                            >
-                              <Eye className="w-4 h-4 mr-1" />
-                              View
-                            </Button>
-                          </div>
-                        </div>
-
-                        {/* Conversation messages */}
-                        <div className="space-y-3">
-                          {conversationMessages.map((message, index) => (
-                            <div 
-                              key={message.id} 
-                              className={`p-3 rounded-lg ${
-                                message.sender_type === 'admin' 
-                                  ? 'bg-gray-50 border-l-2 border-l-gray-300' 
-                                  : 'bg-blue-50 border-l-2 border-l-blue-300 ml-8'
-                              }`}
-                            >
-                              <div className="flex justify-between items-start mb-2">
-                                <span className="text-sm font-medium">
-                                  {message.sender_type === 'admin' ? 'Procurement Team' : 'You'}
-                                </span>
-                                <span className="text-xs text-gray-500">
-                                  {message.created_at && format(new Date(message.created_at), 'MMM dd, hh:mm a')}
-                                </span>
-                              </div>
-                              <p className="text-sm whitespace-pre-wrap">{message.message}</p>
-                            </div>
-                          ))}
-                        </div>
-
-                        {/* Inline reply form */}
-                        {inlineReply[rootMessage.id!]?.visible && (
-                          <div className="mt-4 p-4 bg-gray-50 rounded-lg border">
-                            <label className="text-sm font-medium mb-2 block">Quick Reply</label>
-                            <Textarea
-                              value={inlineReply[rootMessage.id!]?.message || ''}
-                              onChange={(e) => updateInlineReply(rootMessage.id!, e.target.value)}
-                              placeholder="Type your reply here..."
-                              rows={3}
-                              className="mb-3"
-                            />
-                            <div className="flex justify-end gap-2">
-                              <Button 
-                                variant="outline" 
-                                size="sm"
-                                onClick={() => toggleInlineReply(rootMessage.id!)}
-                              >
-                                Cancel
-                              </Button>
-                              <Button 
-                                size="sm"
-                                onClick={() => sendInlineReply(rootMessage.id!)}
-                                disabled={sendingInlineReply === rootMessage.id || !inlineReply[rootMessage.id!]?.message?.trim()}
-                              >
-                                {sendingInlineReply === rootMessage.id ? (
-                                  <>Sending...</>
-                                ) : (
-                                  <>
-                                    <Send className="w-4 h-4 mr-1" />
-                                    Send Reply
-                                  </>
-                                )}
-                              </Button>
-                            </div>
-                          </div>
+          <div className="grid gap-3">
+            {conversations.map((conversation) => (
+              <Card 
+                key={conversation.rootMessage.id} 
+                className={`hover:shadow-md transition-shadow cursor-pointer ${
+                  conversation.hasUnread ? 'border-l-4 border-l-blue-500' : ''
+                }`}
+                onClick={() => openConversation(conversation)}
+              >
+                <CardContent className="p-4">
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <h3 className="font-semibold line-clamp-1">{conversation.rootMessage.subject}</h3>
+                        {conversation.hasUnread && (
+                          <Badge variant="secondary" className="bg-blue-100 text-blue-800">New</Badge>
                         )}
                       </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
+                      
+                      <p className="text-sm text-gray-600 mb-2 line-clamp-2">
+                        {conversation.latestMessage.message}
+                      </p>
+                      
+                      <div className="flex items-center gap-4 text-xs text-gray-500">
+                        <div className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {format(new Date(conversation.latestMessage.created_at!), 'MMM dd, yyyy hh:mm a')}
+                        </div>
+                        <span>
+                          Last from: {conversation.latestMessage.sender_type === 'admin' ? 'Procurement Team' : 'You'}
+                        </span>
+                        <span className="text-blue-600">
+                          {conversation.messages.length} message{conversation.messages.length > 1 ? 's' : ''}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-2 ml-4">
+                      <Button variant="outline" size="sm">
+                        <Eye className="w-4 h-4 mr-1" />
+                        View
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         )}
 
-        {/* Message Detail Dialog */}
-        {selectedMessage && (
-          <Dialog open={!!selectedMessage} onOpenChange={() => setSelectedMessage(null)}>
-            <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>{selectedMessage.subject}</DialogTitle>
-                <DialogDescription>
-                  From: {selectedMessage.sender_type === 'admin' ? 'Procurement Team' : 'You'} • 
-                  {selectedMessage.created_at && format(new Date(selectedMessage.created_at), 'MMM dd, yyyy hh:mm a')}
-                </DialogDescription>
-              </DialogHeader>
-              
-              <div className="space-y-4">
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <p className="whitespace-pre-wrap">{selectedMessage.message}</p>
-                </div>
-                
-                {selectedMessage.attachments && selectedMessage.attachments.length > 0 && (
+        {/* Sliding Conversation Modal */}
+        {showConversationModal && selectedConversation && (
+          <>
+            {/* Backdrop */}
+            <div 
+              className="fixed inset-0 bg-black bg-opacity-50 z-40 animate-fade-in"
+              onClick={closeConversationModal}
+            />
+            
+            {/* Sliding Panel */}
+            <div className="fixed top-0 right-0 h-full w-2/5 bg-white shadow-2xl z-50 animate-slide-in-right">
+              <div className="flex flex-col h-full">
+                {/* Header */}
+                <div className="flex items-center justify-between p-4 border-b">
                   <div>
-                    <h4 className="font-medium mb-2">Attachments:</h4>
-                    <ul className="space-y-1">
-                      {selectedMessage.attachments.map((attachment, index) => (
-                        <li key={index} className="text-sm text-blue-600 hover:underline cursor-pointer">
-                          {attachment}
-                        </li>
-                      ))}
-                    </ul>
+                    <h2 className="text-lg font-semibold line-clamp-1">
+                      {selectedConversation.rootMessage.subject}
+                    </h2>
+                    <p className="text-sm text-gray-500">
+                      {selectedConversation.messages.length} message{selectedConversation.messages.length > 1 ? 's' : ''}
+                    </p>
                   </div>
-                )}
-                
-                <div className="flex gap-2 pt-4 border-t">
-                  <Button 
-                    onClick={() => {
-                      setReplySubject(`Re: ${selectedMessage.subject}`);
-                      setShowReplyDialog(true);
-                    }}
-                    size="sm"
-                  >
-                    <Reply className="w-4 h-4 mr-1" />
-                    Reply
+                  <Button variant="ghost" size="sm" onClick={closeConversationModal}>
+                    <X className="w-4 h-4" />
                   </Button>
                 </div>
-              </div>
-            </DialogContent>
-          </Dialog>
-        )}
 
-        {/* Reply Dialog */}
-        <Dialog open={showReplyDialog} onOpenChange={setShowReplyDialog}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Reply to Message</DialogTitle>
-              <DialogDescription>
-                Send a reply to the procurement team
-              </DialogDescription>
-            </DialogHeader>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-medium">Subject</label>
-                <Input
-                  value={replySubject}
-                  onChange={(e) => setReplySubject(e.target.value)}
-                  placeholder="Reply subject"
-                />
-              </div>
-              
-              <div>
-                <label className="text-sm font-medium">Message</label>
-                <Textarea
-                  value={replyMessage}
-                  onChange={(e) => setReplyMessage(e.target.value)}
-                  placeholder="Type your reply here..."
-                  rows={6}
-                />
-              </div>
-              
-              <div className="flex justify-end gap-2 pt-4">
-                <Button variant="outline" onClick={() => setShowReplyDialog(false)}>
-                  Cancel
-                </Button>
-                <Button 
-                  onClick={sendReply} 
-                  disabled={isSending || !replyMessage.trim()}
-                >
-                  {isSending ? (
-                    <>Sending...</>
-                  ) : (
-                    <>
-                      <Send className="w-4 h-4 mr-1" />
-                      Send Reply
-                    </>
-                  )}
-                </Button>
+                {/* Messages */}
+                <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                  {selectedConversation.messages.map((message) => (
+                    <div 
+                      key={message.id} 
+                      className={`p-4 rounded-lg ${
+                        message.sender_type === 'admin' 
+                          ? 'bg-gray-50 border-l-2 border-l-gray-300' 
+                          : 'bg-blue-50 border-l-2 border-l-blue-300 ml-8'
+                      }`}
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="text-sm font-medium">
+                          {message.sender_type === 'admin' ? 'Procurement Team' : 'You'}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {format(new Date(message.created_at!), 'MMM dd, hh:mm a')}
+                        </span>
+                      </div>
+                      <p className="text-sm whitespace-pre-wrap">{message.message}</p>
+                      
+                      {message.attachments && message.attachments.length > 0 && (
+                        <div className="mt-2">
+                          <p className="text-xs text-gray-500 mb-1">Attachments:</p>
+                          <div className="space-y-1">
+                            {message.attachments.map((attachment, index) => (
+                              <div key={index} className="text-xs text-blue-600 hover:underline cursor-pointer">
+                                {attachment}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Reply Form */}
+                <div className="p-4 border-t bg-gray-50">
+                  <div className="space-y-3">
+                    <label className="text-sm font-medium">Reply to conversation</label>
+                    <Textarea
+                      value={replyMessage}
+                      onChange={(e) => setReplyMessage(e.target.value)}
+                      placeholder="Type your reply here..."
+                      rows={4}
+                      className="resize-none"
+                    />
+                    <div className="flex justify-end gap-2">
+                      <Button 
+                        variant="outline" 
+                        onClick={closeConversationModal}
+                      >
+                        Close
+                      </Button>
+                      <Button 
+                        onClick={sendReply}
+                        disabled={isSending || !replyMessage.trim()}
+                      >
+                        {isSending ? (
+                          <>Sending...</>
+                        ) : (
+                          <>
+                            <Send className="w-4 h-4 mr-1" />
+                            Send Reply
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-          </DialogContent>
-        </Dialog>
+          </>
+        )}
       </div>
     </VendorLayout>
   );
