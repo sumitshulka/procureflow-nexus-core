@@ -79,7 +79,27 @@ const VendorRegistrationPage = () => {
     try {
       setIsSubmitting(true);
 
-      // Try to create user account, but handle existing user gracefully
+      // First check if this email is already registered as a vendor
+      const { data: existingVendor, error: checkError } = await supabase
+        .from('vendor_registrations')
+        .select('id, status, company_name')
+        .eq('primary_email', values.primary_email)
+        .single();
+
+      if (checkError && checkError.code !== 'PGRST116') {
+        throw checkError;
+      }
+
+      if (existingVendor) {
+        toast({
+          title: 'Email Already Registered',
+          description: `This email is already registered for vendor "${existingVendor.company_name}" with status: ${existingVendor.status}. Please use a different email address or contact support if you need assistance.`,
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Try to create user account
       let userId: string;
       
       const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -100,14 +120,13 @@ const VendorRegistrationPage = () => {
         userId = authData.user.id;
       } else {
         // If user already exists, we need to get their ID
-        // Since this is a no-login process, we'll create a temporary session to get the user ID
         const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
           email: values.primary_email,
           password: values.password,
         });
 
         if (signInError) {
-          throw new Error('Unable to verify user credentials. Please use a different email or contact support.');
+          throw new Error('Unable to verify user credentials. Please check your password or use a different email address.');
         }
 
         userId = signInData.user.id;
@@ -177,8 +196,8 @@ const VendorRegistrationPage = () => {
       }
 
       toast({
-        title: 'Registration Successful',
-        description: 'Your vendor registration has been submitted for approval.',
+        title: 'Registration Submitted Successfully!',
+        description: `Thank you ${values.company_name}! Your vendor registration has been submitted and is now under review. You will receive your login credentials and further instructions shortly.`,
       });
 
       navigate('/vendor-registration/success', { 
@@ -192,7 +211,7 @@ const VendorRegistrationPage = () => {
       console.error('Registration error:', error);
       toast({
         title: 'Registration Failed',
-        description: error.message || 'An error occurred during registration',
+        description: error.message || 'An error occurred during registration. Please try again or contact support.',
         variant: 'destructive',
       });
     } finally {
