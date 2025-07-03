@@ -235,7 +235,7 @@ const LoginPage = () => {
               <p className="text-sm text-gray-600 mb-3">
                 Are you a vendor?
               </p>
-              <Link to="/vendor-register">
+              <Link to="/vendor-registration">
                 <Button
                   variant="outline"
                   className="w-full h-11 border-procurement-600 text-procurement-600 hover:bg-procurement-50 transition-all duration-300 group"
