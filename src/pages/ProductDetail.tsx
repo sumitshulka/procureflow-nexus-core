@@ -33,7 +33,7 @@ interface Product {
 }
 
 const ProductDetail = () => {
-  const { productId } = useParams<{ productId: string }>();
+  const { id: productId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
 
