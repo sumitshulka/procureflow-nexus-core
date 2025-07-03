@@ -27,12 +27,13 @@ import {
 import VendorLayout from '@/components/layout/VendorLayout';
 import { Separator } from '@/components/ui/separator';
 import { getCurrencySymbol, getCurrencyName } from '@/utils/currencyUtils';
+import VendorEditDialog from '@/components/vendor/VendorEditDialog';
 
 const VendorProfile = () => {
   const { user } = useAuth();
 
   // Fetch vendor registration details
-  const { data: vendorProfile, isLoading } = useQuery({
+  const { data: vendorProfile, isLoading, refetch } = useQuery({
     queryKey: ["vendor_profile_detailed", user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
@@ -81,10 +82,10 @@ const VendorProfile = () => {
             <h1 className="text-2xl font-bold">Vendor Profile</h1>
             <p className="text-muted-foreground">Manage your company information and registration details</p>
           </div>
-          <Button>
-            <Edit className="w-4 h-4 mr-2" />
-            Edit Profile
-          </Button>
+          <VendorEditDialog 
+            vendorProfile={vendorProfile} 
+            onUpdate={() => refetch()}
+          />
         </div>
 
         {/* Status Overview */}
