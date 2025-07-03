@@ -79,21 +79,33 @@ const VendorRegistrationPage = () => {
     try {
       setIsSubmitting(true);
 
-      // First check if this email is already registered as a vendor
-      const { data: existingVendor, error: checkError } = await supabase
+      // Check for existing vendor registrations with same email, GST, or PAN
+      const { data: existingVendors, error: checkError } = await supabase
         .from('vendor_registrations')
-        .select('id, status, company_name')
-        .eq('primary_email', values.primary_email)
-        .single();
+        .select('id, status, company_name, primary_email, gst_number, pan_number')
+        .or(`primary_email.eq.${values.primary_email},gst_number.eq.${values.gst_number},pan_number.eq.${values.pan_number}`);
 
-      if (checkError && checkError.code !== 'PGRST116') {
+      if (checkError) {
         throw checkError;
       }
 
-      if (existingVendor) {
+      if (existingVendors && existingVendors.length > 0) {
+        const emailMatch = existingVendors.find(v => v.primary_email === values.primary_email);
+        const gstMatch = existingVendors.find(v => v.gst_number === values.gst_number);
+        const panMatch = existingVendors.find(v => v.pan_number === values.pan_number);
+
+        let errorMessage = '';
+        if (emailMatch) {
+          errorMessage = `This email is already registered for vendor "${emailMatch.company_name}" with status: ${emailMatch.status}.`;
+        } else if (gstMatch) {
+          errorMessage = `This GST number is already registered for vendor "${gstMatch.company_name}" with status: ${gstMatch.status}.`;
+        } else if (panMatch) {
+          errorMessage = `This PAN number is already registered for vendor "${panMatch.company_name}" with status: ${panMatch.status}.`;
+        }
+
         toast({
-          title: 'Email Already Registered',
-          description: `This email is already registered for vendor "${existingVendor.company_name}" with status: ${existingVendor.status}. Please use a different email address or contact support if you need assistance.`,
+          title: 'Registration Already Exists',
+          description: `${errorMessage} Please use different details or contact support if you need assistance.`,
           variant: 'destructive',
         });
         return;
