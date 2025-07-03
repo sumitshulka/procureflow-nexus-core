@@ -1872,6 +1872,7 @@ export type Database = {
           tan_number: string | null
           updated_at: string | null
           user_id: string | null
+          vendor_number: string | null
           website: string | null
           years_in_business: number | null
         }
@@ -1910,6 +1911,7 @@ export type Database = {
           tan_number?: string | null
           updated_at?: string | null
           user_id?: string | null
+          vendor_number?: string | null
           website?: string | null
           years_in_business?: number | null
         }
@@ -1948,6 +1950,7 @@ export type Database = {
           tan_number?: string | null
           updated_at?: string | null
           user_id?: string | null
+          vendor_number?: string | null
           website?: string | null
           years_in_business?: number | null
         }
@@ -2124,6 +2127,10 @@ export type Database = {
       delete_procurement_request: {
         Args: { p_request_id: string }
         Returns: Json
+      }
+      generate_vendor_number: {
+        Args: Record<PropertyKey, never>
+        Returns: string
       }
       get_latest_product_price: {
         Args: { p_product_id: string }

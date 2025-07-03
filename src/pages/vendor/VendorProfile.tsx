@@ -97,7 +97,13 @@ const VendorProfile = () => {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {vendorProfile?.vendor_number && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Vendor Number</p>
+                  <p className="font-bold text-primary">{vendorProfile.vendor_number}</p>
+                </div>
+              )}
               <div>
                 <p className="text-sm text-muted-foreground">Registration Date</p>
                 <p className="font-medium">
