@@ -142,7 +142,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         } else if (userRole === 'admin') {
           navigate('/admin-dashboard');
         } else {
-          navigate('/');
+          navigate('/dashboard'); // Changed from '/' to '/dashboard'
         }
       }
       
