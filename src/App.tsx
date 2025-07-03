@@ -9,6 +9,7 @@ import VendorRegistrationSuccess from './pages/VendorRegistrationSuccess';
 import VendorRegistrationDuplicate from './pages/VendorRegistrationDuplicate';
 import VendorDashboard from './pages/VendorDashboard';
 import Dashboard from './pages/Dashboard';
+import Layout from '@/components/layout/Layout';
 import { Building2, Users, FileText } from 'lucide-react';
 import { UserRole } from '@/types';
 
@@ -138,7 +139,9 @@ function App() {
           path="/admin-dashboard" 
           element={
             <ProtectedRoute requiredRole={UserRole.ADMIN}>
-              <Dashboard />
+              <Layout>
+                <Dashboard />
+              </Layout>
             </ProtectedRoute>
           } 
         />
