@@ -48,6 +48,11 @@ const vendorRegistrationSchema = z.object({
   business_description: z.string().optional(),
   years_in_business: z.number().min(0).optional(),
   annual_turnover: z.number().min(0).optional(),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+  confirmPassword: z.string(),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
 });
 
 type VendorRegistrationForm = z.infer<typeof vendorRegistrationSchema>;
@@ -77,7 +82,7 @@ const VendorRegistrationPage = () => {
       // Create user account first
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: values.primary_email,
-        password: 'TempPassword123!', // Temporary password - vendor will reset
+        password: values.password,
         options: {
           data: {
             full_name: values.signatory_name,
@@ -144,7 +149,13 @@ const VendorRegistrationPage = () => {
         description: 'Your vendor registration has been submitted. You will receive login credentials via email.',
       });
 
-      navigate('/vendor-registration-success');
+      navigate('/vendor-registration/success', { 
+        state: { 
+          email: values.primary_email, 
+          password: values.password,
+          companyName: values.company_name 
+        } 
+      });
     } catch (error: any) {
       console.error('Registration error:', error);
       toast({
@@ -179,6 +190,7 @@ const VendorRegistrationPage = () => {
     { number: 3, title: 'Addresses', icon: MapPin },
     { number: 4, title: 'Signatory Details', icon: User },
     { number: 5, title: 'Bank Details', icon: CreditCard },
+    { number: 6, title: 'Account Setup', icon: User },
   ];
 
   return (
@@ -933,6 +945,58 @@ const VendorRegistrationPage = () => {
               </Card>
             )}
 
+            {/* Step 6: Account Setup */}
+            {currentStep === 6 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <User className="w-5 h-5" />
+                    Account Setup
+                  </CardTitle>
+                  <CardDescription>Create your vendor portal login credentials</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="password"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Password *</FormLabel>
+                          <FormControl>
+                            <Input type="password" placeholder="Enter password (min 8 characters)" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="confirmPassword"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Confirm Password *</FormLabel>
+                          <FormControl>
+                            <Input type="password" placeholder="Confirm your password" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <h4 className="font-medium text-blue-800 mb-2">Account Information</h4>
+                    <p className="text-sm text-blue-700 mb-2">
+                      <strong>Login Email:</strong> {form.watch('primary_email') || 'Please complete step 2'}
+                    </p>
+                    <p className="text-sm text-blue-700">
+                      You'll use these credentials to access the vendor portal where you can track your registration status and manage your profile.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Navigation Buttons */}
             <div className="flex justify-between">
               <Button
@@ -944,10 +1008,10 @@ const VendorRegistrationPage = () => {
                 Previous
               </Button>
               
-              {currentStep < 5 ? (
+              {currentStep < 6 ? (
                 <Button
                   type="button"
-                  onClick={() => setCurrentStep(Math.min(5, currentStep + 1))}
+                  onClick={() => setCurrentStep(Math.min(6, currentStep + 1))}
                 >
                   Next
                 </Button>

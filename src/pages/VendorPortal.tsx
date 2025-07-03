@@ -153,7 +153,39 @@ const VendorPortal = () => {
               <div>
                 <h3 className="font-medium text-yellow-800">Registration Under Review</h3>
                 <p className="text-sm text-yellow-700">
-                  Your vendor registration is currently being reviewed. You will be notified once approved.
+                  Your vendor registration is currently being reviewed. You will be notified once approved. You can update your profile information while waiting.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {vendorData.status === 'under_review' && (
+        <Card className="border-blue-200 bg-blue-50">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <Building className="w-5 h-5 text-blue-600" />
+              <div>
+                <h3 className="font-medium text-blue-800">Documents Under Verification</h3>
+                <p className="text-sm text-blue-700">
+                  Your documents are being verified by our team. This process typically takes 2-3 business days.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {vendorData.status === 'approved' && (
+        <Card className="border-green-200 bg-green-50">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <Building className="w-5 h-5 text-green-600" />
+              <div>
+                <h3 className="font-medium text-green-800">Registration Approved</h3>
+                <p className="text-sm text-green-700">
+                  Congratulations! Your vendor registration has been approved. You can now participate in RFPs and receive purchase orders.
                 </p>
               </div>
             </div>
@@ -169,7 +201,7 @@ const VendorPortal = () => {
               <div>
                 <h3 className="font-medium text-red-800">Registration Rejected</h3>
                 <p className="text-sm text-red-700">
-                  Your vendor registration has been rejected. Please check messages for more details or contact support.
+                  Your vendor registration has been rejected. Please check messages for more details or contact support to understand the next steps.
                 </p>
               </div>
             </div>
@@ -232,11 +264,12 @@ const VendorPortal = () => {
 
       {/* Main Content */}
       <Tabs defaultValue="profile" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="products">Products</TabsTrigger>
           <TabsTrigger value="rfps">RFPs</TabsTrigger>
           <TabsTrigger value="orders">Orders</TabsTrigger>
+          <TabsTrigger value="invoices">Invoices</TabsTrigger>
           <TabsTrigger value="messages">Messages</TabsTrigger>
         </TabsList>
 
@@ -316,11 +349,28 @@ const VendorPortal = () => {
                 <ShoppingCart className="w-5 h-5" />
                 Purchase Orders
               </CardTitle>
-              <CardDescription>Your purchase orders and invoices</CardDescription>
+              <CardDescription>Your active and completed purchase orders</CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-center text-gray-500 py-8">
                 No purchase orders yet. This will be available after receiving orders.
+              </p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="invoices">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <DollarSign className="w-5 h-5" />
+                Invoice Management
+              </CardTitle>
+              <CardDescription>Create and manage invoices for your purchase orders</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-center text-gray-500 py-8">
+                No purchase orders available for invoicing yet. Invoicing will be enabled once you receive purchase orders.
               </p>
             </CardContent>
           </Card>
