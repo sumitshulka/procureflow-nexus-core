@@ -32,6 +32,7 @@ import VendorFinances from '@/pages/vendor/VendorFinances';
 import VendorSettings from '@/pages/vendor/VendorSettings';
 import VendorMessages from '@/pages/vendor/VendorMessages';
 import VendorProducts from '@/pages/vendor/VendorProducts';
+import VendorAnalytics from '@/pages/vendor/VendorAnalytics';
 
 // Procurement pages
 import ProcurementRequests from '@/pages/ProcurementRequests';
@@ -191,7 +192,7 @@ function App() {
         
         <Route path="/vendor/analytics" element={
           <ProtectedRoute requireVendor={true}>
-            <VendorSettings />
+            <VendorAnalytics />
           </ProtectedRoute>
         } />
         
