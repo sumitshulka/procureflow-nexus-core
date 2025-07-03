@@ -209,7 +209,7 @@ const VendorRfps = () => {
         ) : (
           <div className="space-y-4">
             {filteredRfps.map((rfp) => {
-              const daysUntilDeadline = getDaysUntilDeadline(rfp.deadline);
+              const daysUntilDeadline = getDaysUntilDeadline(rfp.submission_deadline);
               const isUrgent = daysUntilDeadline <= 3;
               
               return (

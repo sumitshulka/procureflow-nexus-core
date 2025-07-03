@@ -71,7 +71,7 @@ const VendorPurchaseOrders = () => {
   const filteredPOs = purchaseOrders?.filter(po => {
     const matchesSearch = searchTerm === '' || 
       po.po_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      po.description?.toLowerCase().includes(searchTerm.toLowerCase());
+      po.special_instructions?.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = statusFilter === 'all' || po.status === statusFilter;
     
@@ -227,7 +227,7 @@ const VendorPurchaseOrders = () => {
                         {po.po_number}
                       </CardTitle>
                       <CardDescription className="mt-1">
-                        {po.description || 'No description provided'}
+                        {po.special_instructions || 'No special instructions provided'}
                       </CardDescription>
                     </div>
                     <div className="flex flex-col items-end gap-2">
