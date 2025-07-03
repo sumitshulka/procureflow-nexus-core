@@ -10,8 +10,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { useNavigate } from 'react-router-dom';
-import { Building, FileText, Upload, User, CreditCard, Phone, Mail, MapPin } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { Building, FileText, Upload, User, CreditCard, Phone, Mail, MapPin, ArrowLeft, Users, Building2 } from 'lucide-react';
 
 const addressSchema = z.object({
   street: z.string().min(1, 'Street address is required'),
@@ -276,9 +276,33 @@ const VendorRegistrationPage = () => {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-4xl mx-auto px-4">
+        {/* Navigation */}
+        <div className="mb-6 flex items-center justify-between">
+          <Button
+            variant="ghost"
+            onClick={() => navigate('/')}
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Home
+          </Button>
+          <Link to="/login">
+            <Button variant="outline" className="flex items-center gap-2">
+              <Users className="w-4 h-4" />
+              Back to Login
+            </Button>
+          </Link>
+        </div>
+
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Vendor Registration</h1>
-          <p className="text-gray-600 mt-2">Register your company to become an approved vendor</p>
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <Building2 className="w-8 h-8 text-blue-600" />
+            <h1 className="text-3xl font-bold text-gray-900">Vendor Registration</h1>
+          </div>
+          <p className="text-gray-600 max-w-2xl mx-auto">
+            Register your company to participate in procurement opportunities. 
+            If you already have an account, use the "Back to Login" button above.
+          </p>
         </div>
 
         {/* Progress Steps */}
