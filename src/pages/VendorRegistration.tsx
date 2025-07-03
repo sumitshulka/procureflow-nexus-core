@@ -79,7 +79,9 @@ const VendorRegistrationPage = () => {
     try {
       setIsSubmitting(true);
 
-      // Create user account first
+      // Try to create user account, but handle existing user gracefully
+      let userId: string;
+      
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: values.primary_email,
         password: values.password,
@@ -90,10 +92,28 @@ const VendorRegistrationPage = () => {
         },
       });
 
-      if (authError) throw authError;
+      if (authError && authError.message !== 'User already registered') {
+        throw authError;
+      }
 
-      if (!authData.user) {
-        throw new Error('Failed to create user account');
+      if (authData?.user) {
+        userId = authData.user.id;
+      } else {
+        // If user already exists, we need to get their ID
+        // Since this is a no-login process, we'll create a temporary session to get the user ID
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+          email: values.primary_email,
+          password: values.password,
+        });
+
+        if (signInError) {
+          throw new Error('Unable to verify user credentials. Please use a different email or contact support.');
+        }
+
+        userId = signInData.user.id;
+        
+        // Sign out immediately since this is a no-login process
+        await supabase.auth.signOut();
       }
 
       // Prepare vendor data for database insertion
@@ -124,7 +144,7 @@ const VendorRegistrationPage = () => {
         business_description: values.business_description || null,
         years_in_business: values.years_in_business || null,
         annual_turnover: values.annual_turnover || null,
-        user_id: authData.user.id,
+        user_id: userId,
         status: 'pending' as const,
       };
 
@@ -134,19 +154,31 @@ const VendorRegistrationPage = () => {
 
       if (insertError) throw insertError;
 
-      // Assign vendor role
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .insert({
-          user_id: authData.user.id,
-          role: 'vendor',
-        });
+      // Assign vendor role (with proper authentication)
+      const { data: signInForRole, error: roleSignInError } = await supabase.auth.signInWithPassword({
+        email: values.primary_email,
+        password: values.password,
+      });
 
-      if (roleError) throw roleError;
+      if (!roleSignInError && signInForRole.user) {
+        const { error: roleError } = await supabase
+          .from('user_roles')
+          .insert({
+            user_id: userId,
+            role: 'vendor',
+          });
+
+        // Sign out immediately
+        await supabase.auth.signOut();
+
+        if (roleError && !roleError.message.includes('duplicate key')) {
+          throw roleError;
+        }
+      }
 
       toast({
         title: 'Registration Successful',
-        description: 'Your vendor registration has been submitted. You will receive login credentials via email.',
+        description: 'Your vendor registration has been submitted for approval.',
       });
 
       navigate('/vendor-registration/success', { 
