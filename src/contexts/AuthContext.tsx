@@ -120,7 +120,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       if (rolesError) throw rolesError;
       
+      // Check if user is a vendor
+      const { data: vendorData, error: vendorError } = await supabase
+        .from("vendor_registrations")
+        .select("id")
+        .eq("user_id", userId)
+        .single();
+      
       console.log("Roles retrieved from DB:", rolesData);
+      console.log("Vendor registration found:", vendorData ? "Yes" : "No");
 
       const userData = {
         id: userId,
@@ -134,16 +142,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.log("Setting userData to:", userData);
       setUserData(userData);
       
-      // Navigate based on role after login
-      if (rolesData.length > 0) {
+      // Navigate based on vendor status or role after login
+      if (vendorData) {
+        console.log("Navigating to vendor dashboard");
+        navigate('/vendor-dashboard');
+      } else if (rolesData.length > 0) {
         const userRole = rolesData[0].role;
-        if (userRole === 'vendor') {
-          navigate('/vendor-dashboard');
-        } else if (userRole === 'admin') {
+        if (userRole === 'admin') {
           navigate('/admin-dashboard');
         } else {
-          navigate('/dashboard'); // Changed from '/' to '/dashboard'
+          navigate('/dashboard');
         }
+      } else {
+        navigate('/dashboard');
       }
       
     } catch (error) {
