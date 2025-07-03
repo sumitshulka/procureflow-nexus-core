@@ -140,37 +140,37 @@ function App() {
         } />
         
         <Route path="/vendor-dashboard" element={
-          <ProtectedRoute requiredRole={UserRole.VENDOR}>
+          <ProtectedRoute requireVendor={true}>
             <VendorDashboard />
           </ProtectedRoute>
         } />
         
         <Route path="/vendor/profile" element={
-          <ProtectedRoute requiredRole={UserRole.VENDOR}>
+          <ProtectedRoute requireVendor={true}>
             <VendorProfile />
           </ProtectedRoute>
         } />
         
         <Route path="/vendor/rfps" element={
-          <ProtectedRoute requiredRole={UserRole.VENDOR}>
+          <ProtectedRoute requireVendor={true}>
             <VendorRfps />
           </ProtectedRoute>
         } />
         
         <Route path="/vendor/purchase-orders" element={
-          <ProtectedRoute requiredRole={UserRole.VENDOR}>
+          <ProtectedRoute requireVendor={true}>
             <VendorPurchaseOrders />
           </ProtectedRoute>
         } />
         
         <Route path="/vendor/finances" element={
-          <ProtectedRoute requiredRole={UserRole.VENDOR}>
+          <ProtectedRoute requireVendor={true}>
             <VendorFinances />
           </ProtectedRoute>
         } />
         
         <Route path="/vendor/settings" element={
-          <ProtectedRoute requiredRole={UserRole.VENDOR}>
+          <ProtectedRoute requireVendor={true}>
             <VendorSettings />
           </ProtectedRoute>
         } />
