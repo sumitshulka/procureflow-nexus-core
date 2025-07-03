@@ -1,168 +1,137 @@
 
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { UserRole } from "@/types";
-import { toast } from "sonner";
-import { useToast } from "@/hooks/use-toast";
-
-interface LoginCredentials {
-  email: string;
-  password: string;
-  remember: boolean;
-}
+import React, { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useAuth } from '@/contexts/AuthContext';
+import { ArrowLeft, Eye, EyeOff } from 'lucide-react';
 
 const LoginPage = () => {
   const navigate = useNavigate();
-  const { toast: uiToast } = useToast();
-  
-  const [credentials, setCredentials] = useState<LoginCredentials>({
-    email: "",
-    password: "",
-    remember: false,
+  const { login, isLoading } = useAuth();
+  const [formData, setFormData] = useState({
+    email: '',
+    password: ''
   });
-
-  const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState('');
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setCredentials((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleCheckboxChange = (checked: boolean) => {
-    setCredentials((prev) => ({ ...prev, remember: checked }));
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    setError('');
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      // Simulate login success for demo purposes
-      localStorage.setItem("user", JSON.stringify({
-        id: "user-123",
-        name: "Demo User",
-        email: credentials.email,
-        role: UserRole.ADMIN,
-      }));
-
-      toast.success("Login successful! Welcome to the Procurement Management System.");
-      uiToast({
-        title: "Login successful!",
-        description: "Welcome to the Procurement Management System.",
-      });
-      
-      navigate("/");
-    } catch (error) {
-      console.error(error);
-      toast.error("Login failed. Please check your credentials and try again.");
-      uiToast({
-        title: "Login failed",
-        description: "Please check your credentials and try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
+      await login(formData.email, formData.password);
+      // Navigation will be handled by AuthContext based on user role
+    } catch (err: any) {
+      setError(err.message || 'Login failed. Please check your credentials.');
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-md mx-auto px-4">
+        {/* Navigation */}
+        <div className="mb-6">
+          <Button
+            variant="ghost"
+            onClick={() => navigate('/')}
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Home
+          </Button>
+        </div>
+
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold">
-            <span className="text-procurement-600">Procurement</span> Management
-          </h1>
-          <p className="text-muted-foreground mt-2">
-            Sign in to access your procurement dashboard
-          </p>
+          <h1 className="text-3xl font-bold text-gray-900">Welcome Back</h1>
+          <p className="text-gray-600 mt-2">Sign in to access your account</p>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Sign In</CardTitle>
+            <CardTitle>Login</CardTitle>
             <CardDescription>
               Enter your credentials to access your account
             </CardDescription>
           </CardHeader>
-          <form onSubmit={handleSubmit}>
-            <CardContent className="space-y-4">
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {error && (
+                <div className="bg-red-50 border border-red-200 rounded-md p-3">
+                  <p className="text-red-600 text-sm">{error}</p>
+                </div>
+              )}
+
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">Email Address</Label>
                 <Input
                   id="email"
                   name="email"
                   type="email"
-                  placeholder="your.email@company.com"
-                  value={credentials.email}
-                  onChange={handleChange}
                   required
+                  value={formData.email}
+                  onChange={handleChange}
+                  placeholder="Enter your email"
                 />
               </div>
+
               <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="password">Password</Label>
-                  <a
-                    href="#"
-                    className="text-sm text-procurement-600 hover:text-procurement-500"
+                <Label htmlFor="password">Password</Label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    name="password"
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    value={formData.password}
+                    onChange={handleChange}
+                    placeholder="Enter your password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
                   >
-                    Forgot password?
-                  </a>
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
                 </div>
-                <Input
-                  id="password"
-                  name="password"
-                  type="password"
-                  value={credentials.password}
-                  onChange={handleChange}
-                  required
-                />
               </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="remember"
-                  checked={credentials.remember}
-                  onCheckedChange={handleCheckboxChange}
-                />
-                <Label htmlFor="remember" className="text-sm font-normal">
-                  Remember me for 30 days
-                </Label>
-              </div>
-            </CardContent>
-            <CardFooter>
+
               <Button
                 type="submit"
-                className="w-full bg-procurement-600 hover:bg-procurement-700"
+                className="w-full"
                 disabled={isLoading}
               >
-                {isLoading ? "Signing In..." : "Sign In"}
+                {isLoading ? 'Signing In...' : 'Sign In'}
               </Button>
-            </CardFooter>
-          </form>
-        </Card>
+            </form>
 
-        <div className="text-center mt-6">
-          <p className="text-sm text-muted-foreground">
-            Don't have an account?{" "}
-            <a href="#" className="text-procurement-600 hover:text-procurement-500">
-              Contact your administrator
-            </a>
-          </p>
-        </div>
+            <div className="mt-6 text-center space-y-4">
+              <p className="text-sm text-gray-600">
+                Don't have an account?{' '}
+                <Link to="/vendor-registration" className="text-blue-600 hover:text-blue-800 font-medium">
+                  Register as Vendor
+                </Link>
+              </p>
+              
+              <div className="border-t pt-4">
+                <p className="text-xs text-gray-500">
+                  For admin access, contact your system administrator
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

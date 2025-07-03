@@ -1,89 +1,56 @@
-
-import { Navigate, useLocation } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
-import { UserRole } from "@/types";
+import React from 'react';
+import { Navigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
+import { UserRole } from '@/types';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  requiredRoles?: UserRole[];
+  requiredRole?: UserRole;
 }
 
-const ProtectedRoute = ({ children, requiredRoles }: ProtectedRouteProps) => {
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
+  children, 
+  requiredRole 
+}) => {
   const { user, userData, isLoading } = useAuth();
-  const location = useLocation();
 
-  console.log("ProtectedRoute check for path:", location.pathname);
-  
+  // Show loading state
   if (isLoading) {
-    console.log("Auth is loading, showing spinner");
     return (
-      <div className="h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-procurement-600"></div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
       </div>
     );
   }
 
-  // If user is not authenticated, redirect to login
+  // Redirect to login if not authenticated
   if (!user) {
-    console.log("User not authenticated, redirecting to login");
-    // Save the current path to redirect back after login
-    if (location.pathname !== "/login") {
-      sessionStorage.setItem('redirectPath', location.pathname);
-    }
-    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
+    return <Navigate to="/login" replace />;
   }
 
-  // Clear any redirect path that might have been saved
-  sessionStorage.removeItem('redirectPath');
-  
-  // If the user has 'admin' role, always grant access regardless of required roles
-  if (userData?.roles && Array.isArray(userData.roles) && userData.roles.some(role => 
-    typeof role === 'string' && (
-      role.toLowerCase() === 'admin' || 
-      role.toLowerCase() === UserRole.ADMIN.toLowerCase()
-    ))) {
-    console.log("User has ADMIN role - granting access to all routes");
-    return <>{children}</>;
-  }
-
-  // If specific roles are required, check if user has at least one of them
-  if (Array.isArray(requiredRoles) && requiredRoles.length > 0) {
-    console.log("Checking user roles:", userData?.roles);
-    
-    if (!userData?.roles || !Array.isArray(userData.roles) || userData.roles.length === 0) {
-      console.log("No roles found for user, access denied");
-      return (
-        <Navigate 
-          to="/unauthorized" 
-          replace 
-          state={{ requiredRoles }}
-        />
-      );
-    }
-
-    // Convert all role strings to lowercase for case-insensitive comparison
-    const userRolesLower = userData.roles.map(role => String(role).toLowerCase());
-    const requiredRolesLower = requiredRoles.map(role => String(role).toLowerCase());
-
-    // Check if user has any of the required roles
-    const hasRequiredRole = userRolesLower.some(userRole => 
-      requiredRolesLower.includes(userRole)
+  // Check role if required
+  if (requiredRole && (!userData?.roles || !userData.roles.includes(requiredRole))) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto px-4">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h2>
+          <p className="text-gray-600 mb-6">
+            You don't have the required permissions to access this page.
+          </p>
+          <button
+            onClick={() => window.history.back()}
+            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+          >
+            Go Back
+          </button>
+        </div>
+      </div>
     );
-
-    if (!hasRequiredRole) {
-      console.log("Access denied - user does not have any of the required roles");
-      return (
-        <Navigate 
-          to="/unauthorized" 
-          replace 
-          state={{ requiredRoles }}
-        />
-      );
-    }
   }
 
-  // If authenticated and has required role (or no roles required), render the children
-  console.log("Access granted to path:", location.pathname);
   return <>{children}</>;
 };
 

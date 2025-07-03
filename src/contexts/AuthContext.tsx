@@ -134,6 +134,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.log("Setting userData to:", userData);
       setUserData(userData);
       
+      // Navigate based on role after login
+      if (rolesData.length > 0) {
+        const userRole = rolesData[0].role;
+        if (userRole === 'vendor') {
+          navigate('/vendor-dashboard');
+        } else if (userRole === 'admin') {
+          navigate('/admin-dashboard');
+        } else {
+          navigate('/');
+        }
+      }
+      
     } catch (error) {
       console.error("Error fetching user data:", error);
       toast({
@@ -156,6 +168,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       // Log the user activity
       await logUserActivity("login");
+      
+      // Navigation will happen after user data is fetched in the effect
     } catch (error: any) {
       toast({
         title: "Login failed",
