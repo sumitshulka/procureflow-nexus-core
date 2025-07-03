@@ -78,8 +78,8 @@ const VendorSidebar = () => {
   ];
 
   return (
-    <Sidebar collapsible="icon" className="border-r mt-16">
-      <SidebarContent>
+    <Sidebar collapsible="icon" className="border-r mt-16 bg-sidebar-background">
+      <SidebarContent className="bg-sidebar-background">
         <ScrollArea className="flex-1 px-2">
           <SidebarGroup className="pt-4">
             <SidebarGroupContent>
@@ -95,8 +95,8 @@ const VendorSidebar = () => {
                           className={cn(
                             "flex items-center space-x-3 rounded-md px-2 py-2 text-sm font-medium transition-colors",
                             isActive 
-                              ? "bg-primary text-primary-foreground" 
-                              : "text-foreground hover:bg-accent hover:text-accent-foreground"
+                              ? "bg-sidebar-accent text-sidebar-accent-foreground" 
+                              : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
                           )}
                         >
                           <item.icon className="h-4 w-4" />
@@ -116,8 +116,8 @@ const VendorSidebar = () => {
               <SidebarGroupContent>
                 <div className="px-2 py-2">
                   <div className="flex items-center gap-2 text-sm">
-                    <Building2 className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">Company Portal</span>
+                    <Building2 className="h-4 w-4 text-sidebar-foreground/60" />
+                    <span className="text-sidebar-foreground/60">Company Portal</span>
                   </div>
                 </div>
               </SidebarGroupContent>
