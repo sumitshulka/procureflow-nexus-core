@@ -95,18 +95,35 @@ const VendorRegistrationPage = () => {
         const panMatch = existingVendors.find(v => v.pan_number === values.pan_number);
 
         let errorMessage = '';
+        let conflictType: 'email' | 'gst' | 'pan' = 'email';
+        let existingCompany = '';
+        let existingStatus = '';
+
         if (emailMatch) {
           errorMessage = `This email is already registered for vendor "${emailMatch.company_name}" with status: ${emailMatch.status}.`;
+          conflictType = 'email';
+          existingCompany = emailMatch.company_name;
+          existingStatus = emailMatch.status;
         } else if (gstMatch) {
           errorMessage = `This GST number is already registered for vendor "${gstMatch.company_name}" with status: ${gstMatch.status}.`;
+          conflictType = 'gst';
+          existingCompany = gstMatch.company_name;
+          existingStatus = gstMatch.status;
         } else if (panMatch) {
           errorMessage = `This PAN number is already registered for vendor "${panMatch.company_name}" with status: ${panMatch.status}.`;
+          conflictType = 'pan';
+          existingCompany = panMatch.company_name;
+          existingStatus = panMatch.status;
         }
 
-        toast({
-          title: 'Registration Already Exists',
-          description: `${errorMessage} Please use different details or contact support if you need assistance.`,
-          variant: 'destructive',
+        // Navigate to duplicate confirmation page
+        navigate('/vendor-registration/duplicate', {
+          state: {
+            errorMessage,
+            existingCompany,
+            existingStatus,
+            conflictType
+          }
         });
         return;
       }

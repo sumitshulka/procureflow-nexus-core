@@ -1,160 +1,32 @@
-
-import { Routes, Route } from "react-router-dom";
-import Index from "@/pages/Index";
-import LoginPage from "@/pages/auth/LoginPage";
-import SignupPage from "@/pages/auth/SignupPage";
-import ForgotPasswordPage from "@/pages/auth/ForgotPasswordPage";
-import UpdatePasswordPage from "@/pages/auth/UpdatePasswordPage";
-import UnauthorizedPage from "@/pages/auth/UnauthorizedPage";
-import NotFound from "@/pages/NotFound";
-import Dashboard from "@/pages/Dashboard";
-import ProcurementRequests from "@/pages/ProcurementRequests";
-import ProcurementRequestDetail from "@/pages/ProcurementRequestDetail";
-import ProductCatalog from "@/pages/ProductCatalog";
-import AddProduct from "@/pages/AddProduct";
-import ProductDetail from "@/pages/ProductDetail";
-import EditProduct from "@/pages/EditProduct";
-import ProductPriceHistory from "@/pages/ProductPriceHistory";
-import ActiveRfps from "@/pages/rfp/ActiveRfps";
-import CreateRfp from "@/pages/CreateRfp";
-import CreateRfpWizard from "@/pages/rfp/CreateRfpWizard";
-import RfpTemplates from "@/pages/rfp/RfpTemplates";
-import RfpResponses from "@/pages/rfp/RfpResponses";
-import ActivePurchaseOrders from "@/pages/purchase-orders/ActivePurchaseOrders";
-import PendingPurchaseOrders from "@/pages/purchase-orders/PendingPurchaseOrders";
-import CreatePurchaseOrder from "@/pages/purchase-orders/CreatePurchaseOrder";
-import PurchaseOrderHistory from "@/pages/purchase-orders/PurchaseOrderHistory";
-import InventoryIndex from "@/pages/inventory/InventoryIndex";
-import InventoryItems from "@/pages/inventory/InventoryItems";
-import InventoryTransactions from "@/pages/inventory/InventoryTransactions";
-import Warehouses from "@/pages/inventory/Warehouses";
-import InventoryReports from "@/pages/inventory/InventoryReports";
-import StockMovementReport from "@/pages/inventory/StockMovementReport";
-import StockAgingReport from "@/pages/inventory/StockAgingReport";
-import InventoryValuationReport from "@/pages/inventory/InventoryValuationReport";
-import VendorManagement from "@/pages/VendorManagement";
-import VendorPortal from "@/pages/VendorPortal";
-import VendorRegistration from "@/pages/VendorRegistration";
-import VendorRegistrationSuccess from "@/pages/VendorRegistrationSuccess";
-import SpendAnalysis from "@/pages/analytics/SpendAnalysis";
-import VendorPerformance from "@/pages/analytics/VendorPerformance";
-import PerformanceAnalytics from "@/pages/analytics/PerformanceAnalytics";
-import CustomReports from "@/pages/analytics/CustomReports";
-import BudgetOverview from "@/pages/budget/BudgetOverview";
-import BudgetAllocation from "@/pages/budget/BudgetAllocation";
-import BudgetReports from "@/pages/budget/BudgetReports";
-import RiskAssessment from "@/pages/risk/RiskAssessment";
-import RiskMonitoring from "@/pages/risk/RiskMonitoring";
-import RiskReports from "@/pages/risk/RiskReports";
-import AuditTrail from "@/pages/compliance/AuditTrail";
-import PolicyManagement from "@/pages/compliance/PolicyManagement";
-import ComplianceReports from "@/pages/compliance/ComplianceReports";
-import Approvals from "@/pages/Approvals";
-import NotificationsList from "@/pages/NotificationsList";
-import Settings from "@/pages/Settings";
-import UserManagement from "@/pages/UserManagement";
-import FeatureDocumentation from "@/pages/FeatureDocumentation";
-import AppLayout from "@/layouts/AppLayout";
-import TemplateCreationWizard from "@/components/rfp/TemplateCreationWizard";
+import React from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { Toaster } from '@/components/ui/toaster';
+import { AuthProvider } from './context/AuthContext';
+import HomePage from './pages/HomePage';
+import VendorRegistrationPage from './pages/VendorRegistration';
+import VendorRegistrationSuccess from './pages/VendorRegistrationSuccess';
+import { QueryClient } from '@tanstack/react-query';
+import VendorDashboard from './pages/VendorDashboard';
+import AdminDashboard from './pages/AdminDashboard';
+import VendorRegistrationDuplicate from './pages/VendorRegistrationDuplicate';
 
 function App() {
   return (
-    <div className="min-h-screen bg-background">
-      <Routes>
-        <Route path="/" element={<Index />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/vendor-registration" element={<VendorRegistration />} />
-        <Route path="/vendor-registration/success" element={<VendorRegistrationSuccess />} />
-        
-        {/* Layout routes */}
-        <Route path="/" element={<AppLayout />}>
-          <Route path="dashboard" element={<Dashboard />} />
-          
-          {/* Documentation Routes */}
-          <Route path="documentation/features" element={<FeatureDocumentation />} />
-          
-          {/* Procurement Routes */}
-          <Route path="requests" element={<ProcurementRequests />} />
-          <Route path="requests/:requestId" element={<ProcurementRequestDetail />} />
-          
-          {/* Product Routes */}
-          <Route path="products" element={<ProductCatalog />} />
-          <Route path="products/add" element={<AddProduct />} />
-          <Route path="products/:productId" element={<ProductDetail />} />
-          <Route path="products/:productId/edit" element={<EditProduct />} />
-          <Route path="products/:productId/price-history" element={<ProductPriceHistory />} />
-          
-          {/* Additional route to handle legacy /product/:id links */}
-          <Route path="product/:productId" element={<ProductDetail />} />
-          
-          {/* RFP Routes */}
-          <Route path="rfp/active" element={<ActiveRfps />} />
-          <Route path="rfp/create" element={<CreateRfp />} />
-          <Route path="rfp/create-wizard" element={<CreateRfpWizard />} />
-          <Route path="rfp/templates" element={<RfpTemplates />} />
-          <Route path="rfp/templates/create" element={<TemplateCreationWizard />} />
-          <Route path="rfp/responses" element={<RfpResponses />} />
-          <Route path="rfp/:rfpId/responses" element={<RfpResponses />} />
-          
-          {/* Purchase Order Routes */}
-          <Route path="purchase-orders/active" element={<ActivePurchaseOrders />} />
-          <Route path="purchase-orders/pending" element={<PendingPurchaseOrders />} />
-          <Route path="purchase-orders/create" element={<CreatePurchaseOrder />} />
-          <Route path="purchase-orders/history" element={<PurchaseOrderHistory />} />
-          
-          {/* Inventory Routes */}
-          <Route path="inventory" element={<InventoryIndex />} />
-          <Route path="inventory/items" element={<InventoryItems />} />
-          <Route path="inventory/transactions" element={<InventoryTransactions />} />
-          <Route path="inventory/warehouses" element={<Warehouses />} />
-          <Route path="inventory/reports" element={<InventoryReports />} />
-          <Route path="inventory/reports/stock-movement" element={<StockMovementReport />} />
-          <Route path="inventory/reports/stock-aging" element={<StockAgingReport />} />
-          <Route path="inventory/reports/valuation" element={<InventoryValuationReport />} />
-          
-          {/* Vendor Routes */}
-          <Route path="vendors" element={<VendorManagement />} />
-          <Route path="vendor-portal" element={<VendorPortal />} />
-          
-          {/* Analytics Routes */}
-          <Route path="analytics/spend" element={<SpendAnalysis />} />
-          <Route path="analytics/vendor-performance" element={<VendorPerformance />} />
-          <Route path="analytics/performance" element={<PerformanceAnalytics />} />
-          <Route path="analytics/custom" element={<CustomReports />} />
-          
-          {/* Budget Routes */}
-          <Route path="budget/overview" element={<BudgetOverview />} />
-          <Route path="budget/allocation" element={<BudgetAllocation />} />
-          <Route path="budget/reports" element={<BudgetReports />} />
-          
-          {/* Risk Routes */}
-          <Route path="risk/assessment" element={<RiskAssessment />} />
-          <Route path="risk/monitoring" element={<RiskMonitoring />} />
-          <Route path="risk/reports" element={<RiskReports />} />
-          
-          {/* Compliance Routes */}
-          <Route path="compliance/audit-trail" element={<AuditTrail />} />
-          <Route path="compliance/policies" element={<PolicyManagement />} />
-          <Route path="compliance/reports" element={<ComplianceReports />} />
-          
-          {/* Other Routes */}
-          <Route path="approvals" element={<Approvals />} />
-          <Route path="notifications" element={<NotificationsList />} />
-          <Route path="settings" element={<Settings />} />
-          <Route path="users" element={<UserManagement />} />
-        </Route>
-        
-        {/* Auth Routes */}
-        <Route path="/auth/login" element={<LoginPage />} />
-        <Route path="/auth/signup" element={<SignupPage />} />
-        <Route path="/auth/forgot-password" element={<ForgotPasswordPage />} />
-        <Route path="/auth/update-password" element={<UpdatePasswordPage />} />
-        <Route path="/auth/unauthorized" element={<UnauthorizedPage />} />
-        
-        {/* 404 Route */}
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </div>
+    <QueryClient>
+      <BrowserRouter>
+        <AuthProvider>
+          <Toaster />
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/vendor-registration" element={<VendorRegistrationPage />} />
+            <Route path="/vendor-registration/success" element={<VendorRegistrationSuccess />} />
+            <Route path="/vendor-dashboard" element={<VendorDashboard />} />
+            <Route path="/admin-dashboard" element={<AdminDashboard />} />
+            <Route path="/vendor-registration/duplicate" element={<VendorRegistrationDuplicate />} />
+          </Routes>
+        </AuthProvider>
+      </BrowserRouter>
+    </QueryClient>
   );
 }
 
