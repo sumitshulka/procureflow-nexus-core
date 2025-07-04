@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,8 +8,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Search, Package, Plus, Check, X } from 'lucide-react';
+import { Search, Package, Plus, Check, X, Edit, DollarSign } from 'lucide-react';
 import VendorLayout from '@/components/layout/VendorLayout';
+import ProductRegistrationDialog from '@/components/vendor/ProductRegistrationDialog';
+import VendorPriceUpdateDialog from '@/components/vendor/VendorPriceUpdateDialog';
 
 interface Product {
   id: string;
@@ -16,8 +19,6 @@ interface Product {
   description: string;
   category_id: string;
   classification: string;
-  current_price: number;
-  currency: string;
   is_active: boolean;
   created_at: string;
   categories?: {
@@ -35,6 +36,9 @@ interface VendorProductRegistration {
   product_id: string;
   registered_at: string;
   is_active: boolean;
+  vendor_price: number | null;
+  vendor_currency: string;
+  price_updated_at: string;
   products?: Product;
 }
 
@@ -47,6 +51,22 @@ const VendorProducts = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('available');
   const [vendorId, setVendorId] = useState<string | null>(null);
+  
+  // Dialog states
+  const [registrationDialog, setRegistrationDialog] = useState({
+    isOpen: false,
+    product: null as Product | null,
+    isRegistering: false
+  });
+  
+  const [priceUpdateDialog, setPriceUpdateDialog] = useState({
+    isOpen: false,
+    registrationId: '',
+    productName: '',
+    currentPrice: null as number | null,
+    currentCurrency: 'USD',
+    isUpdating: false
+  });
 
   useEffect(() => {
     fetchVendorDetails();
@@ -134,24 +154,29 @@ const VendorProducts = () => {
     }
   };
 
-  const registerForProduct = async (productId: string) => {
+  const handleRegisterProduct = async (productId: string, vendorPrice: number, currency: string) => {
     if (!vendorId) return;
     
     try {
+      setRegistrationDialog(prev => ({ ...prev, isRegistering: true }));
+      
       const { error } = await supabase
         .from('vendor_products')
         .insert({
           vendor_id: vendorId,
           product_id: productId,
+          vendor_price: vendorPrice,
+          vendor_currency: currency,
         });
 
       if (error) throw error;
 
       toast({
         title: 'Success',
-        description: 'Successfully registered for product',
+        description: 'Successfully registered for product with your pricing',
       });
 
+      setRegistrationDialog({ isOpen: false, product: null, isRegistering: false });
       fetchRegisteredProducts();
     } catch (error: any) {
       toast({
@@ -159,10 +184,51 @@ const VendorProducts = () => {
         description: 'Failed to register for product',
         variant: 'destructive',
       });
+    } finally {
+      setRegistrationDialog(prev => ({ ...prev, isRegistering: false }));
     }
   };
 
-  const unregisterFromProduct = async (registrationId: string) => {
+  const handleUpdatePrice = async (newPrice: number, currency: string) => {
+    try {
+      setPriceUpdateDialog(prev => ({ ...prev, isUpdating: true }));
+      
+      const { error } = await supabase
+        .from('vendor_products')
+        .update({
+          vendor_price: newPrice,
+          vendor_currency: currency,
+        })
+        .eq('id', priceUpdateDialog.registrationId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: 'Successfully updated your price',
+      });
+
+      setPriceUpdateDialog({ 
+        isOpen: false, 
+        registrationId: '', 
+        productName: '', 
+        currentPrice: null, 
+        currentCurrency: 'USD',
+        isUpdating: false 
+      });
+      fetchRegisteredProducts();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: 'Failed to update price',
+        variant: 'destructive',
+      });
+    } finally {
+      setPriceUpdateDialog(prev => ({ ...prev, isUpdating: false }));
+    }
+  };
+
+  const handleUnregister = async (registrationId: string) => {
     try {
       const { error } = await supabase
         .from('vendor_products')
@@ -190,11 +256,6 @@ const VendorProducts = () => {
     return registeredProducts.some(reg => reg.product_id === productId);
   };
 
-  const getRegistrationId = (productId: string) => {
-    const registration = registeredProducts.find(reg => reg.product_id === productId);
-    return registration?.id;
-  };
-
   const filteredProducts = allProducts.filter(product =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     product.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -207,11 +268,10 @@ const VendorProducts = () => {
 
   const myRegisteredProducts = registeredProducts
     .filter(reg => reg.products)
-    .map(reg => reg.products!)
-    .filter(product =>
-      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.categories?.name.toLowerCase().includes(searchTerm.toLowerCase())
+    .filter(reg =>
+      reg.products!.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      reg.products!.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      reg.products!.categories?.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
   return (
@@ -220,7 +280,7 @@ const VendorProducts = () => {
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Product Registration</h1>
-            <p className="text-gray-600">Register for products to receive relevant RFPs</p>
+            <p className="text-gray-600">Register for products and set your competitive pricing</p>
           </div>
         </div>
 
@@ -283,24 +343,23 @@ const VendorProducts = () => {
                             <p className="text-gray-600 mb-3">{product.description}</p>
                           )}
                           
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
                             <div>
                               <span className="font-medium">Classification:</span> {product.classification}
                             </div>
                             <div>
                               <span className="font-medium">Unit:</span> {product.units?.name}
                             </div>
-                            {product.current_price && (
-                              <div>
-                                <span className="font-medium">Price:</span> {product.currency} {Number(product.current_price).toLocaleString()}
-                              </div>
-                            )}
                           </div>
                         </div>
                         
                         <div className="flex items-center gap-2 ml-4">
                           <Button
-                            onClick={() => registerForProduct(product.id)}
+                            onClick={() => setRegistrationDialog({ 
+                              isOpen: true, 
+                              product, 
+                              isRegistering: false 
+                            })}
                             size="sm"
                             className="bg-green-600 hover:bg-green-700"
                           >
@@ -339,10 +398,10 @@ const VendorProducts = () => {
               </Card>
             ) : (
               <div className="grid gap-4">
-                {myRegisteredProducts.map((product) => {
-                  const registrationId = getRegistrationId(product.id);
+                {myRegisteredProducts.map((registration) => {
+                  const product = registration.products!;
                   return (
-                    <Card key={product.id} className="hover:shadow-md transition-shadow border-l-4 border-l-green-500">
+                    <Card key={registration.id} className="hover:shadow-md transition-shadow border-l-4 border-l-green-500">
                       <CardContent className="p-6">
                         <div className="flex justify-between items-start">
                           <div className="flex-1">
@@ -368,17 +427,37 @@ const VendorProducts = () => {
                               <div>
                                 <span className="font-medium">Unit:</span> {product.units?.name}
                               </div>
-                              {product.current_price && (
-                                <div>
-                                  <span className="font-medium">Price:</span> {product.currency} {Number(product.current_price).toLocaleString()}
-                                </div>
-                              )}
+                              <div>
+                                <span className="font-medium">Your Price:</span> 
+                                {registration.vendor_price ? (
+                                  <span className="ml-1 font-semibold text-green-600">
+                                    {registration.vendor_currency} {Number(registration.vendor_price).toLocaleString()}
+                                  </span>
+                                ) : (
+                                  <span className="ml-1 text-orange-600">Not Set</span>
+                                )}
+                              </div>
                             </div>
                           </div>
                           
                           <div className="flex items-center gap-2 ml-4">
                             <Button
-                              onClick={() => registrationId && unregisterFromProduct(registrationId)}
+                              onClick={() => setPriceUpdateDialog({
+                                isOpen: true,
+                                registrationId: registration.id,
+                                productName: product.name,
+                                currentPrice: registration.vendor_price,
+                                currentCurrency: registration.vendor_currency,
+                                isUpdating: false
+                              })}
+                              variant="outline"
+                              size="sm"
+                            >
+                              <DollarSign className="w-4 h-4 mr-1" />
+                              {registration.vendor_price ? 'Update Price' : 'Set Price'}
+                            </Button>
+                            <Button
+                              onClick={() => handleUnregister(registration.id)}
                               variant="destructive"
                               size="sm"
                             >
@@ -395,6 +474,33 @@ const VendorProducts = () => {
             )}
           </TabsContent>
         </Tabs>
+
+        {/* Registration Dialog */}
+        <ProductRegistrationDialog
+          isOpen={registrationDialog.isOpen}
+          onClose={() => setRegistrationDialog({ isOpen: false, product: null, isRegistering: false })}
+          product={registrationDialog.product}
+          onRegister={handleRegisterProduct}
+          isRegistering={registrationDialog.isRegistering}
+        />
+
+        {/* Price Update Dialog */}
+        <VendorPriceUpdateDialog
+          isOpen={priceUpdateDialog.isOpen}
+          onClose={() => setPriceUpdateDialog({ 
+            isOpen: false, 
+            registrationId: '', 
+            productName: '', 
+            currentPrice: null, 
+            currentCurrency: 'USD',
+            isUpdating: false 
+          })}
+          productName={priceUpdateDialog.productName}
+          currentPrice={priceUpdateDialog.currentPrice}
+          currentCurrency={priceUpdateDialog.currentCurrency}
+          onUpdate={handleUpdatePrice}
+          isUpdating={priceUpdateDialog.isUpdating}
+        />
       </div>
     </VendorLayout>
   );

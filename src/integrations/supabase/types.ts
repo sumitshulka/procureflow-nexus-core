@@ -1840,23 +1840,32 @@ export type Database = {
         Row: {
           id: string
           is_active: boolean
+          price_updated_at: string | null
           product_id: string
           registered_at: string
+          vendor_currency: string | null
           vendor_id: string
+          vendor_price: number | null
         }
         Insert: {
           id?: string
           is_active?: boolean
+          price_updated_at?: string | null
           product_id: string
           registered_at?: string
+          vendor_currency?: string | null
           vendor_id: string
+          vendor_price?: number | null
         }
         Update: {
           id?: string
           is_active?: boolean
+          price_updated_at?: string | null
           product_id?: string
           registered_at?: string
+          vendor_currency?: string | null
           vendor_id?: string
+          vendor_price?: number | null
         }
         Relationships: [
           {
