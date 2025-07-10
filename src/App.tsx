@@ -177,6 +177,22 @@ function App() {
             }
           />
           <Route
+            path="/products/:id/edit"
+            element={
+              <ProtectedRoute requiredRole={UserRole.ADMIN}>
+                <Layout><EditProduct /></Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/add-product"
+            element={
+              <ProtectedRoute requiredRole={UserRole.ADMIN}>
+                <Layout><AddProduct /></Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/products/:id/price-history"
             element={
               <ProtectedRoute requiredRole={UserRole.ADMIN}>
