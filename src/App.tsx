@@ -152,6 +152,14 @@ function App() {
             }
           />
           <Route
+            path="/product/:id"
+            element={
+              <ProtectedRoute requiredRole={UserRole.ADMIN}>
+                <Layout><ProductDetail /></Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/products/add"
             element={
               <ProtectedRoute requiredRole={UserRole.ADMIN}>
