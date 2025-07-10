@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -8,12 +9,14 @@ import { supabase } from '@/integrations/supabase/client';
 interface ProtectedRouteProps {
   children: React.ReactNode;
   requiredRole?: UserRole;
+  allowedRoles?: UserRole[];
   requireVendor?: boolean;
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
   children, 
   requiredRole,
+  allowedRoles,
   requireVendor = false
 }) => {
   const { user, userData, isLoading } = useAuth();
@@ -80,23 +83,31 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   // Check role if required (for non-vendor routes)
-  if (requiredRole && !requireVendor && (!userData?.roles || !userData.roles.includes(requiredRole))) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center max-w-md mx-auto px-4">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h2>
-          <p className="text-gray-600 mb-6">
-            You don't have the required permissions to access this page.
-          </p>
-          <button
-            onClick={() => navigate('/login')}
-            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
-          >
-            Back to Login
-          </button>
+  if ((requiredRole || allowedRoles) && !requireVendor && userData?.roles) {
+    const hasRequiredRole = requiredRole 
+      ? userData.roles.includes(requiredRole)
+      : allowedRoles 
+        ? allowedRoles.some(role => userData.roles.includes(role))
+        : true;
+
+    if (!hasRequiredRole) {
+      return (
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="text-center max-w-md mx-auto px-4">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h2>
+            <p className="text-gray-600 mb-6">
+              You don't have the required permissions to access this page.
+            </p>
+            <button
+              onClick={() => navigate('/login')}
+              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+            >
+              Back to Login
+            </button>
+          </div>
         </div>
-      </div>
-    );
+      );
+    }
   }
 
   return <>{children}</>;
