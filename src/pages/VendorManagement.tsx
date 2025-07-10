@@ -388,7 +388,7 @@ const VendorManagement = () => {
           ) : (
             <div className="grid gap-4">
               {filteredVendors.map((vendor) => (
-                <Card key={vendor.id} className="hover:shadow-lg transition-all duration-200 border-0 shadow-sm">
+                <Card key={vendor.id} className="hover:shadow-lg transition-all duration-200 border-2 border-border/60 shadow-sm">
                   <CardContent className="p-0">
                     <div className="flex flex-col lg:flex-row">
                       {/* Main vendor information */}
@@ -442,9 +442,9 @@ const VendorManagement = () => {
                           
                           <div className="flex items-center gap-2 text-sm">
                             <Calendar className="w-4 h-4 text-muted-foreground" />
-                            <span className="font-medium">Turnover:</span>
+                            <span className="font-medium">Reg. Date:</span>
                             <span className="text-muted-foreground">
-                              {vendor.annual_turnover ? `${vendor.currency || 'USD'} ${Number(vendor.annual_turnover).toLocaleString()}` : '-'}
+                              {vendor.created_at ? new Date(vendor.created_at).toLocaleDateString() : '-'}
                             </span>
                           </div>
                         </div>
@@ -459,16 +459,6 @@ const VendorManagement = () => {
                             </span>
                           </div>
                         </div>
-                        
-                        {/* Business Description */}
-                        {vendor.business_description && (
-                          <div className="mb-4">
-                            <div className="text-sm">
-                              <span className="font-medium">Business:</span>
-                              <p className="text-muted-foreground mt-1 leading-relaxed">{vendor.business_description}</p>
-                            </div>
-                          </div>
-                        )}
 
                         {/* Approval Comments */}
                         {vendor.approval_comments && (
