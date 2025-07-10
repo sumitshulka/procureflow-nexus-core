@@ -12,6 +12,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Search, Eye, CheckCircle, XCircle, Clock, MessageSquare, FileText } from 'lucide-react';
 import VendorDetailDialog from '@/components/vendor/VendorDetailDialog';
 import VendorCommunicationDialog from '@/components/vendor/VendorCommunicationDialog';
+import VendorApprovalDialog from '@/components/vendor/VendorApprovalDialog';
 
 const VendorManagement = () => {
   const { toast } = useToast();
@@ -24,6 +25,8 @@ const VendorManagement = () => {
   const [selectedVendor, setSelectedVendor] = useState<VendorRegistration | null>(null);
   const [showDetailDialog, setShowDetailDialog] = useState(false);
   const [showCommunicationDialog, setShowCommunicationDialog] = useState(false);
+  const [showApprovalDialog, setShowApprovalDialog] = useState(false);
+  const [approvalAction, setApprovalAction] = useState<'approve' | 'reject' | null>(null);
 
   const fetchVendors = async () => {
     try {
@@ -110,6 +113,20 @@ const VendorManagement = () => {
         variant: 'destructive',
       });
     }
+  };
+
+  const handleApprovalAction = (vendor: VendorRegistration, action: 'approve' | 'reject') => {
+    setSelectedVendor(vendor);
+    setApprovalAction(action);
+    setShowApprovalDialog(true);
+  };
+
+  const handleApprove = (vendorId: string, comments?: string) => {
+    updateVendorStatus(vendorId, 'approved', comments);
+  };
+
+  const handleReject = (vendorId: string, reason: string) => {
+    updateVendorStatus(vendorId, 'rejected', reason);
   };
 
   const getStatusBadge = (status: string) => {
@@ -256,6 +273,15 @@ const VendorManagement = () => {
                             <span className="font-medium">Business:</span> {vendor.business_description}
                           </div>
                         )}
+
+                        {vendor.approval_comments && (
+                          <div className="mt-2 p-3 bg-gray-50 rounded-md">
+                            <span className="font-medium text-sm">
+                              {vendor.status === 'rejected' ? 'Rejection Reason:' : 'Comments:'}
+                            </span>
+                            <p className="text-sm text-gray-700 mt-1">{vendor.approval_comments}</p>
+                          </div>
+                        )}
                       </div>
                       
                       <div className="flex items-center gap-2 ml-4">
@@ -293,21 +319,63 @@ const VendorManagement = () => {
                               Review
                             </Button>
                             <Button
-                              variant="default"
+                              variant="approve"
                               size="sm"
-                              onClick={() => updateVendorStatus(vendor.id!, 'approved')}
-                              className="bg-green-600 hover:bg-green-700"
+                              onClick={() => handleApprovalAction(vendor, 'approve')}
                             >
+                              <CheckCircle className="w-4 h-4 mr-1" />
                               Approve
                             </Button>
                             <Button
-                              variant="destructive"
+                              variant="reject"
                               size="sm"
-                              onClick={() => updateVendorStatus(vendor.id!, 'rejected')}
+                              onClick={() => handleApprovalAction(vendor, 'reject')}
                             >
+                              <XCircle className="w-4 h-4 mr-1" />
                               Reject
                             </Button>
                           </>
+                        )}
+
+                        {vendor.status === 'under_review' && (
+                          <>
+                            <Button
+                              variant="approve"
+                              size="sm"
+                              onClick={() => handleApprovalAction(vendor, 'approve')}
+                            >
+                              <CheckCircle className="w-4 h-4 mr-1" />
+                              Approve
+                            </Button>
+                            <Button
+                              variant="reject"
+                              size="sm"
+                              onClick={() => handleApprovalAction(vendor, 'reject')}
+                            >
+                              <XCircle className="w-4 h-4 mr-1" />
+                              Reject
+                            </Button>
+                          </>
+                        )}
+
+                        {vendor.status === 'approved' && (
+                          <Button
+                            variant="warning"
+                            size="sm"
+                            onClick={() => updateVendorStatus(vendor.id!, 'suspended')}
+                          >
+                            Suspend
+                          </Button>
+                        )}
+
+                        {vendor.status === 'rejected' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => updateVendorStatus(vendor.id!, 'pending')}
+                          >
+                            Reopen
+                          </Button>
                         )}
                       </div>
                     </div>
@@ -339,6 +407,19 @@ const VendorManagement = () => {
               setShowCommunicationDialog(false);
               setSelectedVendor(null);
             }}
+          />
+
+          <VendorApprovalDialog
+            vendor={selectedVendor}
+            isOpen={showApprovalDialog}
+            onClose={() => {
+              setShowApprovalDialog(false);
+              setSelectedVendor(null);
+              setApprovalAction(null);
+            }}
+            onApprove={handleApprove}
+            onReject={handleReject}
+            action={approvalAction}
           />
         </>
       )}

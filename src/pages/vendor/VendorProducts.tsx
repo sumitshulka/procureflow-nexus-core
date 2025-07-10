@@ -4,117 +4,138 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useToast } from '@/hooks/use-toast';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Search, Package, Plus, Check, X, Edit, DollarSign } from 'lucide-react';
-import VendorLayout from '@/components/layout/VendorLayout';
+import { Search, Package, AlertTriangle, CheckCircle, Edit } from 'lucide-react';
 import ProductRegistrationDialog from '@/components/vendor/ProductRegistrationDialog';
 import VendorPriceUpdateDialog from '@/components/vendor/VendorPriceUpdateDialog';
 
 interface Product {
   id: string;
   name: string;
-  description: string;
-  category_id: string;
+  description: string | null;
+  category_name: string;
+  unit_name: string;
   classification: string;
   is_active: boolean;
   created_at: string;
-  categories?: {
-    name: string;
-  };
-  units?: {
-    name: string;
-    abbreviation: string;
-  };
+  is_registered?: boolean;
+  vendor_price?: number | null;
+  vendor_currency?: string;
+  registered_at?: string;
 }
 
-interface VendorProductRegistration {
-  id: string;
-  vendor_id: string;
-  product_id: string;
-  registered_at: string;
-  is_active: boolean;
-  vendor_price: number | null;
-  vendor_currency: string;
-  price_updated_at: string;
-  products?: Product;
+interface VendorStatus {
+  status: string;
+  company_name: string;
 }
 
 const VendorProducts = () => {
   const { toast } = useToast();
-  const { user } = useAuth();
-  const [allProducts, setAllProducts] = useState<Product[]>([]);
-  const [registeredProducts, setRegisteredProducts] = useState<VendorProductRegistration[]>([]);
+  const { userData } = useAuth();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [vendorStatus, setVendorStatus] = useState<VendorStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState('available');
-  const [vendorId, setVendorId] = useState<string | null>(null);
-  
-  // Dialog states
-  const [registrationDialog, setRegistrationDialog] = useState({
-    isOpen: false,
-    product: null as Product | null,
-    isRegistering: false
-  });
-  
-  const [priceUpdateDialog, setPriceUpdateDialog] = useState({
-    isOpen: false,
-    registrationId: '',
-    productName: '',
-    currentPrice: null as number | null,
-    currentCurrency: 'USD',
-    isUpdating: false
-  });
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [showRegistrationDialog, setShowRegistrationDialog] = useState(false);
+  const [showPriceUpdateDialog, setShowPriceUpdateDialog] = useState(false);
 
-  useEffect(() => {
-    fetchVendorDetails();
-  }, [user?.id]);
+  const fetchVendorStatus = async () => {
+    if (!userData?.id) return;
 
-  useEffect(() => {
-    if (vendorId) {
-      fetchProducts();
-      fetchRegisteredProducts();
-    }
-  }, [vendorId]);
-
-  const fetchVendorDetails = async () => {
-    if (!user?.id) return;
-    
     try {
       const { data, error } = await supabase
         .from('vendor_registrations')
-        .select('id')
-        .eq('user_id', user.id)
+        .select('status, company_name')
+        .eq('user_id', userData.id)
         .single();
 
-      if (error) throw error;
-      setVendorId(data.id);
+      if (error && error.code !== 'PGRST116') throw error;
+      
+      setVendorStatus(data);
     } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: 'Failed to fetch vendor details',
-        variant: 'destructive',
-      });
+      console.error('Error fetching vendor status:', error);
     }
   };
 
   const fetchProducts = async () => {
     try {
       setIsLoading(true);
-      const { data, error } = await supabase
+      
+      // Fetch all active products with category and unit details
+      const { data: productsData, error: productsError } = await supabase
         .from('products')
         .select(`
-          *,
-          categories:category_id(name),
-          units:unit_id(name, abbreviation)
+          id,
+          name,
+          description,
+          classification,
+          is_active,
+          created_at,
+          categories!inner(name),
+          units!inner(name, symbol)
         `)
         .eq('is_active', true)
         .order('name');
 
-      if (error) throw error;
-      setAllProducts(data || []);
+      if (productsError) throw productsError;
+
+      if (!userData?.id || !vendorStatus) {
+        const transformedProducts = productsData.map(product => ({
+          id: product.id,
+          name: product.name,
+          description: product.description,
+          category_name: product.categories.name,
+          unit_name: `${product.units.name} (${product.units.symbol})`,
+          classification: product.classification,
+          is_active: product.is_active,
+          created_at: product.created_at,
+          is_registered: false,
+        }));
+        setProducts(transformedProducts);
+        setIsLoading(false);
+        return;
+      }
+
+      // Fetch vendor's registered products
+      const { data: vendorData, error: vendorError } = await supabase
+        .from('vendor_registrations')
+        .select('id')
+        .eq('user_id', userData.id)
+        .single();
+
+      if (vendorError) throw vendorError;
+
+      const { data: registrationsData, error: registrationsError } = await supabase
+        .from('vendor_products')
+        .select('product_id, vendor_price, vendor_currency, registered_at')
+        .eq('vendor_id', vendorData.id);
+
+      if (registrationsError) throw registrationsError;
+
+      // Combine product data with registration status
+      const transformedProducts = productsData.map(product => {
+        const registration = registrationsData.find(reg => reg.product_id === product.id);
+        return {
+          id: product.id,
+          name: product.name,
+          description: product.description,
+          category_name: product.categories.name,
+          unit_name: `${product.units.name} (${product.units.symbol})`,
+          classification: product.classification,
+          is_active: product.is_active,
+          created_at: product.created_at,
+          is_registered: !!registration,
+          vendor_price: registration?.vendor_price || null,
+          vendor_currency: registration?.vendor_currency || 'USD',
+          registered_at: registration?.registered_at,
+        };
+      });
+
+      setProducts(transformedProducts);
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -126,46 +147,34 @@ const VendorProducts = () => {
     }
   };
 
-  const fetchRegisteredProducts = async () => {
-    if (!vendorId) return;
-    
-    try {
-      const { data, error } = await supabase
-        .from('vendor_products')
-        .select(`
-          *,
-          products:product_id(
-            *,
-            categories:category_id(name),
-            units:unit_id(name, abbreviation)
-          )
-        `)
-        .eq('vendor_id', vendorId)
-        .eq('is_active', true);
+  useEffect(() => {
+    fetchVendorStatus();
+  }, [userData?.id]);
 
-      if (error) throw error;
-      setRegisteredProducts(data || []);
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: 'Failed to fetch registered products',
-        variant: 'destructive',
-      });
+  useEffect(() => {
+    if (vendorStatus !== null) {
+      fetchProducts();
     }
-  };
+  }, [vendorStatus, userData?.id]);
 
-  const handleRegisterProduct = async (productId: string, vendorPrice: number, currency: string) => {
-    if (!vendorId) return;
-    
+  const handleProductRegistration = async (productId: string, price: number, currency: string) => {
+    if (!userData?.id || !vendorStatus) return;
+
     try {
-      setRegistrationDialog(prev => ({ ...prev, isRegistering: true }));
-      
+      const { data: vendorData, error: vendorError } = await supabase
+        .from('vendor_registrations')
+        .select('id')
+        .eq('user_id', userData.id)
+        .single();
+
+      if (vendorError) throw vendorError;
+
       const { error } = await supabase
         .from('vendor_products')
         .insert({
-          vendor_id: vendorId,
+          vendor_id: vendorData.id,
           product_id: productId,
-          vendor_price: vendorPrice,
+          vendor_price: price,
           vendor_currency: currency,
         });
 
@@ -173,336 +182,240 @@ const VendorProducts = () => {
 
       toast({
         title: 'Success',
-        description: 'Successfully registered for product with your pricing',
+        description: 'Product registered successfully with your pricing',
       });
 
-      setRegistrationDialog({ isOpen: false, product: null, isRegistering: false });
-      fetchRegisteredProducts();
+      fetchProducts();
     } catch (error: any) {
       toast({
         title: 'Error',
-        description: 'Failed to register for product',
+        description: 'Failed to register product',
         variant: 'destructive',
       });
-    } finally {
-      setRegistrationDialog(prev => ({ ...prev, isRegistering: false }));
     }
   };
 
-  const handleUpdatePrice = async (newPrice: number, currency: string) => {
+  const handlePriceUpdate = async (productId: string, price: number, currency: string) => {
+    if (!userData?.id || !vendorStatus) return;
+
     try {
-      setPriceUpdateDialog(prev => ({ ...prev, isUpdating: true }));
-      
+      const { data: vendorData, error: vendorError } = await supabase
+        .from('vendor_registrations')
+        .select('id')
+        .eq('user_id', userData.id)
+        .single();
+
+      if (vendorError) throw vendorError;
+
       const { error } = await supabase
         .from('vendor_products')
         .update({
-          vendor_price: newPrice,
+          vendor_price: price,
           vendor_currency: currency,
         })
-        .eq('id', priceUpdateDialog.registrationId);
+        .eq('vendor_id', vendorData.id)
+        .eq('product_id', productId);
 
       if (error) throw error;
 
       toast({
         title: 'Success',
-        description: 'Successfully updated your price',
+        description: 'Product price updated successfully',
       });
 
-      setPriceUpdateDialog({ 
-        isOpen: false, 
-        registrationId: '', 
-        productName: '', 
-        currentPrice: null, 
-        currentCurrency: 'USD',
-        isUpdating: false 
-      });
-      fetchRegisteredProducts();
+      fetchProducts();
     } catch (error: any) {
       toast({
         title: 'Error',
-        description: 'Failed to update price',
-        variant: 'destructive',
-      });
-    } finally {
-      setPriceUpdateDialog(prev => ({ ...prev, isUpdating: false }));
-    }
-  };
-
-  const handleUnregister = async (registrationId: string) => {
-    try {
-      const { error } = await supabase
-        .from('vendor_products')
-        .delete()
-        .eq('id', registrationId);
-
-      if (error) throw error;
-
-      toast({
-        title: 'Success',
-        description: 'Successfully unregistered from product',
-      });
-
-      fetchRegisteredProducts();
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: 'Failed to unregister from product',
+        description: 'Failed to update product price',
         variant: 'destructive',
       });
     }
   };
 
-  const isProductRegistered = (productId: string) => {
-    return registeredProducts.some(reg => reg.product_id === productId);
-  };
-
-  const filteredProducts = allProducts.filter(product =>
+  const filteredProducts = products.filter(product =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.categories?.name.toLowerCase().includes(searchTerm.toLowerCase())
+    product.category_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    product.classification.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const availableProducts = filteredProducts.filter(product => 
-    !isProductRegistered(product.id)
-  );
+  const isVendorApproved = vendorStatus?.status === 'approved';
 
-  const myRegisteredProducts = registeredProducts
-    .filter(reg => reg.products)
-    .filter(reg =>
-      reg.products!.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      reg.products!.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      reg.products!.categories?.name.toLowerCase().includes(searchTerm.toLowerCase())
+  if (!vendorStatus) {
+    return (
+      <div className="p-6">
+        <Alert>
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            You need to complete vendor registration before you can view products.
+            Please visit the vendor registration page to get started.
+          </AlertDescription>
+        </Alert>
+      </div>
     );
+  }
 
   return (
-    <VendorLayout>
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Product Registration</h1>
-            <p className="text-gray-600">Register for products and set your competitive pricing</p>
-          </div>
+    <div className="p-6 space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Product Catalog</h1>
+          <p className="text-gray-600">Browse and register for products</p>
         </div>
+        <Badge 
+          variant={isVendorApproved ? "default" : "secondary"}
+          className={isVendorApproved ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}
+        >
+          {vendorStatus.status.charAt(0).toUpperCase() + vendorStatus.status.slice(1)}
+        </Badge>
+      </div>
 
-        {/* Search */}
-        <div className="flex items-center space-x-4">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <Input
-              placeholder="Search products..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-        </div>
-
-        {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="available" className="flex items-center gap-2">
-              Available Products ({availableProducts.length})
-            </TabsTrigger>
-            <TabsTrigger value="registered" className="flex items-center gap-2">
-              My Products ({myRegisteredProducts.length})
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="available" className="space-y-4">
-            {isLoading ? (
-              <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                <p className="text-gray-500 mt-2">Loading products...</p>
-              </div>
-            ) : availableProducts.length === 0 ? (
-              <Card>
-                <CardContent className="p-6">
-                  <div className="text-center py-8">
-                    <Package className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-                    <p className="text-gray-500">
-                      {searchTerm ? 'No products found matching your search.' : 'No available products to register for.'}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-4">
-                {availableProducts.map((product) => (
-                  <Card key={product.id} className="hover:shadow-md transition-shadow">
-                    <CardContent className="p-6">
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <h3 className="text-lg font-semibold">{product.name}</h3>
-                            <Badge variant="outline">
-                              {product.categories?.name || 'Uncategorized'}
-                            </Badge>
-                          </div>
-                          
-                          {product.description && (
-                            <p className="text-gray-600 mb-3">{product.description}</p>
-                          )}
-                          
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
-                            <div>
-                              <span className="font-medium">Classification:</span> {product.classification}
-                            </div>
-                            <div>
-                              <span className="font-medium">Unit:</span> {product.units?.name}
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center gap-2 ml-4">
-                          <Button
-                            onClick={() => setRegistrationDialog({ 
-                              isOpen: true, 
-                              product, 
-                              isRegistering: false 
-                            })}
-                            size="sm"
-                            className="bg-green-600 hover:bg-green-700"
-                          >
-                            <Plus className="w-4 h-4 mr-1" />
-                            Register
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+      {!isVendorApproved && (
+        <Alert>
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            Your vendor registration is currently <strong>{vendorStatus.status}</strong>. 
+            You can view products but cannot register for them until your vendor status is approved.
+            {vendorStatus.status === 'rejected' && (
+              <span className="block mt-2 font-medium">
+                Please check your messages for the rejection reason and resubmit your application.
+              </span>
             )}
-          </TabsContent>
+          </AlertDescription>
+        </Alert>
+      )}
 
-          <TabsContent value="registered" className="space-y-4">
-            {myRegisteredProducts.length === 0 ? (
-              <Card>
-                <CardContent className="p-6">
-                  <div className="text-center py-8">
-                    <Package className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-                    <p className="text-gray-500">
-                      {searchTerm ? 'No registered products found matching your search.' : 'You haven\'t registered for any products yet.'}
-                    </p>
-                    {!searchTerm && (
-                      <Button 
-                        onClick={() => setActiveTab('available')}
+      {/* Search */}
+      <div className="flex items-center space-x-4">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <Input
+            placeholder="Search products by name, category, or classification..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+      </div>
+
+      {/* Products Grid */}
+      {isLoading ? (
+        <div className="text-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="text-gray-500 mt-2">Loading products...</p>
+        </div>
+      ) : filteredProducts.length === 0 ? (
+        <Card>
+          <CardContent className="p-6">
+            <p className="text-center text-gray-500">No products found matching your search.</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredProducts.map((product) => (
+            <Card key={product.id} className="hover:shadow-md transition-shadow">
+              <CardHeader>
+                <div className="flex justify-between items-start">
+                  <div className="flex-1">
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <Package className="w-4 h-4" />
+                      {product.name}
+                    </CardTitle>
+                    <CardDescription className="mt-1">
+                      {product.category_name} • {product.unit_name}
+                    </CardDescription>
+                  </div>
+                  {product.is_registered && (
+                    <Badge className="bg-green-100 text-green-800">
+                      <CheckCircle className="w-3 h-3 mr-1" />
+                      Registered
+                    </Badge>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div>
+                    <span className="text-sm font-medium text-gray-600">Classification:</span>
+                    <p className="text-sm">{product.classification}</p>
+                  </div>
+                  
+                  {product.description && (
+                    <div>
+                      <span className="text-sm font-medium text-gray-600">Description:</span>
+                      <p className="text-sm text-gray-700">{product.description}</p>
+                    </div>
+                  )}
+
+                  {product.is_registered && product.vendor_price && (
+                    <div>
+                      <span className="text-sm font-medium text-gray-600">Your Price:</span>
+                      <p className="text-lg font-semibold text-green-600">
+                        {product.vendor_currency} {product.vendor_price.toLocaleString()}
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="flex gap-2 pt-2">
+                    {product.is_registered ? (
+                      <Button
                         variant="outline"
-                        className="mt-4"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedProduct(product);
+                          setShowPriceUpdateDialog(true);
+                        }}
+                        disabled={!isVendorApproved}
                       >
-                        Browse Available Products
+                        <Edit className="w-4 h-4 mr-1" />
+                        Update Price
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={() => {
+                          setSelectedProduct(product);
+                          setShowRegistrationDialog(true);
+                        }}
+                        disabled={!isVendorApproved}
+                        size="sm"
+                        className="w-full"
+                      >
+                        Register Product
                       </Button>
                     )}
                   </div>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-4">
-                {myRegisteredProducts.map((registration) => {
-                  const product = registration.products!;
-                  return (
-                    <Card key={registration.id} className="hover:shadow-md transition-shadow border-l-4 border-l-green-500">
-                      <CardContent className="p-6">
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-2">
-                              <h3 className="text-lg font-semibold">{product.name}</h3>
-                              <Badge className="bg-green-100 text-green-800">
-                                <Check className="w-3 h-3 mr-1" />
-                                Registered
-                              </Badge>
-                              <Badge variant="outline">
-                                {product.categories?.name || 'Uncategorized'}
-                              </Badge>
-                            </div>
-                            
-                            {product.description && (
-                              <p className="text-gray-600 mb-3">{product.description}</p>
-                            )}
-                            
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
-                              <div>
-                                <span className="font-medium">Classification:</span> {product.classification}
-                              </div>
-                              <div>
-                                <span className="font-medium">Unit:</span> {product.units?.name}
-                              </div>
-                              <div>
-                                <span className="font-medium">Your Price:</span> 
-                                {registration.vendor_price ? (
-                                  <span className="ml-1 font-semibold text-green-600">
-                                    {registration.vendor_currency} {Number(registration.vendor_price).toLocaleString()}
-                                  </span>
-                                ) : (
-                                  <span className="ml-1 text-orange-600">Not Set</span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                          
-                          <div className="flex items-center gap-2 ml-4">
-                            <Button
-                              onClick={() => setPriceUpdateDialog({
-                                isOpen: true,
-                                registrationId: registration.id,
-                                productName: product.name,
-                                currentPrice: registration.vendor_price,
-                                currentCurrency: registration.vendor_currency,
-                                isUpdating: false
-                              })}
-                              variant="outline"
-                              size="sm"
-                            >
-                              <DollarSign className="w-4 h-4 mr-1" />
-                              {registration.vendor_price ? 'Update Price' : 'Set Price'}
-                            </Button>
-                            <Button
-                              onClick={() => handleUnregister(registration.id)}
-                              variant="destructive"
-                              size="sm"
-                            >
-                              <X className="w-4 h-4 mr-1" />
-                              Unregister
-                            </Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
 
-        {/* Registration Dialog */}
-        <ProductRegistrationDialog
-          isOpen={registrationDialog.isOpen}
-          onClose={() => setRegistrationDialog({ isOpen: false, product: null, isRegistering: false })}
-          product={registrationDialog.product}
-          onRegister={handleRegisterProduct}
-          isRegistering={registrationDialog.isRegistering}
-        />
+      {/* Dialogs */}
+      {selectedProduct && (
+        <>
+          <ProductRegistrationDialog
+            product={selectedProduct}
+            isOpen={showRegistrationDialog}
+            onClose={() => {
+              setShowRegistrationDialog(false);
+              setSelectedProduct(null);
+            }}
+            onRegister={handleProductRegistration}
+          />
 
-        {/* Price Update Dialog */}
-        <VendorPriceUpdateDialog
-          isOpen={priceUpdateDialog.isOpen}
-          onClose={() => setPriceUpdateDialog({ 
-            isOpen: false, 
-            registrationId: '', 
-            productName: '', 
-            currentPrice: null, 
-            currentCurrency: 'USD',
-            isUpdating: false 
-          })}
-          productName={priceUpdateDialog.productName}
-          currentPrice={priceUpdateDialog.currentPrice}
-          currentCurrency={priceUpdateDialog.currentCurrency}
-          onUpdate={handleUpdatePrice}
-          isUpdating={priceUpdateDialog.isUpdating}
-        />
-      </div>
-    </VendorLayout>
+          <VendorPriceUpdateDialog
+            product={selectedProduct}
+            isOpen={showPriceUpdateDialog}
+            onClose={() => {
+              setShowPriceUpdateDialog(false);
+              setSelectedProduct(null);
+            }}
+            onUpdate={handlePriceUpdate}
+          />
+        </>
+      )}
+    </div>
   );
 };
 
