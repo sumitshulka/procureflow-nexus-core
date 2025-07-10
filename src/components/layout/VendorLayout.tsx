@@ -16,7 +16,7 @@ const VendorLayout = ({ children }: VendorLayoutProps) => {
           <VendorSidebar />
           <SidebarInset className="flex-1 pt-16">
             <main className="p-6 bg-gradient-to-br from-blue-50 to-indigo-100 min-h-[calc(100vh-4rem)]">
-              <div className="w-full max-w-7xl mx-auto">
+              <div className="w-full">
                 {children}
               </div>
             </main>
