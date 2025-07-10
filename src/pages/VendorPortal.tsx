@@ -103,7 +103,9 @@ const VendorPortal = () => {
       <div className="p-6">
         <Card>
           <CardContent className="p-6">
-            <p className="text-center text-gray-500">Access denied. This portal is for approved vendors only.</p>
+            <div className="py-8">
+              <p className="text-gray-500">Access denied. This portal is for approved vendors only.</p>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -113,9 +115,11 @@ const VendorPortal = () => {
   if (isLoading) {
     return (
       <div className="p-6">
-        <div className="text-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="text-gray-500 mt-2">Loading vendor portal...</p>
+        <div className="py-8">
+          <div className="flex items-center gap-3">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <span>Loading vendor portal...</span>
+          </div>
         </div>
       </div>
     );
@@ -126,7 +130,9 @@ const VendorPortal = () => {
       <div className="p-6">
         <Card>
           <CardContent className="p-6">
-            <p className="text-center text-gray-500">No vendor registration found. Please contact support.</p>
+            <div className="py-8">
+              <p className="text-gray-500">No vendor registration found. Please contact support.</p>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -318,9 +324,9 @@ const VendorPortal = () => {
               <CardDescription>Products you are approved to supply</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-center text-gray-500 py-8">
-                No product associations yet. This will be available after your vendor registration is approved.
-              </p>
+              <div className="py-8">
+                <p className="text-gray-500">No product associations yet. This will be available after your vendor registration is approved.</p>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -335,9 +341,9 @@ const VendorPortal = () => {
               <CardDescription>RFPs you can participate in</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-center text-gray-500 py-8">
-                No RFPs available. This feature will be available after approval and product association setup.
-              </p>
+              <div className="py-8">
+                <p className="text-gray-500">No RFPs available. This feature will be available after approval and product association setup.</p>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -352,9 +358,9 @@ const VendorPortal = () => {
               <CardDescription>Your active and completed purchase orders</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-center text-gray-500 py-8">
-                No purchase orders yet. This will be available after receiving orders.
-              </p>
+              <div className="py-8">
+                <p className="text-gray-500">No purchase orders yet. This will be available after receiving orders.</p>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -369,9 +375,9 @@ const VendorPortal = () => {
               <CardDescription>Create and manage invoices for your purchase orders</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-center text-gray-500 py-8">
-                No purchase orders available for invoicing yet. Invoicing will be enabled once you receive purchase orders.
-              </p>
+              <div className="py-8">
+                <p className="text-gray-500">No purchase orders available for invoicing yet. Invoicing will be enabled once you receive purchase orders.</p>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -387,7 +393,9 @@ const VendorPortal = () => {
             </CardHeader>
             <CardContent>
               {communications.length === 0 ? (
-                <p className="text-center text-gray-500 py-8">No messages yet</p>
+                <div className="py-8">
+                  <p className="text-gray-500">No messages yet</p>
+                </div>
               ) : (
                 <div className="space-y-4">
                   {communications.map((comm) => (

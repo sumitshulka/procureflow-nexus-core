@@ -286,16 +286,20 @@ const VendorMessages = () => {
 
         {/* Messages List */}
         {isLoading ? (
-          <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="text-gray-500 mt-2">Loading messages...</p>
+          <div className="py-8">
+            <div className="flex items-center gap-3">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <p className="text-gray-500">Loading messages...</p>
+            </div>
           </div>
         ) : conversations.length === 0 ? (
           <Card>
             <CardContent className="p-6">
-              <div className="text-center py-8">
-                <MessageSquare className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-                <p className="text-gray-500">No messages found.</p>
+              <div className="py-8">
+                <div className="flex items-center gap-3">
+                  <MessageSquare className="w-8 h-8 text-gray-400" />
+                  <p className="text-gray-500">No messages found.</p>
+                </div>
               </div>
             </CardContent>
           </Card>

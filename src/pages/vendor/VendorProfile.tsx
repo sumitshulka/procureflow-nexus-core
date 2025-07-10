@@ -66,7 +66,7 @@ const VendorProfile = () => {
   if (isLoading) {
     return (
       <VendorLayout>
-        <div className="flex justify-center py-8">
+        <div className="py-8">
           <div className="text-lg">Loading profile...</div>
         </div>
       </VendorLayout>

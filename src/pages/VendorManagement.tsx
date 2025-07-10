@@ -166,7 +166,9 @@ const VendorManagement = () => {
       <div className="p-6">
         <Card>
           <CardContent className="p-6">
-            <p className="text-center text-gray-500">You don't have permission to access vendor management.</p>
+            <div className="py-8">
+              <p className="text-gray-500">You don't have permission to access vendor management.</p>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -217,14 +219,18 @@ const VendorManagement = () => {
 
         <TabsContent value={activeTab} className="space-y-4">
           {isLoading ? (
-            <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-              <p className="text-gray-500 mt-2">Loading vendors...</p>
+            <div className="py-8">
+              <div className="flex items-center gap-3">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <span>Loading vendors...</span>
+              </div>
             </div>
           ) : filteredVendors.length === 0 ? (
             <Card>
               <CardContent className="p-6">
-                <p className="text-center text-gray-500">No vendors found for the selected criteria.</p>
+                <div className="py-8">
+                  <p className="text-gray-500">No vendors found for the selected criteria.</p>
+                </div>
               </CardContent>
             </Card>
           ) : (

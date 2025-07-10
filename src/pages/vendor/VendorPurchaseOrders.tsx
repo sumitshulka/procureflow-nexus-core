@@ -202,17 +202,26 @@ const VendorPurchaseOrders = () => {
 
         {/* Purchase Orders List */}
         {isLoading ? (
-          <div className="text-center py-8">Loading purchase orders...</div>
+          <div className="py-8">
+            <div className="flex items-center gap-3">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+              <span>Loading purchase orders...</span>
+            </div>
+          </div>
         ) : filteredPOs.length === 0 ? (
           <Card>
-            <CardContent className="text-center py-12">
-              <ShoppingCart className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-              <h3 className="text-lg font-medium mb-2">No Purchase Orders Found</h3>
-              <p className="text-muted-foreground">
-                {searchTerm || statusFilter !== 'all' 
-                  ? 'No purchase orders match your current filters.' 
-                  : 'You have no purchase orders yet.'}
-              </p>
+            <CardContent className="py-12">
+              <div className="flex items-center gap-4">
+                <ShoppingCart className="w-12 h-12 text-muted-foreground" />
+                <div>
+                  <h3 className="text-lg font-medium mb-2">No Purchase Orders Found</h3>
+                  <p className="text-muted-foreground">
+                    {searchTerm || statusFilter !== 'all' 
+                      ? 'No purchase orders match your current filters.' 
+                      : 'You have no purchase orders yet.'}
+                  </p>
+                </div>
+              </div>
             </CardContent>
           </Card>
         ) : (

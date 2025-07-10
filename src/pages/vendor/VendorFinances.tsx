@@ -308,11 +308,18 @@ const VendorFinances = () => {
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <div className="text-center py-8">Loading transactions...</div>
+              <div className="py-8">
+                <div className="flex items-center gap-3">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                  <span>Loading transactions...</span>
+                </div>
+              </div>
             ) : financialData?.recentTransactions?.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <FileText className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                <p>No transactions found</p>
+              <div className="py-8">
+                <div className="flex items-center gap-3">
+                  <FileText className="w-8 h-8 text-muted-foreground" />
+                  <p className="text-muted-foreground">No transactions found</p>
+                </div>
               </div>
             ) : (
               <div className="space-y-3">

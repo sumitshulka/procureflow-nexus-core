@@ -312,14 +312,18 @@ const VendorProducts = () => {
 
       {/* Products Grid */}
       {isLoading ? (
-        <div className="text-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="text-gray-500 mt-2">Loading products...</p>
+        <div className="py-8">
+          <div className="flex items-center gap-3">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <span>Loading products...</span>
+          </div>
         </div>
       ) : filteredProducts.length === 0 ? (
         <Card>
           <CardContent className="p-6">
-            <p className="text-center text-gray-500">No products found matching your search.</p>
+            <div className="flex items-center gap-3">
+              <p className="text-gray-500">No products found matching your search.</p>
+            </div>
           </CardContent>
         </Card>
       ) : (

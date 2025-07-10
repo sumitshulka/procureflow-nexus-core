@@ -113,8 +113,9 @@ const VendorAnalytics = () => {
   if (isLoading) {
     return (
       <VendorLayout>
-        <div className="flex justify-center items-center h-64">
+        <div className="flex items-center h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <span className="ml-3">Loading analytics...</span>
         </div>
       </VendorLayout>
     );
@@ -123,9 +124,11 @@ const VendorAnalytics = () => {
   if (!analyticsData) {
     return (
       <VendorLayout>
-        <div className="text-center py-8">
-          <AlertCircle className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-          <p className="text-muted-foreground">No analytics data available</p>
+        <div className="py-8">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="w-8 h-8 text-muted-foreground" />
+            <p className="text-muted-foreground">No analytics data available</p>
+          </div>
         </div>
       </VendorLayout>
     );
@@ -310,9 +313,11 @@ const VendorAnalytics = () => {
                 </div>
               ))}
               {analyticsData.rfpResponses.length === 0 && (
-                <div className="text-center py-4 text-muted-foreground">
-                  <FileText className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                  <p>No recent RFP responses</p>
+                <div className="py-4">
+                  <div className="flex items-center gap-3 text-muted-foreground">
+                    <FileText className="w-8 h-8 opacity-50" />
+                    <p>No recent RFP responses</p>
+                  </div>
                 </div>
               )}
             </CardContent>

@@ -299,9 +299,11 @@ const VendorDashboard = () => {
                     </div>
                   ))
                 ) : (
-                  <div className="text-center py-6 text-muted-foreground">
-                    <FileText className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                    <p>No recent RFPs available</p>
+                  <div className="py-6">
+                    <div className="flex items-center gap-3 text-muted-foreground">
+                      <FileText className="w-8 h-8 opacity-50" />
+                      <p>No recent RFPs available</p>
+                    </div>
                   </div>
                 )}
               </div>
