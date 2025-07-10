@@ -2,7 +2,6 @@ import React from "react";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import VendorHeader from "@/components/layout/VendorHeader";
 import VendorSidebar from "@/components/layout/VendorSidebar";
-import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface VendorLayoutProps {
   children: React.ReactNode;
@@ -10,21 +9,21 @@ interface VendorLayoutProps {
 
 const VendorLayout = ({ children }: VendorLayoutProps) => {
   return (
-    <SidebarProvider defaultOpen={true}>
-      <div className="min-h-screen flex flex-col w-full">
-        <VendorHeader />
-        <div className="flex flex-1">
+    <div className="min-h-screen w-full">
+      <VendorHeader />
+      <SidebarProvider defaultOpen={true}>
+        <div className="flex min-h-[calc(100vh-4rem)] w-full">
           <VendorSidebar />
-          <SidebarInset className="flex-1 bg-gradient-to-br from-blue-50 to-indigo-100">
-            <ScrollArea className="h-[calc(100vh-4rem)]">
-              <div className="p-6 pt-20">
+          <SidebarInset className="flex-1">
+            <main className="flex-1 p-6 bg-gradient-to-br from-blue-50 to-indigo-100 min-h-[calc(100vh-4rem)]">
+              <div className="text-left">
                 {children}
               </div>
-            </ScrollArea>
+            </main>
           </SidebarInset>
         </div>
-      </div>
-    </SidebarProvider>
+      </SidebarProvider>
+    </div>
   );
 };
 

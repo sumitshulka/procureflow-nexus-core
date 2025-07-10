@@ -102,9 +102,9 @@ const VendorSidebar = () => {
   ];
 
   return (
-    <Sidebar collapsible="icon" className="border-r mt-16 bg-sidebar-background">
+    <Sidebar collapsible="icon" className="border-r bg-sidebar-background">
       <SidebarContent className="bg-sidebar-background">
-        <ScrollArea className="flex-1 px-2">
+        <div className="flex-1 px-2">
           <SidebarGroup className="pt-4">
             <SidebarGroupContent>
               <SidebarMenu>
@@ -155,7 +155,7 @@ const VendorSidebar = () => {
               </SidebarGroupContent>
             </SidebarGroup>
           )}
-        </ScrollArea>
+        </div>
       </SidebarContent>
     </Sidebar>
   );
