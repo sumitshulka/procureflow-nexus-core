@@ -9,7 +9,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { VendorRegistration, parseAddress } from '@/types/vendor';
 import { UserRole } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
-import { Search, Eye, CheckCircle, XCircle, Clock, MessageSquare, FileText, BarChart3, Package, FileImage, ShoppingCart } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Search, Eye, CheckCircle, XCircle, Clock, MessageSquare, FileText, BarChart3, Package, FileImage, ShoppingCart, Phone, Building, Globe, Calendar } from 'lucide-react';
 import VendorDetailDialog from '@/components/vendor/VendorDetailDialog';
 import VendorCommunicationDialog from '@/components/vendor/VendorCommunicationDialog';
 import VendorApprovalDialog from '@/components/vendor/VendorApprovalDialog';
@@ -17,6 +18,7 @@ import VendorApprovalDialog from '@/components/vendor/VendorApprovalDialog';
 const VendorManagement = () => {
   const { toast } = useToast();
   const { hasRole } = useAuth();
+  const navigate = useNavigate();
   const [vendors, setVendors] = useState<VendorRegistration[]>([]);
   const [filteredVendors, setFilteredVendors] = useState<VendorRegistration[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -236,171 +238,216 @@ const VendorManagement = () => {
           ) : (
             <div className="grid gap-4">
               {filteredVendors.map((vendor) => (
-                <Card key={vendor.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-6">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h3 className="text-lg font-semibold">{vendor.company_name}</h3>
-                          {getStatusBadge(vendor.status || 'pending')}
-                        </div>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm text-gray-600">
-                          <div>
-                            <span className="font-medium">Vendor Number:</span> {vendor.vendor_number || 'Not Assigned'}
-                          </div>
-                          <div>
-                            <span className="font-medium">Email:</span> {vendor.primary_email}
-                          </div>
-                          <div>
-                            <span className="font-medium">PAN:</span> {vendor.pan_number}
-                          </div>
-                          <div>
-                            <span className="font-medium">GST:</span> {vendor.gst_number}
+                <Card key={vendor.id} className="hover:shadow-lg transition-all duration-200 border-0 shadow-sm">
+                  <CardContent className="p-0">
+                    <div className="flex flex-col lg:flex-row">
+                      {/* Main vendor information */}
+                      <div className="flex-1 p-6">
+                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
+                          <div className="flex-1">
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-3">
+                              <h3 className="text-xl font-bold text-foreground">{vendor.company_name}</h3>
+                              {getStatusBadge(vendor.status || 'pending')}
+                            </div>
+                            
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                              <Building className="w-4 h-4" />
+                              <span className="font-medium">Vendor #:</span>
+                              <span className="font-mono">{vendor.vendor_number || 'Not Assigned'}</span>
+                            </div>
                           </div>
                         </div>
                         
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600 mt-2">
-                          <div>
-                            <span className="font-medium">Country:</span> {vendor.country || '-'}
+                        {/* Key Information Grid */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                          <div className="flex items-center gap-2 text-sm">
+                            <MessageSquare className="w-4 h-4 text-muted-foreground" />
+                            <span className="font-medium">Email:</span>
+                            <span className="text-muted-foreground truncate">{vendor.primary_email}</span>
                           </div>
-                          <div>
-                            <span className="font-medium">Currency:</span> {vendor.currency || '-'}
+                          
+                          <div className="flex items-center gap-2 text-sm">
+                            <Phone className="w-4 h-4 text-muted-foreground" />
+                            <span className="font-medium">Phone:</span>
+                            <span className="text-muted-foreground">{vendor.primary_phone || '-'}</span>
                           </div>
-                          <div>
-                            <span className="font-medium">Annual Turnover:</span> {vendor.annual_turnover ? `${vendor.currency || 'USD'} ${Number(vendor.annual_turnover).toLocaleString()}` : '-'}
+                          
+                          <div className="flex items-center gap-2 text-sm">
+                            <Globe className="w-4 h-4 text-muted-foreground" />
+                            <span className="font-medium">Country:</span>
+                            <span className="text-muted-foreground">{vendor.country || '-'}</span>
+                          </div>
+                          
+                          <div className="flex items-center gap-2 text-sm">
+                            <FileText className="w-4 h-4 text-muted-foreground" />
+                            <span className="font-medium">PAN:</span>
+                            <span className="text-muted-foreground font-mono">{vendor.pan_number || '-'}</span>
+                          </div>
+                          
+                          <div className="flex items-center gap-2 text-sm">
+                            <FileText className="w-4 h-4 text-muted-foreground" />
+                            <span className="font-medium">GST:</span>
+                            <span className="text-muted-foreground font-mono">{vendor.gst_number || '-'}</span>
+                          </div>
+                          
+                          <div className="flex items-center gap-2 text-sm">
+                            <Calendar className="w-4 h-4 text-muted-foreground" />
+                            <span className="font-medium">Turnover:</span>
+                            <span className="text-muted-foreground">
+                              {vendor.annual_turnover ? `${vendor.currency || 'USD'} ${Number(vendor.annual_turnover).toLocaleString()}` : '-'}
+                            </span>
                           </div>
                         </div>
                         
-                        
-                        <div className="mt-2 text-sm text-gray-600">
-                          <span className="font-medium">Signatory:</span> {vendor.signatory_name}
-                          {vendor.signatory_designation && ` (${vendor.signatory_designation})`}
+                        {/* Signatory Information */}
+                        <div className="border-t pt-3 mb-4">
+                          <div className="text-sm">
+                            <span className="font-medium">Signatory:</span>
+                            <span className="text-muted-foreground ml-2">
+                              {vendor.signatory_name}
+                              {vendor.signatory_designation && ` (${vendor.signatory_designation})`}
+                            </span>
+                          </div>
                         </div>
                         
+                        {/* Business Description */}
                         {vendor.business_description && (
-                          <div className="mt-2 text-sm text-gray-600">
-                            <span className="font-medium">Business:</span> {vendor.business_description}
+                          <div className="mb-4">
+                            <div className="text-sm">
+                              <span className="font-medium">Business:</span>
+                              <p className="text-muted-foreground mt-1 leading-relaxed">{vendor.business_description}</p>
+                            </div>
                           </div>
                         )}
 
+                        {/* Approval Comments */}
                         {vendor.approval_comments && (
-                          <div className="mt-2 p-3 bg-gray-50 rounded-md">
+                          <div className="p-3 bg-muted/50 rounded-lg border-l-4 border-l-primary">
                             <span className="font-medium text-sm">
                               {vendor.status === 'rejected' ? 'Rejection Reason:' : 'Comments:'}
                             </span>
-                            <p className="text-sm text-gray-700 mt-1">{vendor.approval_comments}</p>
+                            <p className="text-sm text-muted-foreground mt-1 leading-relaxed">{vendor.approval_comments}</p>
                           </div>
                         )}
                       </div>
                       
-                      <div className="flex items-center gap-2 ml-4">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedVendor(vendor);
-                            setShowDetailDialog(true);
-                          }}
-                        >
-                          <Eye className="w-4 h-4 mr-1" />
-                          View Profile
-                        </Button>
-                        
-                        {vendor.status === 'approved' && (
+                      {/* Action Buttons */}
+                      <div className="border-t lg:border-t-0 lg:border-l bg-muted/20 p-6 lg:min-w-[280px]">
+                        <div className="flex flex-col gap-3">
                           <Button
                             variant="outline"
-                            size="sm"
+                            className="w-full justify-start"
                             onClick={() => {
-                              // Navigate to vendor dashboard
-                              window.location.href = `/vendor-dashboard/${vendor.id}`;
+                              setSelectedVendor(vendor);
+                              setShowDetailDialog(true);
                             }}
                           >
-                            <BarChart3 className="w-4 h-4 mr-1" />
-                            Dashboard
+                            <Eye className="w-4 h-4 mr-2" />
+                            View Profile
                           </Button>
-                        )}
-                        
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedVendor(vendor);
-                            setShowCommunicationDialog(true);
-                          }}
-                        >
-                          <MessageSquare className="w-4 h-4 mr-1" />
-                          Message
-                        </Button>
-                        
-                        {vendor.status === 'pending' && (
-                          <>
+                          
+                          {vendor.status === 'approved' && (
                             <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => updateVendorStatus(vendor.id!, 'under_review')}
+                              variant="default"
+                              className="w-full justify-start"
+                              onClick={() => navigate(`/vendor-dashboard/${vendor.id}`)}
                             >
-                              Review
+                              <BarChart3 className="w-4 h-4 mr-2" />
+                              Vendor Dashboard
                             </Button>
-                            <Button
-                              variant="approve"
-                              size="sm"
-                              onClick={() => handleApprovalAction(vendor, 'approve')}
-                            >
-                              <CheckCircle className="w-4 h-4 mr-1" />
-                              Approve
-                            </Button>
-                            <Button
-                              variant="reject"
-                              size="sm"
-                              onClick={() => handleApprovalAction(vendor, 'reject')}
-                            >
-                              <XCircle className="w-4 h-4 mr-1" />
-                              Reject
-                            </Button>
-                          </>
-                        )}
-
-                        {vendor.status === 'under_review' && (
-                          <>
-                            <Button
-                              variant="approve"
-                              size="sm"
-                              onClick={() => handleApprovalAction(vendor, 'approve')}
-                            >
-                              <CheckCircle className="w-4 h-4 mr-1" />
-                              Approve
-                            </Button>
-                            <Button
-                              variant="reject"
-                              size="sm"
-                              onClick={() => handleApprovalAction(vendor, 'reject')}
-                            >
-                              <XCircle className="w-4 h-4 mr-1" />
-                              Reject
-                            </Button>
-                          </>
-                        )}
-
-                        {vendor.status === 'approved' && (
-                          <Button
-                            variant="warning"
-                            size="sm"
-                            onClick={() => updateVendorStatus(vendor.id!, 'suspended')}
-                          >
-                            Suspend
-                          </Button>
-                        )}
-
-                        {vendor.status === 'rejected' && (
+                          )}
+                          
                           <Button
                             variant="outline"
-                            size="sm"
-                            onClick={() => updateVendorStatus(vendor.id!, 'pending')}
+                            className="w-full justify-start"
+                            onClick={() => {
+                              setSelectedVendor(vendor);
+                              setShowCommunicationDialog(true);
+                            }}
                           >
-                            Reopen
+                            <MessageSquare className="w-4 h-4 mr-2" />
+                            Send Message
                           </Button>
-                        )}
+                          
+                          {/* Status-specific actions */}
+                          <div className="border-t pt-3 space-y-2">
+                            {vendor.status === 'pending' && (
+                              <>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="w-full"
+                                  onClick={() => updateVendorStatus(vendor.id!, 'under_review')}
+                                >
+                                  Start Review
+                                </Button>
+                                <div className="grid grid-cols-2 gap-2">
+                                  <Button
+                                    variant="default"
+                                    size="sm"
+                                    onClick={() => handleApprovalAction(vendor, 'approve')}
+                                    className="bg-green-600 hover:bg-green-700"
+                                  >
+                                    <CheckCircle className="w-4 h-4 mr-1" />
+                                    Approve
+                                  </Button>
+                                  <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() => handleApprovalAction(vendor, 'reject')}
+                                  >
+                                    <XCircle className="w-4 h-4 mr-1" />
+                                    Reject
+                                  </Button>
+                                </div>
+                              </>
+                            )}
+
+                            {vendor.status === 'under_review' && (
+                              <div className="grid grid-cols-2 gap-2">
+                                <Button
+                                  variant="default"
+                                  size="sm"
+                                  onClick={() => handleApprovalAction(vendor, 'approve')}
+                                  className="bg-green-600 hover:bg-green-700"
+                                >
+                                  <CheckCircle className="w-4 h-4 mr-1" />
+                                  Approve
+                                </Button>
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  onClick={() => handleApprovalAction(vendor, 'reject')}
+                                >
+                                  <XCircle className="w-4 h-4 mr-1" />
+                                  Reject
+                                </Button>
+                              </div>
+                            )}
+
+                            {vendor.status === 'approved' && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="w-full text-orange-600 border-orange-200 hover:bg-orange-50"
+                                onClick={() => updateVendorStatus(vendor.id!, 'suspended')}
+                              >
+                                Suspend Vendor
+                              </Button>
+                            )}
+
+                            {vendor.status === 'rejected' && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="w-full"
+                                onClick={() => updateVendorStatus(vendor.id!, 'pending')}
+                              >
+                                Reopen Application
+                              </Button>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </CardContent>
