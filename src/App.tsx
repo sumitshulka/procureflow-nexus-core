@@ -1,5 +1,5 @@
 
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { Toaster } from '@/components/ui/toaster';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
@@ -17,64 +17,62 @@ import VendorRegistration from '@/pages/VendorRegistration';
 
 function App() {
   return (
-    <Router>
-      <AuthProvider>
-        <div className="min-h-screen bg-background">
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/vendor-registration" element={<VendorRegistration />} />
-            
-            {/* Protected Admin Routes */}
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute requiredRole={UserRole.ADMIN}>
-                  <Dashboard />
-                </ProtectedRoute>
-              }
-            />
-            
-            <Route
-              path="/vendors"
-              element={
-                <ProtectedRoute requiredRole={UserRole.ADMIN}>
-                  <VendorManagement />
-                </ProtectedRoute>
-              }
-            />
+    <AuthProvider>
+      <div className="min-h-screen bg-background">
+        <Routes>
+          <Route path="/" element={<Index />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/vendor-registration" element={<VendorRegistration />} />
+          
+          {/* Protected Admin Routes */}
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute requiredRole={UserRole.ADMIN}>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          
+          <Route
+            path="/vendors"
+            element={
+              <ProtectedRoute requiredRole={UserRole.ADMIN}>
+                <VendorManagement />
+              </ProtectedRoute>
+            }
+          />
 
-            <Route
-              path="/product-vendors"
-              element={
-                <ProtectedRoute requiredRole={UserRole.ADMIN}>
-                  <ProductVendorRelationships />
-                </ProtectedRoute>
-              }
-            />
-            
-            <Route
-              path="/edit-product/:id"
-              element={
-                <ProtectedRoute requiredRole={UserRole.ADMIN}>
-                  <EditProduct />
-                </ProtectedRoute>
-              }
-            />
+          <Route
+            path="/product-vendors"
+            element={
+              <ProtectedRoute requiredRole={UserRole.ADMIN}>
+                <ProductVendorRelationships />
+              </ProtectedRoute>
+            }
+          />
+          
+          <Route
+            path="/edit-product/:id"
+            element={
+              <ProtectedRoute requiredRole={UserRole.ADMIN}>
+                <EditProduct />
+              </ProtectedRoute>
+            }
+          />
 
-            <Route
-              path="/create-rfp"
-              element={
-                <ProtectedRoute requiredRole={UserRole.ADMIN}>
-                  <CreateRfp />
-                </ProtectedRoute>
-              }
-            />
-          </Routes>
-          <Toaster />
-        </div>
-      </AuthProvider>
-    </Router>
+          <Route
+            path="/create-rfp"
+            element={
+              <ProtectedRoute requiredRole={UserRole.ADMIN}>
+                <CreateRfp />
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+        <Toaster />
+      </div>
+    </AuthProvider>
   );
 }
 
