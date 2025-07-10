@@ -42,6 +42,8 @@ const VendorProducts = () => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [showRegistrationDialog, setShowRegistrationDialog] = useState(false);
   const [showPriceUpdateDialog, setShowPriceUpdateDialog] = useState(false);
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const fetchVendorStatus = async () => {
     if (!userData?.id) return;
@@ -76,7 +78,7 @@ const VendorProducts = () => {
           is_active,
           created_at,
           categories!inner(name),
-          units!inner(name, symbol)
+          units!inner(name, abbreviation)
         `)
         .eq('is_active', true)
         .order('name');
@@ -89,7 +91,7 @@ const VendorProducts = () => {
           name: product.name,
           description: product.description,
           category_name: product.categories.name,
-          unit_name: `${product.units.name} (${product.units.symbol})`,
+          unit_name: `${product.units.name} (${product.units.abbreviation || ''})`,
           classification: product.classification,
           is_active: product.is_active,
           created_at: product.created_at,
@@ -124,7 +126,7 @@ const VendorProducts = () => {
           name: product.name,
           description: product.description,
           category_name: product.categories.name,
-          unit_name: `${product.units.name} (${product.units.symbol})`,
+          unit_name: `${product.units.name} (${product.units.abbreviation || ''})`,
           classification: product.classification,
           is_active: product.is_active,
           created_at: product.created_at,
@@ -161,6 +163,7 @@ const VendorProducts = () => {
     if (!userData?.id || !vendorStatus) return;
 
     try {
+      setIsRegistering(true);
       const { data: vendorData, error: vendorError } = await supabase
         .from('vendor_registrations')
         .select('id')
@@ -186,19 +189,24 @@ const VendorProducts = () => {
       });
 
       fetchProducts();
+      setShowRegistrationDialog(false);
+      setSelectedProduct(null);
     } catch (error: any) {
       toast({
         title: 'Error',
         description: 'Failed to register product',
         variant: 'destructive',
       });
+    } finally {
+      setIsRegistering(false);
     }
   };
 
-  const handlePriceUpdate = async (productId: string, price: number, currency: string) => {
-    if (!userData?.id || !vendorStatus) return;
+  const handlePriceUpdate = async (price: number, currency: string) => {
+    if (!userData?.id || !vendorStatus || !selectedProduct) return;
 
     try {
+      setIsUpdating(true);
       const { data: vendorData, error: vendorError } = await supabase
         .from('vendor_registrations')
         .select('id')
@@ -214,7 +222,7 @@ const VendorProducts = () => {
           vendor_currency: currency,
         })
         .eq('vendor_id', vendorData.id)
-        .eq('product_id', productId);
+        .eq('product_id', selectedProduct.id);
 
       if (error) throw error;
 
@@ -224,12 +232,16 @@ const VendorProducts = () => {
       });
 
       fetchProducts();
+      setShowPriceUpdateDialog(false);
+      setSelectedProduct(null);
     } catch (error: any) {
       toast({
         title: 'Error',
         description: 'Failed to update product price',
         variant: 'destructive',
       });
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -402,16 +414,20 @@ const VendorProducts = () => {
               setSelectedProduct(null);
             }}
             onRegister={handleProductRegistration}
+            isRegistering={isRegistering}
           />
 
           <VendorPriceUpdateDialog
-            product={selectedProduct}
             isOpen={showPriceUpdateDialog}
             onClose={() => {
               setShowPriceUpdateDialog(false);
               setSelectedProduct(null);
             }}
+            productName={selectedProduct.name}
+            currentPrice={selectedProduct.vendor_price}
+            currentCurrency={selectedProduct.vendor_currency || 'USD'}
             onUpdate={handlePriceUpdate}
+            isUpdating={isUpdating}
           />
         </>
       )}
