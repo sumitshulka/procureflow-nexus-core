@@ -10,7 +10,7 @@ import { VendorRegistration, parseAddress } from '@/types/vendor';
 import { UserRole } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { Search, Eye, CheckCircle, XCircle, Clock, MessageSquare, FileText, BarChart3, Package, FileImage, ShoppingCart, Phone, Building, Globe, Calendar } from 'lucide-react';
+import { Search, Eye, CheckCircle, XCircle, Clock, MessageSquare, FileText, BarChart3, Package, FileImage, ShoppingCart, Phone, Building, Globe, Calendar, Filter, SortAsc, X } from 'lucide-react';
 import VendorDetailDialog from '@/components/vendor/VendorDetailDialog';
 import VendorCommunicationDialog from '@/components/vendor/VendorCommunicationDialog';
 import VendorApprovalDialog from '@/components/vendor/VendorApprovalDialog';
@@ -23,12 +23,23 @@ const VendorManagement = () => {
   const [filteredVendors, setFilteredVendors] = useState<VendorRegistration[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState('pending');
+  const [activeTab, setActiveTab] = useState('all');
   const [selectedVendor, setSelectedVendor] = useState<VendorRegistration | null>(null);
   const [showDetailDialog, setShowDetailDialog] = useState(false);
   const [showCommunicationDialog, setShowCommunicationDialog] = useState(false);
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
   const [approvalAction, setApprovalAction] = useState<'approve' | 'reject' | null>(null);
+  
+  // Advanced search states
+  const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
+  const [searchFilters, setSearchFilters] = useState({
+    productSearch: '',
+    rfpDateFrom: '',
+    rfpDateTo: '',
+    poDateFrom: '',
+    poDateTo: '',
+    alphabetic: ''
+  });
 
   const fetchVendors = async () => {
     try {
@@ -75,7 +86,7 @@ const VendorManagement = () => {
       filtered = filtered.filter(vendor => vendor.status === activeTab);
     }
 
-    // Filter by search term
+    // Filter by basic search term
     if (searchTerm) {
       filtered = filtered.filter(vendor =>
         vendor.company_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -85,8 +96,18 @@ const VendorManagement = () => {
       );
     }
 
+    // Apply advanced filters
+    if (searchFilters.alphabetic) {
+      filtered = filtered.filter(vendor =>
+        vendor.company_name?.toLowerCase().startsWith(searchFilters.alphabetic.toLowerCase())
+      );
+    }
+
+    // Sort alphabetically
+    filtered.sort((a, b) => (a.company_name || '').localeCompare(b.company_name || ''));
+
     setFilteredVendors(filtered);
-  }, [vendors, activeTab, searchTerm]);
+  }, [vendors, activeTab, searchTerm, searchFilters]);
 
   const updateVendorStatus = async (vendorId: string, status: 'pending' | 'under_review' | 'approved' | 'rejected' | 'suspended', comments?: string) => {
     try {
@@ -131,6 +152,21 @@ const VendorManagement = () => {
     updateVendorStatus(vendorId, 'rejected', reason);
   };
 
+  const clearAllFilters = () => {
+    setSearchTerm('');
+    setSearchFilters({
+      productSearch: '',
+      rfpDateFrom: '',
+      rfpDateTo: '',
+      poDateFrom: '',
+      poDateTo: '',
+      alphabetic: ''
+    });
+    setShowAdvancedSearch(false);
+  };
+
+  const alphabetLetters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+
   const getStatusBadge = (status: string) => {
     const statusConfig = {
       pending: { color: 'bg-yellow-100 text-yellow-800', icon: Clock },
@@ -153,11 +189,11 @@ const VendorManagement = () => {
 
   const getStatusCounts = () => {
     return {
+      all: vendors.length,
+      approved: vendors.filter(v => v.status === 'approved').length,
       pending: vendors.filter(v => v.status === 'pending').length,
       under_review: vendors.filter(v => v.status === 'under_review').length,
-      approved: vendors.filter(v => v.status === 'approved').length,
       rejected: vendors.filter(v => v.status === 'rejected').length,
-      all: vendors.length,
     };
   };
 
@@ -186,36 +222,141 @@ const VendorManagement = () => {
         </div>
       </div>
 
-      {/* Search */}
-      <div className="flex items-center space-x-4">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-          <Input
-            placeholder="Search vendors by name, email, PAN, or GST..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
+      {/* Enhanced Search */}
+      <div className="space-y-4">
+        <div className="flex items-center space-x-4">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Input
+              placeholder="Search by name, email, PAN, or GST..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          
+          <Button
+            variant="outline"
+            onClick={() => setShowAdvancedSearch(!showAdvancedSearch)}
+            className="flex items-center gap-2"
+          >
+            <Filter className="w-4 h-4" />
+            Advanced Search
+          </Button>
+          
+          {(searchTerm || Object.values(searchFilters).some(v => v)) && (
+            <Button
+              variant="outline"
+              onClick={clearAllFilters}
+              className="flex items-center gap-2 text-red-600 border-red-200 hover:bg-red-50"
+            >
+              <X className="w-4 h-4" />
+              Clear All
+            </Button>
+          )}
+        </div>
+
+        {/* Advanced Search Panel */}
+        {showAdvancedSearch && (
+          <Card className="p-4 bg-muted/30 animate-fade-in">
+            <div className="space-y-4">
+              <h4 className="font-medium text-sm text-muted-foreground">Advanced Search Filters</h4>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Product/Service</label>
+                  <Input
+                    placeholder="Search by product name..."
+                    value={searchFilters.productSearch}
+                    onChange={(e) => setSearchFilters(prev => ({ ...prev, productSearch: e.target.value }))}
+                    className="mt-1"
+                  />
+                </div>
+                
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">RFP Date Range</label>
+                  <div className="flex gap-2 mt-1">
+                    <Input
+                      type="date"
+                      placeholder="From"
+                      value={searchFilters.rfpDateFrom}
+                      onChange={(e) => setSearchFilters(prev => ({ ...prev, rfpDateFrom: e.target.value }))}
+                    />
+                    <Input
+                      type="date"
+                      placeholder="To"
+                      value={searchFilters.rfpDateTo}
+                      onChange={(e) => setSearchFilters(prev => ({ ...prev, rfpDateTo: e.target.value }))}
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">PO Date Range</label>
+                  <div className="flex gap-2 mt-1">
+                    <Input
+                      type="date"
+                      placeholder="From"
+                      value={searchFilters.poDateFrom}
+                      onChange={(e) => setSearchFilters(prev => ({ ...prev, poDateFrom: e.target.value }))}
+                    />
+                    <Input
+                      type="date"
+                      placeholder="To"
+                      value={searchFilters.poDateTo}
+                      onChange={(e) => setSearchFilters(prev => ({ ...prev, poDateTo: e.target.value }))}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Card>
+        )}
+
+        {/* Alphabetic Filter */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+            <SortAsc className="w-4 h-4" />
+            Quick Filter:
+          </span>
+          <Button
+            variant={searchFilters.alphabetic === '' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setSearchFilters(prev => ({ ...prev, alphabetic: '' }))}
+          >
+            All
+          </Button>
+          {alphabetLetters.map(letter => (
+            <Button
+              key={letter}
+              variant={searchFilters.alphabetic === letter ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSearchFilters(prev => ({ ...prev, alphabetic: letter }))}
+              className="w-8 h-8 p-0"
+            >
+              {letter}
+            </Button>
+          ))}
         </div>
       </div>
 
-      {/* Status Tabs */}
+      {/* Status Tabs - Reordered */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="all" className="flex items-center gap-2">
+            All ({statusCounts.all})
+          </TabsTrigger>
+          <TabsTrigger value="approved" className="flex items-center gap-2">
+            Approved ({statusCounts.approved})
+          </TabsTrigger>
           <TabsTrigger value="pending" className="flex items-center gap-2">
             Pending ({statusCounts.pending})
           </TabsTrigger>
           <TabsTrigger value="under_review" className="flex items-center gap-2">
             Under Review ({statusCounts.under_review})
           </TabsTrigger>
-          <TabsTrigger value="approved" className="flex items-center gap-2">
-            Approved ({statusCounts.approved})
-          </TabsTrigger>
           <TabsTrigger value="rejected" className="flex items-center gap-2">
             Rejected ({statusCounts.rejected})
-          </TabsTrigger>
-          <TabsTrigger value="all" className="flex items-center gap-2">
-            All ({statusCounts.all})
           </TabsTrigger>
         </TabsList>
 
@@ -230,8 +371,17 @@ const VendorManagement = () => {
           ) : filteredVendors.length === 0 ? (
             <Card>
               <CardContent className="p-6">
-                <div className="py-8">
-                  <p className="text-gray-500">No vendors found for the selected criteria.</p>
+                <div className="py-8 text-center">
+                  <p className="text-muted-foreground mb-4">
+                    {(searchTerm || Object.values(searchFilters).some(v => v)) 
+                      ? "No vendors found matching your search criteria."
+                      : "No vendors found for the selected status."}
+                  </p>
+                  {(searchTerm || Object.values(searchFilters).some(v => v)) && (
+                    <Button variant="outline" onClick={clearAllFilters}>
+                      Clear Search Filters
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
