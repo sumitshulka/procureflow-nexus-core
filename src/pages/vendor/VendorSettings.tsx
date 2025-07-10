@@ -18,15 +18,13 @@ import {
   Save,
   AlertCircle,
 } from 'lucide-react';
-import VendorLayout from '@/components/layout/VendorLayout';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const VendorSettings = () => {
   const { userData } = useAuth();
 
   return (
-    <VendorLayout>
-      <div className="space-y-6">
+    <div className="container mx-auto p-6 space-y-6 text-left">
         {/* Header */}
         <div>
           <h1 className="text-2xl font-bold">Settings</h1>
@@ -204,8 +202,7 @@ const VendorSettings = () => {
             </Alert>
           </div>
         </div>
-      </div>
-    </VendorLayout>
+    </div>
   );
 };
 

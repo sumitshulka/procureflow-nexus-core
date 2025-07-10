@@ -19,7 +19,6 @@ import {
   Send,
   DollarSign,
 } from 'lucide-react';
-import VendorLayout from '@/components/layout/VendorLayout';
 import { 
   Select,
   SelectContent,
@@ -107,8 +106,7 @@ const VendorRfps = () => {
   };
 
   return (
-    <VendorLayout>
-      <div className="space-y-6">
+    <div className="container mx-auto p-6 space-y-6 text-left">
         {/* Header */}
         <div>
           <h1 className="text-2xl font-bold">Request for Proposals (RFPs)</h1>
@@ -302,8 +300,7 @@ const VendorRfps = () => {
             })}
           </div>
         )}
-      </div>
-    </VendorLayout>
+    </div>
   );
 };
 

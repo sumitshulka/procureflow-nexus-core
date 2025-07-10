@@ -10,7 +10,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { VendorCommunication, parseAttachments } from '@/types/vendor';
 import { MessageSquare, Send, Eye, Reply, Clock, X, Filter, Calendar } from 'lucide-react';
-import VendorLayout from '@/components/layout/VendorLayout';
 import { format, startOfDay, endOfDay, subDays } from 'date-fns';
 
 interface ConversationGroup {
@@ -235,8 +234,7 @@ const VendorMessages = () => {
   };
 
   return (
-    <VendorLayout>
-      <div className="space-y-6">
+    <div className="container mx-auto p-6 space-y-6 text-left">
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Messages</h1>
@@ -456,8 +454,7 @@ const VendorMessages = () => {
             </div>
           </>
         )}
-      </div>
-    </VendorLayout>
+    </div>
   );
 };
 

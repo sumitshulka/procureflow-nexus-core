@@ -18,7 +18,6 @@ import {
   Target,
   AlertCircle,
 } from 'lucide-react';
-import VendorLayout from '@/components/layout/VendorLayout';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 
 const VendorAnalytics = () => {
@@ -112,31 +111,26 @@ const VendorAnalytics = () => {
 
   if (isLoading) {
     return (
-      <VendorLayout>
-        <div className="flex items-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          <span className="ml-3">Loading analytics...</span>
-        </div>
-      </VendorLayout>
+      <div className="flex items-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <span className="ml-3">Loading analytics...</span>
+      </div>
     );
   }
 
   if (!analyticsData) {
     return (
-      <VendorLayout>
-        <div className="py-8">
-          <div className="flex items-center gap-3">
-            <AlertCircle className="w-8 h-8 text-muted-foreground" />
-            <p className="text-muted-foreground">No analytics data available</p>
-          </div>
+      <div className="py-8">
+        <div className="flex items-center gap-3">
+          <AlertCircle className="w-8 h-8 text-muted-foreground" />
+          <p className="text-muted-foreground">No analytics data available</p>
         </div>
-      </VendorLayout>
+      </div>
     );
   }
 
   return (
-    <VendorLayout>
-      <div className="space-y-6">
+    <div className="container mx-auto p-6 space-y-6 text-left">
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
@@ -323,8 +317,7 @@ const VendorAnalytics = () => {
             </CardContent>
           </Card>
         </div>
-      </div>
-    </VendorLayout>
+    </div>
   );
 };
 

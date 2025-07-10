@@ -24,7 +24,6 @@ import {
   DollarSign,
   CreditCard,
 } from 'lucide-react';
-import VendorLayout from '@/components/layout/VendorLayout';
 import { Separator } from '@/components/ui/separator';
 import { getCurrencySymbol, getCurrencyName } from '@/utils/currencyUtils';
 import VendorEditDialog from '@/components/vendor/VendorEditDialog';
@@ -65,17 +64,14 @@ const VendorProfile = () => {
 
   if (isLoading) {
     return (
-      <VendorLayout>
-        <div className="py-8">
-          <div className="text-lg">Loading profile...</div>
-        </div>
-      </VendorLayout>
+      <div className="py-8">
+        <div className="text-lg">Loading profile...</div>
+      </div>
     );
   }
 
   return (
-    <VendorLayout>
-      <div className="space-y-6">
+    <div className="container mx-auto p-6 space-y-6 text-left">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -343,8 +339,7 @@ const VendorProfile = () => {
             </div>
           </CardContent>
         </Card>
-      </div>
-    </VendorLayout>
+    </div>
   );
 };
 
