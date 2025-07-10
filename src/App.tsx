@@ -7,12 +7,13 @@ import { UserRole } from '@/types';
 
 // Import pages that actually exist
 import Index from '@/pages/Index';
-import LoginPage from '@/pages/LoginPage';
+import LoginPage from '@/pages/auth/LoginPage';
 import Dashboard from '@/pages/Dashboard';
 import VendorManagement from '@/pages/VendorManagement';
 import ProductVendorRelationships from '@/pages/ProductVendorRelationships';
 import EditProduct from '@/pages/EditProduct';
 import CreateRfp from '@/pages/CreateRfp';
+import VendorRegistration from '@/pages/VendorRegistration';
 
 function App() {
   return (
@@ -22,6 +23,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/vendor-registration" element={<VendorRegistration />} />
             
             {/* Protected Admin Routes */}
             <Route
