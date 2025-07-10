@@ -104,6 +104,18 @@ const VendorSidebar = () => {
   return (
     <Sidebar collapsible="icon" className="border-r bg-sidebar-background mt-16">
       <SidebarContent className="bg-sidebar-background">
+        {/* Show Vendor Portal title when sidebar is expanded */}
+        {state === "expanded" && (
+          <div className="px-4 py-4 border-b border-sidebar-border">
+            <div className="flex items-center gap-3">
+              <h1 className="text-xl font-semibold text-primary">Vendor Portal</h1>
+              <Badge variant="secondary" className="bg-green-100 text-green-800">
+                Active
+              </Badge>
+            </div>
+          </div>
+        )}
+        
         <div className="flex-1 px-2 overflow-y-auto">
           <SidebarGroup className="pt-4">
             <SidebarGroupContent>

@@ -15,8 +15,8 @@ const VendorLayout = ({ children }: VendorLayoutProps) => {
         <div className="flex w-full">
           <VendorSidebar />
           <SidebarInset className="flex-1">
-            <main className="p-6 pt-20 bg-gradient-to-br from-blue-50 to-indigo-100 min-h-[calc(100vh-4rem)]">
-              <div className="w-full text-left">
+            <main className="pt-20 px-6 pb-6 bg-gradient-to-br from-blue-50 to-indigo-100 min-h-[calc(100vh-4rem)]">
+              <div className="w-full max-w-none">
                 {children}
               </div>
             </main>
