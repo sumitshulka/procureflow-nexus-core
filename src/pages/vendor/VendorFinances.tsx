@@ -21,7 +21,7 @@ import {
   CheckCircle,
   Clock,
 } from 'lucide-react';
-import VendorLayout from '@/components/layout/VendorLayout';
+
 import { 
   Select,
   SelectContent,
@@ -122,8 +122,7 @@ const VendorFinances = () => {
   const growth = calculateGrowth();
 
   return (
-    <VendorLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -352,8 +351,7 @@ const VendorFinances = () => {
             )}
           </CardContent>
         </Card>
-      </div>
-    </VendorLayout>
+    </div>
   );
 };
 

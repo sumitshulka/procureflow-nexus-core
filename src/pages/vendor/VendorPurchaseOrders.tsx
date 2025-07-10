@@ -21,7 +21,7 @@ import {
   DollarSign,
   TruckIcon,
 } from 'lucide-react';
-import VendorLayout from '@/components/layout/VendorLayout';
+
 import { 
   Select,
   SelectContent,
@@ -112,222 +112,220 @@ const VendorPurchaseOrders = () => {
   const stats = getTotalStats();
 
   return (
-    <VendorLayout>
-      <div className="space-y-6">
-        {/* Header */}
-        <div>
-          <h1 className="text-2xl font-bold">Purchase Orders</h1>
-          <p className="text-muted-foreground">Manage your purchase orders and delivery status</p>
-        </div>
+    <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-bold">Purchase Orders</h1>
+        <p className="text-muted-foreground">Manage your purchase orders and delivery status</p>
+      </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <ShoppingCart className="w-5 h-5 text-blue-600" />
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Orders</p>
-                  <p className="text-xl font-bold">{stats.total}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <DollarSign className="w-5 h-5 text-green-600" />
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Value</p>
-                  <p className="text-xl font-bold">${stats.totalValue.toLocaleString()}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <Clock className="w-5 h-5 text-orange-600" />
-                <div>
-                  <p className="text-sm text-muted-foreground">Active Orders</p>
-                  <p className="text-xl font-bold">{stats.active}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="w-5 h-5 text-green-600" />
-                <div>
-                  <p className="text-sm text-muted-foreground">Completed</p>
-                  <p className="text-xl font-bold">{stats.completed}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Filters */}
+      {/* Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-4">
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                <Input
-                  placeholder="Search by PO number or description..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
+            <div className="flex items-center gap-2">
+              <ShoppingCart className="w-5 h-5 text-blue-600" />
+              <div>
+                <p className="text-sm text-muted-foreground">Total Orders</p>
+                <p className="text-xl font-bold">{stats.total}</p>
               </div>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[200px]">
-                  <Filter className="w-4 h-4 mr-2" />
-                  <SelectValue placeholder="Filter by status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Orders</SelectItem>
-                  <SelectItem value="sent">Sent</SelectItem>
-                  <SelectItem value="acknowledged">Acknowledged</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="delivered">Delivered</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
           </CardContent>
         </Card>
-
-        {/* Purchase Orders List */}
-        {isLoading ? (
-          <div className="py-8">
-            <div className="flex items-center gap-3">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-              <span>Loading purchase orders...</span>
-            </div>
-          </div>
-        ) : filteredPOs.length === 0 ? (
-          <Card>
-            <CardContent className="py-12">
-              <div className="flex items-center gap-4">
-                <ShoppingCart className="w-12 h-12 text-muted-foreground" />
-                <div>
-                  <h3 className="text-lg font-medium mb-2">No Purchase Orders Found</h3>
-                  <p className="text-muted-foreground">
-                    {searchTerm || statusFilter !== 'all' 
-                      ? 'No purchase orders match your current filters.' 
-                      : 'You have no purchase orders yet.'}
-                  </p>
-                </div>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <DollarSign className="w-5 h-5 text-green-600" />
+              <div>
+                <p className="text-sm text-muted-foreground">Total Value</p>
+                <p className="text-xl font-bold">${stats.totalValue.toLocaleString()}</p>
               </div>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-4">
-            {filteredPOs.map((po) => (
-              <Card key={po.id} className="hover:shadow-md transition-shadow">
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <CardTitle className="text-lg flex items-center gap-2">
-                        <ShoppingCart className="w-5 h-5" />
-                        {po.po_number}
-                      </CardTitle>
-                      <CardDescription className="mt-1">
-                        {po.special_instructions || 'No special instructions provided'}
-                      </CardDescription>
-                    </div>
-                    <div className="flex flex-col items-end gap-2">
-                      {getStatusBadge(po.status)}
-                      <span className="text-lg font-bold text-green-600">
-                        ${po.total_amount?.toLocaleString() || '0'}
-                      </span>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-                    <div>
-                      <p className="text-sm text-muted-foreground">PO Date</p>
-                      <p className="font-medium flex items-center gap-1">
-                        <Calendar className="w-4 h-4" />
-                        {format(new Date(po.po_date), 'MMM dd, yyyy')}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Expected Delivery</p>
-                      <p className="font-medium">
-                        {po.expected_delivery_date 
-                          ? format(new Date(po.expected_delivery_date), 'MMM dd, yyyy')
-                          : 'Not specified'}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Items</p>
-                      <p className="font-medium flex items-center gap-1">
-                        <Package className="w-4 h-4" />
-                        {po.purchase_order_items?.length || 0} items
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Currency</p>
-                      <p className="font-medium">{po.currency || 'USD'}</p>
-                    </div>
-                  </div>
-
-                  {/* Items Preview */}
-                  {po.purchase_order_items && po.purchase_order_items.length > 0 && (
-                    <div className="mb-4">
-                      <p className="text-sm font-medium mb-2">Items:</p>
-                      <div className="bg-accent rounded-lg p-3">
-                        {po.purchase_order_items.slice(0, 3).map((item: any, index: number) => (
-                          <div key={item.id || index} className="flex justify-between items-center py-1">
-                            <span className="text-sm">{item.description || 'Item'}</span>
-                            <span className="text-sm font-medium">
-                              {item.quantity} × ${item.unit_price?.toLocaleString() || '0'}
-                            </span>
-                          </div>
-                        ))}
-                        {po.purchase_order_items.length > 3 && (
-                          <p className="text-xs text-muted-foreground mt-2">
-                            +{po.purchase_order_items.length - 3} more items
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                  
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm">
-                      <Eye className="w-4 h-4 mr-2" />
-                      View Details
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      <Download className="w-4 h-4 mr-2" />
-                      Download PDF
-                    </Button>
-                    {po.status === 'sent' && (
-                      <Button size="sm">
-                        <CheckCircle className="w-4 h-4 mr-2" />
-                        Acknowledge
-                      </Button>
-                    )}
-                    {['acknowledged', 'in_progress'].includes(po.status) && (
-                      <Button size="sm">
-                        <TruckIcon className="w-4 h-4 mr-2" />
-                        Update Status
-                      </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <Clock className="w-5 h-5 text-orange-600" />
+              <div>
+                <p className="text-sm text-muted-foreground">Active Orders</p>
+                <p className="text-xl font-bold">{stats.active}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="w-5 h-5 text-green-600" />
+              <div>
+                <p className="text-sm text-muted-foreground">Completed</p>
+                <p className="text-xl font-bold">{stats.completed}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
-    </VendorLayout>
+
+      {/* Filters */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+              <Input
+                placeholder="Search by PO number or description..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[200px]">
+                <Filter className="w-4 h-4 mr-2" />
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Orders</SelectItem>
+                <SelectItem value="sent">Sent</SelectItem>
+                <SelectItem value="acknowledged">Acknowledged</SelectItem>
+                <SelectItem value="in_progress">In Progress</SelectItem>
+                <SelectItem value="delivered">Delivered</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
+                <SelectItem value="cancelled">Cancelled</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Purchase Orders List */}
+      {isLoading ? (
+        <div className="py-8">
+          <div className="flex items-center gap-3">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+            <span>Loading purchase orders...</span>
+          </div>
+        </div>
+      ) : filteredPOs.length === 0 ? (
+        <Card>
+          <CardContent className="py-12">
+            <div className="flex items-center gap-4">
+              <ShoppingCart className="w-12 h-12 text-muted-foreground" />
+              <div>
+                <h3 className="text-lg font-medium mb-2">No Purchase Orders Found</h3>
+                <p className="text-muted-foreground">
+                  {searchTerm || statusFilter !== 'all' 
+                    ? 'No purchase orders match your current filters.' 
+                    : 'You have no purchase orders yet.'}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          {filteredPOs.map((po) => (
+            <Card key={po.id} className="hover:shadow-md transition-shadow">
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <ShoppingCart className="w-5 h-5" />
+                      {po.po_number}
+                    </CardTitle>
+                    <CardDescription className="mt-1">
+                      {po.special_instructions || 'No special instructions provided'}
+                    </CardDescription>
+                  </div>
+                  <div className="flex flex-col items-end gap-2">
+                    {getStatusBadge(po.status)}
+                    <span className="text-lg font-bold text-green-600">
+                      ${po.total_amount?.toLocaleString() || '0'}
+                    </span>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">PO Date</p>
+                    <p className="font-medium flex items-center gap-1">
+                      <Calendar className="w-4 h-4" />
+                      {format(new Date(po.po_date), 'MMM dd, yyyy')}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Expected Delivery</p>
+                    <p className="font-medium">
+                      {po.expected_delivery_date 
+                        ? format(new Date(po.expected_delivery_date), 'MMM dd, yyyy')
+                        : 'Not specified'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Items</p>
+                    <p className="font-medium flex items-center gap-1">
+                      <Package className="w-4 h-4" />
+                      {po.purchase_order_items?.length || 0} items
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Currency</p>
+                    <p className="font-medium">{po.currency || 'USD'}</p>
+                  </div>
+                </div>
+
+                {/* Items Preview */}
+                {po.purchase_order_items && po.purchase_order_items.length > 0 && (
+                  <div className="mb-4">
+                    <p className="text-sm font-medium mb-2">Items:</p>
+                    <div className="bg-accent rounded-lg p-3">
+                      {po.purchase_order_items.slice(0, 3).map((item: any, index: number) => (
+                        <div key={item.id || index} className="flex justify-between items-center py-1">
+                          <span className="text-sm">{item.description || 'Item'}</span>
+                          <span className="text-sm font-medium">
+                            {item.quantity} × ${item.unit_price?.toLocaleString() || '0'}
+                          </span>
+                        </div>
+                      ))}
+                      {po.purchase_order_items.length > 3 && (
+                        <p className="text-xs text-muted-foreground mt-2">
+                          +{po.purchase_order_items.length - 3} more items
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+                
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm">
+                    <Eye className="w-4 h-4 mr-2" />
+                    View Details
+                  </Button>
+                  <Button variant="outline" size="sm">
+                    <Download className="w-4 h-4 mr-2" />
+                    Download PDF
+                  </Button>
+                  {po.status === 'sent' && (
+                    <Button size="sm">
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Acknowledge
+                    </Button>
+                  )}
+                  {['acknowledged', 'in_progress'].includes(po.status) && (
+                    <Button size="sm">
+                      <TruckIcon className="w-4 h-4 mr-2" />
+                      Update Status
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
   );
 };
 

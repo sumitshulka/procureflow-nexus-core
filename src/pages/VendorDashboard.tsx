@@ -20,7 +20,7 @@ import {
   Clock,
   BarChart3,
 } from 'lucide-react';
-import VendorLayout from '@/components/layout/VendorLayout';
+
 import { useNavigate } from 'react-router-dom';
 
 const VendorDashboard = () => {
@@ -170,8 +170,7 @@ const VendorDashboard = () => {
   const isLoading = profileLoading || rfpLoading || poLoading;
 
   return (
-    <VendorLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Welcome Section */}
         <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg p-6">
           <div className="flex items-center justify-between">
@@ -369,8 +368,7 @@ const VendorDashboard = () => {
             </Card>
           </div>
         </div>
-      </div>
-    </VendorLayout>
+    </div>
   );
 };
 
