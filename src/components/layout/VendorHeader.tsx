@@ -19,23 +19,25 @@ const VendorHeader = () => {
   const { state } = useSidebar();
 
   return (
-    <header className="fixed top-0 z-50 w-full border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
-      <div className="flex h-16 items-center px-4 max-w-full">
+    <header className="sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
+      <div className="flex h-16 items-center px-4 gap-4">
+        {/* Left side - Toggle and conditional title */}
         <div className="flex items-center gap-4 flex-1 min-w-0">
           <SidebarTrigger className="shrink-0" />
           
-          {/* Show Vendor Portal title only when sidebar is collapsed */}
+          {/* Show title only when sidebar is collapsed */}
           {state === "collapsed" && (
-            <div className="flex items-center gap-3 min-w-0">
-              <h1 className="text-xl font-semibold text-primary truncate">Vendor Portal</h1>
-              <Badge variant="secondary" className="bg-green-100 text-green-800 shrink-0">
+            <div className="flex items-center gap-3">
+              <h1 className="text-xl font-semibold text-primary">Vendor Portal</h1>
+              <Badge variant="secondary" className="bg-green-100 text-green-800">
                 Active
               </Badge>
             </div>
           )}
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        {/* Right side - Actions */}
+        <div className="flex items-center gap-3 shrink-0">
           {/* Notifications */}
           <Button variant="ghost" size="sm" className="relative">
             <Bell className="h-4 w-4" />
@@ -47,14 +49,14 @@ const VendorHeader = () => {
           {/* User Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="flex items-center gap-2 px-2 min-w-0">
+              <Button variant="ghost" className="flex items-center gap-2 px-2 min-w-0 max-w-[200px]">
                 <Avatar className="h-8 w-8 shrink-0">
                   <AvatarImage src={userData?.avatarUrl || ""} />
                   <AvatarFallback>
                     {userData?.fullName?.charAt(0) || "V"}
                   </AvatarFallback>
                 </Avatar>
-                <div className="text-left hidden lg:block min-w-0">
+                <div className="text-left hidden md:block min-w-0 overflow-hidden">
                   <p className="text-sm font-medium truncate">{userData?.fullName || "Vendor"}</p>
                   <p className="text-xs text-muted-foreground truncate">{userData?.email}</p>
                 </div>

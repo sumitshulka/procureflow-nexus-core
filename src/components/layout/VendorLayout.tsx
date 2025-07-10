@@ -10,13 +10,13 @@ interface VendorLayoutProps {
 const VendorLayout = ({ children }: VendorLayoutProps) => {
   return (
     <SidebarProvider defaultOpen={true}>
-      <div className="min-h-screen w-full">
-        <VendorHeader />
-        <div className="flex w-full">
-          <VendorSidebar />
+      <div className="min-h-screen w-full flex">
+        <VendorSidebar />
+        <div className="flex-1 flex flex-col min-w-0">
+          <VendorHeader />
           <SidebarInset className="flex-1">
-            <main className="pt-20 px-6 pb-6 bg-gradient-to-br from-blue-50 to-indigo-100 min-h-[calc(100vh-4rem)]">
-              <div className="w-full max-w-none">
+            <main className="flex-1 p-6 bg-gradient-to-br from-blue-50 to-indigo-100 min-h-[calc(100vh-4rem)]">
+              <div className="w-full max-w-none text-left">
                 {children}
               </div>
             </main>
