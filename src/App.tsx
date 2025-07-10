@@ -33,6 +33,14 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/admin-dashboard"
+            element={
+              <ProtectedRoute requiredRole={UserRole.ADMIN}>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
           
           <Route
             path="/vendors"
