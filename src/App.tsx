@@ -17,8 +17,8 @@ import VendorRegistration from '@/pages/VendorRegistration';
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
+    <Router>
+      <AuthProvider>
         <div className="min-h-screen bg-background">
           <Routes>
             <Route path="/" element={<Index />} />
@@ -73,8 +73,8 @@ function App() {
           </Routes>
           <Toaster />
         </div>
-      </Router>
-    </AuthProvider>
+      </AuthProvider>
+    </Router>
   );
 }
 
