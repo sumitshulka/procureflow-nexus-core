@@ -82,6 +82,7 @@ import VendorRegistration from '@/pages/VendorRegistration';
 import VendorRegistrationSuccess from '@/pages/VendorRegistrationSuccess';
 import VendorRegistrationDuplicate from '@/pages/VendorRegistrationDuplicate';
 import VendorDashboard from '@/pages/VendorDashboard';
+import VendorDashboardDetail from '@/pages/VendorDashboardDetail';
 
 // Vendor Portal Pages
 import VendorProfile from '@/pages/vendor/VendorProfile';
@@ -488,6 +489,14 @@ function App() {
             element={
               <ProtectedRoute requiredRole={UserRole.ADMIN}>
                 <Layout><VendorManagement /></Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/vendor-dashboard/:vendorId"
+            element={
+              <ProtectedRoute requiredRole={UserRole.ADMIN}>
+                <Layout><VendorDashboardDetail /></Layout>
               </ProtectedRoute>
             }
           />

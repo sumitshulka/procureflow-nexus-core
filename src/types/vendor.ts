@@ -31,6 +31,7 @@ export interface VendorRegistration {
   annual_turnover?: number;
   country?: string;
   currency?: string;
+  vendor_number?: string;
   status?: 'pending' | 'under_review' | 'approved' | 'rejected' | 'suspended';
   user_id?: string;
   created_at?: string;

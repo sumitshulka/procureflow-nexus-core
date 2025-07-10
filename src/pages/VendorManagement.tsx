@@ -9,7 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { VendorRegistration, parseAddress } from '@/types/vendor';
 import { UserRole } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
-import { Search, Eye, CheckCircle, XCircle, Clock, MessageSquare, FileText } from 'lucide-react';
+import { Search, Eye, CheckCircle, XCircle, Clock, MessageSquare, FileText, BarChart3, Package, FileImage, ShoppingCart } from 'lucide-react';
 import VendorDetailDialog from '@/components/vendor/VendorDetailDialog';
 import VendorCommunicationDialog from '@/components/vendor/VendorCommunicationDialog';
 import VendorApprovalDialog from '@/components/vendor/VendorApprovalDialog';
@@ -247,6 +247,9 @@ const VendorManagement = () => {
                         
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm text-gray-600">
                           <div>
+                            <span className="font-medium">Vendor Number:</span> {vendor.vendor_number || 'Not Assigned'}
+                          </div>
+                          <div>
                             <span className="font-medium">Email:</span> {vendor.primary_email}
                           </div>
                           <div>
@@ -255,12 +258,12 @@ const VendorManagement = () => {
                           <div>
                             <span className="font-medium">GST:</span> {vendor.gst_number}
                           </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600 mt-2">
                           <div>
                             <span className="font-medium">Country:</span> {vendor.country || '-'}
                           </div>
-                        </div>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600 mt-2">
                           <div>
                             <span className="font-medium">Currency:</span> {vendor.currency || '-'}
                           </div>
@@ -268,6 +271,7 @@ const VendorManagement = () => {
                             <span className="font-medium">Annual Turnover:</span> {vendor.annual_turnover ? `${vendor.currency || 'USD'} ${Number(vendor.annual_turnover).toLocaleString()}` : '-'}
                           </div>
                         </div>
+                        
                         
                         <div className="mt-2 text-sm text-gray-600">
                           <span className="font-medium">Signatory:</span> {vendor.signatory_name}
@@ -300,8 +304,22 @@ const VendorManagement = () => {
                           }}
                         >
                           <Eye className="w-4 h-4 mr-1" />
-                          View
+                          View Profile
                         </Button>
+                        
+                        {vendor.status === 'approved' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              // Navigate to vendor dashboard
+                              window.location.href = `/vendor-dashboard/${vendor.id}`;
+                            }}
+                          >
+                            <BarChart3 className="w-4 h-4 mr-1" />
+                            Dashboard
+                          </Button>
+                        )}
                         
                         <Button
                           variant="outline"
