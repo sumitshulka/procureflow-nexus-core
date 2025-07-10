@@ -102,7 +102,7 @@ const VendorSidebar = () => {
   ];
 
   return (
-    <Sidebar collapsible="icon" className="border-r bg-sidebar-background">
+    <Sidebar collapsible="icon" className="border-r bg-sidebar-background mt-16">
       <SidebarContent className="bg-sidebar-background">
         <div className="flex-1 px-2 overflow-y-auto">
           <SidebarGroup className="pt-4">
