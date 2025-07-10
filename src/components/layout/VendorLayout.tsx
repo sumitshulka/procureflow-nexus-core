@@ -9,9 +9,9 @@ interface VendorLayoutProps {
 
 const VendorLayout = ({ children }: VendorLayoutProps) => {
   return (
-    <div className="min-h-screen w-full">
-      <VendorHeader />
-      <SidebarProvider defaultOpen={true}>
+    <SidebarProvider defaultOpen={true}>
+      <div className="min-h-screen w-full">
+        <VendorHeader />
         <div className="flex min-h-[calc(100vh-4rem)] w-full">
           <VendorSidebar />
           <SidebarInset className="flex-1">
@@ -22,8 +22,8 @@ const VendorLayout = ({ children }: VendorLayoutProps) => {
             </main>
           </SidebarInset>
         </div>
-      </SidebarProvider>
-    </div>
+      </div>
+    </SidebarProvider>
   );
 };
 
