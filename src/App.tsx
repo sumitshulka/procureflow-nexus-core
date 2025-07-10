@@ -3,6 +3,7 @@ import { Routes, Route } from 'react-router-dom';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { Toaster } from '@/components/ui/toaster';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import Layout from '@/components/layout/Layout';
 import { UserRole } from '@/types';
 
 // Import pages that actually exist
@@ -24,12 +25,14 @@ function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/vendor-registration" element={<VendorRegistration />} />
           
-          {/* Protected Admin Routes */}
+          {/* Protected Admin Routes with Layout */}
           <Route
             path="/dashboard"
             element={
               <ProtectedRoute requiredRole={UserRole.ADMIN}>
-                <Dashboard />
+                <Layout>
+                  <Dashboard />
+                </Layout>
               </ProtectedRoute>
             }
           />
@@ -37,7 +40,9 @@ function App() {
             path="/admin-dashboard"
             element={
               <ProtectedRoute requiredRole={UserRole.ADMIN}>
-                <Dashboard />
+                <Layout>
+                  <Dashboard />
+                </Layout>
               </ProtectedRoute>
             }
           />
@@ -46,7 +51,9 @@ function App() {
             path="/vendors"
             element={
               <ProtectedRoute requiredRole={UserRole.ADMIN}>
-                <VendorManagement />
+                <Layout>
+                  <VendorManagement />
+                </Layout>
               </ProtectedRoute>
             }
           />
@@ -55,7 +62,9 @@ function App() {
             path="/product-vendors"
             element={
               <ProtectedRoute requiredRole={UserRole.ADMIN}>
-                <ProductVendorRelationships />
+                <Layout>
+                  <ProductVendorRelationships />
+                </Layout>
               </ProtectedRoute>
             }
           />
@@ -64,7 +73,9 @@ function App() {
             path="/edit-product/:id"
             element={
               <ProtectedRoute requiredRole={UserRole.ADMIN}>
-                <EditProduct />
+                <Layout>
+                  <EditProduct />
+                </Layout>
               </ProtectedRoute>
             }
           />
@@ -73,7 +84,9 @@ function App() {
             path="/create-rfp"
             element={
               <ProtectedRoute requiredRole={UserRole.ADMIN}>
-                <CreateRfp />
+                <Layout>
+                  <CreateRfp />
+                </Layout>
               </ProtectedRoute>
             }
           />
