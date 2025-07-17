@@ -451,35 +451,220 @@ const VendorDashboardDetail = () => {
           </div>
         </TabsContent>
 
-        <TabsContent value="profile">
+        <TabsContent value="profile" className="space-y-6">
+          {/* Company Information */}
           <Card>
             <CardHeader>
-              <CardTitle>Vendor Profile</CardTitle>
-              <CardDescription>Complete vendor registration information</CardDescription>
+              <CardTitle className="flex items-center gap-2">
+                <Building className="w-5 h-5" />
+                Company Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div>
+                  <span className="font-medium text-gray-600">Company Name:</span>
+                  <p className="mt-1">{vendor.company_name}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-600">Company Type:</span>
+                  <p className="mt-1">{vendor.company_type || 'Not specified'}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-600">PAN Number:</span>
+                  <p className="mt-1">{vendor.pan_number}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-600">GST Number:</span>
+                  <p className="mt-1">{vendor.gst_number}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-600">TAN Number:</span>
+                  <p className="mt-1">{vendor.tan_number || 'Not provided'}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-600">Registration Number:</span>
+                  <p className="mt-1">{vendor.registration_number || 'Not provided'}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-600">Years in Business:</span>
+                  <p className="mt-1">{vendor.years_in_business ? `${vendor.years_in_business} years` : 'Not specified'}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-600">Country:</span>
+                  <p className="mt-1">{vendor.country || 'Not specified'}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-600">Currency:</span>
+                  <p className="mt-1">{vendor.currency || 'USD'}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-600">Annual Turnover:</span>
+                  <p className="mt-1">
+                    {vendor.annual_turnover 
+                      ? `${vendor.currency || 'USD'} ${Number(vendor.annual_turnover).toLocaleString()}`
+                      : 'Not specified'
+                    }
+                  </p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-600">Incorporation Date:</span>
+                  <p className="mt-1">
+                    {vendor.incorporation_date 
+                      ? new Date(vendor.incorporation_date).toLocaleDateString()
+                      : 'Not provided'
+                    }
+                  </p>
+                </div>
+                <div className="md:col-span-2 lg:col-span-3">
+                  <span className="font-medium text-gray-600">Business Description:</span>
+                  <p className="mt-1">{vendor.business_description || 'Not provided'}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Contact Information */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <User className="w-5 h-5" />
+                  Company Contacts
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <span className="font-medium text-gray-600">Primary Email:</span>
+                  <p className="mt-1">{vendor.primary_email}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-600">Secondary Email:</span>
+                  <p className="mt-1">{vendor.secondary_email || 'Not provided'}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-600">Primary Phone:</span>
+                  <p className="mt-1">{vendor.primary_phone}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-600">Secondary Phone:</span>
+                  <p className="mt-1">{vendor.secondary_phone || 'Not provided'}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-600">Website:</span>
+                  <p className="mt-1">{vendor.website || 'Not provided'}</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <User className="w-5 h-5" />
+                  Authorized Signatory
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <span className="font-medium text-gray-600">Name:</span>
+                  <p className="mt-1">{vendor.signatory_name}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-600">Designation:</span>
+                  <p className="mt-1">{vendor.signatory_designation || 'Not provided'}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-600">Email:</span>
+                  <p className="mt-1">{vendor.signatory_email || 'Not provided'}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-600">Phone:</span>
+                  <p className="mt-1">{vendor.signatory_phone || 'Not provided'}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-600">PAN:</span>
+                  <p className="mt-1">{vendor.signatory_pan || 'Not provided'}</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Address Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MapPin className="w-5 h-5" />
+                Address Information
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <h3 className="font-semibold mb-3">Company Information</h3>
-                  <div className="space-y-2 text-sm">
-                    <div><span className="font-medium">Company Name:</span> {vendor.company_name}</div>
-                    <div><span className="font-medium">Company Type:</span> {vendor.company_type || '-'}</div>
-                    <div><span className="font-medium">PAN Number:</span> {vendor.pan_number}</div>
-                    <div><span className="font-medium">GST Number:</span> {vendor.gst_number}</div>
-                    <div><span className="font-medium">Registration Number:</span> {vendor.registration_number || '-'}</div>
-                    <div><span className="font-medium">Years in Business:</span> {vendor.years_in_business || '-'}</div>
+                  <h4 className="font-medium text-gray-900 mb-2">Registered Address</h4>
+                  <div className="text-sm text-gray-600">
+                    <p>{vendor.registered_address.street}</p>
+                    <p>{vendor.registered_address.city}, {vendor.registered_address.state}</p>
+                    <p>{vendor.registered_address.postal_code}</p>
+                    <p>{vendor.registered_address.country}</p>
                   </div>
                 </div>
                 
-                <div>
-                  <h3 className="font-semibold mb-3">Contact Information</h3>
-                  <div className="space-y-2 text-sm">
-                    <div><span className="font-medium">Primary Email:</span> {vendor.primary_email}</div>
-                    <div><span className="font-medium">Secondary Email:</span> {vendor.secondary_email || '-'}</div>
-                    <div><span className="font-medium">Primary Phone:</span> {vendor.primary_phone}</div>
-                    <div><span className="font-medium">Secondary Phone:</span> {vendor.secondary_phone || '-'}</div>
-                    <div><span className="font-medium">Website:</span> {vendor.website || '-'}</div>
+                {vendor.business_address && (
+                  <div>
+                    <h4 className="font-medium text-gray-900 mb-2">Business Address</h4>
+                    <div className="text-sm text-gray-600">
+                      <p>{vendor.business_address.street}</p>
+                      <p>{vendor.business_address.city}, {vendor.business_address.state}</p>
+                      <p>{vendor.business_address.postal_code}</p>
+                      <p>{vendor.business_address.country}</p>
+                    </div>
                   </div>
+                )}
+
+                {vendor.billing_address && (
+                  <div>
+                    <h4 className="font-medium text-gray-900 mb-2">Billing Address</h4>
+                    <div className="text-sm text-gray-600">
+                      <p>{vendor.billing_address.street}</p>
+                      <p>{vendor.billing_address.city}, {vendor.billing_address.state}</p>
+                      <p>{vendor.billing_address.postal_code}</p>
+                      <p>{vendor.billing_address.country}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Bank Account Details */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CreditCard className="w-5 h-5" />
+                Bank Account Details
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div>
+                  <span className="font-medium text-gray-600">Bank Name:</span>
+                  <p className="mt-1">{vendor.bank_name || 'Not provided'}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-600">Branch:</span>
+                  <p className="mt-1">{vendor.bank_branch || 'Not provided'}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-600">Account Number:</span>
+                  <p className="mt-1">{vendor.account_number || 'Not provided'}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-600">IFSC Code:</span>
+                  <p className="mt-1">{vendor.ifsc_code || 'Not provided'}</p>
+                </div>
+                <div className="md:col-span-2">
+                  <span className="font-medium text-gray-600">Account Holder Name:</span>
+                  <p className="mt-1">{vendor.account_holder_name || 'Not provided'}</p>
                 </div>
               </div>
             </CardContent>
