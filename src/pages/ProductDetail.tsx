@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Edit, Package } from "lucide-react";
+import { ArrowLeft, Edit, Package, Building, User, Phone, Mail, Calendar, DollarSign } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import CreateRfpForProduct from "@/components/product/CreateRfpForProduct";
 import ProductPriceHistory from "@/components/product/ProductPriceHistory";
@@ -140,6 +140,39 @@ const ProductDetail = () => {
     enabled: !!productId,
   });
 
+  // Fetch vendors that supply this product
+  const { data: vendors } = useQuery({
+    queryKey: ["product_vendors", productId],
+    queryFn: async () => {
+      if (!productId) return [];
+      
+      const { data, error } = await supabase
+        .from("vendor_products")
+        .select(`
+          *,
+          vendor:vendor_id(
+            company_name,
+            vendor_number,
+            status,
+            primary_email,
+            primary_phone,
+            currency
+          )
+        `)
+        .eq("product_id", productId)
+        .eq("is_active", true)
+        .order("registered_at", { ascending: false });
+
+      if (error) {
+        console.error("Error fetching product vendors:", error);
+        return [];
+      }
+
+      return data || [];
+    },
+    enabled: !!productId,
+  });
+
   console.log("Component state:", { isLoading, error, product });
 
   if (isLoading) {
@@ -262,6 +295,68 @@ const ProductDetail = () => {
               productId={product.id}
               productName={product.name}
             />
+          )}
+
+          {/* Vendors Section */}
+          {vendors && vendors.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Building className="h-5 w-5" />
+                  Suppliers ({vendors.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {vendors.map((vendorProduct: any) => (
+                    <div key={vendorProduct.id} className="p-4 border rounded-lg">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <h4 className="font-semibold text-lg">{vendorProduct.vendor?.company_name}</h4>
+                            <Badge variant={vendorProduct.vendor?.status === 'approved' ? 'default' : 'secondary'}>
+                              {vendorProduct.vendor?.status?.charAt(0).toUpperCase() + vendorProduct.vendor?.status?.slice(1)}
+                            </Badge>
+                          </div>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-gray-600">
+                            <div className="flex items-center gap-2">
+                              <User className="w-4 h-4" />
+                              <span>Vendor #: {vendorProduct.vendor?.vendor_number || 'Not assigned'}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Mail className="w-4 h-4" />
+                              <span>{vendorProduct.vendor?.primary_email}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Phone className="w-4 h-4" />
+                              <span>{vendorProduct.vendor?.primary_phone}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Calendar className="w-4 h-4" />
+                              <span>Registered: {new Date(vendorProduct.registered_at).toLocaleDateString()}</span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="text-right">
+                          {vendorProduct.vendor_price && (
+                            <div className="text-lg font-semibold text-green-600">
+                              {vendorProduct.vendor_currency || vendorProduct.vendor?.currency || 'USD'} {Number(vendorProduct.vendor_price).toLocaleString()}
+                            </div>
+                          )}
+                          {vendorProduct.price_updated_at && (
+                            <div className="text-xs text-gray-500 mt-1">
+                              Updated: {new Date(vendorProduct.price_updated_at).toLocaleDateString()}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
           )}
 
           <Card>

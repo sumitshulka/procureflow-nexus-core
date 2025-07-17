@@ -8,6 +8,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { VendorRegistration, parseAddress } from '@/types/vendor';
 import { useAuth } from '@/contexts/AuthContext';
+import VendorProductsList from '@/components/vendor/VendorProductsList';
 import { 
   ArrowLeft, 
   Building, 
@@ -672,15 +673,7 @@ const VendorDashboardDetail = () => {
         </TabsContent>
 
         <TabsContent value="products">
-          <Card>
-            <CardHeader>
-              <CardTitle>Vendor Products</CardTitle>
-              <CardDescription>Products offered by this vendor</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-gray-500">Product management functionality will be implemented here.</p>
-            </CardContent>
-          </Card>
+          <VendorProductsList vendorId={vendorId!} />
         </TabsContent>
 
         <TabsContent value="orders">
