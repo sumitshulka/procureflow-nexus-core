@@ -307,49 +307,59 @@ const ProductDetail = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
+                <div className="space-y-6">
                   {vendors.map((vendorProduct: any) => (
-                    <div key={vendorProduct.id} className="p-4 border rounded-lg">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <h4 className="font-semibold text-lg">{vendorProduct.vendor?.company_name}</h4>
+                    <div key={vendorProduct.id} className="p-4 border rounded-lg bg-gray-50">
+                      <div className="space-y-4">
+                        {/* Vendor Header */}
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                          <div className="flex items-center gap-3">
+                            <h4 className="font-semibold text-lg text-gray-900">{vendorProduct.vendor?.company_name}</h4>
                             <Badge variant={vendorProduct.vendor?.status === 'approved' ? 'default' : 'secondary'}>
                               {vendorProduct.vendor?.status?.charAt(0).toUpperCase() + vendorProduct.vendor?.status?.slice(1)}
                             </Badge>
                           </div>
                           
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-gray-600">
-                            <div className="flex items-center gap-2">
-                              <User className="w-4 h-4" />
-                              <span>Vendor #: {vendorProduct.vendor?.vendor_number || 'Not assigned'}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Mail className="w-4 h-4" />
-                              <span>{vendorProduct.vendor?.primary_email}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Phone className="w-4 h-4" />
-                              <span>{vendorProduct.vendor?.primary_phone}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Calendar className="w-4 h-4" />
-                              <span>Registered: {new Date(vendorProduct.registered_at).toLocaleDateString()}</span>
-                            </div>
+                          {/* Price Section */}
+                          <div className="text-right">
+                            {vendorProduct.vendor_price && (
+                              <div className="text-xl font-bold text-green-600">
+                                {vendorProduct.vendor_currency || vendorProduct.vendor?.currency || 'USD'} {Number(vendorProduct.vendor_price).toLocaleString()}
+                              </div>
+                            )}
+                            {vendorProduct.price_updated_at && (
+                              <div className="text-xs text-gray-500 mt-1">
+                                Updated: {new Date(vendorProduct.price_updated_at).toLocaleDateString()}
+                              </div>
+                            )}
                           </div>
                         </div>
                         
-                        <div className="text-right">
-                          {vendorProduct.vendor_price && (
-                            <div className="text-lg font-semibold text-green-600">
-                              {vendorProduct.vendor_currency || vendorProduct.vendor?.currency || 'USD'} {Number(vendorProduct.vendor_price).toLocaleString()}
+                        {/* Vendor Details Grid */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <User className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                              <span className="text-gray-600">Vendor #:</span>
+                              <span className="font-medium">{vendorProduct.vendor?.vendor_number || 'Not assigned'}</span>
                             </div>
-                          )}
-                          {vendorProduct.price_updated_at && (
-                            <div className="text-xs text-gray-500 mt-1">
-                              Updated: {new Date(vendorProduct.price_updated_at).toLocaleDateString()}
+                            <div className="flex items-center gap-2">
+                              <Calendar className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                              <span className="text-gray-600">Registered:</span>
+                              <span className="font-medium">{new Date(vendorProduct.registered_at).toLocaleDateString()}</span>
                             </div>
-                          )}
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <Mail className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                              <span className="text-gray-600 truncate">{vendorProduct.vendor?.primary_email}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Phone className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                              <span className="text-gray-600">{vendorProduct.vendor?.primary_phone}</span>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
