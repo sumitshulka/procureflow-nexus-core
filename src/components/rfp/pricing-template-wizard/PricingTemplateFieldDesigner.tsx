@@ -11,7 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Plus, Edit, Trash2, Settings, Table, X, Check } from "lucide-react";
+import { Plus, Edit, Trash2, Settings, Table, X, Check, Calculator } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface PricingField {
   id: string;
@@ -82,6 +83,139 @@ const FieldForm = React.memo(({
       name: field.field_name,
       label: field.field_label
     }));
+  };
+
+  const FormulaBuilder = ({ value, onChange }: { value: string; onChange: (value: string) => void }) => {
+    const [formulaInput, setFormulaInput] = useState(value || "");
+    const availableFields = getAvailableFieldsForFormula();
+    
+    const insertField = (fieldName: string) => {
+      setFormulaInput(prev => prev + fieldName);
+      onChange(formulaInput + fieldName);
+    };
+    
+    const insertOperator = (operator: string) => {
+      setFormulaInput(prev => prev + ` ${operator} `);
+      onChange(formulaInput + ` ${operator} `);
+    };
+    
+    const handleInputChange = (newValue: string) => {
+      setFormulaInput(newValue);
+      onChange(newValue);
+    };
+
+    return (
+      <div className="space-y-3">
+        <div className="relative">
+          <Input
+            value={formulaInput}
+            onChange={(e) => handleInputChange(e.target.value)}
+            placeholder="Build your formula using fields and operators"
+            className="pr-10"
+          />
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="absolute right-1 top-1 h-8 w-8 p-0"
+              >
+                <Calculator className="h-4 w-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80" align="end">
+              <div className="space-y-4">
+                <div>
+                  <h4 className="font-medium text-sm mb-2">Available Fields</h4>
+                  <div className="grid grid-cols-1 gap-1">
+                    {availableFields.length > 0 ? (
+                      availableFields.map((field) => (
+                        <Button
+                          key={field.name}
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="justify-start h-8 text-xs"
+                          onClick={() => insertField(field.name)}
+                        >
+                          <code className="bg-muted px-1 rounded mr-2">{field.name}</code>
+                          {field.label}
+                        </Button>
+                      ))
+                    ) : (
+                      <p className="text-xs text-muted-foreground">
+                        Add numeric fields first to use in calculations
+                      </p>
+                    )}
+                  </div>
+                </div>
+                
+                <div>
+                  <h4 className="font-medium text-sm mb-2">Operators</h4>
+                  <div className="grid grid-cols-4 gap-1">
+                    {['+', '-', '*', '/'].map((op) => (
+                      <Button
+                        key={op}
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-8"
+                        onClick={() => insertOperator(op)}
+                      >
+                        {op}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+                
+                <div>
+                  <h4 className="font-medium text-sm mb-2">Functions</h4>
+                  <div className="grid grid-cols-1 gap-1">
+                    {['SUM()', 'AVG()', 'MAX()', 'MIN()'].map((func) => (
+                      <Button
+                        key={func}
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="justify-start h-8 text-xs"
+                        onClick={() => insertField(func)}
+                      >
+                        {func}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+                
+                <div className="border-t pt-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="w-full text-xs"
+                    onClick={() => {
+                      setFormulaInput("");
+                      onChange("");
+                    }}
+                  >
+                    Clear Formula
+                  </Button>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+        </div>
+        
+        <div className="text-xs text-muted-foreground">
+          <p className="font-medium mb-1">Examples:</p>
+          <ul className="space-y-1">
+            <li>• <code>quantity * unit_price</code></li>
+            <li>• <code>(quantity * unit_price) * (1 + tax_rate)</code></li>
+            <li>• <code>SUM(item1 + item2 + item3)</code></li>
+          </ul>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -235,26 +369,11 @@ const FieldForm = React.memo(({
                 <FormItem>
                   <FormLabel>Calculation Formula</FormLabel>
                   <FormControl>
-                    <Input
-                      placeholder="e.g., quantity * unit_price"
-                      {...field}
+                    <FormulaBuilder
+                      value={field.value || ""}
+                      onChange={field.onChange}
                     />
                   </FormControl>
-                  <div className="text-xs text-muted-foreground space-y-1">
-                    <p>Use field names/labels and operators (+, -, *, /) to create formulas</p>
-                    {getAvailableFieldsForFormula().length > 0 && (
-                      <div>
-                        <span className="font-medium">Available fields:</span>
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {getAvailableFieldsForFormula().map((f) => (
-                            <code key={f.name} className="bg-muted px-1 rounded text-xs">
-                              {f.name}
-                            </code>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
                   <FormMessage />
                 </FormItem>
               )}
