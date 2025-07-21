@@ -11,21 +11,21 @@ const CreateRfp = () => {
   const creationMethods = [
     {
       title: "Create from Template",
-      description: "Use pre-built templates to quickly create standardized RFPs",
+      description: "Use pre-built templates to quickly create standardized RFPs with pre-filled data",
       icon: FileText,
       action: () => navigate("/rfp/templates"),
       color: "bg-blue-500"
     },
     {
       title: "Quick Start Wizard",
-      description: "Step-by-step guided process to create your RFP",
+      description: "Simplified 3-step process for basic RFP creation",
       icon: Zap,
       action: () => navigate("/rfp/create-wizard"),
       color: "bg-green-500"
     },
     {
       title: "Advanced Setup",
-      description: "Full customization with all available options",
+      description: "Complete 5-step process with vendor selection and detailed terms",
       icon: Settings,
       action: () => navigate("/rfp/create-wizard?mode=advanced"),
       color: "bg-purple-500"
