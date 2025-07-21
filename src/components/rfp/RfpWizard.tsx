@@ -88,10 +88,10 @@ const RfpWizard = () => {
         { number: 5, title: "Review & Submit", component: RfpReview },
       ];
     } else if (templateParam) {
-      // Template mode: Focus on customizing template data, no separate vendor step
+      // Template mode: Focus on customizing template data with combined BOQ + vendor step
       return [
         { number: 1, title: "Basic Information & Custom Fields", component: RfpBasicInfo },
-        { number: 2, title: "Bill of Quantities (BOQ)", component: RfpBoq },
+        { number: 2, title: "Items & Vendor Selection", component: RfpBoq },
         { number: 3, title: "Terms & Conditions", component: RfpTerms },
         { number: 4, title: "Review & Submit", component: RfpReview },
       ];

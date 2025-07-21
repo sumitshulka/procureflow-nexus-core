@@ -35,6 +35,7 @@ interface RfpBoqProps {
   onUpdate: (data: any) => void;
   onNext: () => void;
   mode?: string;
+  templateData?: any;
 }
 
 interface Vendor {
@@ -44,7 +45,7 @@ interface Vendor {
   status: string;
 }
 
-const RfpBoq: React.FC<RfpBoqProps> = ({ data, onUpdate, onNext, mode }) => {
+const RfpBoq: React.FC<RfpBoqProps> = ({ data, onUpdate, onNext, mode, templateData }) => {
   const { toast } = useToast();
   const [boqItems, setBoqItems] = useState<BoqItem[]>(data.boqItems || []);
   const [products, setProducts] = useState<Product[]>([]);
@@ -56,11 +57,11 @@ const RfpBoq: React.FC<RfpBoqProps> = ({ data, onUpdate, onNext, mode }) => {
 
   useEffect(() => {
     fetchProducts();
-    if (mode === 'quick') {
+    if (mode === 'quick' || templateData) {
       fetchVendors();
       generatePublicLink();
     }
-  }, [mode]);
+  }, [mode, templateData]);
 
   const fetchProducts = async () => {
     try {
@@ -194,8 +195,8 @@ const RfpBoq: React.FC<RfpBoqProps> = ({ data, onUpdate, onNext, mode }) => {
       return;
     }
 
-    // For quick mode, also validate vendor selection
-    if (mode === 'quick' && !isPublic && selectedVendors.length === 0) {
+    // For quick mode and template mode, also validate vendor selection
+    if ((mode === 'quick' || templateData) && !isPublic && selectedVendors.length === 0) {
       toast({
         title: "Error",
         description: "Please select at least one vendor or make the RFP public",
@@ -206,7 +207,7 @@ const RfpBoq: React.FC<RfpBoqProps> = ({ data, onUpdate, onNext, mode }) => {
 
     const updateData = { 
       boqItems,
-      ...(mode === 'quick' && {
+      ...((mode === 'quick' || templateData) && {
         vendors: selectedVendors,
         isPublic,
         publicLink: isPublic ? publicLink : undefined,
@@ -348,8 +349,8 @@ const RfpBoq: React.FC<RfpBoqProps> = ({ data, onUpdate, onNext, mode }) => {
         </Card>
       )}
 
-      {/* Vendor Selection for Quick Start Mode */}
-      {mode === 'quick' && (
+      {/* Vendor Selection for Quick Start Mode and Template Mode */}
+      {(mode === 'quick' || templateData) && (
         <div className="space-y-6 pt-6 border-t">
           <div>
             <h3 className="text-lg font-medium mb-4">Vendor Selection</h3>
@@ -462,7 +463,7 @@ const RfpBoq: React.FC<RfpBoqProps> = ({ data, onUpdate, onNext, mode }) => {
 
       <div className="flex justify-end">
         <Button onClick={handleContinue}>
-          {mode === 'quick' ? 'Continue to Review' : 'Continue to Vendor Selection'}
+          {mode === 'quick' ? 'Continue to Review' : templateData ? 'Continue to Terms & Conditions' : 'Continue to Vendor Selection'}
         </Button>
       </div>
     </div>
