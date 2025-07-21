@@ -53,7 +53,21 @@ interface RFP {
   title: string;
   rfp_number: string;
   status: string;
+  description?: string;
+  estimated_value?: number;
+  currency?: string;
   submission_deadline: string;
+  technical_evaluation_deadline?: string;
+  commercial_evaluation_deadline?: string;
+  pre_bid_meeting_date?: string;
+  pre_bid_meeting_venue?: string;
+  bid_validity_period?: number;
+  terms_and_conditions?: string;
+  payment_terms?: string;
+  delivery_terms?: string;
+  warranty_requirements?: string;
+  minimum_eligibility_criteria?: string;
+  created_at: string;
   evaluation_criteria?: {
     type: string; // 'qcbs', 'price_l1', 'technical_l1'
     technical_weight?: number;
@@ -62,7 +76,7 @@ interface RFP {
 }
 
 const RfpResponses = () => {
-  const { rfpId } = useParams<{ rfpId: string }>();
+  const { id: rfpId } = useParams<{ id: string }>();
   const { toast } = useToast();
   const [rfp, setRfp] = useState<RFP | null>(null);
   const [responses, setResponses] = useState<RFPResponse[]>([]);
@@ -100,6 +114,7 @@ const RfpResponses = () => {
           rfp_number: "RFP-2024-001",
           status: "active",
           submission_deadline: "2024-03-01T23:59:59Z",
+          created_at: "2024-01-01T00:00:00Z",
           evaluation_criteria: {
             type: "qcbs",
             technical_weight: 70,
@@ -112,6 +127,7 @@ const RfpResponses = () => {
           rfp_number: "RFP-2024-002",
           status: "completed",
           submission_deadline: "2024-02-15T23:59:59Z",
+          created_at: "2024-01-15T00:00:00Z",
           evaluation_criteria: {
             type: "price_l1"
           }
@@ -122,6 +138,7 @@ const RfpResponses = () => {
           rfp_number: "RFP-2023-015",
           status: "awarded",
           submission_deadline: "2023-12-30T23:59:59Z",
+          created_at: "2023-12-01T00:00:00Z",
           evaluation_criteria: {
             type: "technical_l1"
           }
@@ -140,9 +157,28 @@ const RfpResponses = () => {
 
   const fetchRfpData = async (id: string) => {
     try {
-      const selectedRfp = allRfps.find(r => r.id === id);
-      if (selectedRfp) {
-        setRfp(selectedRfp);
+      // First try to fetch from database
+      const { data: rfpData, error } = await supabase
+        .from("rfps")
+        .select("*")
+        .eq("id", id)
+        .single();
+
+      if (!error && rfpData) {
+        // Transform the database response to match our RFP interface
+        const transformedRfp: RFP = {
+          ...rfpData,
+          evaluation_criteria: typeof rfpData.evaluation_criteria === 'string' 
+            ? JSON.parse(rfpData.evaluation_criteria) 
+            : rfpData.evaluation_criteria
+        };
+        setRfp(transformedRfp);
+      } else {
+        // Fallback to mock data
+        const selectedRfp = allRfps.find(r => r.id === id);
+        if (selectedRfp) {
+          setRfp(selectedRfp);
+        }
       }
     } catch (error: any) {
       toast({
@@ -417,27 +453,113 @@ const RfpResponses = () => {
       )}
 
       {rfp && (
-        <div className="mb-6">
+        <div className="mb-6 space-y-4">
+          {/* RFP Header Information */}
           <Card>
-            <CardContent className="p-4">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span>{rfp.title}</span>
+                <Badge variant={getStatusBadgeVariant(rfp.status)}>
+                  {rfp.status.charAt(0).toUpperCase() + rfp.status.slice(1)}
+                </Badge>
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                RFP Number: {rfp.rfp_number}
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {rfp.description && (
                 <div>
-                  <span className="font-medium">RFP:</span> {rfp.title}
+                  <h4 className="font-medium mb-2">Description</h4>
+                  <p className="text-sm text-muted-foreground">{rfp.description}</p>
                 </div>
+              )}
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {rfp.estimated_value && (
+                  <div>
+                    <span className="font-medium">Estimated Value:</span>{" "}
+                    {rfp.currency || 'USD'} {rfp.estimated_value.toLocaleString()}
+                  </div>
+                )}
                 <div>
-                  <span className="font-medium">Number:</span> {rfp.rfp_number}
+                  <span className="font-medium">Submission Deadline:</span>{" "}
+                  {format(new Date(rfp.submission_deadline), "PPp")}
                 </div>
+                {rfp.technical_evaluation_deadline && (
+                  <div>
+                    <span className="font-medium">Technical Evaluation:</span>{" "}
+                    {format(new Date(rfp.technical_evaluation_deadline), "PPp")}
+                  </div>
+                )}
+                {rfp.commercial_evaluation_deadline && (
+                  <div>
+                    <span className="font-medium">Commercial Evaluation:</span>{" "}
+                    {format(new Date(rfp.commercial_evaluation_deadline), "PPp")}
+                  </div>
+                )}
+                {rfp.pre_bid_meeting_date && (
+                  <div>
+                    <span className="font-medium">Pre-bid Meeting:</span>{" "}
+                    {format(new Date(rfp.pre_bid_meeting_date), "PPp")}
+                  </div>
+                )}
+                {rfp.pre_bid_meeting_venue && (
+                  <div>
+                    <span className="font-medium">Meeting Venue:</span>{" "}
+                    {rfp.pre_bid_meeting_venue}
+                  </div>
+                )}
+                {rfp.bid_validity_period && (
+                  <div>
+                    <span className="font-medium">Bid Validity:</span>{" "}
+                    {rfp.bid_validity_period} days
+                  </div>
+                )}
                 <div>
-                  <span className="font-medium">Status:</span>{" "}
-                  <Badge variant={getStatusBadgeVariant(rfp.status)}>
-                    {rfp.status.charAt(0).toUpperCase() + rfp.status.slice(1)}
-                  </Badge>
-                </div>
-                <div>
-                  <span className="font-medium">Deadline:</span>{" "}
-                  {format(new Date(rfp.submission_deadline), "PPP")}
+                  <span className="font-medium">Created:</span>{" "}
+                  {format(new Date(rfp.created_at), "PPp")}
                 </div>
               </div>
+
+              {/* Terms and Conditions */}
+              {(rfp.terms_and_conditions || rfp.payment_terms || rfp.delivery_terms || rfp.warranty_requirements) && (
+                <div className="mt-4 pt-4 border-t">
+                  <h4 className="font-medium mb-3">Terms & Conditions</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    {rfp.payment_terms && (
+                      <div>
+                        <span className="font-medium">Payment Terms:</span>
+                        <p className="text-muted-foreground mt-1">{rfp.payment_terms}</p>
+                      </div>
+                    )}
+                    {rfp.delivery_terms && (
+                      <div>
+                        <span className="font-medium">Delivery Terms:</span>
+                        <p className="text-muted-foreground mt-1">{rfp.delivery_terms}</p>
+                      </div>
+                    )}
+                    {rfp.warranty_requirements && (
+                      <div>
+                        <span className="font-medium">Warranty Requirements:</span>
+                        <p className="text-muted-foreground mt-1">{rfp.warranty_requirements}</p>
+                      </div>
+                    )}
+                    {rfp.minimum_eligibility_criteria && (
+                      <div>
+                        <span className="font-medium">Eligibility Criteria:</span>
+                        <p className="text-muted-foreground mt-1">{rfp.minimum_eligibility_criteria}</p>
+                      </div>
+                    )}
+                  </div>
+                  {rfp.terms_and_conditions && (
+                    <div className="mt-3">
+                      <span className="font-medium">General Terms:</span>
+                      <p className="text-muted-foreground mt-1">{rfp.terms_and_conditions}</p>
+                    </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
