@@ -8,6 +8,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import RfpBasicInfo from "./RfpBasicInfo";
 import RfpBoq from "./RfpBoq";
 import RfpVendors from "./RfpVendors";
+import RfpPricingFormat from "./RfpPricingFormat";
 import RfpTerms from "./RfpTerms";
 import RfpReview from "./RfpReview";
 
@@ -84,23 +85,26 @@ const RfpWizard = () => {
         { number: 1, title: "Basic Information", component: RfpBasicInfo },
         { number: 2, title: "Bill of Quantities (BOQ)", component: RfpBoq },
         { number: 3, title: "Vendor Selection", component: RfpVendors },
-        { number: 4, title: "Terms & Conditions", component: RfpTerms },
-        { number: 5, title: "Review & Submit", component: RfpReview },
+        { number: 4, title: "Pricing Format", component: RfpPricingFormat },
+        { number: 5, title: "Terms & Conditions", component: RfpTerms },
+        { number: 6, title: "Review & Submit", component: RfpReview },
       ];
     } else if (templateParam) {
       // Template mode: Focus on customizing template data with combined BOQ + vendor step
       return [
         { number: 1, title: "Basic Information & Custom Fields", component: RfpBasicInfo },
         { number: 2, title: "Items & Vendor Selection", component: RfpBoq },
-        { number: 3, title: "Terms & Conditions", component: RfpTerms },
-        { number: 4, title: "Review & Submit", component: RfpReview },
+        { number: 3, title: "Pricing Format", component: RfpPricingFormat },
+        { number: 4, title: "Terms & Conditions", component: RfpTerms },
+        { number: 5, title: "Review & Submit", component: RfpReview },
       ];
     } else {
       // Quick start mode: Simplified with combined BOQ + vendor selection
       return [
         { number: 1, title: "Basic Information", component: RfpBasicInfo },
         { number: 2, title: "Items & Vendor Selection", component: RfpBoq }, // Combined step
-        { number: 3, title: "Review & Submit", component: RfpReview },
+        { number: 3, title: "Pricing Format", component: RfpPricingFormat },
+        { number: 4, title: "Review & Submit", component: RfpReview },
       ];
     }
   };
@@ -147,6 +151,8 @@ const RfpWizard = () => {
         return <RfpBoq {...props} />;
       case RfpVendors:
         return <RfpVendors {...props} />;
+      case RfpPricingFormat:
+        return <RfpPricingFormat {...props} />;
       case RfpTerms:
         return <RfpTerms {...props} />;
       case RfpReview:

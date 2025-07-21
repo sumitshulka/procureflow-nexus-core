@@ -480,6 +480,104 @@ export type Database = {
           },
         ]
       }
+      pricing_template_fields: {
+        Row: {
+          calculation_formula: string | null
+          column_number: number
+          created_at: string
+          description: string | null
+          display_order: number
+          field_label: string
+          field_name: string
+          field_options: Json | null
+          field_type: string
+          id: string
+          is_required: boolean
+          row_number: number
+          template_id: string
+        }
+        Insert: {
+          calculation_formula?: string | null
+          column_number?: number
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          field_label: string
+          field_name: string
+          field_options?: Json | null
+          field_type: string
+          id?: string
+          is_required?: boolean
+          row_number?: number
+          template_id: string
+        }
+        Update: {
+          calculation_formula?: string | null
+          column_number?: number
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          field_label?: string
+          field_name?: string
+          field_options?: Json | null
+          field_type?: string
+          id?: string
+          is_required?: boolean
+          row_number?: number
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pricing_template_fields_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "pricing_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pricing_templates: {
+        Row: {
+          category: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          is_active: boolean
+          is_default: boolean
+          name: string
+          template_data: Json
+          updated_at: string
+          usage_count: number
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          name: string
+          template_data?: Json
+          updated_at?: string
+          usage_count?: number
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          name?: string
+          template_data?: Json
+          updated_at?: string
+          usage_count?: number
+        }
+        Relationships: []
+      }
       procurement_request_items: {
         Row: {
           created_at: string | null
