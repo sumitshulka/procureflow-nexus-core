@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -29,6 +30,7 @@ import {
 
 const VendorRfps = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
@@ -272,12 +274,14 @@ const VendorRfps = () => {
                           {format(new Date(rfp.created_at), 'MMM dd, yyyy')}
                         </p>
                       </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Budget Range</p>
-                        <p className="font-medium flex items-center gap-1">
-                          <DollarSign className="w-4 h-4" />
-                          Not specified
-                        </p>
+                       <div>
+                         <p className="text-sm text-muted-foreground">Budget Range</p>
+                         <p className="font-medium flex items-center gap-1">
+                           <DollarSign className="w-4 h-4" />
+                           {rfp.estimated_value && rfp.currency 
+                             ? `${rfp.currency} ${rfp.estimated_value.toLocaleString()}`
+                             : 'Not specified'}
+                         </p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Response Status</p>
@@ -290,18 +294,29 @@ const VendorRfps = () => {
                     </div>
                     
                     <div className="flex gap-2">
-                      <Button variant="outline" size="sm">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => navigate(`/vendor/rfps/${rfp.id}`)}
+                      >
                         <Eye className="w-4 h-4 mr-2" />
                         View Details
                       </Button>
                       {!rfp.hasResponded && daysUntilDeadline > 0 && (
-                        <Button size="sm">
+                        <Button 
+                          size="sm"
+                          onClick={() => navigate(`/vendor/rfps/${rfp.id}/respond`)}
+                        >
                           <Send className="w-4 h-4 mr-2" />
                           Submit Response
                         </Button>
                       )}
                       {rfp.hasResponded && (
-                        <Button variant="outline" size="sm">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => navigate(`/vendor/rfps/${rfp.id}/response`)}
+                        >
                           <FileText className="w-4 h-4 mr-2" />
                           View Response
                         </Button>
