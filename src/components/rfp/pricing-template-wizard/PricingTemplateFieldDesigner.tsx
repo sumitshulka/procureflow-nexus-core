@@ -1,4 +1,7 @@
 import React, { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,8 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Plus, Edit, Trash2, Settings, Table, X, Check } from "lucide-react";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface PricingField {
   id: string;
@@ -37,21 +40,36 @@ interface PricingTemplateFieldDesignerProps {
   onUpdate: (data: Partial<PricingTemplateData>) => void;
 }
 
+const fieldSchema = z.object({
+  field_label: z.string().min(1, "Field label is required"),
+  field_type: z.string().default("text"),
+  description: z.string().optional(),
+  calculation_formula: z.string().optional(),
+  is_required: z.boolean().default(false),
+  row_number: z.number().min(1),
+  column_number: z.number().min(1),
+});
+
+type FieldFormData = z.infer<typeof fieldSchema>;
+
 const PricingTemplateFieldDesigner: React.FC<PricingTemplateFieldDesignerProps> = ({
   data,
   onUpdate,
 }) => {
   const [isAddingField, setIsAddingField] = useState(false);
   const [editingFieldId, setEditingFieldId] = useState<string | null>(null);
-  const [newField, setNewField] = useState<Partial<PricingField>>({
-    field_name: "",
-    field_label: "",
-    field_type: "text",
-    description: "",
-    calculation_formula: "",
-    is_required: false,
-    row_number: 1,
-    column_number: 1
+  
+  const form = useForm<FieldFormData>({
+    resolver: zodResolver(fieldSchema),
+    defaultValues: {
+      field_label: "",
+      field_type: "text",
+      description: "",
+      calculation_formula: "",
+      is_required: false,
+      row_number: 1,
+      column_number: 1,
+    },
   });
 
   const fieldTypes = [
@@ -73,71 +91,69 @@ const PricingTemplateFieldDesigner: React.FC<PricingTemplateFieldDesignerProps> 
   };
 
   const resetForm = () => {
-    setNewField({
-      field_name: "",
+    form.reset({
       field_label: "",
       field_type: "text",
       description: "",
       calculation_formula: "",
       is_required: false,
       row_number: 1,
-      column_number: 1
+      column_number: 1,
     });
   };
 
-  const handleAddField = () => {
-    if (!newField.field_label?.trim()) return;
-
-    const field: PricingField = {
-      id: `field_${Date.now()}`,
-      field_name: newField.field_name || generateFieldName(newField.field_label),
-      field_label: newField.field_label,
-      field_type: newField.field_type || "text",
-      description: newField.description,
-      calculation_formula: newField.calculation_formula,
-      field_options: newField.field_options,
-      is_required: newField.is_required || false,
-      display_order: data.fields.length,
-      row_number: newField.row_number || 1,
-      column_number: newField.column_number || 1
-    };
-
-    onUpdate({
-      fields: [...data.fields, field]
-    });
-
+  const onSubmitField = (formData: FieldFormData) => {
+    if (editingFieldId) {
+      // Update existing field
+      const updatedFields = data.fields.map(field => 
+        field.id === editingFieldId 
+          ? {
+              ...field,
+              field_name: generateFieldName(formData.field_label),
+              field_label: formData.field_label,
+              field_type: formData.field_type,
+              description: formData.description,
+              calculation_formula: formData.calculation_formula,
+              is_required: formData.is_required,
+              row_number: formData.row_number,
+              column_number: formData.column_number,
+            }
+          : field
+      );
+      onUpdate({ fields: updatedFields });
+      setEditingFieldId(null);
+    } else {
+      // Add new field
+      const field: PricingField = {
+        id: `field_${Date.now()}`,
+        field_name: generateFieldName(formData.field_label),
+        field_label: formData.field_label,
+        field_type: formData.field_type,
+        description: formData.description,
+        calculation_formula: formData.calculation_formula,
+        field_options: null,
+        is_required: formData.is_required,
+        display_order: data.fields.length,
+        row_number: formData.row_number,
+        column_number: formData.column_number,
+      };
+      onUpdate({ fields: [...data.fields, field] });
+      setIsAddingField(false);
+    }
     resetForm();
-    setIsAddingField(false);
   };
 
   const handleEditField = (field: PricingField) => {
     setEditingFieldId(field.id);
-    setNewField({...field});
-  };
-
-  const handleUpdateField = () => {
-    if (!editingFieldId || !newField.field_label?.trim()) return;
-
-    const updatedFields = data.fields.map(field => 
-      field.id === editingFieldId 
-        ? {
-            ...field,
-            field_name: newField.field_name || generateFieldName(newField.field_label),
-            field_label: newField.field_label,
-            field_type: newField.field_type || "text",
-            description: newField.description,
-            calculation_formula: newField.calculation_formula,
-            field_options: newField.field_options,
-            is_required: newField.is_required || false,
-            row_number: newField.row_number || 1,
-            column_number: newField.column_number || 1
-          }
-        : field
-    );
-
-    onUpdate({ fields: updatedFields });
-    setEditingFieldId(null);
-    resetForm();
+    form.reset({
+      field_label: field.field_label,
+      field_type: field.field_type,
+      description: field.description || "",
+      calculation_formula: field.calculation_formula || "",
+      is_required: field.is_required,
+      row_number: field.row_number,
+      column_number: field.column_number,
+    });
   };
 
   const handleCancelAdd = () => {
@@ -207,145 +223,182 @@ const PricingTemplateFieldDesigner: React.FC<PricingTemplateFieldDesignerProps> 
         <CardTitle className="text-sm flex items-center justify-between">
           {isEditing ? 'Edit Field' : 'Add New Field'}
           <div className="flex gap-2">
-            {isEditing ? (
-              <>
-                <Button size="sm" onClick={handleUpdateField} className="h-8">
-                  <Check className="h-3 w-3 mr-1" />
-                  Update
-                </Button>
-                <Button size="sm" variant="outline" onClick={handleCancelEdit} className="h-8">
-                  <X className="h-3 w-3 mr-1" />
-                  Cancel
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button size="sm" onClick={handleAddField} className="h-8">
-                  <Check className="h-3 w-3 mr-1" />
-                  Add
-                </Button>
-                <Button size="sm" variant="outline" onClick={handleCancelAdd} className="h-8">
-                  <X className="h-3 w-3 mr-1" />
-                  Cancel
-                </Button>
-              </>
-            )}
+            <Button size="sm" type="submit" form="field-form" className="h-8">
+              <Check className="h-3 w-3 mr-1" />
+              {isEditing ? 'Update' : 'Add'}
+            </Button>
+            <Button 
+              size="sm" 
+              variant="outline" 
+              onClick={isEditing ? handleCancelEdit : handleCancelAdd} 
+              className="h-8"
+            >
+              <X className="h-3 w-3 mr-1" />
+              Cancel
+            </Button>
           </div>
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="field_label">Field Label *</Label>
-            <Input
-              id="field_label"
-              placeholder="e.g., Unit Price"
-              value={newField.field_label || ""}
-              onChange={(e) => {
-                const label = e.target.value;
-                setNewField(prev => ({
-                  ...prev,
-                  field_label: label,
-                  field_name: prev.field_name || generateFieldName(label)
-                }));
-              }}
+      <CardContent>
+        <Form {...form}>
+          <form id="field-form" onSubmit={form.handleSubmit(onSubmitField)} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="field_label"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Field Label *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., Unit Price" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="field_type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Field Type</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {fieldTypes.map((type) => (
+                          <SelectItem key={type.value} value={type.value}>
+                            {type.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="row_number"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Row Position</FormLabel>
+                    <Select 
+                      onValueChange={(value) => field.onChange(parseInt(value))} 
+                      value={field.value?.toString()}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {Array.from({ length: rows }, (_, i) => (
+                          <SelectItem key={i + 1} value={(i + 1).toString()}>
+                            Row {i + 1}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="column_number"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Column Position</FormLabel>
+                    <Select 
+                      onValueChange={(value) => field.onChange(parseInt(value))} 
+                      value={field.value?.toString()}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {Array.from({ length: columns }, (_, i) => (
+                          <SelectItem key={i + 1} value={(i + 1).toString()}>
+                            Column {i + 1}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Brief description of this field..."
+                      rows={2}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="field_type">Field Type</Label>
-            <Select 
-              value={newField.field_type || "text"} 
-              onValueChange={(value) => setNewField(prev => ({ ...prev, field_type: value }))}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {fieldTypes.map((type) => (
-                  <SelectItem key={type.value} value={type.value}>
-                    {type.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="row_number">Row Position</Label>
-            <Select 
-              value={newField.row_number?.toString()} 
-              onValueChange={(value) => setNewField(prev => ({ ...prev, row_number: parseInt(value) }))}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Array.from({ length: rows }, (_, i) => (
-                  <SelectItem key={i + 1} value={(i + 1).toString()}>
-                    Row {i + 1}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="column_number">Column Position</Label>
-            <Select 
-              value={newField.column_number?.toString()} 
-              onValueChange={(value) => setNewField(prev => ({ ...prev, column_number: parseInt(value) }))}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Array.from({ length: columns }, (_, i) => (
-                  <SelectItem key={i + 1} value={(i + 1).toString()}>
-                    Column {i + 1}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
+            {form.watch("field_type") === "calculation" || form.watch("field_type") === "total" ? (
+              <FormField
+                control={form.control}
+                name="calculation_formula"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Calculation Formula</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="e.g., quantity * unit_price"
+                        {...field}
+                      />
+                    </FormControl>
+                    <p className="text-xs text-muted-foreground">
+                      Use field names and operators (+, -, *, /) to create formulas
+                    </p>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            ) : null}
 
-        <div className="space-y-2">
-          <Label htmlFor="description">Description</Label>
-          <Textarea
-            id="description"
-            placeholder="Brief description of this field..."
-            value={newField.description || ""}
-            onChange={(e) => setNewField(prev => ({ ...prev, description: e.target.value }))}
-            rows={2}
-          />
-        </div>
-
-        {(newField.field_type === "calculation" || newField.field_type === "total") && (
-          <div className="space-y-2">
-            <Label htmlFor="calculation_formula">Calculation Formula</Label>
-            <Input
-              id="calculation_formula"
-              placeholder="e.g., quantity * unit_price"
-              value={newField.calculation_formula || ""}
-              onChange={(e) => setNewField(prev => ({ ...prev, calculation_formula: e.target.value }))}
+            <FormField
+              control={form.control}
+              name="is_required"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                  <FormLabel>Required field</FormLabel>
+                </FormItem>
+              )}
             />
-            <p className="text-xs text-muted-foreground">
-              Use field names and operators (+, -, *, /) to create formulas
-            </p>
-          </div>
-        )}
-
-        <div className="flex items-center space-x-2">
-          <Switch
-            id="is_required"
-            checked={newField.is_required || false}
-            onCheckedChange={(checked) => setNewField(prev => ({ ...prev, is_required: checked }))}
-          />
-          <Label htmlFor="is_required">Required field</Label>
-        </div>
+          </form>
+        </Form>
       </CardContent>
     </Card>
   );
