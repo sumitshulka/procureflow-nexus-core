@@ -55,6 +55,14 @@ const RfpBoq: React.FC<RfpBoqProps> = ({ data, onUpdate, onNext, mode, templateD
   const [publicLink, setPublicLink] = useState<string>(data.publicLink || "");
   const [isLoading, setIsLoading] = useState(false);
 
+  // Initialize default BOQ item on first load
+  useEffect(() => {
+    // Ensure there's at least one BOQ item by default for better UX
+    if (boqItems.length === 0 && (!data.boqItems || data.boqItems.length === 0)) {
+      addBoqItem();
+    }
+  }, []); // Run only once on mount
+
   useEffect(() => {
     fetchProducts();
     if (mode === 'quick' || templateData) {
