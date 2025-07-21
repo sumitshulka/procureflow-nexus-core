@@ -1036,6 +1036,47 @@ export type Database = {
           },
         ]
       }
+      rfp_activities: {
+        Row: {
+          activity_data: Json | null
+          activity_type: string
+          created_at: string
+          description: string | null
+          id: string
+          performed_by: string
+          rfp_id: string
+          title: string
+        }
+        Insert: {
+          activity_data?: Json | null
+          activity_type: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          performed_by: string
+          rfp_id: string
+          title: string
+        }
+        Update: {
+          activity_data?: Json | null
+          activity_type?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          performed_by?: string
+          rfp_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rfp_activities_rfp_id_fkey"
+            columns: ["rfp_id"]
+            isOneToOne: false
+            referencedRelation: "rfps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rfp_addendums: {
         Row: {
           addendum_number: number
@@ -1044,6 +1085,7 @@ export type Database = {
           created_at: string
           created_by: string
           description: string | null
+          field_overrides: Json | null
           id: string
           is_published: boolean
           published_at: string | null
@@ -1058,6 +1100,7 @@ export type Database = {
           created_at?: string
           created_by: string
           description?: string | null
+          field_overrides?: Json | null
           id?: string
           is_published?: boolean
           published_at?: string | null
@@ -1072,6 +1115,7 @@ export type Database = {
           created_at?: string
           created_by?: string
           description?: string | null
+          field_overrides?: Json | null
           id?: string
           is_published?: boolean
           published_at?: string | null
@@ -2371,6 +2415,10 @@ export type Database = {
         Args: { country_name: string }
         Returns: string
       }
+      get_effective_rfp_data: {
+        Args: { p_rfp_id: string }
+        Returns: Json
+      }
       get_latest_product_price: {
         Args: { p_product_id: string }
         Returns: {
@@ -2389,6 +2437,17 @@ export type Database = {
       is_request_completed: {
         Args: { request_id: string }
         Returns: boolean
+      }
+      log_rfp_activity: {
+        Args: {
+          p_rfp_id: string
+          p_activity_type: string
+          p_performed_by: string
+          p_title: string
+          p_description?: string
+          p_activity_data?: Json
+        }
+        Returns: string
       }
       record_delivery_and_update_inventory: {
         Args: { transaction_id: string; p_delivery_details: Json }

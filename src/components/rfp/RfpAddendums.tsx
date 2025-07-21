@@ -10,6 +10,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { CreateAddendumDialog } from "./CreateAddendumDialog";
 import { 
   FileText, 
   Plus, 
@@ -19,7 +20,8 @@ import {
   Upload,
   Download,
   Calendar,
-  Send
+  Send,
+  Settings
 } from "lucide-react";
 
 interface RfpAddendum {
@@ -30,6 +32,7 @@ interface RfpAddendum {
   description?: string;
   content?: string;
   attachments: any;
+  field_overrides: Record<string, any>;
   published_at?: string;
   created_by: string;
   created_at: string;
@@ -39,11 +42,13 @@ interface RfpAddendum {
 
 interface RfpAddendumsProps {
   rfpId: string;
+  rfpData?: any;
   canManage?: boolean;
 }
 
 export const RfpAddendums: React.FC<RfpAddendumsProps> = ({ 
-  rfpId, 
+  rfpId,
+  rfpData,
   canManage = false 
 }) => {
   const { toast } = useToast();
@@ -53,6 +58,7 @@ export const RfpAddendums: React.FC<RfpAddendumsProps> = ({
   const [editingAddendum, setEditingAddendum] = useState<RfpAddendum | null>(null);
   const [selectedAddendum, setSelectedAddendum] = useState<RfpAddendum | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -100,7 +106,10 @@ export const RfpAddendums: React.FC<RfpAddendumsProps> = ({
       const { data, error } = await query;
 
       if (error) throw error;
-      setAddendums(data || []);
+      setAddendums((data || []).map(item => ({
+        ...item,
+        field_overrides: item.field_overrides as Record<string, any>
+      })));
     } catch (error: any) {
       toast({
         title: "Error",
@@ -252,13 +261,18 @@ export const RfpAddendums: React.FC<RfpAddendumsProps> = ({
         <h3 className="text-lg font-semibold">RFP Addendums</h3>
         
         {canManage && (
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={openCreateDialog}>
-                <Plus className="h-4 w-4 mr-2" />
-                Create Addendum
-              </Button>
-            </DialogTrigger>
+          <div className="flex space-x-2">
+            <Button onClick={() => setIsCreateDialogOpen(true)}>
+              <Settings className="h-4 w-4 mr-2" />
+              Create Addendum
+            </Button>
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" onClick={openCreateDialog}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Basic Addendum
+                </Button>
+              </DialogTrigger>
             <DialogContent className="max-w-2xl">
               <DialogHeader>
                 <DialogTitle>
@@ -310,6 +324,7 @@ export const RfpAddendums: React.FC<RfpAddendumsProps> = ({
               </form>
             </DialogContent>
           </Dialog>
+          </div>
         )}
       </div>
 
@@ -330,9 +345,16 @@ export const RfpAddendums: React.FC<RfpAddendumsProps> = ({
                       <Badge variant="secondary">Draft</Badge>
                     )}
                   </div>
-                  {addendum.description && (
-                    <p className="text-sm text-muted-foreground">{addendum.description}</p>
-                  )}
+                    {addendum.description && (
+                      <p className="text-sm text-muted-foreground">{addendum.description}</p>
+                    )}
+                    {addendum.field_overrides && Object.keys(addendum.field_overrides).length > 0 && (
+                      <div className="mt-2">
+                        <Badge variant="outline" className="text-xs">
+                          Overrides {Object.keys(addendum.field_overrides).length} field(s)
+                        </Badge>
+                      </div>
+                    )}
                   <div className="flex items-center space-x-4 text-xs text-muted-foreground">
                     <span className="flex items-center">
                       <Calendar className="h-3 w-3 mr-1" />
@@ -431,6 +453,22 @@ export const RfpAddendums: React.FC<RfpAddendumsProps> = ({
                   <h4 className="font-medium mb-2">Content</h4>
                   <div className="prose prose-sm max-w-none">
                     <pre className="whitespace-pre-wrap text-sm">{selectedAddendum.content}</pre>
+                  </div>
+                </div>
+              )}
+
+              {selectedAddendum.field_overrides && Object.keys(selectedAddendum.field_overrides).length > 0 && (
+                <div>
+                  <h4 className="font-medium mb-2">Field Overrides</h4>
+                  <div className="space-y-2">
+                    {Object.entries(selectedAddendum.field_overrides).map(([field, value]) => (
+                      <div key={field} className="p-3 bg-muted rounded-md">
+                        <div className="font-medium text-sm capitalize">{field.replace(/_/g, ' ')}</div>
+                        <div className="text-sm text-muted-foreground mt-1">
+                          {typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value)}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}

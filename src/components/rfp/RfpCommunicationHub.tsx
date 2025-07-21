@@ -26,6 +26,7 @@ export const RfpCommunicationHub: React.FC<RfpCommunicationHubProps> = ({
   const [userRole, setUserRole] = useState<string>('');
   const [isVendor, setIsVendor] = useState(false);
   const [canManage, setCanManage] = useState(false);
+  const [rfpData, setRfpData] = useState(null);
   const [unreadCount, setUnreadCount] = useState({
     addendums: 0,
     communications: 0,
@@ -35,7 +36,23 @@ export const RfpCommunicationHub: React.FC<RfpCommunicationHubProps> = ({
   useEffect(() => {
     checkUserRole();
     fetchUnreadCounts();
+    fetchRfpData();
   }, [rfpId]);
+
+  const fetchRfpData = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('rfps')
+        .select('*')
+        .eq('id', rfpId)
+        .single();
+
+      if (error) throw error;
+      setRfpData(data);
+    } catch (error) {
+      console.error('Error fetching RFP data:', error);
+    }
+  };
 
   const checkUserRole = async () => {
     try {
@@ -187,6 +204,7 @@ export const RfpCommunicationHub: React.FC<RfpCommunicationHubProps> = ({
         <TabsContent value="addendums" className="space-y-4">
           <RfpAddendums
             rfpId={rfpId}
+            rfpData={rfpData}
             canManage={canManage && isRfpActive}
           />
         </TabsContent>
