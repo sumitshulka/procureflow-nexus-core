@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Eye, Download, Award, Search, Filter } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { RfpCommunicationHub } from "@/components/rfp/RfpCommunicationHub";
 import { format } from "date-fns";
 
 interface RFPResponse {
@@ -380,6 +381,7 @@ const RfpResponses = () => {
           <TabsList>
             <TabsTrigger value="rfp-details">RFP Details</TabsTrigger>
             <TabsTrigger value="responses">Responses ({responses.length})</TabsTrigger>
+            <TabsTrigger value="communications">Communications</TabsTrigger>
           </TabsList>
 
           <TabsContent value="rfp-details" className="space-y-4">
@@ -711,6 +713,10 @@ const RfpResponses = () => {
                 </CardContent>
               </Card>
             )}
+          </TabsContent>
+
+          <TabsContent value="communications" className="space-y-4">
+            <RfpCommunicationHub rfpId={rfp.id} rfpStatus={rfp.status} />
           </TabsContent>
         </Tabs>
       )}

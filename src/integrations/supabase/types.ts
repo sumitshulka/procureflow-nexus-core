@@ -1036,6 +1036,128 @@ export type Database = {
           },
         ]
       }
+      rfp_addendums: {
+        Row: {
+          addendum_number: number
+          attachments: Json | null
+          content: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          is_published: boolean
+          published_at: string | null
+          rfp_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          addendum_number: number
+          attachments?: Json | null
+          content?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          is_published?: boolean
+          published_at?: string | null
+          rfp_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          addendum_number?: number
+          attachments?: Json | null
+          content?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          is_published?: boolean
+          published_at?: string | null
+          rfp_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rfp_addendums_rfp_id_fkey"
+            columns: ["rfp_id"]
+            isOneToOne: false
+            referencedRelation: "rfps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rfp_communications: {
+        Row: {
+          attachments: Json | null
+          created_at: string
+          id: string
+          is_clarification: boolean
+          is_public: boolean
+          message: string
+          parent_id: string | null
+          recipient_id: string | null
+          recipient_type: string | null
+          rfp_id: string
+          sender_id: string
+          sender_type: string
+          status: string
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          attachments?: Json | null
+          created_at?: string
+          id?: string
+          is_clarification?: boolean
+          is_public?: boolean
+          message: string
+          parent_id?: string | null
+          recipient_id?: string | null
+          recipient_type?: string | null
+          rfp_id: string
+          sender_id: string
+          sender_type: string
+          status?: string
+          subject: string
+          updated_at?: string
+        }
+        Update: {
+          attachments?: Json | null
+          created_at?: string
+          id?: string
+          is_clarification?: boolean
+          is_public?: boolean
+          message?: string
+          parent_id?: string | null
+          recipient_id?: string | null
+          recipient_type?: string | null
+          rfp_id?: string
+          sender_id?: string
+          sender_type?: string
+          status?: string
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rfp_communications_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "rfp_communications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rfp_communications_rfp_id_fkey"
+            columns: ["rfp_id"]
+            isOneToOne: false
+            referencedRelation: "rfps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rfp_evaluation_criteria: {
         Row: {
           created_at: string
@@ -1073,6 +1195,53 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "rfp_evaluation_criteria_rfp_id_fkey"
+            columns: ["rfp_id"]
+            isOneToOne: false
+            referencedRelation: "rfps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rfp_notifications: {
+        Row: {
+          created_at: string
+          id: string
+          is_read: boolean
+          message: string
+          notification_type: string
+          related_entity_id: string | null
+          related_entity_type: string | null
+          rfp_id: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message: string
+          notification_type: string
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          rfp_id: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message?: string
+          notification_type?: string
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          rfp_id?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rfp_notifications_rfp_id_fkey"
             columns: ["rfp_id"]
             isOneToOne: false
             referencedRelation: "rfps"
