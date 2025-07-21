@@ -88,6 +88,9 @@ import VendorDashboardDetail from '@/pages/VendorDashboardDetail';
 // Vendor Portal Pages
 import VendorProfile from '@/pages/vendor/VendorProfile';
 import VendorRfps from '@/pages/vendor/VendorRfps';
+import VendorRfpDetail from '@/pages/vendor/VendorRfpDetail';
+import VendorRfpResponse from '@/pages/vendor/VendorRfpResponse';
+import VendorResponseView from '@/pages/vendor/VendorResponseView';
 import VendorPurchaseOrders from '@/pages/vendor/VendorPurchaseOrders';
 import VendorProducts from '@/pages/vendor/VendorProducts';
 import VendorFinances from '@/pages/vendor/VendorFinances';
@@ -570,6 +573,30 @@ function App() {
             element={
               <ProtectedRoute requireVendor={true}>
                 <VendorLayout><VendorRfps /></VendorLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/vendor/rfps/:id"
+            element={
+              <ProtectedRoute requireVendor={true}>
+                <VendorLayout><VendorRfpDetail /></VendorLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/vendor/rfps/:id/respond"
+            element={
+              <ProtectedRoute requireVendor={true}>
+                <VendorLayout><VendorRfpResponse /></VendorLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/vendor/rfps/:id/response"
+            element={
+              <ProtectedRoute requireVendor={true}>
+                <VendorLayout><VendorResponseView /></VendorLayout>
               </ProtectedRoute>
             }
           />
