@@ -115,22 +115,25 @@ export const CreateAddendumDialog: React.FC<CreateAddendumDialogProps> = ({
     const isDateField = fieldName.includes('deadline') || fieldName.includes('date');
     
     if (isDateField) {
+      const dateValue = addendumData.field_overrides[fieldName];
+      const formattedValue = dateValue ? new Date(dateValue).toISOString().slice(0, 16) : '';
       return (
         <Input
           type="datetime-local"
-          value={addendumData.field_overrides[fieldName] || ''}
+          value={formattedValue}
           onChange={(e) => handleFieldValueChange(fieldName, e.target.value)}
           className="mt-2"
         />
       );
     }
     
-    if (fieldType === 'number') {
+    if (fieldType === 'number' || fieldName === 'estimated_value' || fieldName === 'bid_validity_period') {
       return (
         <Input
           type="number"
+          step={fieldName === 'estimated_value' ? '0.01' : '1'}
           value={addendumData.field_overrides[fieldName] || ''}
-          onChange={(e) => handleFieldValueChange(fieldName, parseFloat(e.target.value) || 0)}
+          onChange={(e) => handleFieldValueChange(fieldName, fieldName === 'estimated_value' ? parseFloat(e.target.value) || 0 : parseInt(e.target.value) || 0)}
           className="mt-2"
         />
       );
@@ -157,15 +160,23 @@ export const CreateAddendumDialog: React.FC<CreateAddendumDialogProps> = ({
   };
 
   const formatCurrentValue = (fieldName: string, value: any) => {
-    if (!value) return 'Not set';
+    if (!value && value !== 0) return 'Not set';
     
     const isDateField = fieldName.includes('deadline') || fieldName.includes('date');
     if (isDateField) {
-      return format(new Date(value), "PPp");
+      try {
+        return format(new Date(value), "PPp");
+      } catch {
+        return 'Invalid date';
+      }
     }
     
     if (fieldName === 'estimated_value') {
       return `${rfpData.currency || 'USD'} ${value.toLocaleString()}`;
+    }
+    
+    if (fieldName === 'bid_validity_period') {
+      return `${value} days`;
     }
     
     if (typeof value === 'string' && value.length > 100) {
@@ -311,7 +322,7 @@ export const CreateAddendumDialog: React.FC<CreateAddendumDialogProps> = ({
               Select the RFP fields you want to modify in this addendum. The new values will override the original RFP values.
             </p>
             
-            <div className="space-y-4">
+            <div className="space-y-4 max-h-96 overflow-y-auto">
               {EDITABLE_FIELDS.map(fieldName => {
                 const currentValue = (rfpData as any)[fieldName];
                 const isSelected = selectedFields.has(fieldName);
