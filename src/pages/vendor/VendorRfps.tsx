@@ -38,11 +38,11 @@ const VendorRfps = () => {
     queryFn: async () => {
       if (!user?.id) return [];
       
-      // Get all active RFPs
+      // Get all published RFPs
       const { data: rfps, error: rfpError } = await supabase
         .from("rfps")
         .select("*")
-        .eq("status", "active")
+        .eq("status", "published")
         .order("created_at", { ascending: false });
       
       if (rfpError) throw rfpError;
