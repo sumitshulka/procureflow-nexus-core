@@ -7,8 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, Settings, Table } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Plus, Edit, Trash2, Settings, Table, X, Check } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface PricingField {
   id: string;
@@ -42,8 +42,7 @@ const PricingTemplateFieldDesigner: React.FC<PricingTemplateFieldDesignerProps> 
   onUpdate,
 }) => {
   const [isAddingField, setIsAddingField] = useState(false);
-  const [isEditingField, setIsEditingField] = useState(false);
-  const [editingField, setEditingField] = useState<PricingField | null>(null);
+  const [editingFieldId, setEditingFieldId] = useState<string | null>(null);
   const [newField, setNewField] = useState<Partial<PricingField>>({
     field_name: "",
     field_label: "",
@@ -112,16 +111,15 @@ const PricingTemplateFieldDesigner: React.FC<PricingTemplateFieldDesignerProps> 
   };
 
   const handleEditField = (field: PricingField) => {
-    setEditingField(field);
+    setEditingFieldId(field.id);
     setNewField({...field});
-    setIsEditingField(true);
   };
 
   const handleUpdateField = () => {
-    if (!editingField || !newField.field_label?.trim()) return;
+    if (!editingFieldId || !newField.field_label?.trim()) return;
 
     const updatedFields = data.fields.map(field => 
-      field.id === editingField.id 
+      field.id === editingFieldId 
         ? {
             ...field,
             field_name: newField.field_name || generateFieldName(newField.field_label),
@@ -138,8 +136,7 @@ const PricingTemplateFieldDesigner: React.FC<PricingTemplateFieldDesignerProps> 
     );
 
     onUpdate({ fields: updatedFields });
-    setEditingField(null);
-    setIsEditingField(false);
+    setEditingFieldId(null);
     resetForm();
   };
 
@@ -149,8 +146,7 @@ const PricingTemplateFieldDesigner: React.FC<PricingTemplateFieldDesignerProps> 
   };
 
   const handleCancelEdit = () => {
-    setIsEditingField(false);
-    setEditingField(null);
+    setEditingFieldId(null);
     resetForm();
   };
 
@@ -205,127 +201,154 @@ const PricingTemplateFieldDesigner: React.FC<PricingTemplateFieldDesignerProps> 
     );
   };
 
-  const FieldForm = React.memo(() => (
-    <div className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+  const FieldForm = ({ isEditing = false }: { isEditing?: boolean }) => (
+    <Card className={`${isEditing ? 'border-primary' : 'border-dashed border-2'} animate-fade-in`}>
+      <CardHeader className="pb-4">
+        <CardTitle className="text-sm flex items-center justify-between">
+          {isEditing ? 'Edit Field' : 'Add New Field'}
+          <div className="flex gap-2">
+            {isEditing ? (
+              <>
+                <Button size="sm" onClick={handleUpdateField} className="h-8">
+                  <Check className="h-3 w-3 mr-1" />
+                  Update
+                </Button>
+                <Button size="sm" variant="outline" onClick={handleCancelEdit} className="h-8">
+                  <X className="h-3 w-3 mr-1" />
+                  Cancel
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button size="sm" onClick={handleAddField} className="h-8">
+                  <Check className="h-3 w-3 mr-1" />
+                  Add
+                </Button>
+                <Button size="sm" variant="outline" onClick={handleCancelAdd} className="h-8">
+                  <X className="h-3 w-3 mr-1" />
+                  Cancel
+                </Button>
+              </>
+            )}
+          </div>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="field_label">Field Label *</Label>
+            <Input
+              id="field_label"
+              placeholder="e.g., Unit Price"
+              value={newField.field_label || ""}
+              onChange={(e) => {
+                const label = e.target.value;
+                setNewField(prev => ({
+                  ...prev,
+                  field_label: label,
+                  field_name: prev.field_name || generateFieldName(label)
+                }));
+              }}
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="field_type">Field Type</Label>
+            <Select 
+              value={newField.field_type || "text"} 
+              onValueChange={(value) => setNewField(prev => ({ ...prev, field_type: value }))}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {fieldTypes.map((type) => (
+                  <SelectItem key={type.value} value={type.value}>
+                    {type.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="row_number">Row Position</Label>
+            <Select 
+              value={newField.row_number?.toString()} 
+              onValueChange={(value) => setNewField(prev => ({ ...prev, row_number: parseInt(value) }))}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Array.from({ length: rows }, (_, i) => (
+                  <SelectItem key={i + 1} value={(i + 1).toString()}>
+                    Row {i + 1}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="column_number">Column Position</Label>
+            <Select 
+              value={newField.column_number?.toString()} 
+              onValueChange={(value) => setNewField(prev => ({ ...prev, column_number: parseInt(value) }))}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Array.from({ length: columns }, (_, i) => (
+                  <SelectItem key={i + 1} value={(i + 1).toString()}>
+                    Column {i + 1}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
         <div className="space-y-2">
-          <Label htmlFor="field_label">Field Label *</Label>
-          <Input
-            key="field_label_input"
-            id="field_label"
-            placeholder="e.g., Unit Price"
-            value={newField.field_label || ""}
-            onChange={(e) => {
-              const label = e.target.value;
-              setNewField(prev => ({
-                ...prev,
-                field_label: label,
-                field_name: prev.field_name || generateFieldName(label)
-              }));
-            }}
+          <Label htmlFor="description">Description</Label>
+          <Textarea
+            id="description"
+            placeholder="Brief description of this field..."
+            value={newField.description || ""}
+            onChange={(e) => setNewField(prev => ({ ...prev, description: e.target.value }))}
+            rows={2}
           />
         </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="field_type">Field Type</Label>
-          <Select 
-            key="field_type_select"
-            value={newField.field_type || "text"} 
-            onValueChange={(value) => setNewField(prev => ({ ...prev, field_type: value }))}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {fieldTypes.map((type) => (
-                <SelectItem key={type.value} value={type.value}>
-                  {type.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="row_number">Row Position</Label>
-          <Select 
-            value={newField.row_number?.toString()} 
-            onValueChange={(value) => setNewField(prev => ({ ...prev, row_number: parseInt(value) }))}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {Array.from({ length: rows }, (_, i) => (
-                <SelectItem key={i + 1} value={(i + 1).toString()}>
-                  Row {i + 1}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="column_number">Column Position</Label>
-          <Select 
-            value={newField.column_number?.toString()} 
-            onValueChange={(value) => setNewField(prev => ({ ...prev, column_number: parseInt(value) }))}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {Array.from({ length: columns }, (_, i) => (
-                <SelectItem key={i + 1} value={(i + 1).toString()}>
-                  Column {i + 1}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+        {(newField.field_type === "calculation" || newField.field_type === "total") && (
+          <div className="space-y-2">
+            <Label htmlFor="calculation_formula">Calculation Formula</Label>
+            <Input
+              id="calculation_formula"
+              placeholder="e.g., quantity * unit_price"
+              value={newField.calculation_formula || ""}
+              onChange={(e) => setNewField(prev => ({ ...prev, calculation_formula: e.target.value }))}
+            />
+            <p className="text-xs text-muted-foreground">
+              Use field names and operators (+, -, *, /) to create formulas
+            </p>
+          </div>
+        )}
 
-      <div className="space-y-2">
-        <Label htmlFor="description">Description</Label>
-        <Textarea
-          key="description_textarea"
-          id="description"
-          placeholder="Brief description of this field..."
-          value={newField.description || ""}
-          onChange={(e) => setNewField(prev => ({ ...prev, description: e.target.value }))}
-          rows={2}
-        />
-      </div>
-
-      {(newField.field_type === "calculation" || newField.field_type === "total") && (
-        <div className="space-y-2">
-          <Label htmlFor="calculation_formula">Calculation Formula</Label>
-          <Input
-            key="calculation_formula_input"
-            id="calculation_formula"
-            placeholder="e.g., quantity * unit_price"
-            value={newField.calculation_formula || ""}
-            onChange={(e) => setNewField(prev => ({ ...prev, calculation_formula: e.target.value }))}
+        <div className="flex items-center space-x-2">
+          <Switch
+            id="is_required"
+            checked={newField.is_required || false}
+            onCheckedChange={(checked) => setNewField(prev => ({ ...prev, is_required: checked }))}
           />
-          <p className="text-xs text-muted-foreground">
-            Use field names and operators (+, -, *, /) to create formulas
-          </p>
+          <Label htmlFor="is_required">Required field</Label>
         </div>
-      )}
-
-      <div className="flex items-center space-x-2">
-        <Switch
-          key="is_required_switch"
-          id="is_required"
-          checked={newField.is_required || false}
-          onCheckedChange={(checked) => setNewField(prev => ({ ...prev, is_required: checked }))}
-        />
-        <Label htmlFor="is_required">Required field</Label>
-      </div>
-    </div>
-  ));
+      </CardContent>
+    </Card>
+  );
 
   return (
     <div className="space-y-6">
@@ -336,101 +359,90 @@ const PricingTemplateFieldDesigner: React.FC<PricingTemplateFieldDesignerProps> 
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Fields List */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <Settings className="h-4 w-4" />
-                Fields ({data.fields.length})
-              </CardTitle>
-                  <Dialog open={isAddingField} onOpenChange={setIsAddingField}>
-                <DialogTrigger asChild>
-                  <Button size="sm">
+        <div className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Settings className="h-4 w-4" />
+                  Fields ({data.fields.length})
+                </CardTitle>
+                {!isAddingField && (
+                  <Button size="sm" onClick={() => setIsAddingField(true)}>
                     <Plus className="h-4 w-4 mr-2" />
                     Add Field
                   </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Add New Field</DialogTitle>
-                  </DialogHeader>
-                  <FieldForm />
-                  <div className="flex justify-end gap-2 pt-4">
-                    <Button variant="outline" onClick={handleCancelAdd}>
-                      Cancel
-                    </Button>
-                    <Button onClick={handleAddField}>
-                      Add Field
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {data.fields.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <Settings className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p>No fields added yet</p>
-                <p className="text-sm">Click "Add Field" to get started</p>
+                )}
               </div>
-            ) : (
-              data.fields.map((field) => (
-                <div key={field.id} className="border rounded-lg p-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium">{field.field_label}</p>
-                        <Badge variant="secondary" className="text-xs">
-                          {field.field_type}
-                        </Badge>
-                        {field.is_required && (
-                          <Badge variant="destructive" className="text-xs">Required</Badge>
-                        )}
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        Row {field.row_number}, Column {field.column_number}
-                      </p>
-                      {field.description && (
-                        <p className="text-xs text-muted-foreground mt-1">{field.description}</p>
-                      )}
-                    </div>
-                    <div className="flex gap-1">
-                      <Dialog open={isEditingField} onOpenChange={setIsEditingField}>
-                        <DialogTrigger asChild>
-                          <Button size="sm" variant="outline" onClick={() => handleEditField(field)}>
-                            <Edit className="h-3 w-3" />
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Edit Field</DialogTitle>
-                          </DialogHeader>
-                          <FieldForm />
-                          <div className="flex justify-end gap-2 pt-4">
-                            <Button variant="outline" onClick={handleCancelEdit}>
-                              Cancel
-                            </Button>
-                            <Button onClick={handleUpdateField}>
-                              Update Field
-                            </Button>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={() => handleDeleteField(field.id)}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {isAddingField && <FieldForm />}
+              
+              {data.fields.length === 0 && !isAddingField ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Settings className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p>No fields added yet</p>
+                  <p className="text-sm">Click "Add Field" to get started</p>
                 </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
+              ) : (
+                data.fields.map((field) => (
+                  <div key={field.id}>
+                    {editingFieldId === field.id ? (
+                      <FieldForm isEditing={true} />
+                    ) : (
+                      <Card className="hover-scale transition-all duration-200">
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <p className="font-medium">{field.field_label}</p>
+                                <Badge variant="secondary" className="text-xs">
+                                  {field.field_type}
+                                </Badge>
+                                {field.is_required && (
+                                  <Badge variant="destructive" className="text-xs">Required</Badge>
+                                )}
+                              </div>
+                              <p className="text-sm text-muted-foreground">
+                                Row {field.row_number}, Column {field.column_number}
+                              </p>
+                              {field.description && (
+                                <p className="text-xs text-muted-foreground mt-1">{field.description}</p>
+                              )}
+                              {field.calculation_formula && (
+                                <p className="text-xs font-mono bg-muted px-2 py-1 rounded mt-1">
+                                  Formula: {field.calculation_formula}
+                                </p>
+                              )}
+                            </div>
+                            <div className="flex gap-1">
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => handleEditField(field)}
+                                className="h-8 w-8 p-0"
+                              >
+                                <Edit className="h-3 w-3" />
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => handleDeleteField(field.id)}
+                                className="h-8 w-8 p-0 hover:bg-destructive hover:text-destructive-foreground"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Table Preview */}
         <Card>
