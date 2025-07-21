@@ -43,6 +43,7 @@ import CreateRfp from '@/pages/CreateRfp';
 import ActiveRfps from '@/pages/rfp/ActiveRfps';
 import RfpResponses from '@/pages/rfp/RfpResponses';
 import RfpTemplates from '@/pages/rfp/RfpTemplates';
+import CreateRfpTemplate from '@/pages/rfp/CreateRfpTemplate';
 import CreateRfpWizard from '@/pages/rfp/CreateRfpWizard';
 
 // Purchase Order Pages
@@ -331,6 +332,14 @@ function App() {
             element={
               <ProtectedRoute requiredRole={UserRole.ADMIN}>
                 <Layout><RfpTemplates /></Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/rfp/templates/create"
+            element={
+              <ProtectedRoute requiredRole={UserRole.ADMIN}>
+                <Layout><CreateRfpTemplate /></Layout>
               </ProtectedRoute>
             }
           />
