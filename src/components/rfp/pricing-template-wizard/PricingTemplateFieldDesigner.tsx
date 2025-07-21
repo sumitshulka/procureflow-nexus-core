@@ -42,6 +42,7 @@ const PricingTemplateFieldDesigner: React.FC<PricingTemplateFieldDesignerProps> 
   onUpdate,
 }) => {
   const [isAddingField, setIsAddingField] = useState(false);
+  const [isEditingField, setIsEditingField] = useState(false);
   const [editingField, setEditingField] = useState<PricingField | null>(null);
   const [newField, setNewField] = useState<Partial<PricingField>>({
     field_name: "",
@@ -72,6 +73,19 @@ const PricingTemplateFieldDesigner: React.FC<PricingTemplateFieldDesignerProps> 
     return label.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
   };
 
+  const resetForm = () => {
+    setNewField({
+      field_name: "",
+      field_label: "",
+      field_type: "text",
+      description: "",
+      calculation_formula: "",
+      is_required: false,
+      row_number: 1,
+      column_number: 1
+    });
+  };
+
   const handleAddField = () => {
     if (!newField.field_label?.trim()) return;
 
@@ -93,22 +107,14 @@ const PricingTemplateFieldDesigner: React.FC<PricingTemplateFieldDesignerProps> 
       fields: [...data.fields, field]
     });
 
-    setNewField({
-      field_name: "",
-      field_label: "",
-      field_type: "text",
-      description: "",
-      calculation_formula: "",
-      is_required: false,
-      row_number: 1,
-      column_number: 1
-    });
+    resetForm();
     setIsAddingField(false);
   };
 
   const handleEditField = (field: PricingField) => {
     setEditingField(field);
     setNewField({...field});
+    setIsEditingField(true);
   };
 
   const handleUpdateField = () => {
@@ -133,16 +139,19 @@ const PricingTemplateFieldDesigner: React.FC<PricingTemplateFieldDesignerProps> 
 
     onUpdate({ fields: updatedFields });
     setEditingField(null);
-    setNewField({
-      field_name: "",
-      field_label: "",
-      field_type: "text",
-      description: "",
-      calculation_formula: "",
-      is_required: false,
-      row_number: 1,
-      column_number: 1
-    });
+    setIsEditingField(false);
+    resetForm();
+  };
+
+  const handleCancelAdd = () => {
+    setIsAddingField(false);
+    resetForm();
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditingField(false);
+    setEditingField(null);
+    resetForm();
   };
 
   const handleDeleteField = (fieldId: string) => {
@@ -196,12 +205,13 @@ const PricingTemplateFieldDesigner: React.FC<PricingTemplateFieldDesignerProps> 
     );
   };
 
-  const FieldForm = () => (
+  const FieldForm = React.memo(() => (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="field_label">Field Label *</Label>
           <Input
+            key="field_label_input"
             id="field_label"
             placeholder="e.g., Unit Price"
             value={newField.field_label || ""}
@@ -210,7 +220,7 @@ const PricingTemplateFieldDesigner: React.FC<PricingTemplateFieldDesignerProps> 
               setNewField(prev => ({
                 ...prev,
                 field_label: label,
-                field_name: generateFieldName(label)
+                field_name: prev.field_name || generateFieldName(label)
               }));
             }}
           />
@@ -219,7 +229,8 @@ const PricingTemplateFieldDesigner: React.FC<PricingTemplateFieldDesignerProps> 
         <div className="space-y-2">
           <Label htmlFor="field_type">Field Type</Label>
           <Select 
-            value={newField.field_type} 
+            key="field_type_select"
+            value={newField.field_type || "text"} 
             onValueChange={(value) => setNewField(prev => ({ ...prev, field_type: value }))}
           >
             <SelectTrigger>
@@ -279,6 +290,7 @@ const PricingTemplateFieldDesigner: React.FC<PricingTemplateFieldDesignerProps> 
       <div className="space-y-2">
         <Label htmlFor="description">Description</Label>
         <Textarea
+          key="description_textarea"
           id="description"
           placeholder="Brief description of this field..."
           value={newField.description || ""}
@@ -291,6 +303,7 @@ const PricingTemplateFieldDesigner: React.FC<PricingTemplateFieldDesignerProps> 
         <div className="space-y-2">
           <Label htmlFor="calculation_formula">Calculation Formula</Label>
           <Input
+            key="calculation_formula_input"
             id="calculation_formula"
             placeholder="e.g., quantity * unit_price"
             value={newField.calculation_formula || ""}
@@ -304,6 +317,7 @@ const PricingTemplateFieldDesigner: React.FC<PricingTemplateFieldDesignerProps> 
 
       <div className="flex items-center space-x-2">
         <Switch
+          key="is_required_switch"
           id="is_required"
           checked={newField.is_required || false}
           onCheckedChange={(checked) => setNewField(prev => ({ ...prev, is_required: checked }))}
@@ -311,7 +325,7 @@ const PricingTemplateFieldDesigner: React.FC<PricingTemplateFieldDesignerProps> 
         <Label htmlFor="is_required">Required field</Label>
       </div>
     </div>
-  );
+  ));
 
   return (
     <div className="space-y-6">
@@ -329,7 +343,7 @@ const PricingTemplateFieldDesigner: React.FC<PricingTemplateFieldDesignerProps> 
                 <Settings className="h-4 w-4" />
                 Fields ({data.fields.length})
               </CardTitle>
-              <Dialog open={isAddingField} onOpenChange={setIsAddingField}>
+                  <Dialog open={isAddingField} onOpenChange={setIsAddingField}>
                 <DialogTrigger asChild>
                   <Button size="sm">
                     <Plus className="h-4 w-4 mr-2" />
@@ -342,7 +356,7 @@ const PricingTemplateFieldDesigner: React.FC<PricingTemplateFieldDesignerProps> 
                   </DialogHeader>
                   <FieldForm />
                   <div className="flex justify-end gap-2 pt-4">
-                    <Button variant="outline" onClick={() => setIsAddingField(false)}>
+                    <Button variant="outline" onClick={handleCancelAdd}>
                       Cancel
                     </Button>
                     <Button onClick={handleAddField}>
@@ -382,7 +396,7 @@ const PricingTemplateFieldDesigner: React.FC<PricingTemplateFieldDesignerProps> 
                       )}
                     </div>
                     <div className="flex gap-1">
-                      <Dialog>
+                      <Dialog open={isEditingField} onOpenChange={setIsEditingField}>
                         <DialogTrigger asChild>
                           <Button size="sm" variant="outline" onClick={() => handleEditField(field)}>
                             <Edit className="h-3 w-3" />
@@ -394,7 +408,7 @@ const PricingTemplateFieldDesigner: React.FC<PricingTemplateFieldDesignerProps> 
                           </DialogHeader>
                           <FieldForm />
                           <div className="flex justify-end gap-2 pt-4">
-                            <Button variant="outline" onClick={() => setEditingField(null)}>
+                            <Button variant="outline" onClick={handleCancelEdit}>
                               Cancel
                             </Button>
                             <Button onClick={handleUpdateField}>
