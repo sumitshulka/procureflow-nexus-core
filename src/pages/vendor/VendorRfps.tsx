@@ -38,6 +38,19 @@ const VendorRfps = () => {
     queryFn: async () => {
       if (!user?.id) return [];
       
+      // First get the vendor registration
+      const { data: vendorReg, error: vendorError } = await supabase
+        .from("vendor_registrations")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("status", "approved")
+        .single();
+      
+      if (vendorError || !vendorReg) {
+        console.log("Vendor not found or not approved:", vendorError);
+        return [];
+      }
+      
       // Get all published RFPs
       const { data: rfps, error: rfpError } = await supabase
         .from("rfps")
@@ -51,7 +64,7 @@ const VendorRfps = () => {
       const { data: responses, error: responseError } = await supabase
         .from("rfp_responses")
         .select("rfp_id, status, submitted_at")
-        .eq("vendor_id", user.id);
+        .eq("vendor_id", vendorReg.id);
       
       if (responseError) throw responseError;
       
