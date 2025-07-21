@@ -225,7 +225,8 @@ const RfpTemplates = () => {
 
       if (error) throw error;
 
-      await fetchTemplates();
+      // Remove the template from local state immediately
+      setTemplates(prev => prev.filter(t => t.id !== templateId));
       
       toast({
         title: "Success",
