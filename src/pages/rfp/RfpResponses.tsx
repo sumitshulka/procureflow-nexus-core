@@ -376,185 +376,221 @@ const RfpResponses = () => {
       )}
 
       {rfp && (
-        <div className="mb-6 space-y-4">
-          {/* RFP Header Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>{rfp.title}</span>
-                <Badge variant={getStatusBadgeVariant(rfp.status)}>
-                  {rfp.status.charAt(0).toUpperCase() + rfp.status.slice(1)}
-                </Badge>
-              </CardTitle>
-              <p className="text-sm text-muted-foreground">
-                RFP Number: {rfp.rfp_number}
-              </p>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {rfp.description && (
-                <div>
-                  <h4 className="font-medium mb-2">Description</h4>
-                  <p className="text-sm text-muted-foreground">{rfp.description}</p>
-                </div>
-              )}
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {rfp.estimated_value && (
-                  <div>
-                    <span className="font-medium">Estimated Value:</span>{" "}
-                    {rfp.currency || 'USD'} {rfp.estimated_value.toLocaleString()}
-                  </div>
-                )}
-                <div>
-                  <span className="font-medium">Submission Deadline:</span>{" "}
-                  {format(new Date(rfp.submission_deadline), "PPp")}
-                </div>
-                {rfp.technical_evaluation_deadline && (
-                  <div>
-                    <span className="font-medium">Technical Evaluation:</span>{" "}
-                    {format(new Date(rfp.technical_evaluation_deadline), "PPp")}
-                  </div>
-                )}
-                {rfp.commercial_evaluation_deadline && (
-                  <div>
-                    <span className="font-medium">Commercial Evaluation:</span>{" "}
-                    {format(new Date(rfp.commercial_evaluation_deadline), "PPp")}
-                  </div>
-                )}
-                {rfp.pre_bid_meeting_date && (
-                  <div>
-                    <span className="font-medium">Pre-bid Meeting:</span>{" "}
-                    {format(new Date(rfp.pre_bid_meeting_date), "PPp")}
-                  </div>
-                )}
-                {rfp.pre_bid_meeting_venue && (
-                  <div>
-                    <span className="font-medium">Meeting Venue:</span>{" "}
-                    {rfp.pre_bid_meeting_venue}
-                  </div>
-                )}
-                {rfp.bid_validity_period && (
-                  <div>
-                    <span className="font-medium">Bid Validity:</span>{" "}
-                    {rfp.bid_validity_period} days
-                  </div>
-                )}
-                <div>
-                  <span className="font-medium">Created:</span>{" "}
-                  {format(new Date(rfp.created_at), "PPp")}
-                </div>
-              </div>
+        <Tabs defaultValue="rfp-details" className="w-full">
+          <TabsList>
+            <TabsTrigger value="rfp-details">RFP Details</TabsTrigger>
+            <TabsTrigger value="responses">Responses ({responses.length})</TabsTrigger>
+          </TabsList>
 
-              {/* Terms and Conditions */}
-              {(rfp.terms_and_conditions || rfp.payment_terms || rfp.delivery_terms || rfp.warranty_requirements) && (
-                <div className="mt-4 pt-4 border-t">
-                  <h4 className="font-medium mb-3">Terms & Conditions</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                    {rfp.payment_terms && (
-                      <div>
-                        <span className="font-medium">Payment Terms:</span>
-                        <p className="text-muted-foreground mt-1">{rfp.payment_terms}</p>
-                      </div>
-                    )}
-                    {rfp.delivery_terms && (
-                      <div>
-                        <span className="font-medium">Delivery Terms:</span>
-                        <p className="text-muted-foreground mt-1">{rfp.delivery_terms}</p>
-                      </div>
-                    )}
-                    {rfp.warranty_requirements && (
-                      <div>
-                        <span className="font-medium">Warranty Requirements:</span>
-                        <p className="text-muted-foreground mt-1">{rfp.warranty_requirements}</p>
-                      </div>
-                    )}
-                    {rfp.minimum_eligibility_criteria && (
-                      <div>
-                        <span className="font-medium">Eligibility Criteria:</span>
-                        <p className="text-muted-foreground mt-1">{rfp.minimum_eligibility_criteria}</p>
-                      </div>
-                    )}
+          <TabsContent value="rfp-details" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span>{rfp.title}</span>
+                  <Badge variant={getStatusBadgeVariant(rfp.status)}>
+                    {rfp.status.charAt(0).toUpperCase() + rfp.status.slice(1)}
+                  </Badge>
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  RFP Number: {rfp.rfp_number}
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {rfp.description && (
+                  <div>
+                    <h4 className="font-medium mb-2">Description</h4>
+                    <p className="text-sm text-muted-foreground">{rfp.description}</p>
                   </div>
-                  {rfp.terms_and_conditions && (
-                    <div className="mt-3">
-                      <span className="font-medium">General Terms:</span>
-                      <p className="text-muted-foreground mt-1">{rfp.terms_and_conditions}</p>
+                )}
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {rfp.estimated_value && (
+                    <div>
+                      <span className="font-medium">Estimated Value:</span>{" "}
+                      {rfp.currency || 'USD'} {rfp.estimated_value.toLocaleString()}
                     </div>
                   )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {selectedRfpId && responses.length > 0 && (
-        <div className="space-y-6">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold">
-              Received Responses ({responses.length})
-            </h2>
-          </div>
-
-          <Tabs defaultValue="evaluation" className="w-full">
-            <TabsList>
-              <TabsTrigger value="evaluation">Evaluation Summary</TabsTrigger>
-              <TabsTrigger value="details">Response Details</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="evaluation" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Vendor Evaluation Summary</CardTitle>
-                  {rfp?.evaluation_criteria && (
-                    <p className="text-sm text-muted-foreground">
-                      Evaluation Method: {rfp.evaluation_criteria.type?.toUpperCase().replace('_', ' ')}
-                      {rfp.evaluation_criteria.type === 'qcbs' && 
-                        ` (Technical: ${rfp.evaluation_criteria.technical_weight}%, Commercial: ${rfp.evaluation_criteria.commercial_weight}%)`}
-                    </p>
+                  <div>
+                    <span className="font-medium">Submission Deadline:</span>{" "}
+                    {format(new Date(rfp.submission_deadline), "PPp")}
+                  </div>
+                  {rfp.technical_evaluation_deadline && (
+                    <div>
+                      <span className="font-medium">Technical Evaluation:</span>{" "}
+                      {format(new Date(rfp.technical_evaluation_deadline), "PPp")}
+                    </div>
                   )}
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Rank</TableHead>
-                        <TableHead>Vendor</TableHead>
-                        <TableHead>Technical Score</TableHead>
-                        <TableHead>Commercial Score</TableHead>
-                        <TableHead>Final Score</TableHead>
-                        <TableHead>Bid Amount</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Action</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {getEvaluationRanking().map((response) => (
-                        <TableRow key={response.id}>
-                          <TableCell>
-                            <Badge variant={response.rank === 1 ? "default" : "outline"}>
-                              #{response.rank}
+                  {rfp.commercial_evaluation_deadline && (
+                    <div>
+                      <span className="font-medium">Commercial Evaluation:</span>{" "}
+                      {format(new Date(rfp.commercial_evaluation_deadline), "PPp")}
+                    </div>
+                  )}
+                  {rfp.pre_bid_meeting_date && (
+                    <div>
+                      <span className="font-medium">Pre-bid Meeting:</span>{" "}
+                      {format(new Date(rfp.pre_bid_meeting_date), "PPp")}
+                    </div>
+                  )}
+                  {rfp.pre_bid_meeting_venue && (
+                    <div>
+                      <span className="font-medium">Meeting Venue:</span>{" "}
+                      {rfp.pre_bid_meeting_venue}
+                    </div>
+                  )}
+                  {rfp.bid_validity_period && (
+                    <div>
+                      <span className="font-medium">Bid Validity:</span>{" "}
+                      {rfp.bid_validity_period} days
+                    </div>
+                  )}
+                  <div>
+                    <span className="font-medium">Created:</span>{" "}
+                    {format(new Date(rfp.created_at), "PPp")}
+                  </div>
+                </div>
+
+                {/* Terms and Conditions */}
+                {(rfp.terms_and_conditions || rfp.payment_terms || rfp.delivery_terms || rfp.warranty_requirements) && (
+                  <div className="mt-4 pt-4 border-t">
+                    <h4 className="font-medium mb-3">Terms & Conditions</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                      {rfp.payment_terms && (
+                        <div>
+                          <span className="font-medium">Payment Terms:</span>
+                          <p className="text-muted-foreground mt-1">{rfp.payment_terms}</p>
+                        </div>
+                      )}
+                      {rfp.delivery_terms && (
+                        <div>
+                          <span className="font-medium">Delivery Terms:</span>
+                          <p className="text-muted-foreground mt-1">{rfp.delivery_terms}</p>
+                        </div>
+                      )}
+                      {rfp.warranty_requirements && (
+                        <div>
+                          <span className="font-medium">Warranty Requirements:</span>
+                          <p className="text-muted-foreground mt-1">{rfp.warranty_requirements}</p>
+                        </div>
+                      )}
+                      {rfp.minimum_eligibility_criteria && (
+                        <div>
+                          <span className="font-medium">Eligibility Criteria:</span>
+                          <p className="text-muted-foreground mt-1">{rfp.minimum_eligibility_criteria}</p>
+                        </div>
+                      )}
+                    </div>
+                    {rfp.terms_and_conditions && (
+                      <div className="mt-3">
+                        <span className="font-medium">General Terms:</span>
+                        <p className="text-muted-foreground mt-1">{rfp.terms_and_conditions}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="responses" className="space-y-4">
+            {responses.length > 0 ? (
+              <Tabs defaultValue="evaluation" className="w-full">
+                <TabsList>
+                  <TabsTrigger value="evaluation">Evaluation Summary</TabsTrigger>
+                  <TabsTrigger value="details">Response Details</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="evaluation" className="space-y-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Vendor Evaluation Summary</CardTitle>
+                      {rfp?.evaluation_criteria && (
+                        <p className="text-sm text-muted-foreground">
+                          Evaluation Method: {rfp.evaluation_criteria.type?.toUpperCase().replace('_', ' ')}
+                          {rfp.evaluation_criteria.type === 'qcbs' && 
+                            ` (Technical: ${rfp.evaluation_criteria.technical_weight}%, Commercial: ${rfp.evaluation_criteria.commercial_weight}%)`}
+                        </p>
+                      )}
+                    </CardHeader>
+                    <CardContent>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Rank</TableHead>
+                            <TableHead>Vendor</TableHead>
+                            <TableHead>Technical Score</TableHead>
+                            <TableHead>Commercial Score</TableHead>
+                            <TableHead>Final Score</TableHead>
+                            <TableHead>Bid Amount</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Action</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {getEvaluationRanking().map((response) => (
+                            <TableRow key={response.id}>
+                              <TableCell>
+                                <Badge variant={response.rank === 1 ? "default" : "outline"}>
+                                  #{response.rank}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>{response.vendor_registrations?.company_name}</TableCell>
+                              <TableCell>{response.technical_score}/100</TableCell>
+                              <TableCell>{response.commercial_score}/100</TableCell>
+                              <TableCell>
+                                <span className={response.rank === 1 ? "font-bold text-green-600" : ""}>
+                                  {response.finalScore.toFixed(1)}
+                                </span>
+                              </TableCell>
+                              <TableCell>{response.currency} {response.total_bid_amount.toLocaleString()}</TableCell>
+                              <TableCell>
+                                <Badge variant={
+                                  response.recommendedStatus === "Recommended" ? "default" :
+                                  response.recommendedStatus === "Second Choice" ? "secondary" : "outline"
+                                }>
+                                  {response.recommendedStatus}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                {response.status === "submitted" && rfp?.status !== "awarded" && response.rank === 1 && (
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleAwardResponse(response.id)}
+                                  >
+                                    <Award className="h-4 w-4 mr-2" />
+                                    Award
+                                  </Button>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                <TabsContent value="details" className="space-y-4">
+                  {responses.map((response) => (
+                    <Card key={response.id}>
+                      <CardContent className="p-6">
+                        <div className="flex items-start justify-between mb-4">
+                          <div>
+                            <h3 className="text-lg font-semibold">
+                              {response.vendor_registrations?.company_name}
+                            </h3>
+                            <p className="text-sm text-muted-foreground">
+                              Response Number: {response.response_number}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              Submitted: {format(new Date(response.submitted_at), "PPP p")}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge variant={getStatusBadgeVariant(response.status)}>
+                              {response.status.replace("_", " ").toUpperCase()}
                             </Badge>
-                          </TableCell>
-                          <TableCell>{response.vendor_registrations?.company_name}</TableCell>
-                          <TableCell>{response.technical_score}/100</TableCell>
-                          <TableCell>{response.commercial_score}/100</TableCell>
-                          <TableCell>
-                            <span className={response.rank === 1 ? "font-bold text-green-600" : ""}>
-                              {response.finalScore.toFixed(1)}
-                            </span>
-                          </TableCell>
-                          <TableCell>{response.currency} {response.total_bid_amount.toLocaleString()}</TableCell>
-                          <TableCell>
-                            <Badge variant={
-                              response.recommendedStatus === "Recommended" ? "default" :
-                              response.recommendedStatus === "Second Choice" ? "secondary" : "outline"
-                            }>
-                              {response.recommendedStatus}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            {response.status === "submitted" && rfp?.status !== "awarded" && response.rank === 1 && (
+                            {response.status === "submitted" && rfp?.status !== "awarded" && (
                               <Button
                                 size="sm"
                                 onClick={() => handleAwardResponse(response.id)}
@@ -563,150 +599,120 @@ const RfpResponses = () => {
                                 Award
                               </Button>
                             )}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                          </div>
+                        </div>
+
+                        <Tabs defaultValue="summary" className="w-full">
+                          <TabsList>
+                            <TabsTrigger value="summary">Summary</TabsTrigger>
+                            <TabsTrigger value="items">Line Items</TabsTrigger>
+                            <TabsTrigger value="scores">Evaluation</TabsTrigger>
+                          </TabsList>
+
+                          <TabsContent value="summary" className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                              <div className="p-4 border rounded-lg">
+                                <h4 className="font-medium mb-2">Financial Details</h4>
+                                <p className="text-2xl font-bold text-green-600">
+                                  {response.currency} {response.total_bid_amount.toLocaleString()}
+                                </p>
+                                <p className="text-sm text-muted-foreground">Total Bid Amount</p>
+                              </div>
+                              <div className="p-4 border rounded-lg">
+                                <h4 className="font-medium mb-2">Delivery Timeline</h4>
+                                <p className="text-lg">{response.delivery_timeline || "Not specified"}</p>
+                              </div>
+                              <div className="p-4 border rounded-lg">
+                                <h4 className="font-medium mb-2">Warranty Period</h4>
+                                <p className="text-lg">{response.warranty_period || "Not specified"}</p>
+                              </div>
+                            </div>
+                          </TabsContent>
+
+                          <TabsContent value="items" className="space-y-4">
+                            <div className="space-y-3">
+                              {response.rfp_response_items.map((item) => (
+                                <Card key={item.id}>
+                                  <CardContent className="p-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                                      <div className="md:col-span-2">
+                                        <h5 className="font-medium">{item.description}</h5>
+                                        {item.brand_model && (
+                                          <p className="text-sm text-muted-foreground">
+                                            Brand/Model: {item.brand_model}
+                                          </p>
+                                        )}
+                                      </div>
+                                      <div>
+                                        <p className="text-sm font-medium">Quantity</p>
+                                        <p>{item.quantity}</p>
+                                      </div>
+                                      <div>
+                                        <p className="text-sm font-medium">Unit Price</p>
+                                        <p>{response.currency} {item.unit_price.toLocaleString()}</p>
+                                      </div>
+                                      <div>
+                                        <p className="text-sm font-medium">Total Price</p>
+                                        <p className="font-semibold">
+                                          {response.currency} {item.total_price.toLocaleString()}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    {item.specifications && (
+                                      <div className="mt-3">
+                                        <p className="text-sm font-medium">Specifications:</p>
+                                        <p className="text-sm text-muted-foreground">{item.specifications}</p>
+                                      </div>
+                                    )}
+                                  </CardContent>
+                                </Card>
+                              ))}
+                            </div>
+                          </TabsContent>
+
+                          <TabsContent value="scores" className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                              <div className="p-4 border rounded-lg text-center">
+                                <p className="text-sm font-medium">Technical Score</p>
+                                <p className="text-2xl font-bold">
+                                  {response.technical_score || "N/A"}
+                                </p>
+                              </div>
+                              <div className="p-4 border rounded-lg text-center">
+                                <p className="text-sm font-medium">Commercial Score</p>
+                                <p className="text-2xl font-bold">
+                                  {response.commercial_score || "N/A"}
+                                </p>
+                              </div>
+                              <div className="p-4 border rounded-lg text-center">
+                                <p className="text-sm font-medium">Total Score</p>
+                                <p className="text-2xl font-bold text-blue-600">
+                                  {response.total_score || "N/A"}
+                                </p>
+                              </div>
+                              <div className="p-4 border rounded-lg text-center">
+                                <p className="text-sm font-medium">Status</p>
+                                <Badge variant={getStatusBadgeVariant(response.status)} className="mt-2">
+                                  {response.status.replace("_", " ").toUpperCase()}
+                                </Badge>
+                              </div>
+                            </div>
+                          </TabsContent>
+                        </Tabs>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </TabsContent>
+              </Tabs>
+            ) : (
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <p className="text-muted-foreground">No responses received for this RFP yet.</p>
                 </CardContent>
               </Card>
-            </TabsContent>
-
-            <TabsContent value="details" className="space-y-4">
-              {responses.map((response) => (
-                <Card key={response.id}>
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between mb-4">
-                      <div>
-                        <h3 className="text-lg font-semibold">
-                          {response.vendor_registrations?.company_name}
-                        </h3>
-                        <p className="text-sm text-muted-foreground">
-                          Response Number: {response.response_number}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          Submitted: {format(new Date(response.submitted_at), "PPP p")}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant={getStatusBadgeVariant(response.status)}>
-                          {response.status.replace("_", " ").toUpperCase()}
-                        </Badge>
-                        {response.status === "submitted" && rfp?.status !== "awarded" && (
-                          <Button
-                            size="sm"
-                            onClick={() => handleAwardResponse(response.id)}
-                          >
-                            <Award className="h-4 w-4 mr-2" />
-                            Award
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-
-                    <Tabs defaultValue="summary" className="w-full">
-                      <TabsList>
-                        <TabsTrigger value="summary">Summary</TabsTrigger>
-                        <TabsTrigger value="items">Line Items</TabsTrigger>
-                        <TabsTrigger value="scores">Evaluation</TabsTrigger>
-                      </TabsList>
-
-                      <TabsContent value="summary" className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <div className="p-4 border rounded-lg">
-                            <h4 className="font-medium mb-2">Financial Details</h4>
-                            <p className="text-2xl font-bold text-green-600">
-                              {response.currency} {response.total_bid_amount.toLocaleString()}
-                            </p>
-                            <p className="text-sm text-muted-foreground">Total Bid Amount</p>
-                          </div>
-                          <div className="p-4 border rounded-lg">
-                            <h4 className="font-medium mb-2">Delivery Timeline</h4>
-                            <p className="text-lg">{response.delivery_timeline || "Not specified"}</p>
-                          </div>
-                          <div className="p-4 border rounded-lg">
-                            <h4 className="font-medium mb-2">Warranty Period</h4>
-                            <p className="text-lg">{response.warranty_period || "Not specified"}</p>
-                          </div>
-                        </div>
-                      </TabsContent>
-
-                      <TabsContent value="items" className="space-y-4">
-                        <div className="space-y-3">
-                          {response.rfp_response_items.map((item) => (
-                            <Card key={item.id}>
-                              <CardContent className="p-4">
-                                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                                  <div className="md:col-span-2">
-                                    <h5 className="font-medium">{item.description}</h5>
-                                    {item.brand_model && (
-                                      <p className="text-sm text-muted-foreground">
-                                        Brand/Model: {item.brand_model}
-                                      </p>
-                                    )}
-                                  </div>
-                                  <div>
-                                    <p className="text-sm font-medium">Quantity</p>
-                                    <p>{item.quantity}</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-sm font-medium">Unit Price</p>
-                                    <p>{response.currency} {item.unit_price.toLocaleString()}</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-sm font-medium">Total Price</p>
-                                    <p className="font-semibold">
-                                      {response.currency} {item.total_price.toLocaleString()}
-                                    </p>
-                                  </div>
-                                </div>
-                                {item.specifications && (
-                                  <div className="mt-3">
-                                    <p className="text-sm font-medium">Specifications:</p>
-                                    <p className="text-sm text-muted-foreground">{item.specifications}</p>
-                                  </div>
-                                )}
-                              </CardContent>
-                            </Card>
-                          ))}
-                        </div>
-                      </TabsContent>
-
-                      <TabsContent value="scores" className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                          <div className="p-4 border rounded-lg text-center">
-                            <p className="text-sm font-medium">Technical Score</p>
-                            <p className="text-2xl font-bold">
-                              {response.technical_score || "N/A"}
-                            </p>
-                          </div>
-                          <div className="p-4 border rounded-lg text-center">
-                            <p className="text-sm font-medium">Commercial Score</p>
-                            <p className="text-2xl font-bold">
-                              {response.commercial_score || "N/A"}
-                            </p>
-                          </div>
-                          <div className="p-4 border rounded-lg text-center">
-                            <p className="text-sm font-medium">Total Score</p>
-                            <p className="text-2xl font-bold text-blue-600">
-                              {response.total_score || "N/A"}
-                            </p>
-                          </div>
-                          <div className="p-4 border rounded-lg text-center">
-                            <p className="text-sm font-medium">Status</p>
-                            <Badge variant={getStatusBadgeVariant(response.status)} className="mt-2">
-                              {response.status.replace("_", " ").toUpperCase()}
-                            </Badge>
-                          </div>
-                        </div>
-                      </TabsContent>
-                    </Tabs>
-                  </CardContent>
-                </Card>
-              ))}
-            </TabsContent>
-          </Tabs>
-        </div>
+            )}
+          </TabsContent>
+        </Tabs>
       )}
 
       {selectedRfpId && responses.length === 0 && (
