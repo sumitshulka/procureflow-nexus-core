@@ -715,13 +715,6 @@ const RfpResponses = () => {
         </Tabs>
       )}
 
-      {selectedRfpId && responses.length === 0 && (
-        <Card>
-          <CardContent className="p-8 text-center">
-            <p className="text-muted-foreground">No responses received for this RFP yet.</p>
-          </CardContent>
-        </Card>
-      )}
 
       {!selectedRfpId && (
         <Card>
