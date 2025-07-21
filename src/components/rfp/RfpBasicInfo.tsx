@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -34,17 +34,39 @@ interface RfpBasicInfoProps {
   data: any;
   onUpdate: (data: any) => void;
   onNext: () => void;
+  templateData?: any;
+  mode?: string;
 }
 
-const RfpBasicInfo: React.FC<RfpBasicInfoProps> = ({ data, onUpdate, onNext }) => {
+const RfpBasicInfo: React.FC<RfpBasicInfoProps> = ({ data, onUpdate, onNext, templateData, mode }) => {
   const form = useForm<BasicInfoData>({
     resolver: zodResolver(basicInfoSchema),
     defaultValues: {
-      ...data.basicInfo,
-      currency: data.basicInfo?.currency || "USD",
-      bid_validity_period: data.basicInfo?.bid_validity_period || 30,
+      currency: "USD",
+      bid_validity_period: 30,
     },
   });
+
+  // Update form values when data changes (especially template data)
+  useEffect(() => {
+    if (data.basicInfo) {
+      const formValues = {
+        title: data.basicInfo.title || '',
+        description: data.basicInfo.description || '',
+        procurement_request_id: data.basicInfo.procurement_request_id || '',
+        submission_deadline: data.basicInfo.submission_deadline ? new Date(data.basicInfo.submission_deadline) : undefined,
+        technical_evaluation_deadline: data.basicInfo.technical_evaluation_deadline ? new Date(data.basicInfo.technical_evaluation_deadline) : undefined,
+        commercial_evaluation_deadline: data.basicInfo.commercial_evaluation_deadline ? new Date(data.basicInfo.commercial_evaluation_deadline) : undefined,
+        estimated_value: data.basicInfo.estimated_value || undefined,
+        currency: data.basicInfo.currency || "USD",
+        pre_bid_meeting_date: data.basicInfo.pre_bid_meeting_date ? new Date(data.basicInfo.pre_bid_meeting_date) : undefined,
+        pre_bid_meeting_venue: data.basicInfo.pre_bid_meeting_venue || '',
+        bid_validity_period: data.basicInfo.bid_validity_period || 30,
+      };
+      
+      form.reset(formValues);
+    }
+  }, [data.basicInfo, form]);
 
   const onSubmit = (formData: BasicInfoData) => {
     onUpdate({ basicInfo: formData });
