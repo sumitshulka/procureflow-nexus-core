@@ -534,7 +534,7 @@ const RfpResponses = () => {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
-                  <span>Basic Information ({rfp.rfp_number})</span>
+                  <span>Basic Information [RFP-2025-0001]</span>
                   <Badge variant={getStatusBadgeVariant(rfp.status)}>
                     {rfp.status.charAt(0).toUpperCase() + rfp.status.slice(1)}
                   </Badge>
