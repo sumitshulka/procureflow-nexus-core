@@ -361,51 +361,60 @@ const RfpResponses = () => {
 
   return (
     <div className="container mx-auto py-6">
-      {/* RFP Selection Section */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold mb-4">RFP Responses</h1>
-        
-        <Card className="mb-4">
-          <CardContent className="p-4">
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search RFPs..."
-                    value={rfpSearchTerm}
-                    onChange={(e) => setRfpSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
+      {/* RFP Selection Section - Only show if no rfpId in URL */}
+      {!rfpId && (
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold mb-4">RFP Responses</h1>
+          
+          <Card className="mb-4">
+            <CardContent className="p-4">
+              <div className="flex flex-col md:flex-row gap-4">
+                <div className="flex-1">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search RFPs..."
+                      value={rfpSearchTerm}
+                      onChange={(e) => setRfpSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
                 </div>
+                <Select value={yearFilter} onValueChange={setYearFilter}>
+                  <SelectTrigger className="w-[150px]">
+                    <SelectValue placeholder="Select year" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Years</SelectItem>
+                    {availableYears.map(year => (
+                      <SelectItem key={year} value={year}>{year}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={selectedRfpId} onValueChange={setSelectedRfpId}>
+                  <SelectTrigger className="w-[300px]">
+                    <SelectValue placeholder="Select RFP to view responses" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {filteredRfps.map(rfp => (
+                      <SelectItem key={rfp.id} value={rfp.id}>
+                        {rfp.rfp_number} - {rfp.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-              <Select value={yearFilter} onValueChange={setYearFilter}>
-                <SelectTrigger className="w-[150px]">
-                  <SelectValue placeholder="Select year" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Years</SelectItem>
-                  {availableYears.map(year => (
-                    <SelectItem key={year} value={year}>{year}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={selectedRfpId} onValueChange={setSelectedRfpId}>
-                <SelectTrigger className="w-[300px]">
-                  <SelectValue placeholder="Select RFP to view responses" />
-                </SelectTrigger>
-                <SelectContent>
-                  {filteredRfps.map(rfp => (
-                    <SelectItem key={rfp.id} value={rfp.id}>
-                      {rfp.rfp_number} - {rfp.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Show page title when accessing specific RFP */}
+      {rfpId && (
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold">RFP Responses</h1>
+        </div>
+      )}
 
       {rfp && (
         <div className="mb-6">
