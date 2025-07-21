@@ -386,7 +386,7 @@ const RfpBasicInfo: React.FC<RfpBasicInfoProps> = ({ data, onUpdate, onNext, tem
 
         <div className="flex justify-end">
           <Button type="submit">
-            Continue to BOQ
+            {mode === 'quick' ? 'Continue to Items & Vendors' : 'Continue to BOQ'}
           </Button>
         </div>
       </form>

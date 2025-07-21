@@ -462,7 +462,7 @@ const RfpBoq: React.FC<RfpBoqProps> = ({ data, onUpdate, onNext, mode }) => {
 
       <div className="flex justify-end">
         <Button onClick={handleContinue}>
-          {mode === 'quick' ? 'Continue to Terms & Conditions' : 'Continue to Vendor Selection'}
+          {mode === 'quick' ? 'Continue to Review' : 'Continue to Vendor Selection'}
         </Button>
       </div>
     </div>

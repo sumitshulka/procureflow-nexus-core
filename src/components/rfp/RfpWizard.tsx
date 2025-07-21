@@ -79,7 +79,7 @@ const RfpWizard = () => {
   
   const getSteps = () => {
     if (mode === 'advanced') {
-      // Advanced mode includes all steps
+      // Advanced mode: Complete workflow with all steps
       return [
         { number: 1, title: "Basic Information", component: RfpBasicInfo },
         { number: 2, title: "Bill of Quantities (BOQ)", component: RfpBoq },
@@ -88,19 +88,18 @@ const RfpWizard = () => {
         { number: 5, title: "Review & Submit", component: RfpReview },
       ];
     } else if (templateParam) {
-      // Template mode includes all steps but with pre-filled data
+      // Template mode: Focus on customizing template data, no separate vendor step
       return [
-        { number: 1, title: "Basic Information", component: RfpBasicInfo },
+        { number: 1, title: "Basic Information & Custom Fields", component: RfpBasicInfo },
         { number: 2, title: "Bill of Quantities (BOQ)", component: RfpBoq },
-        { number: 3, title: "Vendor Selection", component: RfpVendors },
-        { number: 4, title: "Terms & Conditions", component: RfpTerms },
-        { number: 5, title: "Review & Submit", component: RfpReview },
+        { number: 3, title: "Terms & Conditions", component: RfpTerms },
+        { number: 4, title: "Review & Submit", component: RfpReview },
       ];
     } else {
-      // Quick start mode - simplified steps
+      // Quick start mode: Simplified with combined BOQ + vendor selection
       return [
         { number: 1, title: "Basic Information", component: RfpBasicInfo },
-        { number: 2, title: "Bill of Quantities (BOQ)", component: RfpBoq },
+        { number: 2, title: "Items & Vendor Selection", component: RfpBoq }, // Combined step
         { number: 3, title: "Review & Submit", component: RfpReview },
       ];
     }
