@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface RfpTemplate {
   id: string;
@@ -29,6 +30,7 @@ interface RfpTemplate {
 const RfpTemplates = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [templates, setTemplates] = useState<RfpTemplate[]>([]);
   const [filteredTemplates, setFilteredTemplates] = useState<RfpTemplate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -137,9 +139,16 @@ const RfpTemplates = () => {
       return;
     }
 
+    if (!user) {
+      toast({
+        title: "Authentication Error",
+        description: "You must be logged in to copy templates",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("User not authenticated");
 
       // Create duplicate template
       const { data: newTemplate, error: templateError } = await supabase
