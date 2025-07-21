@@ -36,6 +36,9 @@ const RfpTemplates = () => {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [selectedTemplate, setSelectedTemplate] = useState<RfpTemplate | null>(null);
   const [templateFields, setTemplateFields] = useState<any[]>([]);
+  const [copyDialogOpen, setCopyDialogOpen] = useState(false);
+  const [templateToCopy, setTemplateToCopy] = useState<RfpTemplate | null>(null);
+  const [newTemplateName, setNewTemplateName] = useState("");
 
   useEffect(() => {
     fetchTemplates();
@@ -118,7 +121,22 @@ const RfpTemplates = () => {
     }
   };
 
-  const handleDuplicateTemplate = async (template: RfpTemplate) => {
+  const handleCopyTemplate = (template: RfpTemplate) => {
+    setTemplateToCopy(template);
+    setNewTemplateName(`${template.name} (Copy)`);
+    setCopyDialogOpen(true);
+  };
+
+  const handleConfirmCopy = async (shouldEdit: boolean = false) => {
+    if (!templateToCopy || !newTemplateName.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Please provide a name for the new template",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
@@ -127,10 +145,10 @@ const RfpTemplates = () => {
       const { data: newTemplate, error: templateError } = await supabase
         .from('rfp_templates')
         .insert({
-          name: `${template.name} (Copy)`,
-          description: template.description,
-          category: template.category,
-          template_data: template.template_data,
+          name: newTemplateName.trim(),
+          description: templateToCopy.description,
+          category: templateToCopy.category,
+          template_data: templateToCopy.template_data,
           created_by: user.id,
           is_default: false,
           usage_count: 0
@@ -144,7 +162,7 @@ const RfpTemplates = () => {
       const { data: fields, error: fieldsError } = await supabase
         .from('rfp_template_fields')
         .select('*')
-        .eq('template_id', template.id);
+        .eq('template_id', templateToCopy.id);
 
       if (fieldsError) throw fieldsError;
 
@@ -169,14 +187,30 @@ const RfpTemplates = () => {
 
       await fetchTemplates();
       
+      // Close dialog and reset state
+      setCopyDialogOpen(false);
+      setTemplateToCopy(null);
+      setNewTemplateName("");
+      
       toast({
         title: "Success",
-        description: "Template duplicated successfully",
+        description: `Template "${newTemplateName}" created successfully`,
       });
+
+      // Navigate to edit if user chose to edit
+      if (shouldEdit) {
+        // TODO: Navigate to template editor with newTemplate.id
+        // This would require implementing a template editor page
+        toast({
+          title: "Info",
+          description: "Template editor is not yet implemented. You can use the template from the templates list.",
+        });
+      }
+
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Failed to duplicate template",
+        description: error.message || "Failed to copy template",
         variant: "destructive",
       });
     }
@@ -323,7 +357,7 @@ const RfpTemplates = () => {
                   <Button 
                     size="sm" 
                     variant="outline"
-                    onClick={() => handleDuplicateTemplate(template)}
+                    onClick={() => handleCopyTemplate(template)}
                   >
                     <Copy className="h-4 w-4" />
                   </Button>
@@ -493,6 +527,72 @@ const RfpTemplates = () => {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Copy Template Dialog */}
+      <Dialog open={copyDialogOpen} onOpenChange={setCopyDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Copy className="h-5 w-5" />
+              Copy Template
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm text-muted-foreground mb-4">
+                Create a copy of "{templateToCopy?.name}" with a new name.
+              </p>
+              
+              <div className="space-y-2">
+                <label htmlFor="templateName" className="text-sm font-medium">
+                  New Template Name
+                </label>
+                <Input
+                  id="templateName"
+                  value={newTemplateName}
+                  onChange={(e) => setNewTemplateName(e.target.value)}
+                  placeholder="Enter template name"
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2 pt-4">
+              <Button 
+                onClick={() => handleConfirmCopy(false)}
+                disabled={!newTemplateName.trim()}
+                className="w-full"
+              >
+                <Copy className="h-4 w-4 mr-2" />
+                Copy Template
+              </Button>
+              
+              <Button 
+                variant="outline"
+                onClick={() => handleConfirmCopy(true)}
+                disabled={!newTemplateName.trim()}
+                className="w-full"
+              >
+                <Edit className="h-4 w-4 mr-2" />
+                Copy & Edit Template
+              </Button>
+              
+              <Button 
+                variant="ghost"
+                onClick={() => {
+                  setCopyDialogOpen(false);
+                  setTemplateToCopy(null);
+                  setNewTemplateName("");
+                }}
+                className="w-full"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
