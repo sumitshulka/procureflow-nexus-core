@@ -336,11 +336,7 @@ const RfpTemplates = () => {
     if (activeTab === "rfp") {
       navigate("/rfp/templates/create");
     } else {
-      // For now, we'll create a basic pricing template creation flow
-      toast({
-        title: "Coming Soon",
-        description: "Dedicated pricing template creation page is being developed. You can create pricing templates during RFP creation for now.",
-      });
+      navigate("/rfp/pricing-templates/create");
     }
   };
 
