@@ -97,6 +97,7 @@ interface CustomFieldsSection {
 const CustomFieldsSection = ({ rfpId }: CustomFieldsSection) => {
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, any>>({});
+  const [rfpCurrency, setRfpCurrency] = useState<string>('USD');
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
@@ -106,30 +107,50 @@ const CustomFieldsSection = ({ rfpId }: CustomFieldsSection) => {
 
   const fetchCustomFields = async () => {
     try {
-      // First, we need to check if this RFP was created from a template
-      // For now, let's look for any custom fields associated with this RFP
-      // This would require a way to link RFPs to templates or store custom field data
-      
-      // Placeholder: We'll show template fields that could have been used
-      const { data: templateFields, error } = await supabase
-        .from('rfp_template_fields')
-        .select('*')
-        .order('display_order');
+      // Get RFP data to check for custom fields and currency
+      const { data: rfpData, error: rfpError } = await supabase
+        .from('rfps')
+        .select('currency, evaluation_criteria')
+        .eq('id', rfpId)
+        .single();
 
-      if (error) throw error;
+      if (rfpError) throw rfpError;
       
-      // For demo purposes, we'll show some template fields
-      // In a real implementation, you'd store custom field values with the RFP
-      setCustomFields(templateFields || []);
+      // Set currency from RFP
+      setRfpCurrency(rfpData?.currency || 'USD');
       
-      // Mock some values - in real implementation, these would come from RFP custom data
-      setCustomFieldValues({
-        'turnover': 5000000,
-        'quantity': 1000
+      // Parse evaluation criteria to extract custom fields
+      let customFieldsFromRfp: any[] = [];
+      if (rfpData?.evaluation_criteria) {
+        const criteria = typeof rfpData.evaluation_criteria === 'string' 
+          ? JSON.parse(rfpData.evaluation_criteria) 
+          : rfpData.evaluation_criteria;
+        
+        customFieldsFromRfp = criteria?.custom_fields || [];
+      }
+      
+      // If no custom fields in RFP, don't show any
+      if (customFieldsFromRfp.length === 0) {
+        setCustomFields([]);
+        setCustomFieldValues({});
+        return;
+      }
+      
+      setCustomFields(customFieldsFromRfp);
+      
+      // Extract values from the custom fields
+      const fieldValues: Record<string, any> = {};
+      customFieldsFromRfp.forEach(field => {
+        if (field.value !== undefined) {
+          fieldValues[field.field_name] = field.value;
+        }
       });
+      setCustomFieldValues(fieldValues);
       
     } catch (error: any) {
       console.error('Error fetching custom fields:', error);
+      setCustomFields([]);
+      setCustomFieldValues({});
     } finally {
       setIsLoading(false);
     }
@@ -175,7 +196,7 @@ const CustomFieldsSection = ({ rfpId }: CustomFieldsSection) => {
                   }
                 </p>
                 {field.field_type === 'number' && field.field_name === 'turnover' && (
-                  <p className="text-xs text-muted-foreground">USD (Annual)</p>
+                  <p className="text-xs text-muted-foreground">{rfpCurrency} (Annual)</p>
                 )}
               </div>
               
