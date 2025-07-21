@@ -106,50 +106,26 @@ const RfpResponses = () => {
 
   const fetchAllRfps = async () => {
     try {
-      // Mock RFPs data
-      const mockRfps: RFP[] = [
-        {
-          id: "550e8400-e29b-41d4-a716-446655440001",
-          title: "IT Equipment Procurement",
-          rfp_number: "RFP-2024-001",
-          status: "active",
-          submission_deadline: "2024-03-01T23:59:59Z",
-          created_at: "2024-01-01T00:00:00Z",
-          evaluation_criteria: {
-            type: "qcbs",
-            technical_weight: 70,
-            commercial_weight: 30
-          }
-        },
-        {
-          id: "550e8400-e29b-41d4-a716-446655440002",
-          title: "Office Furniture Supply",
-          rfp_number: "RFP-2024-002",
-          status: "completed",
-          submission_deadline: "2024-02-15T23:59:59Z",
-          created_at: "2024-01-15T00:00:00Z",
-          evaluation_criteria: {
-            type: "price_l1"
-          }
-        },
-        {
-          id: "550e8400-e29b-41d4-a716-446655440003",
-          title: "Security Services",
-          rfp_number: "RFP-2023-015",
-          status: "awarded",
-          submission_deadline: "2023-12-30T23:59:59Z",
-          created_at: "2023-12-01T00:00:00Z",
-          evaluation_criteria: {
-            type: "technical_l1"
-          }
-        }
-      ];
+      const { data, error } = await supabase
+        .from("rfps")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
       
-      setAllRfps(mockRfps);
+      // Transform the data to match our RFP interface
+      const transformedRfps = (data || []).map(rfp => ({
+        ...rfp,
+        evaluation_criteria: typeof rfp.evaluation_criteria === 'string' 
+          ? JSON.parse(rfp.evaluation_criteria) 
+          : rfp.evaluation_criteria
+      }));
+      
+      setAllRfps(transformedRfps);
     } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to fetch RFPs",
+        description: error.message || "Failed to fetch RFPs",
         variant: "destructive",
       });
     }
@@ -157,29 +133,22 @@ const RfpResponses = () => {
 
   const fetchRfpData = async (id: string) => {
     try {
-      // First try to fetch from database
       const { data: rfpData, error } = await supabase
         .from("rfps")
         .select("*")
         .eq("id", id)
         .single();
 
-      if (!error && rfpData) {
-        // Transform the database response to match our RFP interface
-        const transformedRfp: RFP = {
-          ...rfpData,
-          evaluation_criteria: typeof rfpData.evaluation_criteria === 'string' 
-            ? JSON.parse(rfpData.evaluation_criteria) 
-            : rfpData.evaluation_criteria
-        };
-        setRfp(transformedRfp);
-      } else {
-        // Fallback to mock data
-        const selectedRfp = allRfps.find(r => r.id === id);
-        if (selectedRfp) {
-          setRfp(selectedRfp);
-        }
-      }
+      if (error) throw error;
+
+      // Transform the database response to match our RFP interface
+      const transformedRfp: RFP = {
+        ...rfpData,
+        evaluation_criteria: typeof rfpData.evaluation_criteria === 'string' 
+          ? JSON.parse(rfpData.evaluation_criteria) 
+          : rfpData.evaluation_criteria
+      };
+      setRfp(transformedRfp);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -191,101 +160,30 @@ const RfpResponses = () => {
 
   const fetchResponses = async (id: string) => {
     try {
-      // Mock responses with multiple vendors for evaluation
-      const mockResponses: RFPResponse[] = [
-        {
-          id: "660e8400-e29b-41d4-a716-446655440001",
-          response_number: "RFP-RESP-001",
-          submitted_at: "2024-01-15T10:00:00Z",
-          status: "submitted",
-          technical_score: 85,
-          commercial_score: 90,
-          total_score: 87.5,
-          total_bid_amount: 125000,
-          currency: "USD",
-          delivery_timeline: "4-6 weeks",
-          warranty_period: "2 years",
-          vendor_id: "vendor-1",
-          vendor_registrations: {
-            company_name: "Tech Solutions Inc",
-            primary_email: "contact@techsolutions.com",
-            primary_phone: "+1-555-0123"
-          },
-          rfp_response_items: [
-            {
-              id: "item-1",
-              description: "Laptop Computers",
-              quantity: 50,
-              unit_price: 1200,
-              total_price: 60000,
-              brand_model: "Dell Latitude 5520",
-              specifications: "Intel i7, 16GB RAM, 512GB SSD"
-            }
-          ]
-        },
-        {
-          id: "660e8400-e29b-41d4-a716-446655440002",
-          response_number: "RFP-RESP-002",
-          submitted_at: "2024-01-18T14:00:00Z",
-          status: "under_evaluation",
-          technical_score: 78,
-          commercial_score: 95,
-          total_score: 86.5,
-          total_bid_amount: 118000,
-          currency: "USD",
-          delivery_timeline: "6-8 weeks",
-          warranty_period: "3 years",
-          vendor_id: "vendor-2",
-          vendor_registrations: {
-            company_name: "Global IT Corp",
-            primary_email: "sales@globalit.com",
-            primary_phone: "+1-555-0456"
-          },
-          rfp_response_items: [
-            {
-              id: "item-2",
-              description: "Desktop Workstations",
-              quantity: 25,
-              unit_price: 1800,
-              total_price: 45000,
-              brand_model: "HP Z440",
-              specifications: "Intel Xeon, 32GB RAM, 1TB SSD"
-            }
-          ]
-        },
-        {
-          id: "660e8400-e29b-41d4-a716-446655440003",
-          response_number: "RFP-RESP-003",
-          submitted_at: "2024-01-20T16:00:00Z",
-          status: "submitted",
-          technical_score: 92,
-          commercial_score: 75,
-          total_score: 83.5,
-          total_bid_amount: 135000,
-          currency: "USD",
-          delivery_timeline: "3-4 weeks",
-          warranty_period: "2 years",
-          vendor_id: "vendor-3",
-          vendor_registrations: {
-            company_name: "Premium Systems Ltd",
-            primary_email: "info@premiumsystems.com",
-            primary_phone: "+1-555-0789"
-          },
-          rfp_response_items: [
-            {
-              id: "item-3",
-              description: "Server Equipment",
-              quantity: 10,
-              unit_price: 3500,
-              total_price: 35000,
-              brand_model: "Dell PowerEdge R750",
-              specifications: "Dual Xeon, 128GB RAM, 2TB SSD"
-            }
-          ]
-        }
-      ];
+      const { data, error } = await supabase
+        .from("rfp_responses")
+        .select(`
+          *,
+          vendor_registrations:vendor_id (
+            company_name,
+            primary_email,
+            primary_phone
+          ),
+          rfp_response_items (
+            id,
+            description,
+            quantity,
+            unit_price,
+            total_price,
+            brand_model,
+            specifications
+          )
+        `)
+        .eq("rfp_id", id)
+        .order("submitted_at", { ascending: false });
 
-      setResponses(mockResponses);
+      if (error) throw error;
+      setResponses(data || []);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -294,6 +192,47 @@ const RfpResponses = () => {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleAwardResponse = async (responseId: string) => {
+    try {
+      const { error } = await supabase
+        .from("rfp_responses")
+        .update({ status: "awarded" })
+        .eq("id", responseId);
+
+      if (error) throw error;
+
+      // Update local state
+      setResponses(prev => prev.map(response => 
+        response.id === responseId 
+          ? { ...response, status: "awarded" }
+          : response
+      ));
+
+      // Update RFP status to awarded
+      if (rfp) {
+        const { error: rfpError } = await supabase
+          .from("rfps")
+          .update({ status: "awarded" })
+          .eq("id", rfp.id);
+
+        if (!rfpError) {
+          setRfp(prev => prev ? { ...prev, status: "awarded" } : null);
+        }
+      }
+
+      toast({
+        title: "Success",
+        description: "Response awarded successfully",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to award response",
+        variant: "destructive",
+      });
     }
   };
 
@@ -309,34 +248,18 @@ const RfpResponses = () => {
         return "default";
       case "rejected":
         return "destructive";
+      case "draft":
+        return "secondary";
+      case "published":
+        return "default";
+      case "evaluation":
+        return "outline";
+      case "canceled":
+        return "destructive";
+      case "expired":
+        return "secondary";
       default:
         return "secondary";
-    }
-  };
-
-  const handleAwardResponse = async (responseId: string) => {
-    try {
-      // For mock data, we'll just update the local state
-      setResponses(prev => prev.map(response => 
-        response.id === responseId 
-          ? { ...response, status: "awarded" }
-          : response
-      ));
-
-      if (rfp) {
-        setRfp(prev => prev ? { ...prev, status: "awarded" } : null);
-      }
-
-      toast({
-        title: "Success",
-        description: "Response awarded successfully",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to award response",
-        variant: "destructive",
-      });
     }
   };
 
