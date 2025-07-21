@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Search, Copy, Edit, Trash2, FileText, Star, Settings } from "lucide-react";
+import { Plus, Search, Copy, Edit, Trash2, FileText, Star, Settings, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
@@ -34,6 +34,8 @@ const RfpTemplates = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const [selectedTemplate, setSelectedTemplate] = useState<RfpTemplate | null>(null);
+  const [templateFields, setTemplateFields] = useState<any[]>([]);
 
   useEffect(() => {
     fetchTemplates();
@@ -204,6 +206,27 @@ const RfpTemplates = () => {
     }
   };
 
+  const handleViewTemplate = async (template: RfpTemplate) => {
+    try {
+      const { data: fields, error } = await supabase
+        .from('rfp_template_fields')
+        .select('*')
+        .eq('template_id', template.id)
+        .order('display_order');
+
+      if (error) throw error;
+      
+      setTemplateFields(fields || []);
+      setSelectedTemplate(template);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to load template details",
+        variant: "destructive",
+      });
+    }
+  };
+
   const categories = [...new Set(templates.map(t => t.category))];
 
   if (isLoading) {
@@ -293,6 +316,13 @@ const RfpTemplates = () => {
                   <Button 
                     size="sm" 
                     variant="outline"
+                    onClick={() => handleViewTemplate(template)}
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline"
                     onClick={() => handleDuplicateTemplate(template)}
                   >
                     <Copy className="h-4 w-4" />
@@ -319,6 +349,152 @@ const RfpTemplates = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* Template Details Dialog */}
+      <Dialog open={!!selectedTemplate} onOpenChange={() => setSelectedTemplate(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              {selectedTemplate?.name}
+              {selectedTemplate?.is_default && (
+                <Star className="h-4 w-4 text-yellow-500 fill-current" />
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedTemplate && (
+            <div className="space-y-6">
+              {/* Template Overview */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Template Overview</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Category</p>
+                      <Badge variant="outline">{selectedTemplate.category}</Badge>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Usage Count</p>
+                      <p>{selectedTemplate.usage_count} times</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Created</p>
+                      <p>{format(new Date(selectedTemplate.created_at), "PPP")}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Last Updated</p>
+                      <p>{format(new Date(selectedTemplate.updated_at), "PPP")}</p>
+                    </div>
+                  </div>
+                  
+                  {selectedTemplate.description && (
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground mb-2">Description</p>
+                      <p className="text-sm">{selectedTemplate.description}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Template Configuration */}
+              {selectedTemplate.template_data && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Template Configuration</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {selectedTemplate.template_data.evaluation_criteria && (
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground mb-2">Evaluation Criteria</p>
+                        <p className="text-sm">{selectedTemplate.template_data.evaluation_criteria.type?.toUpperCase().replace('_', ' ') || 'Not specified'}</p>
+                      </div>
+                    )}
+                    
+                    {selectedTemplate.template_data.bid_validity_period && (
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground mb-2">Bid Validity Period</p>
+                        <p className="text-sm">{selectedTemplate.template_data.bid_validity_period} days</p>
+                      </div>
+                    )}
+                    
+                    {selectedTemplate.template_data.currency && (
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground mb-2">Currency</p>
+                        <p className="text-sm">{selectedTemplate.template_data.currency}</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Template Fields */}
+              {templateFields.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Custom Fields ({templateFields.length})</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {templateFields.map((field, index) => (
+                        <div key={field.id} className="border rounded-lg p-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <p className="font-medium">{field.field_label}</p>
+                                {field.is_required && (
+                                  <Badge variant="destructive" className="text-xs">Required</Badge>
+                                )}
+                                <Badge variant="secondary" className="text-xs">
+                                  {field.field_type}
+                                </Badge>
+                              </div>
+                              {field.description && (
+                                <p className="text-sm text-muted-foreground mt-1">{field.description}</p>
+                              )}
+                              {field.field_options && (
+                                <div className="mt-2">
+                                  <p className="text-xs text-muted-foreground">Options:</p>
+                                  <div className="flex gap-1 mt-1 flex-wrap">
+                                    {Object.entries(field.field_options).map(([key, value]) => (
+                                      <Badge key={key} variant="outline" className="text-xs">
+                                        {String(value)}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              Order: {field.display_order}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" onClick={() => setSelectedTemplate(null)}>
+                  Close
+                </Button>
+                <Button onClick={() => {
+                  handleUseTemplate(selectedTemplate);
+                  setSelectedTemplate(null);
+                }}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Use This Template
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
