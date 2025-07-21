@@ -276,8 +276,7 @@ const VendorRfps = () => {
                       </div>
                        <div>
                          <p className="text-sm text-muted-foreground">Budget Range</p>
-                         <p className="font-medium flex items-center gap-1">
-                           <DollarSign className="w-4 h-4" />
+                         <p className="font-medium">
                            {rfp.estimated_value && rfp.currency 
                              ? `${rfp.currency} ${rfp.estimated_value.toLocaleString()}`
                              : 'Not specified'}
