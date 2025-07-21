@@ -11,7 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Eye, Download, Award, Search, Filter } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { RfpCommunicationHub } from "@/components/rfp/RfpCommunicationHub";
+import { RfpCommunications } from "@/components/rfp/RfpCommunications";
+import { RfpAddendums } from "@/components/rfp/RfpAddendums";
 import { RfpTimeline } from "@/components/rfp/RfpTimeline";
 import { format } from "date-fns";
 
@@ -381,6 +382,7 @@ const RfpResponses = () => {
         <Tabs defaultValue="rfp-details" className="w-full">
           <TabsList>
             <TabsTrigger value="rfp-details">RFP Details</TabsTrigger>
+            <TabsTrigger value="addendums">Addendums</TabsTrigger>
             <TabsTrigger value="communications">Communications</TabsTrigger>
             <TabsTrigger value="timeline">Timeline</TabsTrigger>
             <TabsTrigger value="responses">Responses ({responses.length})</TabsTrigger>
@@ -717,8 +719,20 @@ const RfpResponses = () => {
             )}
           </TabsContent>
 
+          <TabsContent value="addendums" className="space-y-4">
+            <RfpAddendums 
+              rfpId={rfp.id}
+              rfpData={rfp}
+              canManage={rfp.status === 'published'} 
+            />
+          </TabsContent>
+
           <TabsContent value="communications" className="space-y-4">
-            <RfpCommunicationHub rfpId={rfp.id} rfpStatus={rfp.status} />
+            <RfpCommunications 
+              rfpId={rfp.id}
+              userRole="organization"
+              isVendor={false}
+            />
           </TabsContent>
 
           <TabsContent value="timeline" className="space-y-4">
