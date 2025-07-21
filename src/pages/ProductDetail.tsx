@@ -151,7 +151,7 @@ const ProductDetail = () => {
         .from("vendor_products")
         .select(`
           *,
-          vendor:vendor_id(
+          vendor_registrations:vendor_id(
             company_name,
             vendor_number,
             status,

@@ -19,7 +19,7 @@ interface Supplier {
   vendor_currency: string;
   registered_at: string;
   price_updated_at?: string;
-  vendor?: {
+  vendor_registrations?: {
     company_name: string;
     vendor_number?: string;
     status: string;
@@ -70,44 +70,44 @@ const SuppliersTable: React.FC<SuppliersTableProps> = ({ suppliers }) => {
           <TableBody>
             {currentSuppliers.map((supplier) => (
               <TableRow key={supplier.id}>
-                <TableCell>
-                  <div className="space-y-1">
-                    <div className="font-medium">{supplier.vendor?.company_name}</div>
-                    <div className="text-sm text-muted-foreground">
-                      {supplier.vendor?.vendor_number || 'No vendor number'}
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="space-y-1">
-                    <div className="text-sm">{supplier.vendor?.primary_email}</div>
-                    <div className="text-sm text-muted-foreground">{supplier.vendor?.primary_phone}</div>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="space-y-1">
-                    <div className="font-medium">
-                      {supplier.vendor_currency} {supplier.vendor_price?.toFixed(2) || 'N/A'}
-                    </div>
-                    {supplier.price_updated_at && (
-                      <div className="text-xs text-muted-foreground">
-                        Updated: {format(new Date(supplier.price_updated_at), 'MMM dd, yyyy')}
-                      </div>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="text-sm">
-                    {format(new Date(supplier.registered_at), 'MMM dd, yyyy')}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <Badge 
-                    variant={supplier.vendor?.status === 'approved' ? 'default' : 'secondary'}
-                  >
-                    {supplier.vendor?.status?.charAt(0).toUpperCase() + supplier.vendor?.status?.slice(1)}
-                  </Badge>
-                </TableCell>
+                 <TableCell>
+                   <div className="space-y-1">
+                     <div className="font-medium">{supplier.vendor_registrations?.company_name}</div>
+                     <div className="text-sm text-muted-foreground">
+                       {supplier.vendor_registrations?.vendor_number || 'No vendor number'}
+                     </div>
+                   </div>
+                 </TableCell>
+                 <TableCell>
+                   <div className="space-y-1">
+                     <div className="text-sm">{supplier.vendor_registrations?.primary_email}</div>
+                     <div className="text-sm text-muted-foreground">{supplier.vendor_registrations?.primary_phone}</div>
+                   </div>
+                 </TableCell>
+                 <TableCell>
+                   <div className="space-y-1">
+                     <div className="font-medium">
+                       {supplier.vendor_currency} {supplier.vendor_price?.toFixed(2) || 'N/A'}
+                     </div>
+                     {supplier.price_updated_at && (
+                       <div className="text-xs text-muted-foreground">
+                         Updated: {format(new Date(supplier.price_updated_at), 'MMM dd, yyyy')}
+                       </div>
+                     )}
+                   </div>
+                 </TableCell>
+                 <TableCell>
+                   <div className="text-sm">
+                     {format(new Date(supplier.registered_at), 'MMM dd, yyyy')}
+                   </div>
+                 </TableCell>
+                 <TableCell>
+                   <Badge 
+                     variant={supplier.vendor_registrations?.status === 'approved' ? 'default' : 'secondary'}
+                   >
+                     {supplier.vendor_registrations?.status?.charAt(0).toUpperCase() + supplier.vendor_registrations?.status?.slice(1)}
+                   </Badge>
+                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
