@@ -20,6 +20,7 @@ interface PricingField {
   calculation_formula?: string;
   field_options?: any;
   is_required: boolean;
+  requires_user_input: boolean;
   display_order: number;
   row_number: number;
   column_number: number;

@@ -22,6 +22,7 @@ interface PricingField {
   calculation_formula?: string;
   field_options?: any;
   is_required: boolean;
+  requires_user_input: boolean;
   display_order: number;
   row_number: number;
   column_number: number;
@@ -46,6 +47,7 @@ const fieldSchema = z.object({
   description: z.string().optional(),
   calculation_formula: z.string().optional(),
   is_required: z.boolean().default(false),
+  requires_user_input: z.boolean().default(true),
   row_number: z.number().min(1),
   column_number: z.number().min(1),
 });
@@ -59,7 +61,8 @@ const FieldForm = React.memo(({
   onCancel, 
   fieldTypes, 
   rows, 
-  columns 
+  columns,
+  data
 }: { 
   isEditing?: boolean;
   form: any;
@@ -68,7 +71,20 @@ const FieldForm = React.memo(({
   fieldTypes: Array<{ value: string; label: string }>;
   rows: number;
   columns: number;
-}) => (
+  data: PricingTemplateData;
+}) => {
+  const getAvailableFieldsForFormula = () => {
+    return data.fields.filter(field => 
+      field.field_type === 'number' || 
+      field.field_type === 'currency' || 
+      field.field_type === 'percentage'
+    ).map(field => ({
+      name: field.field_name,
+      label: field.field_label
+    }));
+  };
+
+  return (
   <Card className={`${isEditing ? 'border-primary' : 'border-dashed border-2'} animate-fade-in`}>
     <CardHeader className="pb-4">
       <CardTitle className="text-sm flex items-center justify-between">
@@ -224,35 +240,72 @@ const FieldForm = React.memo(({
                       {...field}
                     />
                   </FormControl>
-                  <p className="text-xs text-muted-foreground">
-                    Use field names and operators (+, -, *, /) to create formulas
-                  </p>
+                  <div className="text-xs text-muted-foreground space-y-1">
+                    <p>Use field names/labels and operators (+, -, *, /) to create formulas</p>
+                    {getAvailableFieldsForFormula().length > 0 && (
+                      <div>
+                        <span className="font-medium">Available fields:</span>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {getAvailableFieldsForFormula().map((f) => (
+                            <code key={f.name} className="bg-muted px-1 rounded text-xs">
+                              {f.name}
+                            </code>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}
             />
           ) : null}
 
-          <FormField
-            control={form.control}
-            name="is_required"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                <FormControl>
-                  <Switch
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-                <FormLabel>Required field</FormLabel>
-              </FormItem>
-            )}
-          />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="is_required"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                  <FormLabel>Required field</FormLabel>
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="requires_user_input"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                  <div className="space-y-0.5">
+                    <FormLabel>Requires User Input</FormLabel>
+                    <p className="text-xs text-muted-foreground">
+                      Toggle off if this cell has pre-filled values
+                    </p>
+                  </div>
+                </FormItem>
+              )}
+            />
+          </div>
+
         </form>
       </Form>
     </CardContent>
   </Card>
-));
+  );
+});
 
 const PricingTemplateFieldDesigner: React.FC<PricingTemplateFieldDesignerProps> = ({
   data,
@@ -269,6 +322,7 @@ const PricingTemplateFieldDesigner: React.FC<PricingTemplateFieldDesignerProps> 
       description: "",
       calculation_formula: "",
       is_required: false,
+      requires_user_input: true,
       row_number: 1,
       column_number: 1,
     },
@@ -299,6 +353,7 @@ const PricingTemplateFieldDesigner: React.FC<PricingTemplateFieldDesignerProps> 
       description: "",
       calculation_formula: "",
       is_required: false,
+      requires_user_input: true,
       row_number: 1,
       column_number: 1,
     });
@@ -317,6 +372,7 @@ const PricingTemplateFieldDesigner: React.FC<PricingTemplateFieldDesignerProps> 
               description: formData.description,
               calculation_formula: formData.calculation_formula,
               is_required: formData.is_required,
+              requires_user_input: formData.requires_user_input,
               row_number: formData.row_number,
               column_number: formData.column_number,
             }
@@ -335,6 +391,7 @@ const PricingTemplateFieldDesigner: React.FC<PricingTemplateFieldDesignerProps> 
         calculation_formula: formData.calculation_formula,
         field_options: null,
         is_required: formData.is_required,
+        requires_user_input: formData.requires_user_input,
         display_order: data.fields.length,
         row_number: formData.row_number,
         column_number: formData.column_number,
@@ -353,6 +410,7 @@ const PricingTemplateFieldDesigner: React.FC<PricingTemplateFieldDesignerProps> 
       description: field.description || "",
       calculation_formula: field.calculation_formula || "",
       is_required: field.is_required,
+      requires_user_input: field.requires_user_input,
       row_number: field.row_number,
       column_number: field.column_number,
     });
@@ -419,7 +477,6 @@ const PricingTemplateFieldDesigner: React.FC<PricingTemplateFieldDesignerProps> 
     );
   };
 
-
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2 mb-4">
@@ -454,6 +511,7 @@ const PricingTemplateFieldDesigner: React.FC<PricingTemplateFieldDesignerProps> 
                   fieldTypes={fieldTypes}
                   rows={rows}
                   columns={columns}
+                  data={data}
                 />
               )}
               
@@ -475,6 +533,7 @@ const PricingTemplateFieldDesigner: React.FC<PricingTemplateFieldDesignerProps> 
                         fieldTypes={fieldTypes}
                         rows={rows}
                         columns={columns}
+                        data={data}
                       />
                     ) : (
                       <Card className="hover-scale transition-all duration-200">
@@ -489,9 +548,13 @@ const PricingTemplateFieldDesigner: React.FC<PricingTemplateFieldDesignerProps> 
                                 {field.is_required && (
                                   <Badge variant="destructive" className="text-xs">Required</Badge>
                                 )}
+                                {!field.requires_user_input && (
+                                  <Badge variant="outline" className="text-xs">Pre-filled</Badge>
+                                )}
                               </div>
                               <p className="text-sm text-muted-foreground">
                                 Row {field.row_number}, Column {field.column_number}
+                                {field.requires_user_input ? " • User Input" : " • Pre-filled"}
                               </p>
                               {field.description && (
                                 <p className="text-xs text-muted-foreground mt-1">{field.description}</p>
