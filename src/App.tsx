@@ -351,6 +351,14 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/rfp/create-wizard"
+            element={
+              <ProtectedRoute requiredRole={UserRole.ADMIN}>
+                <Layout><CreateRfpWizard /></Layout>
+              </ProtectedRoute>
+            }
+          />
 
           {/* Purchase Orders */}
           <Route
