@@ -359,8 +359,14 @@ function App() {
               </ProtectedRoute>
             }
           />
-
-          {/* Purchase Orders */}
+          <Route
+            path="/rfp/:id/responses"
+            element={
+              <ProtectedRoute requiredRole={UserRole.ADMIN}>
+                <Layout><RfpResponses /></Layout>
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/purchase-orders/create"
             element={
