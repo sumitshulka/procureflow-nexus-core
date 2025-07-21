@@ -6,7 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Search, Copy, Edit, Trash2, FileText, Star, Settings, Eye } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Plus, Search, Copy, Edit, Trash2, FileText, Star, Settings, Eye, Table, Calculator } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
@@ -27,28 +28,50 @@ interface RfpTemplate {
   usage_count: number;
 }
 
+interface PricingTemplate {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  template_data: any;
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
+  is_active: boolean;
+  is_default: boolean;
+  usage_count: number;
+}
+
 const RfpTemplates = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState("rfp");
   const [templates, setTemplates] = useState<RfpTemplate[]>([]);
+  const [pricingTemplates, setPricingTemplates] = useState<PricingTemplate[]>([]);
   const [filteredTemplates, setFilteredTemplates] = useState<RfpTemplate[]>([]);
+  const [filteredPricingTemplates, setFilteredPricingTemplates] = useState<PricingTemplate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [selectedTemplate, setSelectedTemplate] = useState<RfpTemplate | null>(null);
+  const [selectedPricingTemplate, setSelectedPricingTemplate] = useState<PricingTemplate | null>(null);
   const [templateFields, setTemplateFields] = useState<any[]>([]);
+  const [pricingTemplateFields, setPricingTemplateFields] = useState<any[]>([]);
   const [copyDialogOpen, setCopyDialogOpen] = useState(false);
   const [templateToCopy, setTemplateToCopy] = useState<RfpTemplate | null>(null);
+  const [pricingTemplateToCopy, setPricingTemplateToCopy] = useState<PricingTemplate | null>(null);
   const [newTemplateName, setNewTemplateName] = useState("");
 
   useEffect(() => {
     fetchTemplates();
+    fetchPricingTemplates();
   }, []);
 
   useEffect(() => {
     filterTemplates();
-  }, [templates, searchTerm, categoryFilter]);
+    filterPricingTemplates();
+  }, [templates, pricingTemplates, searchTerm, categoryFilter]);
 
   const fetchTemplates = async () => {
     try {
@@ -63,11 +86,30 @@ const RfpTemplates = () => {
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Failed to fetch templates",
+        description: error.message || "Failed to fetch RFP templates",
         variant: "destructive",
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchPricingTemplates = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('pricing_templates')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setPricingTemplates(data || []);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to fetch pricing templates",
+        variant: "destructive",
+      });
     }
   };
 
@@ -86,6 +128,23 @@ const RfpTemplates = () => {
     }
 
     setFilteredTemplates(filtered);
+  };
+
+  const filterPricingTemplates = () => {
+    let filtered = pricingTemplates.filter(t => t.is_active);
+
+    if (searchTerm) {
+      filtered = filtered.filter(t =>
+        t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        t.description?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    if (categoryFilter !== "all") {
+      filtered = filtered.filter(t => t.category === categoryFilter);
+    }
+
+    setFilteredPricingTemplates(filtered);
   };
 
   const handleUseTemplate = async (template: RfpTemplate) => {
@@ -271,7 +330,64 @@ const RfpTemplates = () => {
     }
   };
 
-  const categories = [...new Set(templates.map(t => t.category))];
+  const categories = [...new Set([...templates.map(t => t.category), ...pricingTemplates.map(t => t.category)])];
+
+  const handleCreateNewTemplate = () => {
+    if (activeTab === "rfp") {
+      navigate("/rfp/templates/create");
+    } else {
+      // For now, we'll create a basic pricing template creation flow
+      toast({
+        title: "Coming Soon",
+        description: "Dedicated pricing template creation page is being developed. You can create pricing templates during RFP creation for now.",
+      });
+    }
+  };
+
+  const handleViewPricingTemplate = async (template: PricingTemplate) => {
+    try {
+      const { data: fields, error } = await supabase
+        .from('pricing_template_fields')
+        .select('*')
+        .eq('template_id', template.id)
+        .order('display_order');
+
+      if (error) throw error;
+      
+      setPricingTemplateFields(fields || []);
+      setSelectedPricingTemplate(template);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to load pricing template details",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeletePricingTemplate = async (templateId: string) => {
+    try {
+      const { error } = await supabase
+        .from('pricing_templates')
+        .update({ is_active: false })
+        .eq('id', templateId);
+
+      if (error) throw error;
+
+      setPricingTemplates(prev => prev.filter(t => t.id !== templateId));
+      
+      toast({
+        title: "Success",
+        description: "Pricing template deleted successfully",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete pricing template",
+        variant: "destructive",
+      });
+    }
+  };
 
   if (isLoading) {
     return <div className="container mx-auto py-6">Loading...</div>;
@@ -282,119 +398,231 @@ const RfpTemplates = () => {
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-2">
           <FileText className="h-6 w-6" />
-          <h1 className="text-2xl font-bold">RFP Templates</h1>
+          <h1 className="text-2xl font-bold">Templates</h1>
         </div>
-        <Button onClick={() => navigate("/rfp/templates/create")}>
+        <Button onClick={handleCreateNewTemplate}>
           <Plus className="h-4 w-4 mr-2" />
-          Create Template
+          Create {activeTab === "rfp" ? "RFP" : "Pricing"} Template
         </Button>
       </div>
 
-      {/* Filters */}
-      <Card className="mb-6">
-        <CardContent className="p-4">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search templates..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filter by category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                {categories.map(category => (
-                  <SelectItem key={category} value={category}>{category}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="rfp" className="flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            RFP Templates
+          </TabsTrigger>
+          <TabsTrigger value="pricing" className="flex items-center gap-2">
+            <Calculator className="h-4 w-4" />
+            Pricing Templates
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Templates Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredTemplates.map((template) => (
-          <Card key={template.id} className="relative">
-            <CardHeader>
-              <div className="flex items-start justify-between">
+        <TabsContent value="rfp" className="mt-6">
+          {/* Filters */}
+          <Card className="mb-6">
+            <CardContent className="p-4">
+              <div className="flex flex-col md:flex-row gap-4">
                 <div className="flex-1">
-                  <CardTitle className="text-lg mb-2 flex items-center gap-2">
-                    {template.name}
-                    {template.is_default && (
-                      <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                    )}
-                  </CardTitle>
-                  <p className="text-sm text-muted-foreground">{template.description}</p>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search RFP templates..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Badge variant="outline">{template.category}</Badge>
-                <Badge variant="secondary">Used {template.usage_count} times</Badge>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="text-sm text-muted-foreground">
-                  <p>Created: {format(new Date(template.created_at), "PPP")}</p>
-                  <p>Evaluation: {template.template_data.evaluation_criteria?.type?.toUpperCase().replace('_', ' ') || 'Not specified'}</p>
-                </div>
-                
-                <div className="flex gap-2 pt-4">
-                  <Button 
-                    size="sm" 
-                    onClick={() => handleUseTemplate(template)}
-                    className="flex-1"
-                  >
-                    <FileText className="h-4 w-4 mr-2" />
-                    Use Template
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    variant="outline"
-                    onClick={() => handleViewTemplate(template)}
-                  >
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    variant="outline"
-                    onClick={() => handleCopyTemplate(template)}
-                  >
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    variant="outline"
-                    onClick={() => handleDeleteTemplate(template.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
+                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Filter by category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Categories</SelectItem>
+                    {categories.map(category => (
+                      <SelectItem key={category} value={category}>{category}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </CardContent>
           </Card>
-        ))}
-      </div>
 
-      {filteredTemplates.length === 0 && (
-        <Card>
-          <CardContent className="p-8 text-center">
-            <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">No templates found matching your criteria.</p>
-          </CardContent>
-        </Card>
-      )}
+          {/* RFP Templates Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredTemplates.map((template) => (
+              <Card key={template.id} className="relative">
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <CardTitle className="text-lg mb-2 flex items-center gap-2">
+                        {template.name}
+                        {template.is_default && (
+                          <Star className="h-4 w-4 text-yellow-500 fill-current" />
+                        )}
+                      </CardTitle>
+                      <p className="text-sm text-muted-foreground">{template.description}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline">{template.category}</Badge>
+                    <Badge variant="secondary">Used {template.usage_count} times</Badge>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="text-sm text-muted-foreground">
+                      <p>Created: {format(new Date(template.created_at), "PPP")}</p>
+                      <p>Evaluation: {template.template_data.evaluation_criteria?.type?.toUpperCase().replace('_', ' ') || 'Not specified'}</p>
+                    </div>
+                    
+                    <div className="flex gap-2 pt-4">
+                      <Button 
+                        size="sm" 
+                        onClick={() => handleUseTemplate(template)}
+                        className="flex-1"
+                      >
+                        <FileText className="h-4 w-4 mr-2" />
+                        Use Template
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => handleViewTemplate(template)}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => handleCopyTemplate(template)}
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => handleDeleteTemplate(template.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
 
-      {/* Template Details Dialog */}
+          {filteredTemplates.length === 0 && (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">No RFP templates found matching your criteria.</p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="pricing" className="mt-6">
+          {/* Filters */}
+          <Card className="mb-6">
+            <CardContent className="p-4">
+              <div className="flex flex-col md:flex-row gap-4">
+                <div className="flex-1">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search pricing templates..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Filter by category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Categories</SelectItem>
+                    {categories.map(category => (
+                      <SelectItem key={category} value={category}>{category}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Pricing Templates Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredPricingTemplates.map((template) => (
+              <Card key={template.id} className="relative">
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <CardTitle className="text-lg mb-2 flex items-center gap-2">
+                        <Calculator className="h-4 w-4" />
+                        {template.name}
+                        {template.is_default && (
+                          <Star className="h-4 w-4 text-yellow-500 fill-current" />
+                        )}
+                      </CardTitle>
+                      <p className="text-sm text-muted-foreground">{template.description}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline">{template.category}</Badge>
+                    <Badge variant="secondary">Used {template.usage_count} times</Badge>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="text-sm text-muted-foreground">
+                      <p>Created: {format(new Date(template.created_at), "PPP")}</p>
+                      <p>Type: Pricing Format Template</p>
+                    </div>
+                    
+                    <div className="flex gap-2 pt-4">
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => handleViewPricingTemplate(template)}
+                        className="flex-1"
+                      >
+                        <Eye className="h-4 w-4 mr-2" />
+                        View
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => handleDeletePricingTemplate(template.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {filteredPricingTemplates.length === 0 && (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <Calculator className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">No pricing templates found matching your criteria.</p>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Create pricing templates during RFP creation to get started.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+      </Tabs>
+
+      {/* RFP Template Details Dialog */}
       <Dialog open={!!selectedTemplate} onOpenChange={() => setSelectedTemplate(null)}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -603,6 +831,100 @@ const RfpTemplates = () => {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Pricing Template Details Dialog */}
+      <Dialog open={!!selectedPricingTemplate} onOpenChange={() => setSelectedPricingTemplate(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Calculator className="h-5 w-5" />
+              {selectedPricingTemplate?.name}
+              {selectedPricingTemplate?.is_default && (
+                <Star className="h-4 w-4 text-yellow-500 fill-current" />
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedPricingTemplate && (
+            <div className="space-y-6">
+              {/* Template Overview */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Pricing Template Overview</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Category</p>
+                      <Badge variant="outline">{selectedPricingTemplate.category}</Badge>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Usage Count</p>
+                      <p>{selectedPricingTemplate.usage_count} times</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Created</p>
+                      <p>{format(new Date(selectedPricingTemplate.created_at), "PPP")}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Last Updated</p>
+                      <p>{format(new Date(selectedPricingTemplate.updated_at), "PPP")}</p>
+                    </div>
+                  </div>
+                  
+                  {selectedPricingTemplate.description && (
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground mb-2">Description</p>
+                      <p className="text-sm">{selectedPricingTemplate.description}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Pricing Template Fields */}
+              {pricingTemplateFields.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Pricing Fields ({pricingTemplateFields.length})</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {pricingTemplateFields.map((field, index) => (
+                        <div key={field.id} className="border rounded-lg p-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <p className="font-medium">{field.field_label}</p>
+                                <Badge variant="secondary" className="text-xs">
+                                  {field.field_type}
+                                </Badge>
+                                {field.is_required && (
+                                  <Badge variant="destructive" className="text-xs">Required</Badge>
+                                )}
+                              </div>
+                              <p className="text-sm text-muted-foreground mt-1">
+                                Row {field.row_number}, Column {field.column_number}
+                              </p>
+                              {field.description && (
+                                <p className="text-sm text-muted-foreground mt-1">{field.description}</p>
+                              )}
+                              {field.calculation_formula && (
+                                <p className="text-sm font-mono bg-muted p-1 rounded mt-1">
+                                  Formula: {field.calculation_formula}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
