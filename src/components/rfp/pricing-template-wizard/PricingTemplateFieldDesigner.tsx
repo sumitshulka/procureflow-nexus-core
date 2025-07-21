@@ -52,6 +52,208 @@ const fieldSchema = z.object({
 
 type FieldFormData = z.infer<typeof fieldSchema>;
 
+const FieldForm = React.memo(({ 
+  isEditing = false, 
+  form, 
+  onSubmit, 
+  onCancel, 
+  fieldTypes, 
+  rows, 
+  columns 
+}: { 
+  isEditing?: boolean;
+  form: any;
+  onSubmit: (data: FieldFormData) => void;
+  onCancel: () => void;
+  fieldTypes: Array<{ value: string; label: string }>;
+  rows: number;
+  columns: number;
+}) => (
+  <Card className={`${isEditing ? 'border-primary' : 'border-dashed border-2'} animate-fade-in`}>
+    <CardHeader className="pb-4">
+      <CardTitle className="text-sm flex items-center justify-between">
+        {isEditing ? 'Edit Field' : 'Add New Field'}
+        <div className="flex gap-2">
+          <Button size="sm" type="submit" form="field-form" className="h-8">
+            <Check className="h-3 w-3 mr-1" />
+            {isEditing ? 'Update' : 'Add'}
+          </Button>
+          <Button 
+            size="sm" 
+            variant="outline" 
+            onClick={onCancel} 
+            className="h-8"
+          >
+            <X className="h-3 w-3 mr-1" />
+            Cancel
+          </Button>
+        </div>
+      </CardTitle>
+    </CardHeader>
+    <CardContent>
+      <Form {...form}>
+        <form id="field-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="field_label"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Field Label *</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g., Unit Price" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="field_type"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Field Type</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {fieldTypes.map((type) => (
+                        <SelectItem key={type.value} value={type.value}>
+                          {type.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="row_number"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Row Position</FormLabel>
+                  <Select 
+                    onValueChange={(value) => field.onChange(parseInt(value))} 
+                    value={field.value?.toString()}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {Array.from({ length: rows }, (_, i) => (
+                        <SelectItem key={i + 1} value={(i + 1).toString()}>
+                          Row {i + 1}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="column_number"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Column Position</FormLabel>
+                  <Select 
+                    onValueChange={(value) => field.onChange(parseInt(value))} 
+                    value={field.value?.toString()}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {Array.from({ length: columns }, (_, i) => (
+                        <SelectItem key={i + 1} value={(i + 1).toString()}>
+                          Column {i + 1}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <FormField
+            control={form.control}
+            name="description"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Description</FormLabel>
+                <FormControl>
+                  <Textarea
+                    placeholder="Brief description of this field..."
+                    rows={2}
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {form.watch("field_type") === "calculation" || form.watch("field_type") === "total" ? (
+            <FormField
+              control={form.control}
+              name="calculation_formula"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Calculation Formula</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="e.g., quantity * unit_price"
+                      {...field}
+                    />
+                  </FormControl>
+                  <p className="text-xs text-muted-foreground">
+                    Use field names and operators (+, -, *, /) to create formulas
+                  </p>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          ) : null}
+
+          <FormField
+            control={form.control}
+            name="is_required"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                <FormControl>
+                  <Switch
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+                <FormLabel>Required field</FormLabel>
+              </FormItem>
+            )}
+          />
+        </form>
+      </Form>
+    </CardContent>
+  </Card>
+));
+
 const PricingTemplateFieldDesigner: React.FC<PricingTemplateFieldDesignerProps> = ({
   data,
   onUpdate,
@@ -217,191 +419,6 @@ const PricingTemplateFieldDesigner: React.FC<PricingTemplateFieldDesignerProps> 
     );
   };
 
-  const FieldForm = ({ isEditing = false }: { isEditing?: boolean }) => (
-    <Card className={`${isEditing ? 'border-primary' : 'border-dashed border-2'} animate-fade-in`}>
-      <CardHeader className="pb-4">
-        <CardTitle className="text-sm flex items-center justify-between">
-          {isEditing ? 'Edit Field' : 'Add New Field'}
-          <div className="flex gap-2">
-            <Button size="sm" type="submit" form="field-form" className="h-8">
-              <Check className="h-3 w-3 mr-1" />
-              {isEditing ? 'Update' : 'Add'}
-            </Button>
-            <Button 
-              size="sm" 
-              variant="outline" 
-              onClick={isEditing ? handleCancelEdit : handleCancelAdd} 
-              className="h-8"
-            >
-              <X className="h-3 w-3 mr-1" />
-              Cancel
-            </Button>
-          </div>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <Form {...form}>
-          <form id="field-form" onSubmit={form.handleSubmit(onSubmitField)} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="field_label"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Field Label *</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., Unit Price" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="field_type"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Field Type</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {fieldTypes.map((type) => (
-                          <SelectItem key={type.value} value={type.value}>
-                            {type.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="row_number"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Row Position</FormLabel>
-                    <Select 
-                      onValueChange={(value) => field.onChange(parseInt(value))} 
-                      value={field.value?.toString()}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {Array.from({ length: rows }, (_, i) => (
-                          <SelectItem key={i + 1} value={(i + 1).toString()}>
-                            Row {i + 1}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="column_number"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Column Position</FormLabel>
-                    <Select 
-                      onValueChange={(value) => field.onChange(parseInt(value))} 
-                      value={field.value?.toString()}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {Array.from({ length: columns }, (_, i) => (
-                          <SelectItem key={i + 1} value={(i + 1).toString()}>
-                            Column {i + 1}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Brief description of this field..."
-                      rows={2}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {form.watch("field_type") === "calculation" || form.watch("field_type") === "total" ? (
-              <FormField
-                control={form.control}
-                name="calculation_formula"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Calculation Formula</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="e.g., quantity * unit_price"
-                        {...field}
-                      />
-                    </FormControl>
-                    <p className="text-xs text-muted-foreground">
-                      Use field names and operators (+, -, *, /) to create formulas
-                    </p>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            ) : null}
-
-            <FormField
-              control={form.control}
-              name="is_required"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                  <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                  <FormLabel>Required field</FormLabel>
-                </FormItem>
-              )}
-            />
-          </form>
-        </Form>
-      </CardContent>
-    </Card>
-  );
 
   return (
     <div className="space-y-6">
@@ -429,7 +446,16 @@ const PricingTemplateFieldDesigner: React.FC<PricingTemplateFieldDesignerProps> 
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
-              {isAddingField && <FieldForm />}
+              {isAddingField && (
+                <FieldForm 
+                  form={form}
+                  onSubmit={onSubmitField}
+                  onCancel={handleCancelAdd}
+                  fieldTypes={fieldTypes}
+                  rows={rows}
+                  columns={columns}
+                />
+              )}
               
               {data.fields.length === 0 && !isAddingField ? (
                 <div className="text-center py-8 text-muted-foreground">
@@ -441,7 +467,15 @@ const PricingTemplateFieldDesigner: React.FC<PricingTemplateFieldDesignerProps> 
                 data.fields.map((field) => (
                   <div key={field.id}>
                     {editingFieldId === field.id ? (
-                      <FieldForm isEditing={true} />
+                      <FieldForm 
+                        isEditing={true}
+                        form={form}
+                        onSubmit={onSubmitField}
+                        onCancel={handleCancelEdit}
+                        fieldTypes={fieldTypes}
+                        rows={rows}
+                        columns={columns}
+                      />
                     ) : (
                       <Card className="hover-scale transition-all duration-200">
                         <CardContent className="p-4">
