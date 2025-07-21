@@ -78,14 +78,7 @@ const RfpReview: React.FC<RfpReviewProps> = ({ data }) => {
         // Store custom fields in evaluation_criteria
         evaluation_criteria: {
           ...data.terms.evaluation_criteria,
-          custom_fields: data.basicInfo.customFields ? Object.entries(data.basicInfo.customFields).map(([fieldName, value]) => ({
-            field_name: fieldName,
-            field_label: fieldName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-            field_type: typeof value === 'number' ? 'number' : 'text',
-            value: value,
-            is_required: true,
-            use_in_evaluation: true
-          })) : []
+          custom_fields: data.basicInfo.customFieldsConfig || []
         },
         terms_and_conditions: data.terms.terms_and_conditions,
         minimum_eligibility_criteria: data.terms.minimum_eligibility_criteria,
