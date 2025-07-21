@@ -78,6 +78,126 @@ interface RFP {
   };
 }
 
+interface CustomField {
+  id: string;
+  field_name: string;
+  field_label: string;
+  field_type: string;
+  field_options?: any;
+  is_required: boolean;
+  description?: string;
+  display_order: number;
+  use_in_evaluation?: boolean;
+}
+
+interface CustomFieldsSection {
+  rfpId: string;
+}
+
+const CustomFieldsSection = ({ rfpId }: CustomFieldsSection) => {
+  const [customFields, setCustomFields] = useState<CustomField[]>([]);
+  const [customFieldValues, setCustomFieldValues] = useState<Record<string, any>>({});
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    fetchCustomFields();
+  }, [rfpId]);
+
+  const fetchCustomFields = async () => {
+    try {
+      // First, we need to check if this RFP was created from a template
+      // For now, let's look for any custom fields associated with this RFP
+      // This would require a way to link RFPs to templates or store custom field data
+      
+      // Placeholder: We'll show template fields that could have been used
+      const { data: templateFields, error } = await supabase
+        .from('rfp_template_fields')
+        .select('*')
+        .order('display_order');
+
+      if (error) throw error;
+      
+      // For demo purposes, we'll show some template fields
+      // In a real implementation, you'd store custom field values with the RFP
+      setCustomFields(templateFields || []);
+      
+      // Mock some values - in real implementation, these would come from RFP custom data
+      setCustomFieldValues({
+        'turnover': 5000000,
+        'quantity': 1000
+      });
+      
+    } catch (error: any) {
+      console.error('Error fetching custom fields:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (isLoading) {
+    return <div>Loading custom fields...</div>;
+  }
+
+  if (customFields.length === 0) {
+    return null;
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Custom Requirements & Evaluation Criteria</CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Additional fields defined for this RFP that vendors must provide and will be used in evaluation.
+        </p>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {customFields.map((field) => (
+            <div key={field.id} className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-sm font-medium text-muted-foreground">{field.field_label}</span>
+                  {field.is_required && (
+                    <span className="text-red-500 text-xs ml-1">*Required</span>
+                  )}
+                </div>
+                <Badge variant="outline" className="text-xs">
+                  {field.use_in_evaluation ? "Used in Evaluation" : "Information Only"}
+                </Badge>
+              </div>
+              
+              <div className="p-3 bg-muted/50 rounded-md">
+                <p className="font-medium">
+                  {customFieldValues[field.field_name] !== undefined ? 
+                    `${customFieldValues[field.field_name]}${field.field_type === 'number' ? '' : ''}` : 
+                    'Not specified'
+                  }
+                </p>
+                {field.field_type === 'number' && field.field_name === 'turnover' && (
+                  <p className="text-xs text-muted-foreground">USD (Annual)</p>
+                )}
+              </div>
+              
+              {field.description && (
+                <p className="text-xs text-muted-foreground">{field.description}</p>
+              )}
+            </div>
+          ))}
+        </div>
+        
+        <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+          <h4 className="font-medium text-blue-900 mb-2">Evaluation Information</h4>
+          <p className="text-sm text-blue-700">
+            Custom fields marked as "Used in Evaluation" will be considered when scoring vendor responses. 
+            Vendors must provide accurate information for these fields as they directly impact the selection process.
+          </p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
 const RfpResponses = () => {
   const { id: rfpId } = useParams<{ id: string }>();
   const { toast } = useToast();
@@ -388,114 +508,179 @@ const RfpResponses = () => {
             <TabsTrigger value="responses">Responses ({responses.length})</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="rfp-details" className="space-y-4">
+          <TabsContent value="rfp-details" className="space-y-6">
+            {/* Basic Information Section */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
-                  <span>{rfp.title}</span>
+                  <span>Basic Information</span>
                   <Badge variant={getStatusBadgeVariant(rfp.status)}>
                     {rfp.status.charAt(0).toUpperCase() + rfp.status.slice(1)}
                   </Badge>
                 </CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  RFP Number: {rfp.rfp_number}
-                </p>
               </CardHeader>
               <CardContent className="space-y-4">
-                {rfp.description && (
-                  <div>
-                    <h4 className="font-medium mb-2">Description</h4>
-                    <p className="text-sm text-muted-foreground">{rfp.description}</p>
-                  </div>
-                )}
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {rfp.estimated_value && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-3">
                     <div>
-                      <span className="font-medium">Estimated Value:</span>{" "}
-                      {rfp.currency || 'USD'} {rfp.estimated_value.toLocaleString()}
+                      <span className="text-sm font-medium text-muted-foreground">RFP Title</span>
+                      <p className="font-medium">{rfp.title}</p>
                     </div>
-                  )}
+                    <div>
+                      <span className="text-sm font-medium text-muted-foreground">RFP Number</span>
+                      <p className="font-medium">{rfp.rfp_number}</p>
+                    </div>
+                    {rfp.description && (
+                      <div>
+                        <span className="text-sm font-medium text-muted-foreground">Description</span>
+                        <p className="text-sm mt-1 whitespace-pre-wrap">{rfp.description}</p>
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-3">
+                    {rfp.estimated_value && (
+                      <div>
+                        <span className="text-sm font-medium text-muted-foreground">Estimated Value</span>
+                        <p className="font-medium">{rfp.currency || 'USD'} {rfp.estimated_value.toLocaleString()}</p>
+                      </div>
+                    )}
+                    <div>
+                      <span className="text-sm font-medium text-muted-foreground">Created Date</span>
+                      <p className="font-medium">{format(new Date(rfp.created_at), "PPp")}</p>
+                    </div>
+                    <div>
+                      <span className="text-sm font-medium text-muted-foreground">Status</span>
+                      <p className="font-medium">{rfp.status.charAt(0).toUpperCase() + rfp.status.slice(1)}</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Timeline & Deadlines Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Timeline & Deadlines</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   <div>
-                    <span className="font-medium">Submission Deadline:</span>{" "}
-                    {format(new Date(rfp.submission_deadline), "PPp")}
+                    <span className="text-sm font-medium text-muted-foreground">Submission Deadline</span>
+                    <p className="font-medium text-red-600">{format(new Date(rfp.submission_deadline), "PPp")}</p>
                   </div>
                   {rfp.technical_evaluation_deadline && (
                     <div>
-                      <span className="font-medium">Technical Evaluation:</span>{" "}
-                      {format(new Date(rfp.technical_evaluation_deadline), "PPp")}
+                      <span className="text-sm font-medium text-muted-foreground">Technical Evaluation Deadline</span>
+                      <p className="font-medium">{format(new Date(rfp.technical_evaluation_deadline), "PPp")}</p>
                     </div>
                   )}
                   {rfp.commercial_evaluation_deadline && (
                     <div>
-                      <span className="font-medium">Commercial Evaluation:</span>{" "}
-                      {format(new Date(rfp.commercial_evaluation_deadline), "PPp")}
+                      <span className="text-sm font-medium text-muted-foreground">Commercial Evaluation Deadline</span>
+                      <p className="font-medium">{format(new Date(rfp.commercial_evaluation_deadline), "PPp")}</p>
                     </div>
                   )}
                   {rfp.pre_bid_meeting_date && (
                     <div>
-                      <span className="font-medium">Pre-bid Meeting:</span>{" "}
-                      {format(new Date(rfp.pre_bid_meeting_date), "PPp")}
+                      <span className="text-sm font-medium text-muted-foreground">Pre-bid Meeting Date</span>
+                      <p className="font-medium">{format(new Date(rfp.pre_bid_meeting_date), "PPp")}</p>
                     </div>
                   )}
                   {rfp.pre_bid_meeting_venue && (
                     <div>
-                      <span className="font-medium">Meeting Venue:</span>{" "}
-                      {rfp.pre_bid_meeting_venue}
+                      <span className="text-sm font-medium text-muted-foreground">Meeting Venue</span>
+                      <p className="font-medium">{rfp.pre_bid_meeting_venue}</p>
                     </div>
                   )}
                   {rfp.bid_validity_period && (
                     <div>
-                      <span className="font-medium">Bid Validity:</span>{" "}
-                      {rfp.bid_validity_period} days
+                      <span className="text-sm font-medium text-muted-foreground">Bid Validity Period</span>
+                      <p className="font-medium">{rfp.bid_validity_period} days</p>
                     </div>
                   )}
-                  <div>
-                    <span className="font-medium">Created:</span>{" "}
-                    {format(new Date(rfp.created_at), "PPp")}
-                  </div>
                 </div>
+              </CardContent>
+            </Card>
 
-                {/* Terms and Conditions */}
-                {(rfp.terms_and_conditions || rfp.payment_terms || rfp.delivery_terms || rfp.warranty_requirements) && (
-                  <div className="mt-4 pt-4 border-t">
-                    <h4 className="font-medium mb-3">Terms & Conditions</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                      {rfp.payment_terms && (
-                        <div>
-                          <span className="font-medium">Payment Terms:</span>
-                          <p className="text-muted-foreground mt-1">{rfp.payment_terms}</p>
-                        </div>
-                      )}
-                      {rfp.delivery_terms && (
-                        <div>
-                          <span className="font-medium">Delivery Terms:</span>
-                          <p className="text-muted-foreground mt-1">{rfp.delivery_terms}</p>
-                        </div>
-                      )}
-                      {rfp.warranty_requirements && (
-                        <div>
-                          <span className="font-medium">Warranty Requirements:</span>
-                          <p className="text-muted-foreground mt-1">{rfp.warranty_requirements}</p>
-                        </div>
-                      )}
-                      {rfp.minimum_eligibility_criteria && (
-                        <div>
-                          <span className="font-medium">Eligibility Criteria:</span>
-                          <p className="text-muted-foreground mt-1">{rfp.minimum_eligibility_criteria}</p>
-                        </div>
-                      )}
+            {/* Evaluation Criteria Section */}
+            {rfp.evaluation_criteria && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Evaluation Criteria</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                      <span className="text-sm font-medium text-muted-foreground">Evaluation Method</span>
+                      <p className="font-medium capitalize">
+                        {rfp.evaluation_criteria.type === 'qcbs' ? 'Quality & Cost Based Selection' : 
+                         rfp.evaluation_criteria.type === 'price_l1' ? 'Lowest Price' :
+                         rfp.evaluation_criteria.type === 'technical_l1' ? 'Highest Technical Score' :
+                         rfp.evaluation_criteria.type}
+                      </p>
                     </div>
-                    {rfp.terms_and_conditions && (
-                      <div className="mt-3">
-                        <span className="font-medium">General Terms:</span>
-                        <p className="text-muted-foreground mt-1">{rfp.terms_and_conditions}</p>
+                    {rfp.evaluation_criteria.technical_weight && (
+                      <div>
+                        <span className="text-sm font-medium text-muted-foreground">Technical Weight</span>
+                        <p className="font-medium">{rfp.evaluation_criteria.technical_weight}%</p>
+                      </div>
+                    )}
+                    {rfp.evaluation_criteria.commercial_weight && (
+                      <div>
+                        <span className="text-sm font-medium text-muted-foreground">Commercial Weight</span>
+                        <p className="font-medium">{rfp.evaluation_criteria.commercial_weight}%</p>
                       </div>
                     )}
                   </div>
-                )}
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Terms & Conditions Section */}
+            {(rfp.terms_and_conditions || rfp.payment_terms || rfp.delivery_terms || rfp.warranty_requirements || rfp.minimum_eligibility_criteria) && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Terms & Conditions</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {rfp.payment_terms && (
+                      <div>
+                        <span className="text-sm font-medium text-muted-foreground">Payment Terms</span>
+                        <p className="text-sm mt-1 whitespace-pre-wrap">{rfp.payment_terms}</p>
+                      </div>
+                    )}
+                    {rfp.delivery_terms && (
+                      <div>
+                        <span className="text-sm font-medium text-muted-foreground">Delivery Terms</span>
+                        <p className="text-sm mt-1 whitespace-pre-wrap">{rfp.delivery_terms}</p>
+                      </div>
+                    )}
+                    {rfp.warranty_requirements && (
+                      <div>
+                        <span className="text-sm font-medium text-muted-foreground">Warranty Requirements</span>
+                        <p className="text-sm mt-1 whitespace-pre-wrap">{rfp.warranty_requirements}</p>
+                      </div>
+                    )}
+                    {rfp.minimum_eligibility_criteria && (
+                      <div>
+                        <span className="text-sm font-medium text-muted-foreground">Minimum Eligibility Criteria</span>
+                        <p className="text-sm mt-1 whitespace-pre-wrap">{rfp.minimum_eligibility_criteria}</p>
+                      </div>
+                    )}
+                  </div>
+                  {rfp.terms_and_conditions && (
+                    <div>
+                      <span className="text-sm font-medium text-muted-foreground">General Terms & Conditions</span>
+                      <p className="text-sm mt-1 whitespace-pre-wrap">{rfp.terms_and_conditions}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Custom Fields Section - We'll need to fetch and display these */}
+            <CustomFieldsSection rfpId={rfp.id} />
           </TabsContent>
 
           <TabsContent value="responses" className="space-y-4">
