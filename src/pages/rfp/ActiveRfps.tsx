@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface RFP {
   id: string;
@@ -26,6 +27,7 @@ interface RFP {
 const ActiveRfps = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [rfps, setRfps] = useState<RFP[]>([]);
   const [filteredRfps, setFilteredRfps] = useState<RFP[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -42,14 +44,22 @@ const ActiveRfps = () => {
 
   const fetchRfps = async () => {
     try {
+      console.log("Fetching RFPs for user:", user?.id);
       const { data, error } = await supabase
         .from("rfps")
         .select("*")
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching RFPs:", error);
+        throw error;
+      }
+      
+      console.log("Fetched RFPs:", data?.length || 0, "RFPs");
+      console.log("RFPs data:", data);
       setRfps(data || []);
     } catch (error: any) {
+      console.error("fetchRfps error:", error);
       toast({
         title: "Error",
         description: error.message || "Failed to fetch RFPs",
