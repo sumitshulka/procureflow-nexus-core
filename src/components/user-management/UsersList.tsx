@@ -253,6 +253,27 @@ const UsersList = () => {
 
       // Check if role needs to be updated
       if (values.role !== currentUser.roles[0]) {
+        // First check if the current user can assign this role
+        const { data: canAssign, error: permissionError } = await supabase
+          .rpc('can_assign_role', { 
+            target_user_id: currentUser.id, 
+            role_to_assign: values.role 
+          });
+
+        if (permissionError) {
+          console.error('Error checking role assignment permission:', permissionError);
+          throw permissionError;
+        }
+
+        if (!canAssign) {
+          toast({
+            title: "Permission denied",
+            description: "You do not have permission to assign this role",
+            variant: "destructive"
+          });
+          return;
+        }
+
         // Remove existing roles
         const { error: deleteRoleError } = await supabase
           .from("user_roles")

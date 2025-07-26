@@ -1823,6 +1823,48 @@ export type Database = {
           },
         ]
       }
+      security_logs: {
+        Row: {
+          action: string
+          created_at: string
+          error_message: string | null
+          id: string
+          ip_address: string | null
+          metadata: Json | null
+          role_name: string | null
+          success: boolean
+          target_user_id: string | null
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          role_name?: string | null
+          success?: boolean
+          target_user_id?: string | null
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          role_name?: string | null
+          success?: boolean
+          target_user_id?: string | null
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       system_modules: {
         Row: {
           created_at: string
@@ -2492,6 +2534,13 @@ export type Database = {
       begin_transaction: {
         Args: Record<PropertyKey, never>
         Returns: Json
+      }
+      can_assign_role: {
+        Args: {
+          target_user_id: string
+          role_to_assign: Database["public"]["Enums"]["user_role"]
+        }
+        Returns: boolean
       }
       can_delete_procurement_request: {
         Args: { p_request_id: string }
