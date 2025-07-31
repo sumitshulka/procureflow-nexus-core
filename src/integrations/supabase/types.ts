@@ -192,18 +192,21 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          is_active: boolean | null
           name: string
         }
         Insert: {
           created_at?: string
           description?: string | null
           id?: string
+          is_active?: boolean | null
           name: string
         }
         Update: {
           created_at?: string
           description?: string | null
           id?: string
+          is_active?: boolean | null
           name?: string
         }
         Relationships: []
@@ -213,6 +216,7 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          is_active: boolean | null
           name: string
           updated_at: string
         }
@@ -220,6 +224,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          is_active?: boolean | null
           name: string
           updated_at?: string
         }
@@ -227,6 +232,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          is_active?: boolean | null
           name?: string
           updated_at?: string
         }
