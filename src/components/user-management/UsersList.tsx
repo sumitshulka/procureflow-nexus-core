@@ -35,6 +35,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Edit, Trash2, UserPlus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { logDatabaseError } from "@/utils/supabaseHelpers";
 
 interface Department {
   id: string;
@@ -48,11 +49,16 @@ interface UserEmailData {
   full_name?: string;
 }
 
-// Form schema for user creation/editing
+// Enhanced form schema with strong password requirements
 const userFormSchema = z.object({
   email: z.string().email("Invalid email address"),
   fullName: z.string().min(1, "Full name is required"),
-  password: z.string().min(6, "Password must be at least 6 characters").optional(),
+  password: z.string().min(8, "Password must be at least 8 characters")
+    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+    .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+    .regex(/[0-9]/, "Password must contain at least one number")
+    .regex(/[!@#$%^&*(),.?":{}|<>]/, "Password must contain at least one special character")
+    .optional(),
   role: z.string().min(1, "Role is required"),
   department: z.string().optional()
 });
@@ -168,6 +174,22 @@ const UsersList = () => {
     try {
       console.log("Creating user with values:", values);
       
+      // Check authorization to assign this role first
+      const { data: canAssign, error: authError } = await supabase
+        .rpc('can_assign_role', {
+          target_user_id: null, // null for new users - admin check only
+          role_to_assign: values.role
+        });
+
+      if (authError || !canAssign) {
+        toast({
+          title: "Access Denied",
+          description: `You don't have permission to assign the ${values.role} role`,
+          variant: "destructive",
+        });
+        return;
+      }
+      
       // Create user in auth
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email: values.email,
@@ -180,7 +202,10 @@ const UsersList = () => {
         }
       });
 
-      if (signUpError) throw signUpError;
+      if (signUpError) {
+        logDatabaseError(signUpError, 'creating new user');
+        return;
+      }
 
       // Assign role if user is created
       if (signUpData.user) {
@@ -193,7 +218,8 @@ const UsersList = () => {
           .eq("id", signUpData.user.id);
           
         if (profileError) {
-          console.error("Error updating user profile:", profileError);
+          logDatabaseError(profileError, 'updating user profile');
+          return;
         }
         
         // Assign user role
@@ -204,7 +230,10 @@ const UsersList = () => {
             role: values.role
           });
 
-        if (roleError) throw roleError;
+        if (roleError) {
+          logDatabaseError(roleError, 'assigning user role');
+          return;
+        }
 
         toast({
           title: "User added successfully",
