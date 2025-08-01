@@ -486,6 +486,27 @@ export type Database = {
           },
         ]
       }
+      password_history: {
+        Row: {
+          created_at: string | null
+          id: string
+          password_hash: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          password_hash: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          password_hash?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       pricing_template_fields: {
         Row: {
           calculation_formula: string | null
@@ -1829,6 +1850,39 @@ export type Database = {
           },
         ]
       }
+      security_audit_logs: {
+        Row: {
+          created_at: string | null
+          event_data: Json | null
+          event_type: string
+          id: string
+          ip_address: unknown | null
+          success: boolean | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          event_data?: Json | null
+          event_type: string
+          id?: string
+          ip_address?: unknown | null
+          success?: boolean | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          event_data?: Json | null
+          event_type?: string
+          id?: string
+          ip_address?: unknown | null
+          success?: boolean | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       security_logs: {
         Row: {
           action: string
@@ -2552,6 +2606,14 @@ export type Database = {
         Args: { p_request_id: string }
         Returns: Json
       }
+      check_password_history: {
+        Args: {
+          p_user_id: string
+          p_new_password_hash: string
+          p_history_count?: number
+        }
+        Returns: boolean
+      }
       commit_transaction: {
         Args: Record<PropertyKey, never>
         Returns: Json
@@ -2602,6 +2664,17 @@ export type Database = {
         }
         Returns: string
       }
+      log_security_event: {
+        Args: {
+          p_user_id: string
+          p_event_type: string
+          p_event_data?: Json
+          p_ip_address?: unknown
+          p_user_agent?: string
+          p_success?: boolean
+        }
+        Returns: string
+      }
       record_delivery_and_update_inventory: {
         Args: { transaction_id: string; p_delivery_details: Json }
         Returns: Json
@@ -2617,6 +2690,10 @@ export type Database = {
       user_has_module_permission: {
         Args: { p_user_id: string; p_module_name: string; p_permission: string }
         Returns: boolean
+      }
+      validate_password_strength: {
+        Args: { password: string }
+        Returns: Json
       }
     }
     Enums: {
