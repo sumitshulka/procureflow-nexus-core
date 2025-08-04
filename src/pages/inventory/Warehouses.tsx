@@ -161,15 +161,19 @@ const Warehouses = () => {
         throw locationsError;
       }
       
-      // Fetch managers
-      const { data: managersData, error: managersError } = await supabase.auth.admin.listUsers();
-      
+      // Fetch managers using secure Edge Function
       let managers: SupabaseUser[] = [];
-      if (managersError) {
-        console.error("Failed to fetch managers (this might be expected if not admin):", managersError);
+      try {
+        const { data: managersData, error: managersError } = await supabase.functions.invoke('admin-list-users');
+        
+        if (managersError) {
+          console.error("Failed to fetch managers:", managersError);
+        } else if (managersData?.data?.users) {
+          managers = managersData.data.users as SupabaseUser[];
+        }
+      } catch (error) {
+        console.error("Failed to fetch managers (this might be expected if not admin):", error);
         // Don't throw, just continue with empty managers
-      } else if (managersData) {
-        managers = managersData.users as SupabaseUser[];
       }
       
       // Combine data
@@ -240,15 +244,19 @@ const Warehouses = () => {
   const { data: users = [], isLoading: isLoadingUsers } = useQuery({
     queryKey: ["users_for_warehouse_managers"],
     queryFn: async () => {
-      // This is a placeholder, in a real app you would fetch users with appropriate roles
-      const { data, error } = await supabase.auth.admin.listUsers();
-      
-      if (error) {
+      try {
+        const { data, error } = await supabase.functions.invoke('admin-list-users');
+        
+        if (error) {
+          console.error("Failed to fetch users:", error);
+          return [];
+        }
+        
+        return data?.data?.users as SupabaseUser[] || [];
+      } catch (error) {
         console.error("Failed to fetch users (this might be expected if not admin):", error);
         return [];
       }
-      
-      return data?.users as SupabaseUser[] || [];
     },
     retry: false, // Don't retry as this might fail if not an admin
   });

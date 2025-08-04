@@ -21,6 +21,28 @@ Deno.serve(async (req) => {
       { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
     );
 
+    // Verify the user is authenticated
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+    
+    if (authError || !user) {
+      console.error("Authentication error:", authError);
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401,
+        }
+      );
+    }
+
+    // Log the security event
+    await supabaseClient.rpc('log_security_event', {
+      p_user_id: user.id,
+      p_event_type: 'transaction_rollback',
+      p_event_data: {},
+      p_success: true
+    });
+
     const { data, error } = await supabaseClient.rpc('rollback_transaction');
     
     if (error) {

@@ -341,10 +341,13 @@ const UsersList = () => {
 
   const handleDeleteUser = async (userId) => {
     try {
-      // Delete user from auth
-      const { error } = await supabase.auth.admin.deleteUser(userId);
+      // Delete user using secure Edge Function
+      const { data, error } = await supabase.functions.invoke('admin-delete-user', {
+        body: { userId }
+      });
       
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
 
       toast({
         title: "User deleted",
