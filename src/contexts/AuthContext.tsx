@@ -173,12 +173,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       setIsLoading(true);
       const { error, data } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
+      
+      if (error) {
+        console.error('[AuthContext] Login error:', error);
+        // Log failed login attempt
+        await logSecurityEvent(null, 'login_failed', { 
+          email,
+          error: error.message,
+          user_agent: navigator.userAgent 
+        }, null, null, false);
+        throw error;
+      }
       
       console.log("Login successful, session:", data.session);
-      
-      // Log the user activity
-      await logUserActivity("login");
+
+      // Log successful login
+      if (data.user) {
+        await logSecurityEvent(data.user.id, 'login_success', { 
+          email,
+          user_agent: navigator.userAgent 
+        });
+        
+        // Log the user activity (legacy)
+        await logUserActivity("login");
+      }
       
       // Navigation will happen after user data is fetched in the effect
     } catch (error: any) {
@@ -196,6 +214,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signUp = async (email: string, password: string, fullName: string, makeAdmin: boolean = false) => {
     try {
       setIsLoading(true);
+
+      // Validate password strength using database function
+      const { data: passwordCheck, error: passwordError } = await supabase.rpc('validate_password_strength', {
+        password: password
+      });
+
+      if (passwordError) {
+        console.error('[AuthContext] Password validation error:', passwordError);
+        throw new Error('Password validation failed');
+      }
+
+      // Type guard for the password validation response
+      const validationResult = passwordCheck as { valid: boolean; errors?: string[] } | null;
+      
+      if (!validationResult?.valid) {
+        const errors = validationResult?.errors || ['Password does not meet security requirements'];
+        throw new Error(errors.join(', '));
+      }
       
       // Check if this is the first user signing up
       const { count, error: countError } = await supabase
@@ -215,32 +251,52 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           data: {
             full_name: fullName,
           },
+          emailRedirectTo: `${window.location.origin}/`,
         }
       });
       
-      if (error) throw error;
-      
-      // If automatic setup is completed and user is already created
-      if (data.user && shouldMakeAdmin) {
-        // Assign admin role manually
-        const { error: roleError } = await supabase
-          .from('user_roles')
-          .insert({
-            user_id: data.user.id,
-            role: 'admin'
-          });
+      if (error) {
+        console.error('[AuthContext] Sign up error:', error);
+        // Log failed signup attempt
+        await logSecurityEvent(null, 'signup_failed', { 
+          email,
+          error: error.message,
+          user_agent: navigator.userAgent 
+        }, null, null, false);
+        throw error;
+      }
+
+      // Log successful signup
+      if (data.user) {
+        await logSecurityEvent(data.user.id, 'signup_success', { 
+          email,
+          user_agent: navigator.userAgent 
+        });
+
+        // If automatic setup is completed and user is already created
+        if (shouldMakeAdmin) {
+          // Assign admin role manually
+          const { error: roleError } = await supabase
+            .from('user_roles')
+            .insert({
+              user_id: data.user.id,
+              role: 'admin'
+            });
+            
+          if (roleError) throw roleError;
           
-        if (roleError) throw roleError;
-        
-        toast({
-          title: "Admin account created",
-          description: "You have been assigned the admin role.",
-        });
-      } else {
-        toast({
-          title: "Account created",
-          description: "Please check your email for the confirmation link.",
-        });
+          await logSecurityEvent(data.user.id, 'admin_role_assigned', { email });
+          
+          toast({
+            title: "Admin account created",
+            description: "You have been assigned the admin role.",
+          });
+        } else {
+          toast({
+            title: "Account created",
+            description: "Please check your email for the confirmation link.",
+          });
+        }
       }
       
       navigate("/login");
@@ -262,6 +318,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // Log activity before signing out
       if (user) {
         await logUserActivity("logout");
+        // Log security event
+        await logSecurityEvent(user.id, 'logout', { 
+          user_agent: navigator.userAgent 
+        });
       }
       
       const { error } = await supabase.auth.signOut();
@@ -344,6 +404,29 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         });
     } catch (error) {
       console.error("Failed to log user activity:", error);
+    }
+  };
+
+  // Helper function to log security events
+  const logSecurityEvent = async (
+    userId: string | null, 
+    eventType: string, 
+    eventData: any = {}, 
+    ipAddress: string | null = null, 
+    userAgent: string | null = null, 
+    success: boolean = true
+  ) => {
+    try {
+      await supabase.rpc('log_security_event', {
+        p_user_id: userId,
+        p_event_type: eventType,
+        p_event_data: eventData,
+        p_ip_address: ipAddress,
+        p_user_agent: userAgent,
+        p_success: success
+      });
+    } catch (error) {
+      console.error('[AuthContext] Failed to log security event:', error);
     }
   };
 
