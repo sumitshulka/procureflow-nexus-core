@@ -648,13 +648,6 @@ export type Database = {
             foreignKeyName: "procurement_request_items_request_id_fkey"
             columns: ["request_id"]
             isOneToOne: false
-            referencedRelation: "procurement_request_details"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "procurement_request_items_request_id_fkey"
-            columns: ["request_id"]
-            isOneToOne: false
             referencedRelation: "procurement_requests"
             referencedColumns: ["id"]
           },
@@ -1117,13 +1110,6 @@ export type Database = {
           warranty_terms?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "purchase_orders_procurement_request_id_fkey"
-            columns: ["procurement_request_id"]
-            isOneToOne: false
-            referencedRelation: "procurement_request_details"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "purchase_orders_procurement_request_id_fkey"
             columns: ["procurement_request_id"]
@@ -1792,13 +1778,6 @@ export type Database = {
           warranty_requirements?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "rfps_procurement_request_id_fkey"
-            columns: ["procurement_request_id"]
-            isOneToOne: false
-            referencedRelation: "procurement_request_details"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "rfps_procurement_request_id_fkey"
             columns: ["procurement_request_id"]
@@ -2506,44 +2485,6 @@ export type Database = {
       }
     }
     Views: {
-      approval_requests_view: {
-        Row: {
-          approval_date: string | null
-          approver_id: string | null
-          comments: string | null
-          created_at: string | null
-          entity_id: string | null
-          entity_status: string | null
-          entity_type: string | null
-          id: string | null
-          request_title: string | null
-          requester_id: string | null
-          requester_name: string | null
-          status: string | null
-        }
-        Relationships: []
-      }
-      procurement_request_details: {
-        Row: {
-          created_at: string | null
-          date_created: string | null
-          date_needed: string | null
-          department: string | null
-          description: string | null
-          estimated_value: number | null
-          id: string | null
-          priority: Database["public"]["Enums"]["request_priority"] | null
-          request_number: string | null
-          requester_department: string | null
-          requester_id: string | null
-          requester_name: string | null
-          status: Database["public"]["Enums"]["request_status"] | null
-          title: string | null
-          total_estimated_value: number | null
-          updated_at: string | null
-        }
-        Relationships: []
-      }
       vendor_registration_details: {
         Row: {
           account_holder_name: string | null
@@ -2626,6 +2567,23 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_approval_requests_secure: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          entity_id: string
+          requester_id: string
+          approver_id: string
+          created_at: string
+          approval_date: string
+          entity_type: string
+          status: string
+          comments: string
+          requester_name: string
+          request_title: string
+          entity_status: string
+        }[]
+      }
       get_currency_for_country: {
         Args: { country_name: string }
         Returns: string
@@ -2640,6 +2598,27 @@ export type Database = {
           price: number
           currency: string
           effective_date: string
+        }[]
+      }
+      get_procurement_request_details_secure: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          requester_id: string
+          date_created: string
+          date_needed: string
+          priority: Database["public"]["Enums"]["request_priority"]
+          status: Database["public"]["Enums"]["request_status"]
+          estimated_value: number
+          created_at: string
+          updated_at: string
+          total_estimated_value: number
+          request_number: string
+          title: string
+          description: string
+          department: string
+          requester_name: string
+          requester_department: string
         }[]
       }
       has_role: {
