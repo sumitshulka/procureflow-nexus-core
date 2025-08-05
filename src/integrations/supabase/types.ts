@@ -1135,13 +1135,6 @@ export type Database = {
             foreignKeyName: "purchase_orders_vendor_id_fkey"
             columns: ["vendor_id"]
             isOneToOne: false
-            referencedRelation: "vendor_registration_details"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "purchase_orders_vendor_id_fkey"
-            columns: ["vendor_id"]
-            isOneToOne: false
             referencedRelation: "vendor_registrations"
             referencedColumns: ["id"]
           },
@@ -1546,13 +1539,6 @@ export type Database = {
             columns: ["rfp_id"]
             isOneToOne: false
             referencedRelation: "rfps"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "rfp_responses_vendor_id_fkey"
-            columns: ["vendor_id"]
-            isOneToOne: false
-            referencedRelation: "vendor_registration_details"
             referencedColumns: ["id"]
           },
           {
@@ -2118,13 +2104,6 @@ export type Database = {
             foreignKeyName: "vendor_communications_vendor_id_fkey"
             columns: ["vendor_id"]
             isOneToOne: false
-            referencedRelation: "vendor_registration_details"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "vendor_communications_vendor_id_fkey"
-            columns: ["vendor_id"]
-            isOneToOne: false
             referencedRelation: "vendor_registrations"
             referencedColumns: ["id"]
           },
@@ -2178,13 +2157,6 @@ export type Database = {
             foreignKeyName: "vendor_documents_vendor_id_fkey"
             columns: ["vendor_id"]
             isOneToOne: false
-            referencedRelation: "vendor_registration_details"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "vendor_documents_vendor_id_fkey"
-            columns: ["vendor_id"]
-            isOneToOne: false
             referencedRelation: "vendor_registrations"
             referencedColumns: ["id"]
           },
@@ -2215,13 +2187,6 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "categories"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "vendor_product_categories_vendor_id_fkey"
-            columns: ["vendor_id"]
-            isOneToOne: false
-            referencedRelation: "vendor_registration_details"
             referencedColumns: ["id"]
           },
           {
@@ -2270,13 +2235,6 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_vendor_products_vendor"
-            columns: ["vendor_id"]
-            isOneToOne: false
-            referencedRelation: "vendor_registration_details"
             referencedColumns: ["id"]
           },
           {
@@ -2485,51 +2443,7 @@ export type Database = {
       }
     }
     Views: {
-      vendor_registration_details: {
-        Row: {
-          account_holder_name: string | null
-          account_number: string | null
-          annual_turnover: number | null
-          approval_comments: string | null
-          avatar_url: string | null
-          bank_branch: string | null
-          bank_name: string | null
-          billing_address: Json | null
-          business_address: Json | null
-          business_description: string | null
-          company_name: string | null
-          company_type: string | null
-          created_at: string | null
-          gst_number: string | null
-          id: string | null
-          ifsc_code: string | null
-          incorporation_date: string | null
-          pan_number: string | null
-          primary_email: string | null
-          primary_phone: string | null
-          registered_address: Json | null
-          registration_number: string | null
-          reviewed_at: string | null
-          reviewed_by: string | null
-          reviewer_name: string | null
-          secondary_email: string | null
-          secondary_phone: string | null
-          signatory_designation: string | null
-          signatory_email: string | null
-          signatory_full_name: string | null
-          signatory_name: string | null
-          signatory_pan: string | null
-          signatory_phone: string | null
-          status: Database["public"]["Enums"]["vendor_status"] | null
-          tan_number: string | null
-          updated_at: string | null
-          user_email: string | null
-          user_id: string | null
-          website: string | null
-          years_in_business: number | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       begin_transaction: {
