@@ -2535,6 +2535,10 @@ export type Database = {
           requester_department: string
         }[]
       }
+      get_security_status: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       has_role: {
         Args: {
           user_id: string
