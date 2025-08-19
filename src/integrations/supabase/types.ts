@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
@@ -2452,8 +2452,8 @@ export type Database = {
       }
       can_assign_role: {
         Args: {
-          target_user_id: string
           role_to_assign: Database["public"]["Enums"]["user_role"]
+          target_user_id: string
         }
         Returns: boolean
       }
@@ -2463,9 +2463,9 @@ export type Database = {
       }
       check_password_history: {
         Args: {
-          p_user_id: string
-          p_new_password_hash: string
           p_history_count?: number
+          p_new_password_hash: string
+          p_user_id: string
         }
         Returns: boolean
       }
@@ -2484,18 +2484,18 @@ export type Database = {
       get_approval_requests_secure: {
         Args: Record<PropertyKey, never>
         Returns: {
-          id: string
-          entity_id: string
-          requester_id: string
-          approver_id: string
-          created_at: string
           approval_date: string
-          entity_type: string
-          status: string
+          approver_id: string
           comments: string
-          requester_name: string
-          request_title: string
+          created_at: string
+          entity_id: string
           entity_status: string
+          entity_type: string
+          id: string
+          request_title: string
+          requester_id: string
+          requester_name: string
+          status: string
         }[]
       }
       get_currency_for_country: {
@@ -2509,30 +2509,30 @@ export type Database = {
       get_latest_product_price: {
         Args: { p_product_id: string }
         Returns: {
-          price: number
           currency: string
           effective_date: string
+          price: number
         }[]
       }
       get_procurement_request_details_secure: {
         Args: Record<PropertyKey, never>
         Returns: {
-          id: string
-          requester_id: string
+          created_at: string
           date_created: string
           date_needed: string
-          priority: Database["public"]["Enums"]["request_priority"]
-          status: Database["public"]["Enums"]["request_status"]
-          estimated_value: number
-          created_at: string
-          updated_at: string
-          total_estimated_value: number
-          request_number: string
-          title: string
-          description: string
           department: string
-          requester_name: string
+          description: string
+          estimated_value: number
+          id: string
+          priority: Database["public"]["Enums"]["request_priority"]
+          request_number: string
           requester_department: string
+          requester_id: string
+          requester_name: string
+          status: Database["public"]["Enums"]["request_status"]
+          title: string
+          total_estimated_value: number
+          updated_at: string
         }[]
       }
       get_security_status: {
@@ -2541,8 +2541,8 @@ export type Database = {
       }
       has_role: {
         Args: {
-          user_id: string
           required_role: Database["public"]["Enums"]["user_role"]
+          user_id: string
         }
         Returns: boolean
       }
@@ -2552,28 +2552,28 @@ export type Database = {
       }
       log_rfp_activity: {
         Args: {
-          p_rfp_id: string
-          p_activity_type: string
-          p_performed_by: string
-          p_title: string
-          p_description?: string
           p_activity_data?: Json
+          p_activity_type: string
+          p_description?: string
+          p_performed_by: string
+          p_rfp_id: string
+          p_title: string
         }
         Returns: string
       }
       log_security_event: {
         Args: {
-          p_user_id: string
-          p_event_type: string
           p_event_data?: Json
+          p_event_type: string
           p_ip_address?: unknown
-          p_user_agent?: string
           p_success?: boolean
+          p_user_agent?: string
+          p_user_id: string
         }
         Returns: string
       }
       record_delivery_and_update_inventory: {
-        Args: { transaction_id: string; p_delivery_details: Json }
+        Args: { p_delivery_details: Json; transaction_id: string }
         Returns: Json
       }
       rollback_transaction: {
@@ -2581,11 +2581,11 @@ export type Database = {
         Returns: Json
       }
       update_transaction_delivery_details: {
-        Args: { transaction_id: string; p_delivery_details: Json }
+        Args: { p_delivery_details: Json; transaction_id: string }
         Returns: Json
       }
       user_has_module_permission: {
-        Args: { p_user_id: string; p_module_name: string; p_permission: string }
+        Args: { p_module_name: string; p_permission: string; p_user_id: string }
         Returns: boolean
       }
       validate_password_strength: {
