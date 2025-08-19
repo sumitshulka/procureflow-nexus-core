@@ -158,26 +158,43 @@ const ProcurementRequests = () => {
     try {
       setIsLoading(true);
       
-      // Use the secure function to get procurement request details
-      const { data, error } = await supabase.rpc('get_procurement_request_details_secure');
+      // Fetch procurement requests first
+      const { data: requestsData, error: requestsError } = await supabase
+        .from("procurement_requests")
+        .select("*")
+        .order('date_created', { ascending: false });
 
-      if (error) throw error;
-      
-      if (data) {
+      if (requestsError) throw requestsError;
+
+      if (requestsData) {
+        // Fetch requester profiles separately
+        const requesterIds = [...new Set(requestsData.map(req => req.requester_id))];
+        const { data: profilesData } = await supabase
+          .from("profiles")
+          .select("id, full_name, department")
+          .in("id", requesterIds);
+
+        // Create a map of profiles for quick lookup
+        const profilesMap = new Map(profilesData?.map(p => [p.id, p]) || []);
+
         // Transform the data to match the expected ProcurementRequest type
-        const transformedData: ProcurementRequest[] = data.map(item => ({
-          id: item.id,
-          request_number: item.request_number,
-          title: item.title,
-          requester_id: item.requester_id,
-          department: item.department,
-          date_created: item.date_created,
-          date_needed: item.date_needed,
-          priority: item.priority as RequestPriority,
-          status: item.status as RequestStatus,
-          estimated_value: item.estimated_value,
-          requester_name: item.requester_name
-        }));
+        const transformedData: ProcurementRequest[] = requestsData.map(item => {
+          const profile = profilesMap.get(item.requester_id);
+          return {
+            id: item.id,
+            request_number: item.request_number,
+            title: item.title,
+            requester_id: item.requester_id,
+            department: item.department || profile?.department || '',
+            date_created: item.date_created,
+            date_needed: item.date_needed,
+            priority: item.priority as RequestPriority,
+            status: item.status as RequestStatus,
+            estimated_value: item.estimated_value || 0,
+            requester_name: profile?.full_name || 'Unknown'
+          };
+        });
+        
         setRequests(transformedData);
       }
     } catch (error: any) {
