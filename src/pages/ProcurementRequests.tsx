@@ -158,10 +158,8 @@ const ProcurementRequests = () => {
     try {
       setIsLoading(true);
       
-      // Fetch from the view that joins with profiles
-      const { data, error } = await supabase
-        .from("procurement_request_details")
-        .select("*");
+      // Use the secure function to get procurement request details
+      const { data, error } = await supabase.rpc('get_procurement_request_details_secure');
 
       if (error) throw error;
       

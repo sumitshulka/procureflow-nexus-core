@@ -53,16 +53,30 @@ const ProcurementRequestSelector = ({
       try {
         // First get the approved requests
         const { data: requests, error } = await supabase
-          .from("procurement_request_details")
-          .select("id, request_number, title, department, date_created, requester_name")
+          .from("procurement_requests")
+          .select(`
+            id, 
+            request_number, 
+            title, 
+            department, 
+            date_created,
+            requester_id
+          `)
           .eq("status", "approved")
           .order("date_created", { ascending: false });
           
         if (error) throw error;
         
-        // For each request, get its items with product details
+        // For each request, get its items with product details and requester name
         const requestsWithItems = await Promise.all(
-          (requests || []).map(async (request) => {
+          (requests || []).map(async (request: any) => {
+            // Get requester name
+            const { data: profileData } = await supabase
+              .from("profiles")
+              .select("full_name")
+              .eq("id", request.requester_id)
+              .single();
+              
             const { data: items, error: itemsError } = await supabase
               .from("procurement_request_items")
               .select(`
@@ -91,6 +105,7 @@ const ProcurementRequestSelector = ({
             
             return {
               ...request,
+              requester_name: profileData?.full_name || "Unknown",
               items: formattedItems
             };
           })

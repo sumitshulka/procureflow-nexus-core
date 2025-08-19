@@ -108,12 +108,25 @@ const ProcurementRequestDetail = () => {
 
     setIsLoading(true);
     try {
-      // Fetch the request
+      // Fetch the request and profile data separately to avoid join issues
       const { data: requestData, error: requestError } = await supabase
-        .from("procurement_request_details")
+        .from("procurement_requests")
         .select("*")
         .eq("id", id)
         .single();
+        
+      if (requestError) throw requestError;
+      
+      // Get requester profile separately
+      let requesterName = "Unknown";
+      if (requestData.requester_id) {
+        const { data: profileData } = await supabase
+          .from("profiles")
+          .select("full_name")
+          .eq("id", requestData.requester_id)
+          .single();
+        requesterName = profileData?.full_name || "Unknown";
+      }
 
       if (requestError) throw requestError;
 
@@ -139,7 +152,7 @@ const ProcurementRequestDetail = () => {
         title: requestData.title,
         description: requestData.description,
         requester_id: requestData.requester_id,
-        requester_name: requestData.requester_name,
+        requester_name: requesterName,
         department: requestData.department,
         date_created: requestData.date_created,
         date_needed: requestData.date_needed,

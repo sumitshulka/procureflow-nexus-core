@@ -39,13 +39,7 @@ const Approvals = () => {
     queryFn: async () => {
       console.log("Fetching approvals with status:", activeTab);
       
-      let query = supabase
-        .from('approval_requests_view')
-        .select('*');
-        
-      if (activeTab !== 'all') {
-        query = query.eq('status', activeTab);
-      }
+      let query = supabase.rpc('get_approval_requests_secure');
       
       const { data, error } = await query;
       
@@ -55,7 +49,9 @@ const Approvals = () => {
       }
       
       console.log(`Found ${data?.length} approval requests with status ${activeTab}`, data);
-      return data as ApprovalRequest[];
+      return (data || []).filter(item => 
+        activeTab === 'all' || item.status === activeTab
+      ) as ApprovalRequest[];
     }
   });
 
