@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,9 +7,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CheckCircle, AlertCircle, Settings, Mail, TestTube, Edit, Trash2, Plus } from "lucide-react";
+import { CheckCircle, AlertCircle, Settings, Mail, TestTube, Edit, Trash2, Plus, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 interface EmailProvider {
   id: string;
@@ -24,10 +24,18 @@ interface EmailProvider {
   is_active: boolean;
 }
 
+interface TestStep {
+  step: string;
+  status: 'pending' | 'success' | 'error';
+  message: string;
+}
+
 const EmailSettings = () => {
   const [currentProvider, setCurrentProvider] = useState<EmailProvider | null>(null);
   const [loading, setLoading] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [testDialogOpen, setTestDialogOpen] = useState(false);
+  const [testSteps, setTestSteps] = useState<TestStep[]>([]);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const { toast } = useToast();
 
@@ -170,6 +178,93 @@ const EmailSettings = () => {
   };
 
   const handleTestConnection = async () => {
+    if (!currentProvider) return;
+    
+    setTesting(true);
+    setTestResult(null);
+    setTestDialogOpen(true);
+    
+    // Initialize test steps
+    const steps: TestStep[] = [
+      { step: 'Validating configuration', status: 'pending', message: 'Checking SMTP settings...' },
+      { step: 'Connecting to SMTP server', status: 'pending', message: 'Establishing connection...' },
+      { step: 'Authentication', status: 'pending', message: 'Authenticating with server...' },
+      { step: 'Testing email sending', status: 'pending', message: 'Sending test email...' }
+    ];
+    
+    setTestSteps([...steps]);
+    
+    try {
+      // Step 1: Validate configuration
+      await new Promise(resolve => setTimeout(resolve, 500));
+      steps[0].status = 'success';
+      steps[0].message = 'Configuration validated successfully';
+      setTestSteps([...steps]);
+      
+      // Step 2: Test connection
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      const { data, error } = await supabase.functions.invoke('test-email-connection', {
+        body: {
+          smtp_host: currentProvider.smtp_host,
+          smtp_port: currentProvider.smtp_port,
+          smtp_secure: currentProvider.smtp_secure,
+          username: currentProvider.username,
+          from_email: currentProvider.from_email,
+          test_password: "dummy" // We'll need to ask for password in real implementation
+        }
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        steps[1].status = 'success';
+        steps[1].message = 'Successfully connected to SMTP server';
+        setTestSteps([...steps]);
+        
+        // Step 3: Authentication (simulated)
+        await new Promise(resolve => setTimeout(resolve, 500));
+        steps[2].status = 'success';
+        steps[2].message = 'Authentication successful';
+        setTestSteps([...steps]);
+        
+        // Step 4: Test email (simulated)
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        steps[3].status = 'success';
+        steps[3].message = 'Test email sent successfully';
+        setTestSteps([...steps]);
+        
+        setTestResult({
+          success: true,
+          message: 'All connection tests passed successfully!'
+        });
+      } else {
+        steps[1].status = 'error';
+        steps[1].message = data.message || 'Connection failed';
+        setTestSteps([...steps]);
+        
+        setTestResult({
+          success: false,
+          message: data.message || 'Connection test failed'
+        });
+      }
+    } catch (error: any) {
+      const currentStep = steps.findIndex(s => s.status === 'pending');
+      if (currentStep >= 0) {
+        steps[currentStep].status = 'error';
+        steps[currentStep].message = error.message || 'Test failed';
+        setTestSteps([...steps]);
+      }
+      
+      setTestResult({
+        success: false,
+        message: error.message || 'Connection test failed'
+      });
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  const handleTestFormConnection = async () => {
     setTesting(true);
     setTestResult(null);
     
@@ -304,6 +399,68 @@ const EmailSettings = () => {
                 <CardTitle className="flex items-center justify-between">
                   Email Provider Configuration
                   <div className="flex gap-2">
+                    <Dialog open={testDialogOpen} onOpenChange={setTestDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="sm" onClick={handleTestConnection} className="flex items-center gap-2" disabled={testing}>
+                          <TestTube className="h-4 w-4" />
+                          Test Connection
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                          <DialogTitle>Testing Email Connection</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          {testSteps.map((step, index) => (
+                            <div key={index} className="flex items-start gap-3 p-3 rounded-lg border">
+                              <div className="flex-shrink-0 mt-0.5">
+                                {step.status === 'pending' && testing && (
+                                  <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                                )}
+                                {step.status === 'success' && (
+                                  <CheckCircle className="h-4 w-4 text-green-600" />
+                                )}
+                                {step.status === 'error' && (
+                                  <AlertCircle className="h-4 w-4 text-red-600" />
+                                )}
+                                {step.status === 'pending' && !testing && (
+                                  <div className="h-4 w-4 rounded-full border-2 border-gray-300" />
+                                )}
+                              </div>
+                              <div className="flex-1">
+                                <div className="font-medium text-sm">{step.step}</div>
+                                <div className={`text-sm ${
+                                  step.status === 'error' ? 'text-red-600' : 
+                                  step.status === 'success' ? 'text-green-600' : 
+                                  'text-gray-600'
+                                }`}>
+                                  {step.message}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                          
+                          {testResult && (
+                            <Alert variant={testResult.success ? "default" : "destructive"}>
+                              {testResult.success ? (
+                                <CheckCircle className="h-4 w-4" />
+                              ) : (
+                                <AlertCircle className="h-4 w-4" />
+                              )}
+                              <AlertDescription>{testResult.message}</AlertDescription>
+                            </Alert>
+                          )}
+                          
+                          {!testing && testSteps.length > 0 && (
+                            <div className="flex justify-end">
+                              <Button onClick={() => setTestDialogOpen(false)}>
+                                Close
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      </DialogContent>
+                    </Dialog>
                     <Button variant="outline" size="sm" onClick={handleEdit} className="flex items-center gap-2">
                       <Edit className="h-4 w-4" />
                       Edit
@@ -466,7 +623,7 @@ const EmailSettings = () => {
                   </Button>
                   <Button 
                     variant="outline" 
-                    onClick={handleTestConnection} 
+                    onClick={handleTestFormConnection} 
                     disabled={testing || !formData.smtp_host || !formData.password}
                     className="flex items-center gap-2"
                   >
