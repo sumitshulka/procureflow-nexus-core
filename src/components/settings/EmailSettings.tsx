@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CheckCircle, AlertCircle, Settings, Mail, TestTube } from "lucide-react";
+import { CheckCircle, AlertCircle, Settings, Mail, TestTube, Edit, Trash2, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -52,9 +52,9 @@ const EmailSettings = () => {
         .from("email_provider_settings")
         .select("*")
         .eq("is_active", true)
-        .single();
+        .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') {
+      if (error) {
         console.error("Error fetching email provider:", error);
         return;
       }
@@ -174,21 +174,88 @@ const EmailSettings = () => {
     setTestResult(null);
     
     try {
-      // Here we would call an edge function to test the email connection
-      // For now, we'll simulate a test
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      setTestResult({
-        success: true,
-        message: "Email connection test successful!"
+      const { data, error } = await supabase.functions.invoke('test-email-connection', {
+        body: {
+          smtp_host: formData.smtp_host,
+          smtp_port: formData.smtp_port,
+          smtp_secure: formData.smtp_secure,
+          username: formData.username,
+          password: formData.password,
+          from_email: formData.from_email
+        }
       });
-    } catch (error) {
+
+      if (error) throw error;
+
+      setTestResult({
+        success: data.success,
+        message: data.message
+      });
+    } catch (error: any) {
       setTestResult({
         success: false,
-        message: "Failed to connect to email server. Please check your settings."
+        message: error.message || "Failed to connect to email server. Please check your settings."
       });
     } finally {
       setTesting(false);
+    }
+  };
+
+  const handleEdit = () => {
+    // Reset form with current provider data for editing and show form
+    if (currentProvider) {
+      setFormData({
+        provider: currentProvider.provider,
+        from_email: currentProvider.from_email,
+        from_name: currentProvider.from_name || "",
+        smtp_host: currentProvider.smtp_host || "",
+        smtp_port: currentProvider.smtp_port || 587,
+        smtp_secure: currentProvider.smtp_secure ?? true,
+        username: currentProvider.username || "",
+        password: ""
+      });
+      // Temporarily hide the config card to show the form
+      setCurrentProvider(null);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!currentProvider) return;
+    
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from("email_provider_settings")
+        .delete()
+        .eq("id", currentProvider.id);
+
+      if (error) throw error;
+
+      setCurrentProvider(null);
+      setFormData({
+        provider: "custom_smtp",
+        from_email: "",
+        from_name: "",
+        smtp_host: "",
+        smtp_port: 587,
+        smtp_secure: true,
+        username: "",
+        password: ""
+      });
+
+      toast({
+        title: "Email Provider Deleted",
+        description: "Your email provider configuration has been removed.",
+      });
+    } catch (error) {
+      console.error("Error deleting email provider:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete email provider configuration.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -231,131 +298,196 @@ const EmailSettings = () => {
         </TabsList>
 
         <TabsContent value="setup" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Email Provider Configuration</CardTitle>
-              <CardDescription>
-                Select and configure your email provider to enable email functionality.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="provider">Email Provider</Label>
-                  <Select value={formData.provider} onValueChange={handleProviderChange}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select email provider" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {providerOptions.map(option => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+          {currentProvider ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  Email Provider Configuration
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={handleEdit} className="flex items-center gap-2">
+                      <Edit className="h-4 w-4" />
+                      Edit
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={handleDelete} className="flex items-center gap-2" disabled={loading}>
+                      <Trash2 className="h-4 w-4" />
+                      Delete
+                    </Button>
+                  </div>
+                </CardTitle>
+                <CardDescription>
+                  Your active email provider configuration.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm font-medium text-muted-foreground">Provider</Label>
+                    <p className="text-sm mt-1 capitalize">{currentProvider.provider.replace('_', ' ')}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-muted-foreground">From Email</Label>
+                    <p className="text-sm mt-1">{currentProvider.from_email}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-muted-foreground">From Name</Label>
+                    <p className="text-sm mt-1">{currentProvider.from_name || "Not set"}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-muted-foreground">SMTP Host</Label>
+                    <p className="text-sm mt-1">{currentProvider.smtp_host}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-muted-foreground">SMTP Port</Label>
+                    <p className="text-sm mt-1">{currentProvider.smtp_port}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-muted-foreground">Security</Label>
+                    <p className="text-sm mt-1">{currentProvider.smtp_secure ? "TLS/SSL Enabled" : "No encryption"}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-muted-foreground">Username</Label>
+                    <p className="text-sm mt-1">{currentProvider.username || "Not set"}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-muted-foreground">Status</Label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                      <p className="text-sm text-green-600">Active</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Plus className="h-5 w-5" />
+                  Setup Email Provider
+                </CardTitle>
+                <CardDescription>
+                  Configure your email provider to enable email functionality.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="provider">Email Provider</Label>
+                    <Select value={formData.provider} onValueChange={handleProviderChange}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select email provider" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {providerOptions.map(option => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="from_email">From Email Address</Label>
+                    <Input
+                      id="from_email"
+                      type="email"
+                      value={formData.from_email}
+                      onChange={(e) => setFormData(prev => ({ ...prev, from_email: e.target.value }))}
+                      placeholder="noreply@yourcompany.com"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="from_name">From Name (Optional)</Label>
+                    <Input
+                      id="from_name"
+                      value={formData.from_name}
+                      onChange={(e) => setFormData(prev => ({ ...prev, from_name: e.target.value }))}
+                      placeholder="Your Company Name"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="username">Username/Email</Label>
+                    <Input
+                      id="username"
+                      value={formData.username}
+                      onChange={(e) => setFormData(prev => ({ ...prev, username: e.target.value }))}
+                      placeholder="your-email@domain.com"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="smtp_host">SMTP Host</Label>
+                    <Input
+                      id="smtp_host"
+                      value={formData.smtp_host}
+                      onChange={(e) => setFormData(prev => ({ ...prev, smtp_host: e.target.value }))}
+                      placeholder="smtp.gmail.com"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="smtp_port">SMTP Port</Label>
+                    <Input
+                      id="smtp_port"
+                      type="number"
+                      value={formData.smtp_port}
+                      onChange={(e) => setFormData(prev => ({ ...prev, smtp_port: parseInt(e.target.value) }))}
+                      placeholder="587"
+                    />
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="smtp_secure"
+                      checked={formData.smtp_secure}
+                      onCheckedChange={(checked) => setFormData(prev => ({ ...prev, smtp_secure: checked }))}
+                    />
+                    <Label htmlFor="smtp_secure">Use TLS/SSL</Label>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Password/App Password</Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      value={formData.password}
+                      onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                      placeholder="Enter your email password"
+                    />
+                  </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="from_email">From Email Address</Label>
-                  <Input
-                    id="from_email"
-                    type="email"
-                    value={formData.from_email}
-                    onChange={(e) => setFormData(prev => ({ ...prev, from_email: e.target.value }))}
-                    placeholder="noreply@yourcompany.com"
-                  />
+                <div className="flex gap-2 pt-4">
+                  <Button onClick={handleSaveProvider} disabled={loading}>
+                    {loading ? "Saving..." : "Save Configuration"}
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={handleTestConnection} 
+                    disabled={testing || !formData.smtp_host || !formData.password}
+                    className="flex items-center gap-2"
+                  >
+                    <TestTube className="h-4 w-4" />
+                    {testing ? "Testing..." : "Test Connection"}
+                  </Button>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="from_name">From Name (Optional)</Label>
-                  <Input
-                    id="from_name"
-                    value={formData.from_name}
-                    onChange={(e) => setFormData(prev => ({ ...prev, from_name: e.target.value }))}
-                    placeholder="Your Company Name"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="username">Username/Email</Label>
-                  <Input
-                    id="username"
-                    value={formData.username}
-                    onChange={(e) => setFormData(prev => ({ ...prev, username: e.target.value }))}
-                    placeholder="your-email@domain.com"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="smtp_host">SMTP Host</Label>
-                  <Input
-                    id="smtp_host"
-                    value={formData.smtp_host}
-                    onChange={(e) => setFormData(prev => ({ ...prev, smtp_host: e.target.value }))}
-                    placeholder="smtp.gmail.com"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="smtp_port">SMTP Port</Label>
-                  <Input
-                    id="smtp_port"
-                    type="number"
-                    value={formData.smtp_port}
-                    onChange={(e) => setFormData(prev => ({ ...prev, smtp_port: parseInt(e.target.value) }))}
-                    placeholder="587"
-                  />
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="smtp_secure"
-                    checked={formData.smtp_secure}
-                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, smtp_secure: checked }))}
-                  />
-                  <Label htmlFor="smtp_secure">Use TLS/SSL</Label>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password/App Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={formData.password}
-                    onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-                    placeholder="Enter your email password"
-                  />
-                </div>
-              </div>
-
-              <div className="flex gap-2 pt-4">
-                <Button onClick={handleSaveProvider} disabled={loading}>
-                  {loading ? "Saving..." : "Save Configuration"}
-                </Button>
-                <Button 
-                  variant="outline" 
-                  onClick={handleTestConnection} 
-                  disabled={testing || !formData.smtp_host}
-                  className="flex items-center gap-2"
-                >
-                  <TestTube className="h-4 w-4" />
-                  {testing ? "Testing..." : "Test Connection"}
-                </Button>
-              </div>
-
-              {testResult && (
-                <Alert variant={testResult.success ? "default" : "destructive"}>
-                  {testResult.success ? (
-                    <CheckCircle className="h-4 w-4" />
-                  ) : (
-                    <AlertCircle className="h-4 w-4" />
-                  )}
-                  <AlertDescription>{testResult.message}</AlertDescription>
-                </Alert>
-              )}
-            </CardContent>
-          </Card>
+                {testResult && (
+                  <Alert variant={testResult.success ? "default" : "destructive"}>
+                    {testResult.success ? (
+                      <CheckCircle className="h-4 w-4" />
+                    ) : (
+                      <AlertCircle className="h-4 w-4" />
+                    )}
+                    <AlertDescription>{testResult.message}</AlertDescription>
+                  </Alert>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="templates">

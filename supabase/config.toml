@@ -9,3 +9,6 @@ verify_jwt = false
 
 [functions.rollback-transaction]
 verify_jwt = false
+
+[functions.test-email-connection]
+verify_jwt = true
