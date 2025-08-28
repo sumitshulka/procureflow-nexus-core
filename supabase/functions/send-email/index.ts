@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
-import { SmtpClient } from "https://deno.land/x/smtp@v0.7.0/mod.ts";
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -94,27 +93,107 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    const client = new SmtpClient();
+    // Minimal SMTP client using Deno net/TLS to avoid incompatibilities
+    const encoder = new TextEncoder();
+    const decoder = new TextDecoder();
 
-    // Connect using TLS for port 465, or STARTTLS/plain for others per provider config
+    const writeLine = async (conn: Deno.Conn, line: string) => {
+      await conn.write(encoder.encode(line + "\r\n"));
+    };
+
+    const readResponse = async (conn: Deno.Conn): Promise<string> => {
+      let resp = "";
+      const buf = new Uint8Array(4096);
+      while (true) {
+        const n = await conn.read(buf);
+        if (n === null) break;
+        resp += decoder.decode(buf.subarray(0, n));
+        // Stop when we have a line ending with status code + space (end of multiline response)
+        const lines = resp.split(/\r?\n/).filter(Boolean);
+        const last = lines[lines.length - 1] || "";
+        if (/^\d{3} /.test(last)) break;
+        // Some servers send single-line responses quickly
+        if (resp.endsWith("\r\n")) {
+          const anyLineEnd = lines.find((l) => /^\d{3} /.test(l));
+          if (anyLineEnd) break;
+        }
+      }
+      return resp;
+    };
+
+    const expectCode = (resp: string, code: number) => {
+      const firstLine = (resp.split(/\r?\n/).find(Boolean)) || resp;
+      if (!firstLine.startsWith(String(code))) {
+        throw new Error(`SMTP ${code} expected, got: ${firstLine}`);
+      }
+    };
+
+    let conn: Deno.Conn | Deno.TlsConn;
     if (secure && port === 465) {
-      await client.connectTLS({ hostname: host, port, username, password });
+      conn = await Deno.connectTls({ hostname: host, port });
     } else {
-      await client.connect({ hostname: host, port, username, password });
+      conn = await Deno.connect({ hostname: host, port });
     }
 
+    // Server greeting
+    let resp = await readResponse(conn);
+
+    // Say hello
+    await writeLine(conn, `EHLO ${host}`);
+    resp = await readResponse(conn);
+    // If not accepted and we are not on TLS yet but secure is requested, try STARTTLS
+    if (!(secure && port === 465) && secure && !resp.startsWith("250")) {
+      await writeLine(conn, "STARTTLS");
+      resp = await readResponse(conn);
+      expectCode(resp, 220);
+      conn = await Deno.startTls(conn, { hostname: host });
+      await writeLine(conn, `EHLO ${host}`);
+      resp = await readResponse(conn);
+    }
+    expectCode(resp, 250);
+
+    // AUTH LOGIN
+    await writeLine(conn, "AUTH LOGIN");
+    resp = await readResponse(conn);
+    expectCode(resp, 334);
+    await writeLine(conn, btoa(username));
+    resp = await readResponse(conn);
+    expectCode(resp, 334);
+    await writeLine(conn, btoa(password));
+    resp = await readResponse(conn);
+    expectCode(resp, 235);
+
+    // MAIL transaction
+    await writeLine(conn, `MAIL FROM:<${fromEmail}>`);
+    resp = await readResponse(conn);
+    expectCode(resp, 250);
+
+    await writeLine(conn, `RCPT TO:<${to}>`);
+    resp = await readResponse(conn);
+    expectCode(resp, 250);
+
+    await writeLine(conn, "DATA");
+    resp = await readResponse(conn);
+    expectCode(resp, 354);
+
     const fromHeader = `${fromName} <${fromEmail}>`;
-    const plainText = text || (html ? 'Your email client does not support HTML.' : '');
+    const headers = [
+      `From: ${fromHeader}`,
+      `To: <${to}>`,
+      `Subject: ${subject}`,
+      "MIME-Version: 1.0",
+      html ? "Content-Type: text/html; charset=UTF-8" : "Content-Type: text/plain; charset=UTF-8",
+      "",
+    ].join("\r\n");
 
-    await client.send({
-      from: fromHeader,
-      to,
-      subject,
-      content: plainText,
-      html: html,
-    });
+    const bodyContent = (html || text || "").replace(/\n/g, "\r\n");
+    await writeLine(conn, headers + bodyContent + "\r\n.");
+    resp = await readResponse(conn);
+    expectCode(resp, 250);
 
-    await client.close();
+    await writeLine(conn, "QUIT");
+    await readResponse(conn);
+    conn.close();
 
     const sentAt = new Date().toISOString();
     console.log('SMTP email sent', { to, subject, provider: emailProvider.provider, host, port, sent_at: sentAt, is_test });
