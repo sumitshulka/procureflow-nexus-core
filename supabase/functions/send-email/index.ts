@@ -141,16 +141,18 @@ const handler = async (req: Request): Promise<Response> => {
     // Say hello
     await writeLine(conn, `EHLO ${host}`);
     resp = await readResponse(conn);
-    // If not accepted and we are not on TLS yet but secure is requested, try STARTTLS
-    if (!(secure && port === 465) && secure && !resp.startsWith("250")) {
+    expectCode(resp, 250);
+
+    // If secure is requested and not implicit TLS (465), upgrade via STARTTLS
+    if (secure && port !== 465) {
       await writeLine(conn, "STARTTLS");
       resp = await readResponse(conn);
       expectCode(resp, 220);
-      conn = await Deno.startTls(conn, { hostname: host });
+      conn = await Deno.startTls(conn as Deno.Conn, { hostname: host });
       await writeLine(conn, `EHLO ${host}`);
       resp = await readResponse(conn);
+      expectCode(resp, 250);
     }
-    expectCode(resp, 250);
 
     // AUTH LOGIN
     await writeLine(conn, "AUTH LOGIN");
@@ -187,7 +189,7 @@ const handler = async (req: Request): Promise<Response> => {
     ].join("\r\n");
 
     const bodyContent = (html || text || "").replace(/\n/g, "\r\n");
-    await writeLine(conn, headers + bodyContent + "\r\n.");
+    await writeLine(conn, headers + bodyContent + "\r\n.\r\n");
     resp = await readResponse(conn);
     expectCode(resp, 250);
 
