@@ -238,6 +238,66 @@ export type Database = {
         }
         Relationships: []
       }
+      email_provider_settings: {
+        Row: {
+          created_at: string
+          from_email: string
+          from_name: string | null
+          id: string
+          imap_host: string | null
+          imap_port: number | null
+          imap_secure: boolean | null
+          is_active: boolean
+          pop_host: string | null
+          pop_port: number | null
+          pop_secure: boolean | null
+          provider: string
+          smtp_host: string | null
+          smtp_port: number | null
+          smtp_secure: boolean | null
+          updated_at: string
+          username: string | null
+        }
+        Insert: {
+          created_at?: string
+          from_email: string
+          from_name?: string | null
+          id?: string
+          imap_host?: string | null
+          imap_port?: number | null
+          imap_secure?: boolean | null
+          is_active?: boolean
+          pop_host?: string | null
+          pop_port?: number | null
+          pop_secure?: boolean | null
+          provider: string
+          smtp_host?: string | null
+          smtp_port?: number | null
+          smtp_secure?: boolean | null
+          updated_at?: string
+          username?: string | null
+        }
+        Update: {
+          created_at?: string
+          from_email?: string
+          from_name?: string | null
+          id?: string
+          imap_host?: string | null
+          imap_port?: number | null
+          imap_secure?: boolean | null
+          is_active?: boolean
+          pop_host?: string | null
+          pop_port?: number | null
+          pop_secure?: boolean | null
+          provider?: string
+          smtp_host?: string | null
+          smtp_port?: number | null
+          smtp_secure?: boolean | null
+          updated_at?: string
+          username?: string | null
+        }
+        Relationships: []
+      }
       inventory_items: {
         Row: {
           id: string
