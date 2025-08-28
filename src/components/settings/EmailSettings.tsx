@@ -62,7 +62,7 @@ const EmailSettings = () => {
     try {
       const { data, error } = await supabase
         .from("email_provider_settings")
-        .select("*")
+        .select("id, provider, from_email, from_name, smtp_host, smtp_port, smtp_secure, username, is_active")
         .eq("is_active", true)
         .maybeSingle();
 
@@ -154,9 +154,10 @@ const EmailSettings = () => {
           smtp_port: formData.smtp_port,
           smtp_secure: formData.smtp_secure,
           username: formData.username || null,
+          smtp_password: formData.password || null,
           is_active: true
         })
-        .select()
+        .select("id, provider, from_email, from_name, smtp_host, smtp_port, smtp_secure, username, is_active")
         .single();
 
       if (error) throw error;

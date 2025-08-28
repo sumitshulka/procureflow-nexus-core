@@ -253,6 +253,7 @@ export type Database = {
           pop_secure: boolean | null
           provider: string
           smtp_host: string | null
+          smtp_password: string | null
           smtp_port: number | null
           smtp_secure: boolean | null
           updated_at: string
@@ -272,6 +273,7 @@ export type Database = {
           pop_secure?: boolean | null
           provider: string
           smtp_host?: string | null
+          smtp_password?: string | null
           smtp_port?: number | null
           smtp_secure?: boolean | null
           updated_at?: string
@@ -291,6 +293,7 @@ export type Database = {
           pop_secure?: boolean | null
           provider?: string
           smtp_host?: string | null
+          smtp_password?: string | null
           smtp_port?: number | null
           smtp_secure?: boolean | null
           updated_at?: string
