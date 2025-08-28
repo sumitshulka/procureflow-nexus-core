@@ -12,9 +12,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 const AppHeader: React.FC = () => {
   const { userData, logout } = useAuth();
+  const navigate = useNavigate();
 
   return (
     <header className="fixed top-0 left-0 right-0 z-40 h-16 flex items-center justify-between border-b bg-white px-4">
@@ -76,20 +78,13 @@ const AppHeader: React.FC = () => {
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon">
-              <Settings className="h-5 w-5" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Settings</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>System Settings</DropdownMenuItem>
-            <DropdownMenuItem>User Preferences</DropdownMenuItem>
-            <DropdownMenuItem>Notification Settings</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <Button 
+          variant="ghost" 
+          size="icon"
+          onClick={() => navigate('/settings')}
+        >
+          <Settings className="h-5 w-5" />
+        </Button>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
