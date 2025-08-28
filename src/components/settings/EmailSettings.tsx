@@ -135,13 +135,11 @@ const EmailSettings = () => {
   const handleSaveProvider = async () => {
     setLoading(true);
     try {
-      // First, deactivate any existing provider
-      if (currentProvider) {
-        await supabase
-          .from("email_provider_settings")
-          .update({ is_active: false })
-          .eq("id", currentProvider.id);
-      }
+      // First, deactivate ALL existing active providers to avoid unique constraint violation
+      await supabase
+        .from("email_provider_settings")
+        .update({ is_active: false })
+        .eq("is_active", true);
 
       // Insert new provider settings
       const { data, error } = await supabase
