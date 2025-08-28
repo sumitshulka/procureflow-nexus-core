@@ -10,7 +10,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CheckCircle, AlertCircle, Settings, Mail, TestTube, Edit, Trash2, Plus, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 interface EmailProvider {
   id: string;
@@ -209,8 +209,7 @@ const EmailSettings = () => {
           smtp_port: currentProvider.smtp_port,
           smtp_secure: currentProvider.smtp_secure,
           username: currentProvider.username,
-          from_email: currentProvider.from_email,
-          test_password: "dummy" // We'll need to ask for password in real implementation
+          from_email: currentProvider.from_email
         }
       });
 
@@ -409,6 +408,7 @@ const EmailSettings = () => {
                       <DialogContent className="sm:max-w-md">
                         <DialogHeader>
                           <DialogTitle>Testing Email Connection</DialogTitle>
+                          <DialogDescription>We will validate configuration and attempt to connect to your SMTP server.</DialogDescription>
                         </DialogHeader>
                         <div className="space-y-4">
                           {testSteps.map((step, index) => (
