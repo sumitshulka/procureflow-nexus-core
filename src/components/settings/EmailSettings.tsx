@@ -7,10 +7,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CheckCircle, AlertCircle, Settings, Mail, TestTube, Edit, Trash2, Plus, Loader2 } from "lucide-react";
+import { CheckCircle, AlertCircle, Settings, Mail, TestTube, Edit, Trash2, Plus, Loader2, Send } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { useEmailService } from "@/hooks/useEmailService";
 
 interface EmailProvider {
   id: string;
@@ -37,7 +38,10 @@ const EmailSettings = () => {
   const [testDialogOpen, setTestDialogOpen] = useState(false);
   const [testSteps, setTestSteps] = useState<TestStep[]>([]);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [testEmail, setTestEmail] = useState("");
+  const [sendingTestEmail, setSendingTestEmail] = useState(false);
   const { toast } = useToast();
+  const { sendTestEmail } = useEmailService();
 
   const [formData, setFormData] = useState({
     provider: "custom_smtp",
@@ -184,10 +188,11 @@ const EmailSettings = () => {
     setTestResult(null);
     setTestDialogOpen(true);
     
-    // Initialize test steps - only what we actually test
+    // Initialize test steps - including actual email sending
     const steps: TestStep[] = [
       { step: 'Validating configuration', status: 'pending', message: 'Checking SMTP settings...' },
-      { step: 'Testing SMTP connectivity', status: 'pending', message: 'Connecting to SMTP server...' }
+      { step: 'Testing SMTP connectivity', status: 'pending', message: 'Connecting to SMTP server...' },
+      { step: 'Sending test email', status: 'pending', message: 'Waiting for test email address...' }
     ];
     
     setTestSteps([...steps]);
@@ -229,9 +234,14 @@ const EmailSettings = () => {
         steps[1].message = data.message || 'Successfully connected to SMTP server';
         setTestSteps([...steps]);
         
+        // Step 3: Wait for user to provide test email
+        steps[2].status = 'pending';
+        steps[2].message = 'Please enter an email address below to test email sending';
+        setTestSteps([...steps]);
+        
         setTestResult({
           success: true,
-          message: 'SMTP connection test successful! Note: This only tests connectivity, not authentication or email sending.'
+          message: 'SMTP connection successful! You can now test email sending by entering an email address below.'
         });
       } else {
         steps[1].status = 'error';
@@ -257,6 +267,53 @@ const EmailSettings = () => {
       });
     } finally {
       setTesting(false);
+    }
+  };
+
+  const handleSendTestEmail = async () => {
+    if (!testEmail || !testEmail.includes('@')) {
+      toast({
+        title: "Invalid Email",
+        description: "Please enter a valid email address",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSendingTestEmail(true);
+    
+    // Update the test steps to show email sending in progress
+    const updatedSteps = [...testSteps];
+    const emailStepIndex = updatedSteps.findIndex(step => step.step === 'Sending test email');
+    if (emailStepIndex >= 0) {
+      updatedSteps[emailStepIndex].status = 'pending';
+      updatedSteps[emailStepIndex].message = `Sending test email to ${testEmail}...`;
+      setTestSteps(updatedSteps);
+    }
+
+    try {
+      const result = await sendTestEmail(testEmail);
+      
+      if (result.success) {
+        updatedSteps[emailStepIndex].status = 'success';
+        updatedSteps[emailStepIndex].message = `Test email sent successfully to ${testEmail}`;
+        setTestSteps(updatedSteps);
+        
+        toast({
+          title: "Test Email Sent",
+          description: `Check your inbox at ${testEmail}`,
+        });
+      } else {
+        updatedSteps[emailStepIndex].status = 'error';
+        updatedSteps[emailStepIndex].message = result.message || 'Failed to send test email';
+        setTestSteps(updatedSteps);
+      }
+    } catch (error: any) {
+      updatedSteps[emailStepIndex].status = 'error';
+      updatedSteps[emailStepIndex].message = error.message || 'Failed to send test email';
+      setTestSteps(updatedSteps);
+    } finally {
+      setSendingTestEmail(false);
     }
   };
 
@@ -436,6 +493,34 @@ const EmailSettings = () => {
                               </div>
                             </div>
                           ))}
+                          
+                          {testResult && testResult.success && (
+                            <div className="space-y-3 pt-4 border-t">
+                              <div>
+                                <Label htmlFor="test-email" className="text-sm font-medium">
+                                  Test Email Address
+                                </Label>
+                                <div className="flex gap-2 mt-1">
+                                  <Input
+                                    id="test-email"
+                                    type="email"
+                                    placeholder="Enter email to test sending"
+                                    value={testEmail}
+                                    onChange={(e) => setTestEmail(e.target.value)}
+                                    className="flex-1"
+                                  />
+                                  <Button 
+                                    onClick={handleSendTestEmail} 
+                                    disabled={sendingTestEmail || !testEmail}
+                                    className="flex items-center gap-2"
+                                  >
+                                    <Send className="h-4 w-4" />
+                                    {sendingTestEmail ? "Sending..." : "Send Test"}
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          )}
                           
                           {testResult && (
                             <Alert variant={testResult.success ? "default" : "destructive"}>
