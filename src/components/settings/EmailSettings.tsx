@@ -184,12 +184,10 @@ const EmailSettings = () => {
     setTestResult(null);
     setTestDialogOpen(true);
     
-    // Initialize test steps
+    // Initialize test steps - only what we actually test
     const steps: TestStep[] = [
       { step: 'Validating configuration', status: 'pending', message: 'Checking SMTP settings...' },
-      { step: 'Connecting to SMTP server', status: 'pending', message: 'Establishing connection...' },
-      { step: 'Authentication', status: 'pending', message: 'Authenticating with server...' },
-      { step: 'Testing email sending', status: 'pending', message: 'Sending test email...' }
+      { step: 'Testing SMTP connectivity', status: 'pending', message: 'Connecting to SMTP server...' }
     ];
     
     setTestSteps([...steps]);
@@ -197,11 +195,22 @@ const EmailSettings = () => {
     try {
       // Step 1: Validate configuration
       await new Promise(resolve => setTimeout(resolve, 500));
+      if (!currentProvider.smtp_host || !currentProvider.smtp_port) {
+        steps[0].status = 'error';
+        steps[0].message = 'Missing SMTP host or port configuration';
+        setTestSteps([...steps]);
+        setTestResult({
+          success: false,
+          message: 'Configuration validation failed'
+        });
+        return;
+      }
+      
       steps[0].status = 'success';
       steps[0].message = 'Configuration validated successfully';
       setTestSteps([...steps]);
       
-      // Step 2: Test connection
+      // Step 2: Test SMTP connectivity
       await new Promise(resolve => setTimeout(resolve, 1000));
       const { data, error } = await supabase.functions.invoke('test-email-connection', {
         body: {
@@ -217,24 +226,12 @@ const EmailSettings = () => {
 
       if (data.success) {
         steps[1].status = 'success';
-        steps[1].message = 'Successfully connected to SMTP server';
-        setTestSteps([...steps]);
-        
-        // Step 3: Authentication (simulated)
-        await new Promise(resolve => setTimeout(resolve, 500));
-        steps[2].status = 'success';
-        steps[2].message = 'Authentication successful';
-        setTestSteps([...steps]);
-        
-        // Step 4: Test email (simulated)
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        steps[3].status = 'success';
-        steps[3].message = 'Test email sent successfully';
+        steps[1].message = data.message || 'Successfully connected to SMTP server';
         setTestSteps([...steps]);
         
         setTestResult({
           success: true,
-          message: 'All connection tests passed successfully!'
+          message: 'SMTP connection test successful! Note: This only tests connectivity, not authentication or email sending.'
         });
       } else {
         steps[1].status = 'error';
@@ -243,7 +240,7 @@ const EmailSettings = () => {
         
         setTestResult({
           success: false,
-          message: data.message || 'Connection test failed'
+          message: data.message || 'SMTP connection test failed'
         });
       }
     } catch (error: any) {
