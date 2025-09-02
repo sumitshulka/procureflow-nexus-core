@@ -1,8 +1,8 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
 import { KeyRound } from 'lucide-react';
+import ResetPasswordDialog from './ResetPasswordDialog';
 
 interface ResetPasswordActionProps {
   userId: string;
@@ -10,20 +10,20 @@ interface ResetPasswordActionProps {
 }
 
 const ResetPasswordAction: React.FC<ResetPasswordActionProps> = ({ userId, userEmail }) => {
-  const { toast } = useToast();
-
-  const handleResetPassword = () => {
-    // This would typically send a password reset email
-    toast({
-      title: 'Password Reset',
-      description: `Password reset email would be sent to ${userEmail}`,
-    });
-  };
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   return (
-    <Button variant="ghost" size="icon" onClick={handleResetPassword}>
-      <KeyRound className="w-4 h-4" />
-    </Button>
+    <>
+      <Button variant="ghost" size="icon" onClick={() => setIsDialogOpen(true)}>
+        <KeyRound className="w-4 h-4" />
+      </Button>
+      <ResetPasswordDialog
+        userId={userId}
+        userEmail={userEmail}
+        isOpen={isDialogOpen}
+        onClose={() => setIsDialogOpen(false)}
+      />
+    </>
   );
 };
 
