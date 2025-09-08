@@ -408,8 +408,8 @@ const UsersList = () => {
                     </div>
                   </TableCell>
                   <TableCell className="text-right space-x-2">
-                    <Button variant="outline" size="sm" onClick={() => handleEditUser(user)}>
-                      <Edit className="w-4 h-4 mr-1" /> Edit
+                    <Button variant="ghost" size="icon" onClick={() => handleEditUser(user)}>
+                      <Edit className="w-4 h-4" />
                     </Button>
                     <ResetPasswordAction userId={user.id} userEmail={user.email} />
                   </TableCell>
