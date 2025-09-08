@@ -86,7 +86,7 @@ const UsersList = () => {
 
   // Fetch users with real emails
   const { data: users, isLoading, refetch } = useQuery({
-    queryKey: ["users"],
+    queryKey: ["users", departments],
     queryFn: async () => {
       const { data: profiles, error } = await supabase
         .from("profiles")
@@ -131,14 +131,19 @@ const UsersList = () => {
       }, {});
 
       // Join profiles with roles and emails
-      return profiles.map(profile => ({
-        id: profile.id,
-        fullName: profile.full_name || "Unnamed User",
-        department: profile.department || "No Department",
-        roles: rolesByUser[profile.id] || [],
-        createdAt: new Date(profile.created_at).toLocaleDateString(),
-        email: emailsMap.get(profile.id) || "No email found"
-      }));
+      return profiles.map(profile => {
+        // Find department name from ID
+        const department = departments.find(dept => dept.id === profile.department);
+        
+        return {
+          id: profile.id,
+          fullName: profile.full_name || "Unnamed User",
+          department: department?.name || "No Department",
+          roles: rolesByUser[profile.id] || [],
+          createdAt: new Date(profile.created_at).toLocaleDateString(),
+          email: emailsMap.get(profile.id) || "No email found"
+        };
+      });
     },
   });
 
@@ -209,11 +214,15 @@ const UsersList = () => {
 
       // Assign role if user is created
       if (signUpData.user) {
+        // Find department ID from department name  
+        const selectedDept = departments.find(dept => dept.name === values.department);
+        const departmentId = selectedDept ? selectedDept.id : null;
+        
         // Update the department in profiles table
         const { error: profileError } = await supabase
           .from("profiles")
           .update({
-            department: values.department
+            department: departmentId
           })
           .eq("id", signUpData.user.id);
           
@@ -260,7 +269,7 @@ const UsersList = () => {
       email: user.email,
       fullName: user.fullName,
       role: user.roles[0] || UserRole.REQUESTER,
-      department: user.department || ""
+      department: user.department === "No Department" ? "" : user.department
     });
     setIsEditDialogOpen(true);
   };
@@ -269,29 +278,25 @@ const UsersList = () => {
     if (!currentUser) return;
     
     try {
-      console.log("Updating user with values:", values);
-      console.log("Current user:", currentUser);
+      // Find department ID from department name
+      const selectedDept = departments.find(dept => dept.name === values.department);
+      const departmentId = selectedDept ? selectedDept.id : null;
       
       // Update profile
       const { error: profileError } = await supabase
         .from("profiles")
         .update({ 
           full_name: values.fullName,
-          department: values.department 
+          department: departmentId 
         })
         .eq("id", currentUser.id);
 
       if (profileError) {
-        console.error("Profile update error:", profileError);
         throw profileError;
       }
 
-      console.log("Profile updated successfully");
-
       // Check if role needs to be updated
       if (values.role !== currentUser.roles[0]) {
-        console.log("Updating role from", currentUser.roles[0], "to", values.role);
-        
         // First check if the current user can assign this role
         const { data: canAssign, error: permissionError } = await supabase
           .rpc('can_assign_role', { 
@@ -300,7 +305,6 @@ const UsersList = () => {
           });
 
         if (permissionError) {
-          console.error('Error checking role assignment permission:', permissionError);
           throw permissionError;
         }
 
@@ -320,7 +324,6 @@ const UsersList = () => {
           .eq("user_id", currentUser.id);
 
         if (deleteRoleError) {
-          console.error("Role deletion error:", deleteRoleError);
           throw deleteRoleError;
         }
 
@@ -333,11 +336,8 @@ const UsersList = () => {
           });
 
         if (addRoleError) {
-          console.error("Role addition error:", addRoleError);
           throw addRoleError;
         }
-        
-        console.log("Role updated successfully");
       }
 
       toast({
@@ -346,7 +346,6 @@ const UsersList = () => {
       });
 
       setIsEditDialogOpen(false);
-      console.log("Refetching users data...");
       refetch();
     } catch (error) {
       console.error("Error updating user:", error);
