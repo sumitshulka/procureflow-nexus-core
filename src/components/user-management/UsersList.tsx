@@ -132,8 +132,10 @@ const UsersList = () => {
 
       // Join profiles with roles and emails
       return profiles.map(profile => {
-        // Find department name from ID
-        const department = departments.find(dept => dept.id === profile.department);
+        // Find department by ID or name
+        const department =
+          departments.find(dept => dept.id === profile.department) ||
+          departments.find(dept => dept.name === profile.department);
         
         return {
           id: profile.id,
