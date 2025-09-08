@@ -269,6 +269,9 @@ const UsersList = () => {
     if (!currentUser) return;
     
     try {
+      console.log("Updating user with values:", values);
+      console.log("Current user:", currentUser);
+      
       // Update profile
       const { error: profileError } = await supabase
         .from("profiles")
@@ -278,10 +281,17 @@ const UsersList = () => {
         })
         .eq("id", currentUser.id);
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error("Profile update error:", profileError);
+        throw profileError;
+      }
+
+      console.log("Profile updated successfully");
 
       // Check if role needs to be updated
       if (values.role !== currentUser.roles[0]) {
+        console.log("Updating role from", currentUser.roles[0], "to", values.role);
+        
         // First check if the current user can assign this role
         const { data: canAssign, error: permissionError } = await supabase
           .rpc('can_assign_role', { 
@@ -309,7 +319,10 @@ const UsersList = () => {
           .delete()
           .eq("user_id", currentUser.id);
 
-        if (deleteRoleError) throw deleteRoleError;
+        if (deleteRoleError) {
+          console.error("Role deletion error:", deleteRoleError);
+          throw deleteRoleError;
+        }
 
         // Add new role
         const { error: addRoleError } = await supabase
@@ -319,7 +332,12 @@ const UsersList = () => {
             role: values.role
           });
 
-        if (addRoleError) throw addRoleError;
+        if (addRoleError) {
+          console.error("Role addition error:", addRoleError);
+          throw addRoleError;
+        }
+        
+        console.log("Role updated successfully");
       }
 
       toast({
@@ -328,12 +346,13 @@ const UsersList = () => {
       });
 
       setIsEditDialogOpen(false);
+      console.log("Refetching users data...");
       refetch();
     } catch (error) {
       console.error("Error updating user:", error);
       toast({
         title: "Failed to update user",
-        description: error.message,
+        description: error?.message || "An unexpected error occurred",
         variant: "destructive"
       });
     }
