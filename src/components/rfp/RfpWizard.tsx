@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 import RfpBasicInfo from "./RfpBasicInfo";
 import RfpBoq from "./RfpBoq";
 import RfpVendors from "./RfpVendors";
@@ -26,7 +28,9 @@ export interface RfpWizardData {
 const RfpWizard = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
   const [wizardData, setWizardData] = useState<RfpWizardData>({
     basicInfo: {},
     boqItems: [],
@@ -35,12 +39,18 @@ const RfpWizard = () => {
     terms: {},
   });
 
-  // Check for template data and mode from URL parameters
+  // Load existing RFP data for editing or template data
   useEffect(() => {
+    const rfpId = searchParams.get('rfpId');
     const templateParam = searchParams.get('template');
     const mode = searchParams.get('mode');
-    
-    if (templateParam) {
+
+    // Priority 1: Load existing RFP data for editing
+    if (rfpId) {
+      loadRfpData(rfpId);
+    }
+    // Priority 2: Load template data
+    else if (templateParam) {
       try {
         const templateData = JSON.parse(decodeURIComponent(templateParam));
         
@@ -54,7 +64,6 @@ const RfpWizard = () => {
             estimatedValue: '',
             currency: 'USD',
             submissionDeadline: '',
-            // Include custom fields from template
             customFields: templateData.fields?.reduce((acc: any, field: any) => {
               acc[field.field_name] = '';
               return acc;
@@ -73,6 +82,67 @@ const RfpWizard = () => {
       }
     }
   }, [searchParams]);
+
+  const loadRfpData = async (rfpId: string) => {
+    try {
+      setIsLoading(true);
+      
+      // Fetch RFP data
+      const { data: rfpData, error: rfpError } = await supabase
+        .from('rfps')
+        .select('*')
+        .eq('id', rfpId)
+        .single();
+
+      if (rfpError) throw rfpError;
+
+      if (rfpData) {
+        // Populate wizard with existing RFP data
+        setWizardData({
+          basicInfo: {
+            id: rfpData.id,
+            title: rfpData.title,
+            description: rfpData.description,
+            rfpNumber: rfpData.rfp_number,
+            estimatedValue: rfpData.estimated_value,
+            currency: rfpData.currency,
+            submissionDeadline: rfpData.submission_deadline,
+            technicalDeadline: rfpData.technical_evaluation_deadline,
+            commercialDeadline: rfpData.commercial_evaluation_deadline,
+            preBidMeetingDate: rfpData.pre_bid_meeting_date,
+            preBidMeetingVenue: rfpData.pre_bid_meeting_venue,
+            bidValidityPeriod: rfpData.bid_validity_period,
+            status: rfpData.status,
+          },
+          boqItems: [],
+          vendors: [],
+          isPublic: false,
+          terms: {
+            termsAndConditions: rfpData.terms_and_conditions,
+            minimumEligibilityCriteria: rfpData.minimum_eligibility_criteria,
+            paymentTerms: rfpData.payment_terms,
+            deliveryTerms: rfpData.delivery_terms,
+            warrantyRequirements: rfpData.warranty_requirements,
+            evaluationCriteria: rfpData.evaluation_criteria,
+          },
+        });
+
+        toast({
+          title: "RFP Loaded",
+          description: "Existing RFP data has been loaded for editing.",
+        });
+      }
+    } catch (error: any) {
+      console.error('Error loading RFP data:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to load RFP data",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Determine steps based on mode
   const mode = searchParams.get('mode');
@@ -136,12 +206,15 @@ const RfpWizard = () => {
     const step = steps[currentStep - 1];
     if (!step) return null;
 
+    const rfpId = searchParams.get('rfpId');
     const props = {
       data: wizardData,
       onUpdate: updateWizardData,
       onNext: handleNext,
       templateData: templateParam ? JSON.parse(decodeURIComponent(templateParam)) : null,
-      mode: mode || 'quick'
+      mode: mode || 'quick',
+      rfpId: rfpId || undefined,
+      isEditMode: !!rfpId
     };
 
     switch (step.component) {
@@ -162,12 +235,27 @@ const RfpWizard = () => {
     }
   };
 
+  const rfpId = searchParams.get('rfpId');
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto py-6">
+        <Card>
+          <CardContent className="p-8 text-center">
+            <p className="text-muted-foreground">Loading RFP data...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto py-6">
       <Card>
         <CardHeader>
           <CardTitle>
-            {templateParam ? 'Create RFP from Template' : 
+            {rfpId ? 'Edit RFP' :
+             templateParam ? 'Create RFP from Template' : 
              mode === 'advanced' ? 'Create RFP - Advanced Setup' : 
              'Create RFP - Quick Start'}
           </CardTitle>
