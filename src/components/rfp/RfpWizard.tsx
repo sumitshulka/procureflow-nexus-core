@@ -97,6 +97,10 @@ const RfpWizard = () => {
       if (rfpError) throw rfpError;
 
       if (rfpData) {
+        // Extract BOQ items from evaluation_criteria if they exist
+        const evaluationCriteria = rfpData.evaluation_criteria as any;
+        const boqItems = evaluationCriteria?.boq_items || [];
+        
         // Populate wizard with existing RFP data
         setWizardData({
           basicInfo: {
@@ -114,7 +118,7 @@ const RfpWizard = () => {
             bidValidityPeriod: rfpData.bid_validity_period,
             status: rfpData.status,
           },
-          boqItems: [],
+          boqItems: boqItems,
           vendors: [],
           isPublic: false,
           terms: {

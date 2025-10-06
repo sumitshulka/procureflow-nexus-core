@@ -15,9 +15,11 @@ import type { RfpWizardData } from "./RfpWizard";
 interface RfpReviewProps {
   data: RfpWizardData;
   onUpdate: (data: any) => void;
+  rfpId?: string;
+  isEditMode?: boolean;
 }
 
-const RfpReview: React.FC<RfpReviewProps> = ({ data }) => {
+const RfpReview: React.FC<RfpReviewProps> = ({ data, rfpId, isEditMode }) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -60,7 +62,7 @@ const RfpReview: React.FC<RfpReviewProps> = ({ data }) => {
 
     setIsSubmitting(true);
     try {
-      // Create RFP
+      // Prepare RFP data
       const rfpData = {
         title: data.basicInfo.title,
         description: data.basicInfo.description,
@@ -75,10 +77,11 @@ const RfpReview: React.FC<RfpReviewProps> = ({ data }) => {
           data.basicInfo.commercial_evaluation_deadline ? new Date(data.basicInfo.commercial_evaluation_deadline).toISOString() : null,
         estimated_value: data.basicInfo.estimated_value,
         currency: data.basicInfo.currency,
-        // Store custom fields in evaluation_criteria
+        // Store custom fields and BOQ items in evaluation_criteria
         evaluation_criteria: {
           ...data.terms.evaluation_criteria,
-          custom_fields: data.basicInfo.customFieldsConfig || []
+          custom_fields: data.basicInfo.customFieldsConfig || [],
+          boq_items: data.boqItems || []
         },
         terms_and_conditions: data.terms.terms_and_conditions,
         minimum_eligibility_criteria: data.terms.minimum_eligibility_criteria,
@@ -90,31 +93,51 @@ const RfpReview: React.FC<RfpReviewProps> = ({ data }) => {
         payment_terms: data.terms.payment_terms,
         delivery_terms: data.terms.delivery_terms,
         warranty_requirements: data.terms.warranty_requirements,
-        created_by: user.id,
-        status: "draft",
+        updated_at: new Date().toISOString(),
       };
 
-      const { data: rfpResult, error: rfpError } = await supabase
-        .from("rfps")
-        .insert(rfpData as any)
-        .select()
-        .single();
+      let rfpResult;
+      let rfpError;
+
+      if (isEditMode && rfpId) {
+        // Update existing RFP
+        const result = await supabase
+          .from("rfps")
+          .update(rfpData as any)
+          .eq('id', rfpId)
+          .select()
+          .single();
+        
+        rfpResult = result.data;
+        rfpError = result.error;
+      } else {
+        // Create new RFP
+        const result = await supabase
+          .from("rfps")
+          .insert({
+            ...rfpData,
+            created_by: user.id,
+            status: "draft",
+          } as any)
+          .select()
+          .single();
+        
+        rfpResult = result.data;
+        rfpError = result.error;
+      }
 
       if (rfpError) throw rfpError;
 
-      // Insert BOQ items as RFP items (you may need to create this table)
-      // For now, we'll store them in a separate table or as JSON
-
       toast({
         title: "Success",
-        description: "RFP created successfully and submitted for approval",
+        description: isEditMode ? "RFP updated successfully" : "RFP created successfully and submitted for approval",
       });
 
       navigate("/rfp/active");
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Failed to create RFP",
+        description: error.message || `Failed to ${isEditMode ? 'update' : 'create'} RFP`,
         variant: "destructive",
       });
     } finally {
