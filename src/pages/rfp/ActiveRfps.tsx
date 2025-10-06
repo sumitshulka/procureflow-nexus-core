@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Eye, Edit, Trash2, Search, Plus } from "lucide-react";
+import { Eye, Edit, Trash2, Search, Plus, Lock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
@@ -100,10 +100,36 @@ const ActiveRfps = () => {
         return "default";
       case "canceled":
         return "destructive";
+      case "closed":
+        return "destructive";
       case "expired":
         return "secondary";
       default:
         return "secondary";
+    }
+  };
+
+  const handleCloseRfp = async (rfpId: string) => {
+    try {
+      const { error } = await supabase
+        .from("rfps")
+        .update({ status: "closed" })
+        .eq("id", rfpId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "RFP has been closed. Vendors can no longer submit responses.",
+      });
+
+      fetchRfps();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to close RFP",
+        variant: "destructive",
+      });
     }
   };
 
@@ -170,6 +196,7 @@ const ActiveRfps = () => {
                 <SelectItem value="published">Published</SelectItem>
                 <SelectItem value="evaluation">Under Evaluation</SelectItem>
                 <SelectItem value="awarded">Awarded</SelectItem>
+                <SelectItem value="closed">Closed</SelectItem>
                 <SelectItem value="canceled">Canceled</SelectItem>
                 <SelectItem value="expired">Expired</SelectItem>
               </SelectContent>
@@ -231,6 +258,16 @@ const ActiveRfps = () => {
                         onClick={() => handlePublishRfp(rfp.id)}
                       >
                         Publish
+                      </Button>
+                    )}
+                    {(rfp.status === "published" || rfp.status === "evaluation") && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleCloseRfp(rfp.id)}
+                        title="Close RFP"
+                      >
+                        <Lock className="h-4 w-4" />
                       </Button>
                     )}
                     <Button

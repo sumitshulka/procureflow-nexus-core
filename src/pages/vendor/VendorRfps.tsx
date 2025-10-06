@@ -53,11 +53,11 @@ const VendorRfps = () => {
         return [];
       }
       
-      // Get all published RFPs
+      // Get all published or closed RFPs
       const { data: rfps, error: rfpError } = await supabase
         .from("rfps")
         .select("*")
-        .eq("status", "published")
+        .in("status", ["published", "closed"])
         .order("created_at", { ascending: false });
       
       if (rfpError) throw rfpError;
@@ -97,6 +97,11 @@ const VendorRfps = () => {
   }) || [];
 
   const getStatusBadge = (rfp: any) => {
+    // Check if RFP is closed
+    if (rfp.status === 'closed') {
+      return <Badge variant="destructive"><AlertCircle className="w-3 h-3 mr-1" />Closed</Badge>;
+    }
+    
     if (rfp.hasResponded) {
       const status = rfp.response?.status || 'submitted';
       switch (status) {
@@ -301,7 +306,7 @@ const VendorRfps = () => {
                         <Eye className="w-4 h-4 mr-2" />
                         View Details
                       </Button>
-                      {!rfp.hasResponded && daysUntilDeadline > 0 && (
+                      {!rfp.hasResponded && daysUntilDeadline > 0 && rfp.status !== 'closed' && (
                         <Button 
                           size="sm"
                           onClick={() => navigate(`/vendor/rfps/${rfp.id}/respond`)}

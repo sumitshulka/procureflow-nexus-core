@@ -59,7 +59,6 @@ const VendorRfpResponse = () => {
         .from('rfps')
         .select('*')
         .eq('id', id)
-        .eq('status', 'published')
         .single();
       
       if (error) throw error;
@@ -247,6 +246,74 @@ const VendorRfpResponse = () => {
             </Button>
           </CardContent>
         </Card>
+      </div>
+    );
+  }
+
+  // Check if RFP is closed
+  if (rfp.status === 'closed') {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => navigate(`/vendor/rfps/${id}`)}
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to RFP Details
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold">RFP Closed</h1>
+            <p className="text-muted-foreground">This RFP has been closed and is no longer accepting responses</p>
+          </div>
+        </div>
+
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            This RFP has been closed by the procurement team. No further responses can be submitted.
+          </AlertDescription>
+        </Alert>
+
+        <Button onClick={() => navigate(`/vendor/rfps/${id}`)}>
+          <FileText className="w-4 h-4 mr-2" />
+          View RFP Details
+        </Button>
+      </div>
+    );
+  }
+
+  // Check if RFP is not published
+  if (rfp.status !== 'published') {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => navigate('/vendor/rfps')}
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to RFPs
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold">RFP Not Available</h1>
+            <p className="text-muted-foreground">This RFP is not currently accepting responses</p>
+          </div>
+        </div>
+
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            This RFP is currently {rfp.status}. Only published RFPs accept vendor responses.
+          </AlertDescription>
+        </Alert>
+
+        <Button onClick={() => navigate('/vendor/rfps')}>
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back to RFPs
+        </Button>
       </div>
     );
   }

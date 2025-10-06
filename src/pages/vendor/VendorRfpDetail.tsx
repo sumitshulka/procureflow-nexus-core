@@ -25,7 +25,6 @@ const VendorRfpDetail = () => {
         .from('rfps')
         .select('*')
         .eq('id', id)
-        .eq('status', 'published')
         .single();
       
       if (error) throw error;
@@ -104,7 +103,9 @@ const VendorRfpDetail = () => {
 
   const daysUntilDeadline = getDaysUntilDeadline(rfp.submission_deadline);
   const hasResponded = !!response;
-  const canRespond = !hasResponded && daysUntilDeadline > 0;
+  const isClosed = rfp.status === 'closed';
+  const isExpired = daysUntilDeadline <= 0;
+  const canRespond = !hasResponded && !isClosed && !isExpired && rfp.status === 'published';
 
   return (
     <div className="space-y-6">
