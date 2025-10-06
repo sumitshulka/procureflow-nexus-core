@@ -29,6 +29,8 @@ interface RFP {
   delivery_terms?: string;
   warranty_requirements?: string;
   minimum_eligibility_criteria?: string;
+  status?: string;
+  updated_at?: string;
 }
 
 interface CreateAddendumDialogProps {
@@ -213,6 +215,48 @@ export const CreateAddendumDialog: React.FC<CreateAddendumDialogProps> = ({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
+      let shouldReopenRfp = false;
+
+      // If auto-publishing and RFP is closed, check if we can reopen it
+      if (addendumData.auto_publish && rfpData?.status === 'closed') {
+        // Get organization settings for time limit
+        const { data: orgSettings, error: settingsError } = await supabase
+          .from('organization_settings')
+          .select('rfp_reopen_time_limit_days')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (!settingsError && orgSettings) {
+          const timeLimitDays = orgSettings.rfp_reopen_time_limit_days || 30;
+          const rfpUpdatedDate = new Date(rfpData.updated_at);
+          const now = new Date();
+          const daysSinceClosed = Math.floor((now.getTime() - rfpUpdatedDate.getTime()) / (1000 * 60 * 60 * 24));
+
+          if (daysSinceClosed <= timeLimitDays) {
+            shouldReopenRfp = true;
+          } else {
+            toast({
+              title: "Cannot Reopen RFP",
+              description: `This RFP was closed ${daysSinceClosed} days ago. The time limit of ${timeLimitDays} days has expired.`,
+              variant: "destructive",
+            });
+            setIsLoading(false);
+            return;
+          }
+        }
+      }
+
+      // If we need to reopen the RFP, do it first
+      if (shouldReopenRfp) {
+        const { error: reopenError } = await supabase
+          .from('rfps')
+          .update({ status: 'published' })
+          .eq('id', rfpId);
+
+        if (reopenError) throw reopenError;
+      }
+
       // Create the addendum
       const { error } = await supabase
         .from('rfp_addendums')
@@ -231,9 +275,11 @@ export const CreateAddendumDialog: React.FC<CreateAddendumDialogProps> = ({
 
       toast({
         title: "Success",
-        description: addendumData.auto_publish 
-          ? "Addendum created and published successfully"
-          : "Addendum created successfully",
+        description: shouldReopenRfp
+          ? "Addendum created, published, and RFP has been reopened for submissions"
+          : (addendumData.auto_publish 
+            ? "Addendum created and published successfully"
+            : "Addendum created successfully"),
       });
 
       // Reset form

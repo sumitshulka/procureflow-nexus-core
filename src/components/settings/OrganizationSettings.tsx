@@ -30,6 +30,11 @@ const formSchema = z.object({
     message: "Please select a time zone.",
   }),
   logoUrl: z.string().optional(),
+  rfpReopenTimeLimitDays: z.number().int().min(1, {
+    message: "RFP reopen time limit must be at least 1 day.",
+  }).max(365, {
+    message: "RFP reopen time limit cannot exceed 365 days.",
+  }),
 });
 
 const OrganizationSettings = () => {
@@ -79,6 +84,7 @@ const OrganizationSettings = () => {
       fiscalYearStart: "January",
       timeZone: "UTC",
       logoUrl: "",
+      rfpReopenTimeLimitDays: 30,
     },
   });
 
@@ -93,6 +99,7 @@ const OrganizationSettings = () => {
         fiscalYearStart: "January",
         timeZone: "UTC",
         logoUrl: "",
+        rfpReopenTimeLimitDays: orgSettings.rfp_reopen_time_limit_days || 30,
       });
     }
   }, [orgSettings, form]);
@@ -119,6 +126,7 @@ const OrganizationSettings = () => {
           .update({
             organization_name: values.organizationName,
             base_currency: values.baseCurrency,
+            rfp_reopen_time_limit_days: values.rfpReopenTimeLimitDays,
           })
           .eq('id', orgSettings.id)
           .select()
@@ -138,6 +146,7 @@ const OrganizationSettings = () => {
         const settingsData = {
           organization_name: values.organizationName,
           base_currency: values.baseCurrency,
+          rfp_reopen_time_limit_days: values.rfpReopenTimeLimitDays,
           created_by: user.id,
         };
 
@@ -350,6 +359,33 @@ const OrganizationSettings = () => {
                           <SelectItem value="IST">Indian Standard Time (IST)</SelectItem>
                         </SelectContent>
                       </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="border-t pt-6">
+                <h3 className="text-lg font-semibold mb-4">RFP Settings</h3>
+                <FormField
+                  control={form.control}
+                  name="rfpReopenTimeLimitDays"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>RFP Reopen Time Limit (Days)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          min="1"
+                          max="365"
+                          placeholder="30" 
+                          {...field}
+                          onChange={(e) => field.onChange(parseInt(e.target.value) || 30)}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Number of days after closing within which a closed RFP can be reopened by publishing an addendum. Default is 30 days.
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}

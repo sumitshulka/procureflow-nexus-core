@@ -88,6 +88,57 @@ export const RfpAddendums: React.FC<RfpAddendumsProps> = ({
 
   const handlePublish = async (addendumId: string) => {
     try {
+      // First, check if RFP is closed and if we need to reopen it
+      const { data: rfpData, error: rfpError } = await supabase
+        .from('rfps')
+        .select('id, status, updated_at')
+        .eq('id', rfpId)
+        .single();
+
+      if (rfpError) throw rfpError;
+
+      let shouldReopenRfp = false;
+
+      // If RFP is closed, check if we're within the reopen time limit
+      if (rfpData?.status === 'closed') {
+        // Get organization settings for time limit
+        const { data: orgSettings, error: settingsError } = await supabase
+          .from('organization_settings')
+          .select('rfp_reopen_time_limit_days')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (!settingsError && orgSettings) {
+          const timeLimitDays = orgSettings.rfp_reopen_time_limit_days || 30;
+          const rfpUpdatedDate = new Date(rfpData.updated_at);
+          const now = new Date();
+          const daysSinceClosed = Math.floor((now.getTime() - rfpUpdatedDate.getTime()) / (1000 * 60 * 60 * 24));
+
+          if (daysSinceClosed <= timeLimitDays) {
+            shouldReopenRfp = true;
+          } else {
+            toast({
+              title: "Cannot Reopen RFP",
+              description: `This RFP was closed ${daysSinceClosed} days ago. The time limit of ${timeLimitDays} days has expired.`,
+              variant: "destructive",
+            });
+            return;
+          }
+        }
+      }
+
+      // If we need to reopen the RFP, do it first
+      if (shouldReopenRfp) {
+        const { error: reopenError } = await supabase
+          .from('rfps')
+          .update({ status: 'published' })
+          .eq('id', rfpId);
+
+        if (reopenError) throw reopenError;
+      }
+
+      // Now publish the addendum
       const { error } = await supabase
         .from('rfp_addendums')
         .update({
@@ -100,7 +151,9 @@ export const RfpAddendums: React.FC<RfpAddendumsProps> = ({
 
       toast({
         title: "Success",
-        description: "Addendum published successfully",
+        description: shouldReopenRfp 
+          ? "Addendum published and RFP has been reopened for submissions"
+          : "Addendum published successfully",
       });
 
       fetchAddendums();
