@@ -236,7 +236,7 @@ const ActiveRfps = () => {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => navigate(`/rfp/edit/${rfp.id}`)}
+                      onClick={() => navigate(`/rfp/wizard?rfpId=${rfp.id}`)}
                     >
                       <Edit className="h-4 w-4" />
                     </Button>
