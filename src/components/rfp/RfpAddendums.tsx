@@ -14,7 +14,8 @@ import {
   Trash2, 
   Calendar,
   Send,
-  Settings
+  Settings,
+  AlertTriangle
 } from "lucide-react";
 
 interface RfpAddendum {
@@ -201,6 +202,20 @@ export const RfpAddendums: React.FC<RfpAddendumsProps> = ({
 
   return (
     <div className="space-y-6">
+      {rfpData?.status === 'closed' && canManage && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5" />
+            <div>
+              <h4 className="font-semibold text-amber-900">RFP is Closed</h4>
+              <p className="text-sm text-amber-700 mt-1">
+                This RFP is currently closed. Publishing an addendum will automatically reopen it for vendor submissions if within the configured time limit.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold">RFP Addendums</h3>
         

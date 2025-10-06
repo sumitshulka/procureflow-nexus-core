@@ -311,6 +311,19 @@ export const CreateAddendumDialog: React.FC<CreateAddendumDialogProps> = ({
           <DialogTitle>Create RFP Addendum</DialogTitle>
         </DialogHeader>
         
+        {rfpData?.status === 'closed' && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+            <div className="flex items-center space-x-2">
+              <AlertTriangle className="h-5 w-5 text-blue-600" />
+              <span className="font-medium text-blue-800">RFP Reopening Notice</span>
+            </div>
+            <p className="text-sm text-blue-700 mt-2">
+              This RFP is currently closed. If you publish this addendum and the RFP is within the configured reopen time limit, 
+              it will automatically be reopened for vendor submissions.
+            </p>
+          </div>
+        )}
+
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
           <div className="flex items-center space-x-2">
             <AlertTriangle className="h-5 w-5 text-amber-600" />

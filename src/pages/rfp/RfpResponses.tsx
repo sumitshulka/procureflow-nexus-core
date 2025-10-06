@@ -929,7 +929,7 @@ const RfpResponses = () => {
             <RfpAddendums 
               rfpId={rfp.id}
               rfpData={rfp}
-              canManage={rfp.status === 'published'} 
+              canManage={rfp.status === 'published' || rfp.status === 'closed'} 
             />
           </TabsContent>
 
