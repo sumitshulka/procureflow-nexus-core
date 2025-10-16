@@ -19,12 +19,6 @@ const VendorProductsList: React.FC<VendorProductsListProps> = ({ vendorId }) => 
   const { data: vendorProducts, isLoading, error } = useQuery({
     queryKey: ['vendor_products', vendorId, user?.id],
     queryFn: async () => {
-      // Ensure we have an authenticated session
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error('No active session');
-      }
-
       const { data, error } = await supabase
         .from('vendor_products')
         .select(`
