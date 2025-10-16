@@ -10,8 +10,9 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit, Loader2 } from "lucide-react";
+import { Plus, Edit, Loader2, Info } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import DataTable from "@/components/common/DataTable";
 import { format } from "date-fns";
 
@@ -58,6 +59,20 @@ const BudgetCyclesManager = () => {
         console.error('Budget cycles error:', error);
         throw error;
       }
+      return data || [];
+    }
+  });
+
+  // Check if budget heads are set up
+  const { data: budgetHeads } = useQuery({
+    queryKey: ['budget-heads-check'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('budget_heads')
+        .select('id')
+        .eq('is_active', true);
+      
+      if (error) throw error;
       return data || [];
     }
   });
@@ -132,6 +147,48 @@ const BudgetCyclesManager = () => {
     onError: (error: any) => {
       toast({ 
         title: "Error updating budget cycle", 
+        description: error.message,
+        variant: "destructive" 
+      });
+    }
+  });
+
+  const quickOpenMutation = useMutation({
+    mutationFn: async (cycleId: string) => {
+      // First check if budget heads exist
+      const { data: heads, error: headsError } = await supabase
+        .from('budget_heads')
+        .select('id')
+        .eq('is_active', true)
+        .limit(1);
+
+      if (headsError) throw headsError;
+      
+      if (!heads || heads.length === 0) {
+        throw new Error("Cannot open budget cycle. Please set up budget heads first.");
+      }
+
+      // Update cycle status to open
+      const { data, error } = await supabase
+        .from('budget_cycles')
+        .update({ status: 'open' })
+        .eq('id', cycleId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['budget-cycles'] });
+      toast({ 
+        title: "Budget cycle opened", 
+        description: "Department heads can now submit budgets for this cycle." 
+      });
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Cannot open budget cycle", 
         description: error.message,
         variant: "destructive" 
       });
@@ -215,9 +272,21 @@ const BudgetCyclesManager = () => {
       id: 'actions', 
       header: 'Actions',
       cell: (row: any) => (
-        <Button variant="ghost" size="sm" onClick={() => handleEdit(row)}>
-          <Edit className="h-4 w-4" />
-        </Button>
+        <div className="flex gap-2">
+          {row.status === 'draft' && (
+            <Button 
+              variant="default" 
+              size="sm" 
+              onClick={() => quickOpenMutation.mutate(row.id)}
+              disabled={quickOpenMutation.isPending}
+            >
+              Open Budget
+            </Button>
+          )}
+          <Button variant="ghost" size="sm" onClick={() => handleEdit(row)}>
+            <Edit className="h-4 w-4" />
+          </Button>
+        </div>
       )
     }
   ];
@@ -233,7 +302,12 @@ const BudgetCyclesManager = () => {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-semibold">Budget Cycles</h2>
+        <div>
+          <h2 className="text-2xl font-semibold">Budget Cycles</h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            Create budget cycles and open them for department heads to submit their budgets
+          </p>
+        </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button onClick={handleNewClick}>
@@ -369,6 +443,16 @@ const BudgetCyclesManager = () => {
           </DialogContent>
         </Dialog>
       </div>
+
+      {cycles && cycles.some(c => c.status === 'draft') && (!budgetHeads || budgetHeads.length === 0) && (
+        <Alert>
+          <Info className="h-4 w-4" />
+          <AlertDescription>
+            You have draft budget cycles. Before opening them, make sure to set up budget heads in the "Budget Heads" tab. 
+            Department heads will need budget heads to submit their allocations.
+          </AlertDescription>
+        </Alert>
+      )}
 
       <DataTable
         columns={columns}
