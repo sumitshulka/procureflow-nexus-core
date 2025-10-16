@@ -1839,6 +1839,198 @@ export type Database = {
           },
         ]
       }
+      risk_assessments: {
+        Row: {
+          category_id: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          due_date: string | null
+          id: string
+          impact: number
+          mitigation_strategy: string | null
+          owner_id: string | null
+          probability: number
+          risk_level: string | null
+          risk_score: number | null
+          status: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          category_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          impact: number
+          mitigation_strategy?: string | null
+          owner_id?: string | null
+          probability: number
+          risk_level?: string | null
+          risk_score?: number | null
+          status?: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          category_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          impact?: number
+          mitigation_strategy?: string | null
+          owner_id?: string | null
+          probability?: number
+          risk_level?: string | null
+          risk_score?: number | null
+          status?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "risk_assessments_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "risk_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      risk_categories: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      risk_metrics: {
+        Row: {
+          created_at: string | null
+          id: string
+          impact: number
+          metric_date: string | null
+          mitigation_progress: number | null
+          notes: string | null
+          probability: number
+          recorded_by: string | null
+          risk_id: string
+          risk_score: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          impact: number
+          metric_date?: string | null
+          mitigation_progress?: number | null
+          notes?: string | null
+          probability: number
+          recorded_by?: string | null
+          risk_id: string
+          risk_score?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          impact?: number
+          metric_date?: string | null
+          mitigation_progress?: number | null
+          notes?: string | null
+          probability?: number
+          recorded_by?: string | null
+          risk_id?: string
+          risk_score?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "risk_metrics_risk_id_fkey"
+            columns: ["risk_id"]
+            isOneToOne: false
+            referencedRelation: "risk_assessments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      risk_mitigation_actions: {
+        Row: {
+          action_description: string | null
+          action_title: string
+          assigned_to: string | null
+          completion_date: string | null
+          created_at: string | null
+          created_by: string | null
+          due_date: string | null
+          effectiveness_rating: number | null
+          id: string
+          risk_id: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          action_description?: string | null
+          action_title: string
+          assigned_to?: string | null
+          completion_date?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          due_date?: string | null
+          effectiveness_rating?: number | null
+          id?: string
+          risk_id: string
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          action_description?: string | null
+          action_title?: string
+          assigned_to?: string | null
+          completion_date?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          due_date?: string | null
+          effectiveness_rating?: number | null
+          id?: string
+          risk_id?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "risk_mitigation_actions_risk_id_fkey"
+            columns: ["risk_id"]
+            isOneToOne: false
+            referencedRelation: "risk_assessments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       role_permissions: {
         Row: {
           created_at: string

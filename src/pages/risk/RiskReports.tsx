@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,35 +7,156 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from "recharts";
 import { Download, FileText, TrendingUp, AlertTriangle, Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { subMonths, subYears, format } from "date-fns";
 
 const RiskReports = () => {
   const { toast } = useToast();
   const [selectedPeriod, setSelectedPeriod] = useState("last-3-months");
-  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [risks, setRisks] = useState<any[]>([]);
+  const [metrics, setMetrics] = useState<any[]>([]);
+  const [mitigationActions, setMitigationActions] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Mock data for reports
-  const riskTrendData = [
-    { month: "Oct", critical: 1, high: 3, medium: 5, low: 2 },
-    { month: "Nov", critical: 2, high: 4, medium: 6, low: 3 },
-    { month: "Dec", critical: 1, high: 2, medium: 7, low: 4 },
-    { month: "Jan", critical: 0, high: 3, medium: 5, low: 5 },
-  ];
+  useEffect(() => {
+    fetchData();
+  }, [selectedPeriod]);
 
-  const riskCategoryData = [
-    { name: "Vendor", value: 35, color: "#0088FE" },
-    { name: "Financial", value: 25, color: "#00C49F" },
-    { name: "Operational", value: 20, color: "#FFBB28" },
-    { name: "Compliance", value: 12, color: "#FF8042" },
-    { name: "Technology", value: 8, color: "#8884D8" },
-  ];
+  const getDateRangeForPeriod = () => {
+    const now = new Date();
+    switch (selectedPeriod) {
+      case "last-month":
+        return subMonths(now, 1);
+      case "last-3-months":
+        return subMonths(now, 3);
+      case "last-6-months":
+        return subMonths(now, 6);
+      case "last-year":
+        return subYears(now, 1);
+      default:
+        return subMonths(now, 3);
+    }
+  };
 
-  const mitigationEffectivenessData = [
-    { category: "Vendor", planned: 10, completed: 8, effectiveness: 80 },
-    { category: "Financial", planned: 8, completed: 6, effectiveness: 75 },
-    { category: "Operational", planned: 12, completed: 10, effectiveness: 83 },
-    { category: "Compliance", planned: 6, completed: 5, effectiveness: 83 },
-    { category: "Technology", planned: 4, completed: 3, effectiveness: 75 },
-  ];
+  const fetchData = async () => {
+    try {
+      const startDate = getDateRangeForPeriod();
+
+      // Fetch risk assessments
+      const { data: risksData, error: risksError } = await supabase
+        .from("risk_assessments")
+        .select(`
+          *,
+          category:risk_categories(id, name, color)
+        `)
+        .gte("created_at", startDate.toISOString())
+        .order("risk_score", { ascending: false });
+
+      if (risksError) throw risksError;
+      setRisks(risksData || []);
+
+      // Fetch risk metrics for the period
+      const { data: metricsData, error: metricsError } = await supabase
+        .from("risk_metrics")
+        .select(`
+          *,
+          risk:risk_assessments(title)
+        `)
+        .gte("metric_date", startDate.toISOString())
+        .order("metric_date", { ascending: true });
+
+      if (metricsError) throw metricsError;
+      setMetrics(metricsData || []);
+
+      // Fetch mitigation actions
+      const { data: actionsData, error: actionsError } = await supabase
+        .from("risk_mitigation_actions")
+        .select("*")
+        .gte("created_at", startDate.toISOString());
+
+      if (actionsError) throw actionsError;
+      setMitigationActions(actionsData || []);
+
+    } catch (error: any) {
+      console.error("Error fetching risk data:", error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch risk report data",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const getRiskTrendData = () => {
+    const monthlyData: any = {};
+    
+    metrics.forEach(metric => {
+      const monthKey = format(new Date(metric.metric_date), "MMM");
+      if (!monthlyData[monthKey]) {
+        monthlyData[monthKey] = { month: monthKey, critical: 0, high: 0, medium: 0, low: 0 };
+      }
+      
+      if (metric.risk_score >= 15) {
+        monthlyData[monthKey].critical++;
+      } else if (metric.risk_score >= 10) {
+        monthlyData[monthKey].high++;
+      } else if (metric.risk_score >= 5) {
+        monthlyData[monthKey].medium++;
+      } else {
+        monthlyData[monthKey].low++;
+      }
+    });
+
+    return Object.values(monthlyData);
+  };
+
+  const getRiskCategoryData = () => {
+    const categoryCount: any = {};
+    
+    risks.forEach(risk => {
+      const categoryName = risk.category?.name || "Uncategorized";
+      const categoryColor = risk.category?.color || "#94a3b8";
+      
+      if (!categoryCount[categoryName]) {
+        categoryCount[categoryName] = { name: categoryName, value: 0, color: categoryColor };
+      }
+      categoryCount[categoryName].value++;
+    });
+
+    return Object.values(categoryCount);
+  };
+
+  const getMitigationEffectivenessData = () => {
+    const categoryData: any = {};
+    
+    mitigationActions.forEach(action => {
+      const categoryName = action.category || "General";
+      if (!categoryData[categoryName]) {
+        categoryData[categoryName] = {
+          category: categoryName,
+          planned: 0,
+          completed: 0,
+          effectiveness: 0
+        };
+      }
+      
+      categoryData[categoryName].planned++;
+      if (action.status === "Completed") {
+        categoryData[categoryName].completed++;
+      }
+    });
+
+    // Calculate effectiveness percentage
+    Object.values(categoryData).forEach((data: any) => {
+      data.effectiveness = data.planned > 0 
+        ? Math.round((data.completed / data.planned) * 100) 
+        : 0;
+    });
+
+    return Object.values(categoryData);
+  };
 
   const handleExportReport = (reportType: string) => {
     toast({
@@ -44,6 +164,26 @@ const RiskReports = () => {
       description: `${reportType} report will be downloaded shortly`,
     });
   };
+
+  const totalRisks = risks.length;
+  const highCriticalRisks = risks.filter(r => r.risk_level === "High" || r.risk_level === "Critical").length;
+  const completedActions = mitigationActions.filter(a => a.status === "Completed").length;
+  const totalActions = mitigationActions.length;
+  const mitigationRate = totalActions > 0 ? Math.round((completedActions / totalActions) * 100) : 0;
+  
+  // Calculate average resolution time
+  const completedRisks = risks.filter(r => r.status === "Closed" || r.status === "Mitigated");
+  const avgResolutionTime = completedRisks.length > 0 
+    ? Math.round(completedRisks.reduce((sum, risk) => {
+        const created = new Date(risk.created_at);
+        const updated = new Date(risk.updated_at);
+        return sum + Math.round((updated.getTime() - created.getTime()) / (1000 * 60 * 60 * 24));
+      }, 0) / completedRisks.length)
+    : 0;
+
+  if (isLoading) {
+    return <div className="container mx-auto py-6">Loading...</div>;
+  }
 
   return (
     <div className="container mx-auto py-6">
@@ -76,8 +216,8 @@ const RiskReports = () => {
             <AlertTriangle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">42</div>
-            <div className="text-xs text-muted-foreground">+3 from last period</div>
+            <div className="text-2xl font-bold">{totalRisks}</div>
+            <div className="text-xs text-muted-foreground">In selected period</div>
           </CardContent>
         </Card>
         <Card>
@@ -86,8 +226,8 @@ const RiskReports = () => {
             <AlertTriangle className="h-4 w-4 text-red-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">5</div>
-            <div className="text-xs text-muted-foreground">-2 from last period</div>
+            <div className="text-2xl font-bold text-red-600">{highCriticalRisks}</div>
+            <div className="text-xs text-muted-foreground">Requires attention</div>
           </CardContent>
         </Card>
         <Card>
@@ -96,8 +236,8 @@ const RiskReports = () => {
             <TrendingUp className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">78%</div>
-            <div className="text-xs text-muted-foreground">+5% from last period</div>
+            <div className="text-2xl font-bold text-green-600">{mitigationRate}%</div>
+            <div className="text-xs text-muted-foreground">{completedActions} of {totalActions} actions</div>
           </CardContent>
         </Card>
         <Card>
@@ -106,8 +246,8 @@ const RiskReports = () => {
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">18 days</div>
-            <div className="text-xs text-muted-foreground">-3 days from last period</div>
+            <div className="text-2xl font-bold">{avgResolutionTime} days</div>
+            <div className="text-xs text-muted-foreground">{completedRisks.length} risks resolved</div>
           </CardContent>
         </Card>
       </div>
@@ -127,24 +267,30 @@ const RiskReports = () => {
                 <CardTitle>Risk Distribution by Category</CardTitle>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={riskCategoryData}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                      outerRadius={80}
-                      dataKey="value"
-                    >
-                      {riskCategoryData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
+                {getRiskCategoryData().length > 0 ? (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={getRiskCategoryData()}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        outerRadius={80}
+                        dataKey="value"
+                      >
+                        {getRiskCategoryData().map((entry: any, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+                    No data for selected period
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -153,19 +299,25 @@ const RiskReports = () => {
                 <CardTitle>Risk Severity Trend</CardTitle>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={riskTrendData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Line type="monotone" dataKey="critical" stroke="#dc2626" name="Critical" />
-                    <Line type="monotone" dataKey="high" stroke="#ea580c" name="High" />
-                    <Line type="monotone" dataKey="medium" stroke="#ca8a04" name="Medium" />
-                    <Line type="monotone" dataKey="low" stroke="#16a34a" name="Low" />
-                  </LineChart>
-                </ResponsiveContainer>
+                {getRiskTrendData().length > 0 ? (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={getRiskTrendData()}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="month" />
+                      <YAxis />
+                      <Tooltip />
+                      <Legend />
+                      <Line type="monotone" dataKey="critical" stroke="#dc2626" name="Critical" />
+                      <Line type="monotone" dataKey="high" stroke="#ea580c" name="High" />
+                      <Line type="monotone" dataKey="medium" stroke="#ca8a04" name="Medium" />
+                      <Line type="monotone" dataKey="low" stroke="#16a34a" name="Low" />
+                    </LineChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+                    No trend data for selected period
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -177,19 +329,25 @@ const RiskReports = () => {
               <CardTitle>Risk Trends Over Time</CardTitle>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={400}>
-                <BarChart data={riskTrendData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="critical" stackId="a" fill="#dc2626" name="Critical" />
-                  <Bar dataKey="high" stackId="a" fill="#ea580c" name="High" />
-                  <Bar dataKey="medium" stackId="a" fill="#ca8a04" name="Medium" />
-                  <Bar dataKey="low" stackId="a" fill="#16a34a" name="Low" />
-                </BarChart>
-              </ResponsiveContainer>
+              {getRiskTrendData().length > 0 ? (
+                <ResponsiveContainer width="100%" height={400}>
+                  <BarChart data={getRiskTrendData()}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Bar dataKey="critical" stackId="a" fill="#dc2626" name="Critical" />
+                    <Bar dataKey="high" stackId="a" fill="#ea580c" name="High" />
+                    <Bar dataKey="medium" stackId="a" fill="#ca8a04" name="Medium" />
+                    <Bar dataKey="low" stackId="a" fill="#16a34a" name="Low" />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-[400px] flex items-center justify-center text-muted-foreground">
+                  No data for selected period. Adjust the time range or create risk assessments.
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -200,17 +358,23 @@ const RiskReports = () => {
               <CardTitle>Mitigation Effectiveness by Category</CardTitle>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={400}>
-                <BarChart data={mitigationEffectivenessData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="category" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="planned" fill="#94a3b8" name="Planned" />
-                  <Bar dataKey="completed" fill="#3b82f6" name="Completed" />
-                </BarChart>
-              </ResponsiveContainer>
+              {getMitigationEffectivenessData().length > 0 ? (
+                <ResponsiveContainer width="100%" height={400}>
+                  <BarChart data={getMitigationEffectivenessData()}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="category" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Bar dataKey="planned" fill="#94a3b8" name="Planned" />
+                    <Bar dataKey="completed" fill="#3b82f6" name="Completed" />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-[400px] flex items-center justify-center text-muted-foreground">
+                  No mitigation data for selected period
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
