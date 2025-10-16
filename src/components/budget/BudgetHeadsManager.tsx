@@ -7,6 +7,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -19,6 +20,7 @@ const headSchema = z.object({
   name: z.string().min(1, "Name is required"),
   code: z.string().min(1, "Code is required"),
   description: z.string().optional(),
+  type: z.enum(["income", "expenditure"]).default("expenditure"),
   is_active: z.boolean().default(true),
   display_order: z.coerce.number().default(0)
 });
@@ -37,6 +39,7 @@ const BudgetHeadsManager = () => {
       name: "",
       code: "",
       description: "",
+      type: "expenditure",
       is_active: true,
       display_order: 0
     }
@@ -82,6 +85,7 @@ const BudgetHeadsManager = () => {
           name: values.name,
           code: values.code,
           description: values.description,
+          type: values.type,
           is_active: values.is_active,
           display_order: values.display_order,
           created_by: user.id 
@@ -149,6 +153,7 @@ const BudgetHeadsManager = () => {
       name: head.name,
       code: head.code,
       description: head.description || "",
+      type: head.type || "expenditure",
       is_active: head.is_active,
       display_order: head.display_order
     });
@@ -177,6 +182,15 @@ const BudgetHeadsManager = () => {
       id: 'name', 
       header: 'Name',
       cell: (row: any) => row.name 
+    },
+    { 
+      id: 'type', 
+      header: 'Type',
+      cell: (row: any) => (
+        <Badge variant={row.type === 'income' ? "default" : "secondary"}>
+          {row.type === 'income' ? "Income" : "Expenditure"}
+        </Badge>
+      )
     },
     { 
       id: 'description', 
@@ -279,6 +293,28 @@ const BudgetHeadsManager = () => {
                       <FormControl>
                         <Input placeholder="e.g., Capital Expenditure" {...field} />
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="type"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Type</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="income">Income</SelectItem>
+                          <SelectItem value="expenditure">Expenditure</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
