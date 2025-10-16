@@ -14,7 +14,10 @@ import { useToast } from "@/hooks/use-toast";
 import { RfpCommunications } from "@/components/rfp/RfpCommunications";
 import { RfpAddendums } from "@/components/rfp/RfpAddendums";
 import { RfpTimeline } from "@/components/rfp/RfpTimeline";
+import { RfpFieldHistory } from "@/components/rfp/RfpFieldHistory";
+import { FieldOverrideIndicator } from "@/components/rfp/FieldOverrideIndicator";
 import { format } from "date-fns";
+import { getEffectiveRfpData, getOverriddenFields } from "@/utils/rfpHelpers";
 
 interface RFPResponse {
   id: string;
@@ -229,6 +232,7 @@ const RfpResponses = () => {
   const [selectedRfpId, setSelectedRfpId] = useState<string>(rfpId || "");
   const [rfpSearchTerm, setRfpSearchTerm] = useState("");
   const [yearFilter, setYearFilter] = useState<string>(new Date().getFullYear().toString());
+  const [overriddenFields, setOverriddenFields] = useState<string[]>([]);
 
   useEffect(() => {
     fetchAllRfps();
@@ -277,22 +281,20 @@ const RfpResponses = () => {
 
   const fetchRfpData = async (id: string) => {
     try {
-      const { data: rfpData, error } = await supabase
-        .from("rfps")
-        .select("*")
-        .eq("id", id)
-        .single();
+      // Fetch effective RFP data with all published addendum overrides applied
+      const effectiveData = await getEffectiveRfpData(id);
+      
+      if (!effectiveData) {
+        throw new Error("Failed to fetch RFP data");
+      }
 
-      if (error) throw error;
-
-      // Transform the database response to match our RFP interface
-      const transformedRfp: RFP = {
-        ...rfpData,
-        evaluation_criteria: typeof rfpData.evaluation_criteria === 'string' 
-          ? JSON.parse(rfpData.evaluation_criteria) 
-          : rfpData.evaluation_criteria
-      };
+      // The helper already handles parsing evaluation_criteria
+      const transformedRfp: RFP = effectiveData as RFP;
       setRfp(transformedRfp);
+      
+      // Fetch which fields have been overridden
+      const overridden = await getOverriddenFields(id);
+      setOverriddenFields(overridden);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -526,6 +528,7 @@ const RfpResponses = () => {
             <TabsTrigger value="addendums">Addendums</TabsTrigger>
             <TabsTrigger value="communications">Communications</TabsTrigger>
             <TabsTrigger value="timeline">Timeline</TabsTrigger>
+            <TabsTrigger value="history">Version History</TabsTrigger>
             <TabsTrigger value="responses">Responses ({responses.length})</TabsTrigger>
           </TabsList>
 
@@ -586,12 +589,24 @@ const RfpResponses = () => {
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   <div>
-                    <span className="text-sm font-medium text-muted-foreground">Submission Deadline</span>
+                    <span className="text-sm font-medium text-muted-foreground">
+                      Submission Deadline
+                      <FieldOverrideIndicator 
+                        fieldName="submission_deadline" 
+                        hasOverride={overriddenFields.includes('submission_deadline')} 
+                      />
+                    </span>
                     <p className="font-medium text-red-600">{format(new Date(rfp.submission_deadline), "PPp")}</p>
                   </div>
                   {rfp.technical_evaluation_deadline && (
                     <div>
-                      <span className="text-sm font-medium text-muted-foreground">Technical Evaluation Deadline</span>
+                      <span className="text-sm font-medium text-muted-foreground">
+                        Technical Evaluation Deadline
+                        <FieldOverrideIndicator 
+                          fieldName="technical_evaluation_deadline" 
+                          hasOverride={overriddenFields.includes('technical_evaluation_deadline')} 
+                        />
+                      </span>
                       <p className="font-medium">{format(new Date(rfp.technical_evaluation_deadline), "PPp")}</p>
                     </div>
                   )}
@@ -944,6 +959,10 @@ const RfpResponses = () => {
 
           <TabsContent value="timeline" className="space-y-4">
             <RfpTimeline rfpId={rfp.id} />
+          </TabsContent>
+
+          <TabsContent value="history" className="space-y-4">
+            <RfpFieldHistory rfpId={rfp.id} rfpData={rfp} />
           </TabsContent>
         </Tabs>
       )}

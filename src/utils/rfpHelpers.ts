@@ -11,7 +11,16 @@ export const getEffectiveRfpData = async (rfpId: string) => {
     });
 
     if (error) throw error;
-    return data;
+    
+    // Cast to any first to handle the JSON type from RPC
+    const rfpData = data as any;
+    
+    // Parse evaluation_criteria if it's a string
+    if (rfpData && typeof rfpData.evaluation_criteria === 'string') {
+      rfpData.evaluation_criteria = JSON.parse(rfpData.evaluation_criteria);
+    }
+    
+    return rfpData;
   } catch (error) {
     console.error('Error fetching effective RFP data:', error);
     return null;
@@ -65,4 +74,30 @@ export const getEditableRfpFields = () => {
     'warranty_requirements',
     'minimum_eligibility_criteria'
   ];
+};
+
+/**
+ * Get list of fields that have been overridden by published addendums
+ */
+export const getOverriddenFields = async (rfpId: string): Promise<string[]> => {
+  try {
+    const { data: addendums, error } = await supabase
+      .from('rfp_addendums')
+      .select('field_overrides')
+      .eq('rfp_id', rfpId)
+      .eq('is_published', true);
+
+    if (error) throw error;
+
+    const overriddenFields = new Set<string>();
+    addendums?.forEach((addendum) => {
+      const overrides = addendum.field_overrides as Record<string, any>;
+      Object.keys(overrides).forEach(field => overriddenFields.add(field));
+    });
+
+    return Array.from(overriddenFields);
+  } catch (error) {
+    console.error('Error fetching overridden fields:', error);
+    return [];
+  }
 };
