@@ -43,7 +43,7 @@ const AssignDepartmentHeadDialog = ({
 }: AssignDepartmentHeadDialogProps) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [selectedHeadId, setSelectedHeadId] = useState<string>(currentHeadId || "");
+  const [selectedHeadId, setSelectedHeadId] = useState<string>(currentHeadId || "none");
 
   // Fetch users with department_head role
   const { data: departmentHeads = [], isLoading: isLoadingHeads } = useQuery({
@@ -103,7 +103,7 @@ const AssignDepartmentHeadDialog = ({
   });
 
   const handleSubmit = () => {
-    assignHeadMutation.mutate(selectedHeadId || null);
+    assignHeadMutation.mutate(selectedHeadId === "none" ? null : selectedHeadId);
   };
 
   return (
@@ -136,7 +136,7 @@ const AssignDepartmentHeadDialog = ({
                   <SelectValue placeholder="Select a department head" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None (Remove assignment)</SelectItem>
+                  <SelectItem value="none">None (Remove assignment)</SelectItem>
                   {departmentHeads.map((head) => (
                     <SelectItem key={head.id} value={head.id}>
                       {head.full_name}
