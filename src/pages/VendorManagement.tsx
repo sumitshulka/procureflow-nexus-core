@@ -56,7 +56,12 @@ const VendorManagement = () => {
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching vendors:', error);
+        throw error;
+      }
+      
+      console.log('Vendors fetched successfully:', data);
       
       // Transform the data to match our interface
       const transformedData: VendorRegistration[] = (data || []).map(item => ({
@@ -69,9 +74,10 @@ const VendorManagement = () => {
       
       setVendors(transformedData);
     } catch (error: any) {
+      console.error('Failed to fetch vendors:', error);
       toast({
         title: 'Error',
-        description: 'Failed to fetch vendors',
+        description: error?.message || 'Failed to fetch vendors',
         variant: 'destructive',
       });
     } finally {
