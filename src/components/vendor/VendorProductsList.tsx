@@ -3,9 +3,10 @@ import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
-import { Package, Calendar, DollarSign, Eye } from 'lucide-react';
+import { Package, Calendar, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface VendorProductsListProps {
   vendorId: string;
@@ -13,10 +14,17 @@ interface VendorProductsListProps {
 
 const VendorProductsList: React.FC<VendorProductsListProps> = ({ vendorId }) => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   
   const { data: vendorProducts, isLoading, error } = useQuery({
-    queryKey: ['vendor_products', vendorId],
+    queryKey: ['vendor_products', vendorId, user?.id],
     queryFn: async () => {
+      // Ensure we have an authenticated session
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('No active session');
+      }
+
       const { data, error } = await supabase
         .from('vendor_products')
         .select(`
@@ -38,7 +46,7 @@ const VendorProductsList: React.FC<VendorProductsListProps> = ({ vendorId }) => 
       if (error) throw error;
       return data || [];
     },
-    enabled: !!vendorId,
+    enabled: !!vendorId && !!user,
   });
 
   if (isLoading) {
