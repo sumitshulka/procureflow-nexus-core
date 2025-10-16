@@ -46,7 +46,7 @@ const RFP_FIELD_LABELS = {
   description: "Description",
   estimated_value: "Estimated Value",
   currency: "Currency",
-  submission_deadline: "Submission Deadline",
+  submission_deadline: "Submission Deadline (⚠️ extends opening dates)",
   technical_evaluation_deadline: "Technical Evaluation Deadline",
   commercial_evaluation_deadline: "Commercial Evaluation Deadline",
   pre_bid_meeting_date: "Pre-bid Meeting Date",

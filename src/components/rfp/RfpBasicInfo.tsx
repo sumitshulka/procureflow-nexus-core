@@ -22,6 +22,8 @@ const basicInfoSchema = z.object({
   description: z.string().optional(),
   procurement_request_id: z.string().optional(),
   submission_deadline: z.date({ required_error: "Submission deadline is required" }),
+  technical_opening_date: z.date().optional(),
+  commercial_opening_date: z.date().optional(),
   technical_evaluation_deadline: z.date().optional(),
   commercial_evaluation_deadline: z.date().optional(),
   estimated_value: z.number().min(0).optional(),
@@ -84,6 +86,8 @@ const RfpBasicInfo: React.FC<RfpBasicInfoProps> = ({ data, onUpdate, onNext, tem
         description: data.basicInfo.description || '',
         procurement_request_id: data.basicInfo.procurement_request_id || '',
         submission_deadline: data.basicInfo.submission_deadline ? new Date(data.basicInfo.submission_deadline) : undefined,
+        technical_opening_date: data.basicInfo.technical_opening_date ? new Date(data.basicInfo.technical_opening_date) : undefined,
+        commercial_opening_date: data.basicInfo.commercial_opening_date ? new Date(data.basicInfo.commercial_opening_date) : undefined,
         technical_evaluation_deadline: data.basicInfo.technical_evaluation_deadline ? new Date(data.basicInfo.technical_evaluation_deadline) : undefined,
         commercial_evaluation_deadline: data.basicInfo.commercial_evaluation_deadline ? new Date(data.basicInfo.commercial_evaluation_deadline) : undefined,
         estimated_value: data.basicInfo.estimated_value || undefined,
@@ -209,6 +213,90 @@ const RfpBasicInfo: React.FC<RfpBasicInfoProps> = ({ data, onUpdate, onNext, tem
                     />
                   </PopoverContent>
                 </Popover>
+                <FormMessage />
+          </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={form.control}
+            name="technical_opening_date"
+            render={({ field }) => (
+              <FormItem className="flex flex-col">
+                <FormLabel>Technical Opening Date</FormLabel>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <FormControl>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full pl-3 text-left font-normal",
+                          !field.value && "text-muted-foreground"
+                        )}
+                      >
+                        {field.value ? format(field.value, "PPP") : "Pick a date"}
+                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                      </Button>
+                    </FormControl>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={field.value}
+                      onSelect={field.onChange}
+                      disabled={(date) => {
+                        const submissionDeadline = form.getValues('submission_deadline');
+                        return date < (submissionDeadline || new Date());
+                      }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+                <p className="text-xs text-muted-foreground">
+                  Date when technical responses will be opened for evaluation
+                </p>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={form.control}
+            name="commercial_opening_date"
+            render={({ field }) => (
+              <FormItem className="flex flex-col">
+                <FormLabel>Commercial Opening Date</FormLabel>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <FormControl>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full pl-3 text-left font-normal",
+                          !field.value && "text-muted-foreground"
+                        )}
+                      >
+                        {field.value ? format(field.value, "PPP") : "Pick a date"}
+                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                      </Button>
+                    </FormControl>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={field.value}
+                      onSelect={field.onChange}
+                      disabled={(date) => {
+                        const submissionDeadline = form.getValues('submission_deadline');
+                        return date < (submissionDeadline || new Date());
+                      }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+                <p className="text-xs text-muted-foreground">
+                  Date when commercial responses will be opened for evaluation
+                </p>
                 <FormMessage />
               </FormItem>
             )}

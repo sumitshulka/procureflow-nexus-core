@@ -1737,6 +1737,8 @@ export type Database = {
           bid_validity_until: string | null
           commercial_documents: Json | null
           commercial_score: number | null
+          commercial_submission_status: string | null
+          commercial_submitted_at: string | null
           compliance_documents: Json | null
           created_at: string
           currency: string | null
@@ -1752,6 +1754,8 @@ export type Database = {
           submitted_at: string
           technical_documents: Json | null
           technical_score: number | null
+          technical_submission_status: string | null
+          technical_submitted_at: string | null
           total_bid_amount: number
           total_score: number | null
           updated_at: string
@@ -1762,6 +1766,8 @@ export type Database = {
           bid_validity_until?: string | null
           commercial_documents?: Json | null
           commercial_score?: number | null
+          commercial_submission_status?: string | null
+          commercial_submitted_at?: string | null
           compliance_documents?: Json | null
           created_at?: string
           currency?: string | null
@@ -1777,6 +1783,8 @@ export type Database = {
           submitted_at?: string
           technical_documents?: Json | null
           technical_score?: number | null
+          technical_submission_status?: string | null
+          technical_submitted_at?: string | null
           total_bid_amount: number
           total_score?: number | null
           updated_at?: string
@@ -1787,6 +1795,8 @@ export type Database = {
           bid_validity_until?: string | null
           commercial_documents?: Json | null
           commercial_score?: number | null
+          commercial_submission_status?: string | null
+          commercial_submitted_at?: string | null
           compliance_documents?: Json | null
           created_at?: string
           currency?: string | null
@@ -1802,6 +1812,8 @@ export type Database = {
           submitted_at?: string
           technical_documents?: Json | null
           technical_score?: number | null
+          technical_submission_status?: string | null
+          technical_submitted_at?: string | null
           total_bid_amount?: number
           total_score?: number | null
           updated_at?: string
@@ -1964,6 +1976,7 @@ export type Database = {
           attachments: Json | null
           bid_validity_period: number | null
           commercial_evaluation_deadline: string | null
+          commercial_opening_date: string | null
           created_at: string
           created_by: string
           currency: string | null
@@ -1981,6 +1994,7 @@ export type Database = {
           status: string
           submission_deadline: string
           technical_evaluation_deadline: string | null
+          technical_opening_date: string | null
           terms_and_conditions: string | null
           title: string
           updated_at: string
@@ -1990,6 +2004,7 @@ export type Database = {
           attachments?: Json | null
           bid_validity_period?: number | null
           commercial_evaluation_deadline?: string | null
+          commercial_opening_date?: string | null
           created_at?: string
           created_by: string
           currency?: string | null
@@ -2007,6 +2022,7 @@ export type Database = {
           status?: string
           submission_deadline: string
           technical_evaluation_deadline?: string | null
+          technical_opening_date?: string | null
           terms_and_conditions?: string | null
           title: string
           updated_at?: string
@@ -2016,6 +2032,7 @@ export type Database = {
           attachments?: Json | null
           bid_validity_period?: number | null
           commercial_evaluation_deadline?: string | null
+          commercial_opening_date?: string | null
           created_at?: string
           created_by?: string
           currency?: string | null
@@ -2033,6 +2050,7 @@ export type Database = {
           status?: string
           submission_deadline?: string
           technical_evaluation_deadline?: string | null
+          technical_opening_date?: string | null
           terms_and_conditions?: string | null
           title?: string
           updated_at?: string
@@ -2927,6 +2945,14 @@ export type Database = {
       can_delete_procurement_request: {
         Args: { p_request_id: string }
         Returns: Json
+      }
+      can_view_commercial_responses: {
+        Args: { p_rfp_id: string }
+        Returns: boolean
+      }
+      can_view_technical_responses: {
+        Args: { p_rfp_id: string }
+        Returns: boolean
       }
       check_password_history: {
         Args: {

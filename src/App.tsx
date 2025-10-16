@@ -91,6 +91,7 @@ import VendorProfile from '@/pages/vendor/VendorProfile';
 import VendorRfps from '@/pages/vendor/VendorRfps';
 import VendorRfpDetail from '@/pages/vendor/VendorRfpDetail';
 import VendorRfpResponse from '@/pages/vendor/VendorRfpResponse';
+import VendorRfpResponseTwoPart from '@/pages/vendor/VendorRfpResponseTwoPart';
 import VendorResponseView from '@/pages/vendor/VendorResponseView';
 import VendorPurchaseOrders from '@/pages/vendor/VendorPurchaseOrders';
 import VendorProducts from '@/pages/vendor/VendorProducts';
@@ -595,6 +596,14 @@ function App() {
           />
           <Route
             path="/vendor/rfps/:id/respond"
+            element={
+              <ProtectedRoute requireVendor={true}>
+                <VendorLayout><VendorRfpResponseTwoPart /></VendorLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/vendor/rfps/:id/respond-legacy"
             element={
               <ProtectedRoute requireVendor={true}>
                 <VendorLayout><VendorRfpResponse /></VendorLayout>
