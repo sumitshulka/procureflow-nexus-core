@@ -160,9 +160,15 @@ const BudgetCyclesManager = () => {
   };
 
   const handleDialogClose = () => {
+    console.log('Dialog closing');
     setIsDialogOpen(false);
     setEditingCycle(null);
     form.reset();
+  };
+
+  const handleNewClick = () => {
+    console.log('New cycle button clicked');
+    setIsDialogOpen(true);
   };
 
   const getStatusBadge = (status: string) => {
@@ -228,9 +234,9 @@ const BudgetCyclesManager = () => {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-semibold">Budget Cycles</h2>
-        <Dialog open={isDialogOpen} onOpenChange={handleDialogClose}>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={() => setIsDialogOpen(true)}>
+            <Button onClick={handleNewClick}>
               <Plus className="h-4 w-4 mr-2" />
               New Cycle
             </Button>

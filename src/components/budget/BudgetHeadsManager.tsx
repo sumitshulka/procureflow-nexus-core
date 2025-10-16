@@ -156,9 +156,15 @@ const BudgetHeadsManager = () => {
   };
 
   const handleDialogClose = () => {
+    console.log('Dialog closing');
     setIsDialogOpen(false);
     setEditingHead(null);
     form.reset();
+  };
+
+  const handleNewClick = () => {
+    console.log('New budget head button clicked');
+    setIsDialogOpen(true);
   };
 
   const columns = [
@@ -219,9 +225,9 @@ const BudgetHeadsManager = () => {
             Standard budget categories that departments will use for submissions
           </p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={handleDialogClose}>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={() => setIsDialogOpen(true)}>
+            <Button onClick={handleNewClick}>
               <Plus className="h-4 w-4 mr-2" />
               New Budget Head
             </Button>
