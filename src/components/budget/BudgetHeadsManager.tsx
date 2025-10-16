@@ -42,18 +42,34 @@ const BudgetHeadsManager = () => {
     }
   });
 
-  const { data: heads, isLoading } = useQuery({
+  const { data: heads, isLoading, error: queryError } = useQuery({
     queryKey: ['budget-heads'],
     queryFn: async () => {
+      console.log('Fetching budget heads...');
       const { data, error } = await supabase
         .from('budget_heads')
         .select('*')
         .order('display_order', { ascending: true });
       
-      if (error) throw error;
-      return data;
+      console.log('Budget heads result:', { data, error });
+      if (error) {
+        console.error('Budget heads error:', error);
+        throw error;
+      }
+      return data || [];
     }
   });
+
+  React.useEffect(() => {
+    if (queryError) {
+      console.error('Query error:', queryError);
+      toast({
+        title: "Error loading budget heads",
+        description: queryError instanceof Error ? queryError.message : "Failed to load data",
+        variant: "destructive"
+      });
+    }
+  }, [queryError, toast]);
 
   const createMutation = useMutation({
     mutationFn: async (values: HeadForm) => {

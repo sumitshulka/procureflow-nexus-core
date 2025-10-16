@@ -44,18 +44,34 @@ const BudgetCyclesManager = () => {
     }
   });
 
-  const { data: cycles, isLoading } = useQuery({
+  const { data: cycles, isLoading, error: queryError } = useQuery({
     queryKey: ['budget-cycles'],
     queryFn: async () => {
+      console.log('Fetching budget cycles...');
       const { data, error } = await supabase
         .from('budget_cycles')
         .select('*')
         .order('fiscal_year', { ascending: false });
       
-      if (error) throw error;
-      return data;
+      console.log('Budget cycles result:', { data, error });
+      if (error) {
+        console.error('Budget cycles error:', error);
+        throw error;
+      }
+      return data || [];
     }
   });
+
+  React.useEffect(() => {
+    if (queryError) {
+      console.error('Query error:', queryError);
+      toast({
+        title: "Error loading budget cycles",
+        description: queryError instanceof Error ? queryError.message : "Failed to load data",
+        variant: "destructive"
+      });
+    }
+  }, [queryError, toast]);
 
   const createMutation = useMutation({
     mutationFn: async (values: CycleForm) => {
