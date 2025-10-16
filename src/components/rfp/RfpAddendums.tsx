@@ -38,12 +38,14 @@ interface RfpAddendumsProps {
   rfpId: string;
   rfpData?: any;
   canManage?: boolean;
+  onRfpUpdate?: () => void;
 }
 
 export const RfpAddendums: React.FC<RfpAddendumsProps> = ({ 
   rfpId,
   rfpData,
-  canManage = false 
+  canManage = false,
+  onRfpUpdate
 }) => {
   const { toast } = useToast();
   const [addendums, setAddendums] = useState<RfpAddendum[]>([]);
@@ -158,6 +160,11 @@ export const RfpAddendums: React.FC<RfpAddendumsProps> = ({
       });
 
       fetchAddendums();
+      
+      // Notify parent component to refresh RFP data if status changed
+      if (shouldReopenRfp && onRfpUpdate) {
+        onRfpUpdate();
+      }
     } catch (error: any) {
       toast({
         title: "Error",
