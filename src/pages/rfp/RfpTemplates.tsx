@@ -286,10 +286,8 @@ const RfpTemplates = () => {
 
   const handleDeleteTemplate = async (templateId: string) => {
     try {
-      const { error } = await supabase
-        .from('rfp_templates')
-        .update({ is_active: false })
-        .eq('id', templateId);
+      const { data, error } = await supabase
+        .rpc('soft_delete_rfp_template', { p_template_id: templateId });
 
       if (error) throw error;
 

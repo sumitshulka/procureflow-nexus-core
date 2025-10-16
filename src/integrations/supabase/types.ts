@@ -3047,6 +3047,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
+      soft_delete_rfp_template: {
+        Args: { p_template_id: string }
+        Returns: boolean
+      }
       update_transaction_delivery_details: {
         Args: { p_delivery_details: Json; transaction_id: string }
         Returns: Json
