@@ -49,17 +49,26 @@ const AssignDepartmentHeadDialog = ({
   const { data: departmentHeads = [], isLoading: isLoadingHeads } = useQuery({
     queryKey: ["department-heads"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // First get user_ids with department_head role
+      const { data: roleData, error: roleError } = await supabase
         .from("user_roles")
-        .select("user_id, profiles!inner(id, full_name)")
+        .select("user_id")
         .eq("role", "department_head");
 
-      if (error) throw error;
+      if (roleError) throw roleError;
+      if (!roleData || roleData.length === 0) return [];
 
-      return data.map((item: any) => ({
-        id: item.profiles.id,
-        full_name: item.profiles.full_name,
-      })) as DepartmentHead[];
+      const userIds = roleData.map(r => r.user_id);
+
+      // Then fetch profile information for those users
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .in("id", userIds);
+
+      if (profileError) throw profileError;
+
+      return (profileData || []) as DepartmentHead[];
     },
     enabled: open,
   });
