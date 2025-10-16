@@ -407,6 +407,7 @@ export type Database = {
         Row: {
           created_at: string
           description: string | null
+          head_of_department_id: string | null
           id: string
           is_active: boolean | null
           name: string
@@ -415,6 +416,7 @@ export type Database = {
         Insert: {
           created_at?: string
           description?: string | null
+          head_of_department_id?: string | null
           id?: string
           is_active?: boolean | null
           name: string
@@ -423,12 +425,21 @@ export type Database = {
         Update: {
           created_at?: string
           description?: string | null
+          head_of_department_id?: string | null
           id?: string
           is_active?: boolean | null
           name?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "departments_head_of_department_id_fkey"
+            columns: ["head_of_department_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       email_provider_settings: {
         Row: {
@@ -3069,6 +3080,7 @@ export type Database = {
         | "finance_officer"
         | "vendor"
         | "evaluation_committee"
+        | "department_head"
       vendor_status:
         | "pending"
         | "under_review"
@@ -3229,6 +3241,7 @@ export const Constants = {
         "finance_officer",
         "vendor",
         "evaluation_committee",
+        "department_head",
       ],
       vendor_status: [
         "pending",

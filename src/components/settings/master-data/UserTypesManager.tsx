@@ -13,6 +13,7 @@ const UserTypesManager = () => {
     { role: UserRole.INVENTORY_MANAGER, description: 'Manage inventory' },
     { role: UserRole.FINANCE_OFFICER, description: 'Financial operations' },
     { role: UserRole.EVALUATION_COMMITTEE, description: 'Evaluate proposals' },
+    { role: 'department_head' as UserRole, description: 'Head of Department - Can be assigned as department head' },
   ];
 
   return (

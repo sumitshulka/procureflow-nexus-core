@@ -18,6 +18,7 @@ export enum UserRole {
   INVENTORY_MANAGER = "inventory_manager",
   FINANCE_OFFICER = "finance_officer",
   EVALUATION_COMMITTEE = "evaluation_committee",
+  DEPARTMENT_HEAD = "department_head",
 }
 
 // Product & Catalog Types

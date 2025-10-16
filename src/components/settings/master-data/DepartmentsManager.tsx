@@ -11,10 +11,11 @@ import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Loader2, Plus, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { Loader2, Plus, MoreHorizontal, Pencil, Trash2, UserCog } from "lucide-react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import AssignDepartmentHeadDialog from "./AssignDepartmentHeadDialog";
 
 // Department schema for form validation
 const departmentSchema = z.object({
@@ -27,6 +28,10 @@ interface DepartmentData {
   name: string;
   description: string | null;
   created_at: string;
+  head_of_department_id: string | null;
+  head_profile?: {
+    full_name: string;
+  } | null;
 }
 
 const DepartmentsManager = () => {
@@ -34,6 +39,7 @@ const DepartmentsManager = () => {
   const queryClient = useQueryClient();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isAssignHeadOpen, setIsAssignHeadOpen] = useState(false);
   const [currentDept, setCurrentDept] = useState<DepartmentData | null>(null);
   
   // Form setup for creating new departments
@@ -54,13 +60,16 @@ const DepartmentsManager = () => {
     },
   });
   
-  // Fetch departments
+  // Fetch departments with head info
   const { data: departments = [], isLoading, error } = useQuery({
     queryKey: ["departments"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("departments")
-        .select("*")
+        .select(`
+          *,
+          head_profile:profiles!departments_head_of_department_id_fkey(full_name)
+        `)
         .order("name");
       
       if (error) throw error;
@@ -190,6 +199,12 @@ const DepartmentsManager = () => {
     if (window.confirm("Are you sure you want to delete this department? This may affect users assigned to this department.")) {
       deleteDepartmentMutation.mutate(id);
     }
+  };
+
+  // Handle assign department head
+  const handleAssignHead = (dept: DepartmentData) => {
+    setCurrentDept(dept);
+    setIsAssignHeadOpen(true);
   };
   
   return (
@@ -328,13 +343,14 @@ const DepartmentsManager = () => {
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead className="hidden sm:table-cell">Description</TableHead>
+                  <TableHead className="hidden md:table-cell">Department Head</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {departments.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={3} className="text-center py-6 text-muted-foreground">
+                    <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">
                       No departments found. Create your first department to get started.
                     </TableCell>
                   </TableRow>
@@ -345,6 +361,11 @@ const DepartmentsManager = () => {
                       <TableCell className="hidden sm:table-cell max-w-md truncate">
                         {dept.description || "-"}
                       </TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        {dept.head_profile?.full_name || (
+                          <span className="text-muted-foreground italic">Not assigned</span>
+                        )}
+                      </TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -353,6 +374,9 @@ const DepartmentsManager = () => {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleAssignHead(dept)}>
+                              <UserCog className="w-4 h-4 mr-2" /> Assign Department Head
+                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleEditDepartment(dept)}>
                               <Pencil className="w-4 h-4 mr-2" /> Edit Department
                             </DropdownMenuItem>
@@ -371,6 +395,16 @@ const DepartmentsManager = () => {
               </TableBody>
             </Table>
           </div>
+        )}
+        
+        {currentDept && (
+          <AssignDepartmentHeadDialog
+            open={isAssignHeadOpen}
+            onOpenChange={setIsAssignHeadOpen}
+            departmentId={currentDept.id}
+            departmentName={currentDept.name}
+            currentHeadId={currentDept.head_of_department_id}
+          />
         )}
       </CardContent>
     </Card>
