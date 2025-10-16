@@ -22,7 +22,8 @@ const headSchema = z.object({
   description: z.string().optional(),
   type: z.enum(["income", "expenditure"]).default("expenditure"),
   is_active: z.boolean().default(true),
-  display_order: z.coerce.number().default(0)
+  display_order: z.coerce.number().default(0),
+  allow_department_subitems: z.boolean().default(false)
 });
 
 type HeadForm = z.infer<typeof headSchema>;
@@ -41,7 +42,8 @@ const BudgetHeadsManager = () => {
       description: "",
       type: "expenditure",
       is_active: true,
-      display_order: 0
+      display_order: 0,
+      allow_department_subitems: false
     }
   });
 
@@ -52,6 +54,7 @@ const BudgetHeadsManager = () => {
       const { data, error } = await supabase
         .from('budget_heads')
         .select('*')
+        .order('type', { ascending: false }) // Income first, then expenditure
         .order('display_order', { ascending: true });
       
       console.log('Budget heads result:', { data, error });
@@ -88,6 +91,7 @@ const BudgetHeadsManager = () => {
           type: values.type,
           is_active: values.is_active,
           display_order: values.display_order,
+          allow_department_subitems: values.allow_department_subitems,
           created_by: user.id 
         }])
         .select()
@@ -155,7 +159,8 @@ const BudgetHeadsManager = () => {
       description: head.description || "",
       type: head.type || "expenditure",
       is_active: head.is_active,
-      display_order: head.display_order
+      display_order: head.display_order,
+      allow_department_subitems: head.allow_department_subitems || false
     });
     setIsDialogOpen(true);
   };
@@ -184,18 +189,18 @@ const BudgetHeadsManager = () => {
       cell: (row: any) => row.name 
     },
     { 
-      id: 'type', 
-      header: 'Type',
-      cell: (row: any) => (
-        <Badge variant={row.type === 'income' ? "default" : "secondary"}>
-          {row.type === 'income' ? "Income" : "Expenditure"}
-        </Badge>
-      )
-    },
-    { 
       id: 'description', 
       header: 'Description',
       cell: (row: any) => row.description || '-'
+    },
+    { 
+      id: 'allow_department_subitems', 
+      header: 'Allow Sub-items',
+      cell: (row: any) => (
+        <Badge variant={row.allow_department_subitems ? "default" : "secondary"}>
+          {row.allow_department_subitems ? "Yes" : "No"}
+        </Badge>
+      )
     },
     { 
       id: 'display_order', 
@@ -339,6 +344,27 @@ const BudgetHeadsManager = () => {
 
                 <FormField
                   control={form.control}
+                  name="allow_department_subitems"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center justify-between rounded-lg border p-4">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base">Allow Department Sub-items</FormLabel>
+                        <FormDescription>
+                          Allow department heads to create sub-items under this budget head
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
                   name="is_active"
                   render={({ field }) => (
                     <FormItem className="flex items-center justify-between rounded-lg border p-4">
@@ -375,11 +401,37 @@ const BudgetHeadsManager = () => {
         </Dialog>
       </div>
 
-      <DataTable
-        columns={columns}
-        data={heads || []}
-        emptyMessage="No budget heads found. Create standard categories for departments."
-      />
+      {/* Group heads by type */}
+      {heads && heads.length > 0 ? (
+        <>
+          {['income', 'expenditure'].map(type => {
+            const typeHeads = heads.filter(h => h.type === type);
+            if (typeHeads.length === 0) return null;
+            
+            return (
+              <div key={type} className="space-y-2">
+                <h3 className="text-lg font-semibold capitalize flex items-center gap-2">
+                  {type}
+                  <Badge variant={type === 'income' ? "default" : "secondary"}>
+                    {typeHeads.length}
+                  </Badge>
+                </h3>
+                <DataTable
+                  columns={columns}
+                  data={typeHeads}
+                  emptyMessage={`No ${type} heads found.`}
+                />
+              </div>
+            );
+          })}
+        </>
+      ) : (
+        <DataTable
+          columns={columns}
+          data={[]}
+          emptyMessage="No budget heads found. Create standard categories for departments."
+        />
+      )}
     </div>
   );
 };

@@ -280,6 +280,7 @@ export type Database = {
       }
       budget_heads: {
         Row: {
+          allow_department_subitems: boolean
           code: string | null
           created_at: string | null
           created_by: string
@@ -292,6 +293,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          allow_department_subitems?: boolean
           code?: string | null
           created_at?: string | null
           created_by: string
@@ -304,6 +306,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          allow_department_subitems?: boolean
           code?: string | null
           created_at?: string | null
           created_by?: string
