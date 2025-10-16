@@ -160,6 +160,195 @@ export type Database = {
         }
         Relationships: []
       }
+      budget_allocations: {
+        Row: {
+          allocated_amount: number
+          approved_amount: number | null
+          created_at: string | null
+          cycle_id: string
+          department_id: string | null
+          head_id: string
+          id: string
+          notes: string | null
+          period_number: number
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["budget_allocation_status"]
+          submitted_at: string | null
+          submitted_by: string
+          updated_at: string | null
+        }
+        Insert: {
+          allocated_amount?: number
+          approved_amount?: number | null
+          created_at?: string | null
+          cycle_id: string
+          department_id?: string | null
+          head_id: string
+          id?: string
+          notes?: string | null
+          period_number: number
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["budget_allocation_status"]
+          submitted_at?: string | null
+          submitted_by: string
+          updated_at?: string | null
+        }
+        Update: {
+          allocated_amount?: number
+          approved_amount?: number | null
+          created_at?: string | null
+          cycle_id?: string
+          department_id?: string | null
+          head_id?: string
+          id?: string
+          notes?: string | null
+          period_number?: number
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["budget_allocation_status"]
+          submitted_at?: string | null
+          submitted_by?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "budget_allocations_cycle_id_fkey"
+            columns: ["cycle_id"]
+            isOneToOne: false
+            referencedRelation: "budget_cycles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "budget_allocations_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "budget_allocations_head_id_fkey"
+            columns: ["head_id"]
+            isOneToOne: false
+            referencedRelation: "budget_heads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      budget_cycles: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          end_date: string
+          fiscal_year: number
+          id: string
+          name: string
+          period_type: Database["public"]["Enums"]["budget_period_type"]
+          start_date: string
+          status: Database["public"]["Enums"]["budget_cycle_status"]
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          end_date: string
+          fiscal_year: number
+          id?: string
+          name: string
+          period_type?: Database["public"]["Enums"]["budget_period_type"]
+          start_date: string
+          status?: Database["public"]["Enums"]["budget_cycle_status"]
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          end_date?: string
+          fiscal_year?: number
+          id?: string
+          name?: string
+          period_type?: Database["public"]["Enums"]["budget_period_type"]
+          start_date?: string
+          status?: Database["public"]["Enums"]["budget_cycle_status"]
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      budget_heads: {
+        Row: {
+          code: string | null
+          created_at: string | null
+          created_by: string
+          description: string | null
+          display_order: number | null
+          id: string
+          is_active: boolean | null
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          code?: string | null
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          code?: string | null
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      budget_line_items: {
+        Row: {
+          allocation_id: string
+          amount: number
+          created_at: string | null
+          description: string
+          id: string
+          justification: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          allocation_id: string
+          amount: number
+          created_at?: string | null
+          description: string
+          id?: string
+          justification?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          allocation_id?: string
+          amount?: number
+          created_at?: string | null
+          description?: string
+          id?: string
+          justification?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "budget_line_items_allocation_id_fkey"
+            columns: ["allocation_id"]
+            isOneToOne: false
+            referencedRelation: "budget_allocations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       categories: {
         Row: {
           created_at: string | null
@@ -2852,6 +3041,14 @@ export type Database = {
       }
     }
     Enums: {
+      budget_allocation_status:
+        | "draft"
+        | "submitted"
+        | "under_review"
+        | "approved"
+        | "rejected"
+      budget_cycle_status: "draft" | "open" | "closed" | "archived"
+      budget_period_type: "monthly" | "quarterly"
       request_priority: "low" | "medium" | "high" | "urgent"
       request_status:
         | "draft"
@@ -3002,6 +3199,15 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      budget_allocation_status: [
+        "draft",
+        "submitted",
+        "under_review",
+        "approved",
+        "rejected",
+      ],
+      budget_cycle_status: ["draft", "open", "closed", "archived"],
+      budget_period_type: ["monthly", "quarterly"],
       request_priority: ["low", "medium", "high", "urgent"],
       request_status: [
         "draft",
