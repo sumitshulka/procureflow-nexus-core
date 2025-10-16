@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import DataTable from "@/components/common/DataTable";
 import { format } from "date-fns";
+import OpenBudgetDialog from "./OpenBudgetDialog";
 
 const cycleSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -32,6 +33,8 @@ const BudgetCyclesManager = () => {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCycle, setEditingCycle] = useState<any>(null);
+  const [openBudgetDialogOpen, setOpenBudgetDialogOpen] = useState(false);
+  const [cycleToOpen, setCycleToOpen] = useState<any>(null);
 
   const form = useForm<CycleForm>({
     resolver: zodResolver(cycleSchema),
@@ -153,47 +156,10 @@ const BudgetCyclesManager = () => {
     }
   });
 
-  const quickOpenMutation = useMutation({
-    mutationFn: async (cycleId: string) => {
-      // First check if budget heads exist
-      const { data: heads, error: headsError } = await supabase
-        .from('budget_heads')
-        .select('id')
-        .eq('is_active', true)
-        .limit(1);
-
-      if (headsError) throw headsError;
-      
-      if (!heads || heads.length === 0) {
-        throw new Error("Cannot open budget cycle. Please set up budget heads first.");
-      }
-
-      // Update cycle status to open
-      const { data, error } = await supabase
-        .from('budget_cycles')
-        .update({ status: 'open' })
-        .eq('id', cycleId)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['budget-cycles'] });
-      toast({ 
-        title: "Budget cycle opened", 
-        description: "Department heads can now submit budgets for this cycle." 
-      });
-    },
-    onError: (error: any) => {
-      toast({ 
-        title: "Cannot open budget cycle", 
-        description: error.message,
-        variant: "destructive" 
-      });
-    }
-  });
+  const handleOpenBudget = (cycle: any) => {
+    setCycleToOpen(cycle);
+    setOpenBudgetDialogOpen(true);
+  };
 
   const onSubmit = (data: CycleForm) => {
     if (editingCycle) {
@@ -277,8 +243,7 @@ const BudgetCyclesManager = () => {
             <Button 
               variant="default" 
               size="sm" 
-              onClick={() => quickOpenMutation.mutate(row.id)}
-              disabled={quickOpenMutation.isPending}
+              onClick={() => handleOpenBudget(row)}
             >
               Open Budget
             </Button>
@@ -459,6 +424,15 @@ const BudgetCyclesManager = () => {
         data={cycles || []}
         emptyMessage="No budget cycles found. Create one to get started."
       />
+
+      {cycleToOpen && (
+        <OpenBudgetDialog
+          open={openBudgetDialogOpen}
+          onOpenChange={setOpenBudgetDialogOpen}
+          cycleId={cycleToOpen.id}
+          cycleName={cycleToOpen.name}
+        />
+      )}
     </div>
   );
 };

@@ -238,6 +238,7 @@ export type Database = {
       }
       budget_cycles: {
         Row: {
+          allowed_department_ids: string[] | null
           created_at: string | null
           created_by: string
           end_date: string
@@ -250,6 +251,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          allowed_department_ids?: string[] | null
           created_at?: string | null
           created_by: string
           end_date: string
@@ -262,6 +264,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          allowed_department_ids?: string[] | null
           created_at?: string | null
           created_by?: string
           end_date?: string
