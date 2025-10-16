@@ -17,7 +17,7 @@ import VendorApprovalDialog from '@/components/vendor/VendorApprovalDialog';
 
 const VendorManagement = () => {
   const { toast } = useToast();
-  const { hasRole } = useAuth();
+  const { hasRole, user } = useAuth();
   const navigate = useNavigate();
   const [vendors, setVendors] = useState<VendorRegistration[]>([]);
   const [filteredVendors, setFilteredVendors] = useState<VendorRegistration[]>([]);
@@ -44,6 +44,13 @@ const VendorManagement = () => {
   const fetchVendors = async () => {
     try {
       setIsLoading(true);
+      
+      // Ensure we have an authenticated session
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('No active session');
+      }
+
       const { data, error } = await supabase
         .from('vendor_registrations')
         .select('*')
@@ -73,10 +80,10 @@ const VendorManagement = () => {
   };
 
   useEffect(() => {
-    if (hasRole(UserRole.ADMIN) || hasRole(UserRole.PROCUREMENT_OFFICER)) {
+    if ((hasRole(UserRole.ADMIN) || hasRole(UserRole.PROCUREMENT_OFFICER)) && user) {
       fetchVendors();
     }
-  }, [hasRole]);
+  }, [hasRole, user]);
 
   useEffect(() => {
     let filtered = vendors;
