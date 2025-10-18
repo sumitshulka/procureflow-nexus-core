@@ -16,6 +16,7 @@ import { RfpAddendums } from "@/components/rfp/RfpAddendums";
 import { RfpTimeline } from "@/components/rfp/RfpTimeline";
 import { RfpFieldHistory } from "@/components/rfp/RfpFieldHistory";
 import { FieldOverrideIndicator } from "@/components/rfp/FieldOverrideIndicator";
+import TechnicalScoreReview from "@/components/rfp/TechnicalScoreReview";
 import { format } from "date-fns";
 import { getEffectiveRfpData, getOverriddenFields } from "@/utils/rfpHelpers";
 
@@ -63,6 +64,8 @@ interface RFP {
   estimated_value?: number;
   currency?: string;
   submission_deadline: string;
+  technical_opening_date?: string;
+  commercial_opening_date?: string;
   technical_evaluation_deadline?: string;
   commercial_evaluation_deadline?: string;
   pre_bid_meeting_date?: string;
@@ -73,6 +76,8 @@ interface RFP {
   delivery_terms?: string;
   warranty_requirements?: string;
   minimum_eligibility_criteria?: string;
+  enable_technical_scoring?: boolean;
+  minimum_technical_score?: number;
   created_at: string;
   evaluation_criteria?: {
     type: string; // 'qcbs', 'price_l1', 'technical_l1'
@@ -724,8 +729,21 @@ const RfpResponses = () => {
               <Tabs defaultValue="evaluation" className="w-full">
                 <TabsList>
                   <TabsTrigger value="evaluation">Evaluation Summary</TabsTrigger>
+                  {rfp?.enable_technical_scoring && (
+                    <TabsTrigger value="technical-scores">Technical Scores</TabsTrigger>
+                  )}
                   <TabsTrigger value="details">Response Details</TabsTrigger>
                 </TabsList>
+
+                {/* Technical Scores Tab */}
+                {rfp?.enable_technical_scoring && (
+                  <TabsContent value="technical-scores" className="space-y-4">
+                    <TechnicalScoreReview 
+                      rfpId={rfp.id} 
+                      minimumScore={rfp.minimum_technical_score || undefined}
+                    />
+                  </TabsContent>
+                )}
 
                 <TabsContent value="evaluation" className="space-y-4">
                   <Card>

@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import VendorTechnicalResponse from '@/components/rfp/VendorTechnicalResponse';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -473,6 +474,15 @@ const VendorRfpResponseTwoPart = () => {
         </TabsList>
 
         <TabsContent value="technical" className="space-y-4">
+          {/* Technical Scoring Section (if enabled) */}
+          {rfp?.enable_technical_scoring && existingResponse && (
+            <VendorTechnicalResponse 
+              rfpId={rfp.id} 
+              responseId={existingResponse.id}
+              disabled={technicalSubmitted}
+            />
+          )}
+          
           <Card>
             <CardHeader>
               <CardTitle>Technical Proposal</CardTitle>

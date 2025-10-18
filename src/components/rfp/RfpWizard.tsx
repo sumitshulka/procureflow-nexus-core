@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import RfpBasicInfo from "./RfpBasicInfo";
 import RfpBoq from "./RfpBoq";
+import TechnicalScoringManager from "./TechnicalScoringManager";
 import RfpVendors from "./RfpVendors";
 import RfpPricingFormat from "./RfpPricingFormat";
 import RfpTerms from "./RfpTerms";
@@ -153,18 +154,33 @@ const RfpWizard = () => {
   const templateParam = searchParams.get('template');
   
   const getSteps = () => {
+    // Check if RFP has technical scoring enabled
+    const hasTechnicalScoring = wizardData.basicInfo?.enable_technical_scoring;
+    
     if (mode === 'advanced') {
       // Advanced mode: Complete workflow with all steps
-      return [
+      const advancedSteps: Array<{ number: number; title: string; component: any }> = [
         { number: 1, title: "Basic Information", component: RfpBasicInfo },
         { number: 2, title: "Bill of Quantities (BOQ)", component: RfpBoq },
-        { number: 3, title: "Vendor Selection", component: RfpVendors },
-        { number: 4, title: "Pricing Format", component: RfpPricingFormat },
-        { number: 5, title: "Terms & Conditions", component: RfpTerms },
-        { number: 6, title: "Review & Submit", component: RfpReview },
       ];
+      
+      // Add technical scoring step if enabled
+      if (hasTechnicalScoring) {
+        advancedSteps.push({ number: 3, title: "Technical Scoring Criteria", component: TechnicalScoringManager });
+        advancedSteps.push({ number: 4, title: "Vendor Selection", component: RfpVendors });
+        advancedSteps.push({ number: 5, title: "Pricing Format", component: RfpPricingFormat });
+        advancedSteps.push({ number: 6, title: "Terms & Conditions", component: RfpTerms });
+        advancedSteps.push({ number: 7, title: "Review & Submit", component: RfpReview });
+      } else {
+        advancedSteps.push({ number: 3, title: "Vendor Selection", component: RfpVendors });
+        advancedSteps.push({ number: 4, title: "Pricing Format", component: RfpPricingFormat });
+        advancedSteps.push({ number: 5, title: "Terms & Conditions", component: RfpTerms });
+        advancedSteps.push({ number: 6, title: "Review & Submit", component: RfpReview });
+      }
+      
+      return advancedSteps;
     } else if (templateParam) {
-      // Template mode: Focus on customizing template data with combined BOQ + vendor step
+      // Template mode: Focus on customizing template data
       return [
         { number: 1, title: "Basic Information & Custom Fields", component: RfpBasicInfo },
         { number: 2, title: "Items & Vendor Selection", component: RfpBoq },
@@ -173,10 +189,10 @@ const RfpWizard = () => {
         { number: 5, title: "Review & Submit", component: RfpReview },
       ];
     } else {
-      // Quick start mode: Simplified with combined BOQ + vendor selection
+      // Quick start mode: Simplified workflow
       return [
         { number: 1, title: "Basic Information", component: RfpBasicInfo },
-        { number: 2, title: "Items & Vendor Selection", component: RfpBoq }, // Combined step
+        { number: 2, title: "Items & Vendor Selection", component: RfpBoq },
         { number: 3, title: "Pricing Format", component: RfpPricingFormat },
         { number: 4, title: "Review & Submit", component: RfpReview },
       ];
@@ -226,6 +242,9 @@ const RfpWizard = () => {
         return <RfpBasicInfo {...props} />;
       case RfpBoq:
         return <RfpBoq {...props} />;
+      case TechnicalScoringManager:
+        // Special handling for TechnicalScoringManager with different props
+        return <TechnicalScoringManager rfpId={props.rfpId || ''} onUpdate={() => handleNext()} />;
       case RfpVendors:
         return <RfpVendors {...props} />;
       case RfpPricingFormat:
