@@ -1,5 +1,4 @@
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -7,45 +6,224 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
-import { Download, AlertTriangle, CheckCircle, XCircle } from "lucide-react";
+import { Download, AlertTriangle, CheckCircle, XCircle, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 const ComplianceReports = () => {
   const [reportPeriod, setReportPeriod] = useState("current-year");
   const [complianceArea, setComplianceArea] = useState("all");
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
-  // Mock compliance data
-  const complianceOverview = {
-    totalChecks: 150,
-    compliant: 135,
-    nonCompliant: 12,
-    pending: 3,
-    complianceRate: 90,
+  // State for database-driven data
+  const [complianceOverview, setComplianceOverview] = useState({
+    totalChecks: 0,
+    compliant: 0,
+    nonCompliant: 0,
+    pending: 0,
+    complianceRate: 0,
+  });
+  const [complianceByArea, setComplianceByArea] = useState<any[]>([]);
+  const [violationTrends, setViolationTrends] = useState<any[]>([]);
+  const [riskDistribution, setRiskDistribution] = useState<any[]>([]);
+  const [audits, setAudits] = useState<any[]>([]);
+  const [areas, setAreas] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetchAreas();
+  }, []);
+
+  useEffect(() => {
+    fetchComplianceData();
+  }, [reportPeriod, complianceArea]);
+
+  const fetchAreas = async () => {
+    const { data, error } = await supabase
+      .from('compliance_areas')
+      .select('*')
+      .eq('is_active', true)
+      .order('name');
+
+    if (!error && data) {
+      setAreas(data);
+    }
   };
 
-  const complianceByArea = [
-    { area: "Procurement", total: 45, compliant: 42, rate: 93.3, status: "good" },
-    { area: "Financial", total: 30, compliant: 28, rate: 93.3, status: "good" },
-    { area: "Vendor Management", total: 25, compliant: 22, rate: 88, status: "warning" },
-    { area: "Data Privacy", total: 20, compliant: 19, rate: 95, status: "excellent" },
-    { area: "Security", total: 30, compliant: 24, rate: 80, status: "critical" },
-  ];
+  const fetchComplianceData = async () => {
+    try {
+      setLoading(true);
 
-  const violationTrends = [
-    { month: "Jan", violations: 5, resolved: 4 },
-    { month: "Feb", violations: 3, resolved: 3 },
-    { month: "Mar", violations: 7, resolved: 6 },
-    { month: "Apr", violations: 4, resolved: 4 },
-    { month: "May", violations: 6, resolved: 5 },
-    { month: "Jun", violations: 2, resolved: 2 },
-  ];
+      // Calculate date range based on period
+      const dateRange = getDateRange(reportPeriod);
 
-  const riskDistribution = [
-    { name: "Low Risk", value: 60, color: "#00C49F" },
-    { name: "Medium Risk", value: 25, color: "#FFBB28" },
-    { name: "High Risk", value: 12, color: "#FF8042" },
-    { name: "Critical Risk", value: 3, color: "#FF0000" },
-  ];
+      // Fetch compliance checks
+      let checksQuery = supabase
+        .from('compliance_checks')
+        .select(`
+          *,
+          compliance_rules!inner(
+            *,
+            compliance_areas(*)
+          )
+        `)
+        .gte('check_date', dateRange.start)
+        .lte('check_date', dateRange.end);
 
+      if (complianceArea !== 'all') {
+        checksQuery = checksQuery.eq('compliance_rules.area_id', complianceArea);
+      }
+
+      const { data: checks, error: checksError } = await checksQuery;
+      
+      if (checksError) throw checksError;
+
+      // Calculate overview stats
+      const totalChecks = checks?.length || 0;
+      const compliant = checks?.filter(c => c.status === 'compliant').length || 0;
+      const nonCompliant = checks?.filter(c => c.status === 'non_compliant').length || 0;
+      const pending = checks?.filter(c => c.status === 'pending').length || 0;
+      const complianceRate = totalChecks > 0 ? Math.round((compliant / totalChecks) * 100) : 0;
+
+      setComplianceOverview({
+        totalChecks,
+        compliant,
+        nonCompliant,
+        pending,
+        complianceRate,
+      });
+
+      // Fetch areas and calculate stats
+      const { data: areas, error: areasError } = await supabase
+        .from('compliance_areas')
+        .select('*')
+        .eq('is_active', true);
+
+      if (areasError) throw areasError;
+
+      const areaStats = areas?.map(area => {
+        const areaChecks = checks?.filter(c => c.compliance_rules?.area_id === area.id) || [];
+        const total = areaChecks.length;
+        const compliantCount = areaChecks.filter(c => c.status === 'compliant').length;
+        const rate = total > 0 ? Math.round((compliantCount / total) * 100) : 0;
+        
+        let status = 'good';
+        if (rate < 70) status = 'critical';
+        else if (rate < 85) status = 'warning';
+        else if (rate >= 95) status = 'excellent';
+
+        return {
+          area: area.name,
+          total,
+          compliant: compliantCount,
+          rate,
+          status,
+        };
+      }) || [];
+
+      setComplianceByArea(areaStats);
+
+      // Fetch violations for trends
+      const { data: violations, error: violationsError } = await supabase
+        .from('compliance_violations')
+        .select('*')
+        .gte('identified_date', dateRange.start)
+        .lte('identified_date', dateRange.end);
+
+      if (violationsError) throw violationsError;
+
+      // Group violations by month
+      const monthlyViolations = groupByMonth(violations || [], dateRange);
+      setViolationTrends(monthlyViolations);
+
+      // Calculate risk distribution by severity
+      const severityCounts = {
+        low: violations?.filter(v => v.severity === 'low' && v.status !== 'resolved').length || 0,
+        medium: violations?.filter(v => v.severity === 'medium' && v.status !== 'resolved').length || 0,
+        high: violations?.filter(v => v.severity === 'high' && v.status !== 'resolved').length || 0,
+        critical: violations?.filter(v => v.severity === 'critical' && v.status !== 'resolved').length || 0,
+      };
+
+      setRiskDistribution([
+        { name: "Low Risk", value: severityCounts.low, color: "#00C49F" },
+        { name: "Medium Risk", value: severityCounts.medium, color: "#FFBB28" },
+        { name: "High Risk", value: severityCounts.high, color: "#FF8042" },
+        { name: "Critical Risk", value: severityCounts.critical, color: "#FF0000" },
+      ]);
+
+      // Fetch audits
+      const { data: auditsData, error: auditsError } = await supabase
+        .from('compliance_audits')
+        .select('*')
+        .gte('created_at', dateRange.start)
+        .lte('created_at', dateRange.end)
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      if (auditsError) throw auditsError;
+      setAudits(auditsData || []);
+
+    } catch (error: any) {
+      console.error('Error fetching compliance data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load compliance data",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getDateRange = (period: string) => {
+    const now = new Date();
+    let start = new Date();
+
+    switch (period) {
+      case 'current-year':
+        start = new Date(now.getFullYear(), 0, 1);
+        break;
+      case 'previous-year':
+        start = new Date(now.getFullYear() - 1, 0, 1);
+        now.setFullYear(now.getFullYear() - 1, 11, 31);
+        break;
+      case 'quarter':
+        const quarter = Math.floor(now.getMonth() / 3);
+        start = new Date(now.getFullYear(), quarter * 3, 1);
+        break;
+      case 'month':
+        start = new Date(now.getFullYear(), now.getMonth(), 1);
+        break;
+    }
+
+    return {
+      start: start.toISOString(),
+      end: now.toISOString(),
+    };
+  };
+
+  const groupByMonth = (violations: any[], dateRange: any) => {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const result = [];
+    
+    const start = new Date(dateRange.start);
+    const end = new Date(dateRange.end);
+    
+    for (let d = new Date(start); d <= end; d.setMonth(d.getMonth() + 1)) {
+      const monthViolations = violations.filter(v => {
+        const vDate = new Date(v.identified_date);
+        return vDate.getMonth() === d.getMonth() && vDate.getFullYear() === d.getFullYear();
+      });
+      
+      result.push({
+        month: months[d.getMonth()],
+        violations: monthViolations.length,
+        resolved: monthViolations.filter(v => v.status === 'resolved').length,
+      });
+    }
+    
+    return result.slice(-6); // Last 6 months
+  };
   const getStatusBadge = (status: string) => {
     const variants: Record<string, { variant: "default" | "secondary" | "destructive" | "outline", icon: React.ReactNode }> = {
       excellent: { variant: "default", icon: <CheckCircle className="h-3 w-3" /> },
@@ -62,6 +240,14 @@ const ComplianceReports = () => {
       </Badge>
     );
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -86,10 +272,11 @@ const ComplianceReports = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Areas</SelectItem>
-              <SelectItem value="procurement">Procurement</SelectItem>
-              <SelectItem value="financial">Financial</SelectItem>
-              <SelectItem value="vendor">Vendor Management</SelectItem>
-              <SelectItem value="security">Security</SelectItem>
+              {areas.map(area => (
+                <SelectItem key={area.id} value={area.id}>
+                  {area.name}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -254,33 +441,36 @@ const ComplianceReports = () => {
               <CardTitle>Recent Audit Results</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div className="border rounded-lg p-4">
-                  <div className="flex justify-between items-start mb-2">
-                    <h4 className="font-semibold">Procurement Process Audit</h4>
-                    <Badge variant="default">Passed</Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-2">
-                    Comprehensive review of procurement processes and vendor management
-                  </p>
-                  <div className="text-xs text-muted-foreground">
-                    Completed: June 15, 2024 | Auditor: External Audit Firm
-                  </div>
+              {audits.length === 0 ? (
+                <p className="text-muted-foreground text-center py-8">No audits found for this period</p>
+              ) : (
+                <div className="space-y-4">
+                  {audits.map((audit) => (
+                    <div key={audit.id} className="border rounded-lg p-4">
+                      <div className="flex justify-between items-start mb-2">
+                        <h4 className="font-semibold">{audit.title}</h4>
+                        <Badge variant={
+                          audit.overall_result === 'passed' ? 'default' :
+                          audit.overall_result === 'passed_with_issues' ? 'outline' :
+                          'destructive'
+                        }>
+                          {audit.overall_result === 'passed' ? 'Passed' :
+                           audit.overall_result === 'passed_with_issues' ? 'Passed with Issues' :
+                           'Failed'}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        {audit.description || 'No description provided'}
+                      </p>
+                      <div className="text-xs text-muted-foreground">
+                        Completed: {audit.end_date ? new Date(audit.end_date).toLocaleDateString() : 'In Progress'} | 
+                        Auditor: {audit.auditor_name || 'N/A'} | 
+                        Type: {audit.audit_type}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                
-                <div className="border rounded-lg p-4">
-                  <div className="flex justify-between items-start mb-2">
-                    <h4 className="font-semibold">Data Security Compliance</h4>
-                    <Badge variant="outline">Minor Issues</Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-2">
-                    Security protocols and data handling procedures review
-                  </p>
-                  <div className="text-xs text-muted-foreground">
-                    Completed: June 10, 2024 | Auditor: Internal Security Team
-                  </div>
-                </div>
-              </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

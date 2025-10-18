@@ -385,6 +385,261 @@ export type Database = {
         }
         Relationships: []
       }
+      compliance_areas: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      compliance_audits: {
+        Row: {
+          area_id: string | null
+          audit_type: string | null
+          auditor_name: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          end_date: string | null
+          findings: Json | null
+          id: string
+          overall_result: string | null
+          recommendations: Json | null
+          start_date: string | null
+          status: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          area_id?: string | null
+          audit_type?: string | null
+          auditor_name?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          end_date?: string | null
+          findings?: Json | null
+          id?: string
+          overall_result?: string | null
+          recommendations?: Json | null
+          start_date?: string | null
+          status?: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          area_id?: string | null
+          audit_type?: string | null
+          auditor_name?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          end_date?: string | null
+          findings?: Json | null
+          id?: string
+          overall_result?: string | null
+          recommendations?: Json | null
+          start_date?: string | null
+          status?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compliance_audits_area_id_fkey"
+            columns: ["area_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_areas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      compliance_checks: {
+        Row: {
+          check_date: string | null
+          checked_by: string | null
+          created_at: string | null
+          evidence: Json | null
+          id: string
+          next_check_date: string | null
+          notes: string | null
+          rule_id: string | null
+          score: number | null
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          check_date?: string | null
+          checked_by?: string | null
+          created_at?: string | null
+          evidence?: Json | null
+          id?: string
+          next_check_date?: string | null
+          notes?: string | null
+          rule_id?: string | null
+          score?: number | null
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          check_date?: string | null
+          checked_by?: string | null
+          created_at?: string | null
+          evidence?: Json | null
+          id?: string
+          next_check_date?: string | null
+          notes?: string | null
+          rule_id?: string | null
+          score?: number | null
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compliance_checks_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      compliance_rules: {
+        Row: {
+          area_id: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          frequency: string | null
+          id: string
+          is_active: boolean | null
+          rule_type: string
+          severity: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          area_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          frequency?: string | null
+          id?: string
+          is_active?: boolean | null
+          rule_type: string
+          severity?: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          area_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          frequency?: string | null
+          id?: string
+          is_active?: boolean | null
+          rule_type?: string
+          severity?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compliance_rules_area_id_fkey"
+            columns: ["area_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_areas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      compliance_violations: {
+        Row: {
+          assigned_to: string | null
+          check_id: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          identified_date: string | null
+          resolution_date: string | null
+          resolution_notes: string | null
+          rule_id: string | null
+          severity: string
+          status: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          check_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          identified_date?: string | null
+          resolution_date?: string | null
+          resolution_notes?: string | null
+          rule_id?: string | null
+          severity?: string
+          status?: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          check_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          identified_date?: string | null
+          resolution_date?: string | null
+          resolution_notes?: string | null
+          rule_id?: string | null
+          severity?: string
+          status?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compliance_violations_check_id_fkey"
+            columns: ["check_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_checks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_violations_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       custom_roles: {
         Row: {
           created_at: string
