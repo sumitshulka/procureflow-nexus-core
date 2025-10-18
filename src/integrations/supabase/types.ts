@@ -527,6 +527,57 @@ export type Database = {
           },
         ]
       }
+      compliance_policies: {
+        Row: {
+          category: string
+          compliance_rate: number | null
+          content: string
+          created_at: string | null
+          created_by: string | null
+          description: string
+          effective_date: string
+          id: string
+          owner: string
+          review_date: string
+          status: string
+          title: string
+          updated_at: string | null
+          version: string
+        }
+        Insert: {
+          category: string
+          compliance_rate?: number | null
+          content: string
+          created_at?: string | null
+          created_by?: string | null
+          description: string
+          effective_date: string
+          id?: string
+          owner: string
+          review_date: string
+          status?: string
+          title: string
+          updated_at?: string | null
+          version?: string
+        }
+        Update: {
+          category?: string
+          compliance_rate?: number | null
+          content?: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string
+          effective_date?: string
+          id?: string
+          owner?: string
+          review_date?: string
+          status?: string
+          title?: string
+          updated_at?: string | null
+          version?: string
+        }
+        Relationships: []
+      }
       compliance_rules: {
         Row: {
           area_id: string | null

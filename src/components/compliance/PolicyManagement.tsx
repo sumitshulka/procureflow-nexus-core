@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import DataTable from "@/components/common/DataTable";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Plus, Edit, Trash2, FileText, Users, AlertTriangle, Calendar } from "lucide-react";
 import { format } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { checkAuthentication } from "@/utils/supabaseHelpers";
 
 const policySchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -33,6 +36,8 @@ type PolicyForm = z.infer<typeof policySchema>;
 const PolicyManagement = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingPolicy, setEditingPolicy] = useState<any>(null);
+  const [policies, setPolicies] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const form = useForm<PolicyForm>({
     resolver: zodResolver(policySchema),
@@ -49,48 +54,29 @@ const PolicyManagement = () => {
     },
   });
 
-  // Mock policy data
-  const policies = [
-    {
-      id: "1",
-      title: "Procurement Policy",
-      category: "Procurement",
-      version: "2.1",
-      status: "active",
-      effectiveDate: "2024-01-01",
-      reviewDate: "2024-12-31",
-      owner: "Procurement Manager",
-      lastUpdated: "2024-01-15",
-      description: "Guidelines for procurement processes and vendor management",
-      complianceRate: 95,
-    },
-    {
-      id: "2",
-      title: "Information Security Policy",
-      category: "Security",
-      version: "1.5",
-      status: "active",
-      effectiveDate: "2024-02-01",
-      reviewDate: "2024-11-30",
-      owner: "IT Security Manager",
-      lastUpdated: "2024-02-10",
-      description: "Data protection and information security requirements",
-      complianceRate: 88,
-    },
-    {
-      id: "3",
-      title: "Vendor Code of Conduct",
-      category: "Vendor Management",
-      version: "1.0",
-      status: "draft",
-      effectiveDate: "2024-07-01",
-      reviewDate: "2024-06-30",
-      owner: "Vendor Relations Manager",
-      lastUpdated: "2024-06-01",
-      description: "Ethical standards and requirements for vendor partners",
-      complianceRate: null,
-    },
-  ];
+  useEffect(() => {
+    fetchPolicies();
+  }, []);
+
+  const fetchPolicies = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("compliance_policies")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      
+      setPolicies(data || []);
+    } catch (error: any) {
+      toast.error("Failed to fetch policies", {
+        description: error.message,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
@@ -131,14 +117,14 @@ const PolicyManagement = () => {
     {
       id: "effectiveDate",
       header: "Effective Date",
-      cell: (row: any) => format(new Date(row.effectiveDate), "MMM dd, yyyy"),
+      cell: (row: any) => format(new Date(row.effective_date), "MMM dd, yyyy"),
     },
     {
       id: "reviewDate",
       header: "Review Date",
       cell: (row: any) => (
-        <div className={new Date(row.reviewDate) < new Date() ? "text-red-600" : ""}>
-          {format(new Date(row.reviewDate), "MMM dd, yyyy")}
+        <div className={new Date(row.review_date) < new Date() ? "text-red-600" : ""}>
+          {format(new Date(row.review_date), "MMM dd, yyyy")}
         </div>
       ),
     },
@@ -146,7 +132,7 @@ const PolicyManagement = () => {
       id: "compliance",
       header: "Compliance",
       cell: (row: any) => 
-        row.complianceRate !== null ? `${row.complianceRate}%` : "N/A",
+        row.compliance_rate !== null ? `${row.compliance_rate}%` : "N/A",
     },
     {
       id: "actions",
@@ -180,23 +166,79 @@ const PolicyManagement = () => {
       description: policy.description,
       content: policy.content || "",
       version: policy.version,
-      effectiveDate: policy.effectiveDate,
-      reviewDate: policy.reviewDate,
+      effectiveDate: policy.effective_date,
+      reviewDate: policy.review_date,
       owner: policy.owner,
       status: policy.status,
     });
     setIsDialogOpen(true);
   };
 
-  const handleDelete = (id: string) => {
-    console.log("Delete policy:", id);
+  const handleDelete = async (id: string) => {
+    try {
+      const user = await checkAuthentication();
+      if (!user) return;
+
+      const { error } = await supabase
+        .from("compliance_policies")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast.success("Policy deleted successfully");
+      fetchPolicies();
+    } catch (error: any) {
+      toast.error("Failed to delete policy", {
+        description: error.message,
+      });
+    }
   };
 
-  const onSubmit = (data: PolicyForm) => {
-    console.log("Policy data:", data);
-    setIsDialogOpen(false);
-    setEditingPolicy(null);
-    form.reset();
+  const onSubmit = async (data: PolicyForm) => {
+    try {
+      const user = await checkAuthentication();
+      if (!user) return;
+
+      const policyData = {
+        title: data.title,
+        category: data.category,
+        description: data.description,
+        content: data.content,
+        version: data.version,
+        effective_date: data.effectiveDate,
+        review_date: data.reviewDate,
+        owner: data.owner,
+        status: data.status,
+        created_by: user.id,
+      };
+
+      if (editingPolicy) {
+        const { error } = await supabase
+          .from("compliance_policies")
+          .update(policyData)
+          .eq("id", editingPolicy.id);
+
+        if (error) throw error;
+        toast.success("Policy updated successfully");
+      } else {
+        const { error } = await supabase
+          .from("compliance_policies")
+          .insert([policyData]);
+
+        if (error) throw error;
+        toast.success("Policy created successfully");
+      }
+
+      setIsDialogOpen(false);
+      setEditingPolicy(null);
+      form.reset();
+      fetchPolicies();
+    } catch (error: any) {
+      toast.error(editingPolicy ? "Failed to update policy" : "Failed to create policy", {
+        description: error.message,
+      });
+    }
   };
 
   const showDetailPanel = (row: any) => (
@@ -209,11 +251,11 @@ const PolicyManagement = () => {
           <div><strong>Category:</strong> {row.category}</div>
           <div><strong>Status:</strong> {getStatusBadge(row.status)}</div>
           <div><strong>Owner:</strong> {row.owner}</div>
-          <div><strong>Effective Date:</strong> {format(new Date(row.effectiveDate), "PPP")}</div>
-          <div><strong>Review Date:</strong> {format(new Date(row.reviewDate), "PPP")}</div>
-          <div><strong>Last Updated:</strong> {format(new Date(row.lastUpdated), "PPP")}</div>
-          {row.complianceRate !== null && (
-            <div><strong>Compliance Rate:</strong> {row.complianceRate}%</div>
+          <div><strong>Effective Date:</strong> {format(new Date(row.effective_date), "PPP")}</div>
+          <div><strong>Review Date:</strong> {format(new Date(row.review_date), "PPP")}</div>
+          <div><strong>Last Updated:</strong> {format(new Date(row.updated_at), "PPP")}</div>
+          {row.compliance_rate !== null && (
+            <div><strong>Compliance Rate:</strong> {row.compliance_rate}%</div>
           )}
         </div>
       </div>
@@ -434,6 +476,7 @@ const PolicyManagement = () => {
                 columns={columns}
                 data={policies}
                 emptyMessage="No policies found"
+                loading={loading}
                 showDetailPanel={showDetailPanel}
                 detailPanelTitle="Policy Details"
               />
