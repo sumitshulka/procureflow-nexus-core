@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -31,6 +31,8 @@ const basicInfoSchema = z.object({
   pre_bid_meeting_date: z.date().optional(),
   pre_bid_meeting_venue: z.string().optional(),
   bid_validity_period: z.number().default(30),
+  enable_technical_scoring: z.boolean().default(false),
+  minimum_technical_score: z.number().min(0).optional(),
 });
 
 type BasicInfoData = z.infer<typeof basicInfoSchema>;
@@ -52,6 +54,8 @@ const RfpBasicInfo: React.FC<RfpBasicInfoProps> = ({ data, onUpdate, onNext, tem
     defaultValues: {
       currency: "USD",
       bid_validity_period: 30,
+      enable_technical_scoring: false,
+      minimum_technical_score: 0,
     },
   });
 
@@ -95,6 +99,8 @@ const RfpBasicInfo: React.FC<RfpBasicInfoProps> = ({ data, onUpdate, onNext, tem
         pre_bid_meeting_date: data.basicInfo.pre_bid_meeting_date ? new Date(data.basicInfo.pre_bid_meeting_date) : undefined,
         pre_bid_meeting_venue: data.basicInfo.pre_bid_meeting_venue || '',
         bid_validity_period: data.basicInfo.bid_validity_period || 30,
+        enable_technical_scoring: data.basicInfo.enable_technical_scoring || false,
+        minimum_technical_score: data.basicInfo.minimum_technical_score || 0,
       };
       
       form.reset(formValues);
@@ -298,12 +304,59 @@ const RfpBasicInfo: React.FC<RfpBasicInfoProps> = ({ data, onUpdate, onNext, tem
                   Date when commercial responses will be opened for evaluation
                 </p>
                 <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <FormField
+          control={form.control}
+          name="enable_technical_scoring"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+              <div className="space-y-0.5">
+                <FormLabel className="text-base">
+                  Enable Technical Scoring
+                </FormLabel>
+                <FormDescription>
+                  Allow vendors to be scored based on technical criteria
+                </FormDescription>
+              </div>
+              <FormControl>
+                <Switch
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
 
         <FormField
+          control={form.control}
+          name="minimum_technical_score"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Minimum Technical Score</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  placeholder="e.g., 70"
+                  {...field}
+                  disabled={!form.watch("enable_technical_scoring")}
+                />
+              </FormControl>
+              <FormDescription>
+                Minimum score required to qualify technically
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <FormField
           control={form.control}
           name="description"
           render={({ field }) => (

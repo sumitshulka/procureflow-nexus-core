@@ -1732,6 +1732,79 @@ export type Database = {
           },
         ]
       }
+      rfp_response_scores: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          auto_calculated_score: number | null
+          created_at: string | null
+          criteria_id: string
+          id: string
+          is_approved: boolean | null
+          manual_override_reason: string | null
+          manual_score: number | null
+          response_id: string
+          selected_option_id: string | null
+          submitted_value: string | null
+          updated_at: string | null
+          uploaded_document_url: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          auto_calculated_score?: number | null
+          created_at?: string | null
+          criteria_id: string
+          id?: string
+          is_approved?: boolean | null
+          manual_override_reason?: string | null
+          manual_score?: number | null
+          response_id: string
+          selected_option_id?: string | null
+          submitted_value?: string | null
+          updated_at?: string | null
+          uploaded_document_url?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          auto_calculated_score?: number | null
+          created_at?: string | null
+          criteria_id?: string
+          id?: string
+          is_approved?: boolean | null
+          manual_override_reason?: string | null
+          manual_score?: number | null
+          response_id?: string
+          selected_option_id?: string | null
+          submitted_value?: string | null
+          updated_at?: string | null
+          uploaded_document_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rfp_response_scores_criteria_id_fkey"
+            columns: ["criteria_id"]
+            isOneToOne: false
+            referencedRelation: "rfp_scoring_criteria"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rfp_response_scores_response_id_fkey"
+            columns: ["response_id"]
+            isOneToOne: false
+            referencedRelation: "rfp_responses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rfp_response_scores_selected_option_id_fkey"
+            columns: ["selected_option_id"]
+            isOneToOne: false
+            referencedRelation: "rfp_scoring_options"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rfp_responses: {
         Row: {
           bid_validity_until: string | null
@@ -1747,6 +1820,7 @@ export type Database = {
           evaluated_by: string | null
           evaluation_notes: string | null
           id: string
+          is_technically_qualified: boolean | null
           payment_terms_accepted: boolean | null
           response_number: string
           rfp_id: string
@@ -1754,10 +1828,13 @@ export type Database = {
           submitted_at: string
           technical_documents: Json | null
           technical_score: number | null
+          technical_score_approved_at: string | null
+          technical_score_approved_by: string | null
           technical_submission_status: string | null
           technical_submitted_at: string | null
           total_bid_amount: number
           total_score: number | null
+          total_technical_score: number | null
           updated_at: string
           vendor_id: string
           warranty_period: string | null
@@ -1776,6 +1853,7 @@ export type Database = {
           evaluated_by?: string | null
           evaluation_notes?: string | null
           id?: string
+          is_technically_qualified?: boolean | null
           payment_terms_accepted?: boolean | null
           response_number: string
           rfp_id: string
@@ -1783,10 +1861,13 @@ export type Database = {
           submitted_at?: string
           technical_documents?: Json | null
           technical_score?: number | null
+          technical_score_approved_at?: string | null
+          technical_score_approved_by?: string | null
           technical_submission_status?: string | null
           technical_submitted_at?: string | null
           total_bid_amount: number
           total_score?: number | null
+          total_technical_score?: number | null
           updated_at?: string
           vendor_id: string
           warranty_period?: string | null
@@ -1805,6 +1886,7 @@ export type Database = {
           evaluated_by?: string | null
           evaluation_notes?: string | null
           id?: string
+          is_technically_qualified?: boolean | null
           payment_terms_accepted?: boolean | null
           response_number?: string
           rfp_id?: string
@@ -1812,10 +1894,13 @@ export type Database = {
           submitted_at?: string
           technical_documents?: Json | null
           technical_score?: number | null
+          technical_score_approved_at?: string | null
+          technical_score_approved_by?: string | null
           technical_submission_status?: string | null
           technical_submitted_at?: string | null
           total_bid_amount?: number
           total_score?: number | null
+          total_technical_score?: number | null
           updated_at?: string
           vendor_id?: string
           warranty_period?: string | null
@@ -1833,6 +1918,100 @@ export type Database = {
             columns: ["vendor_id"]
             isOneToOne: false
             referencedRelation: "vendor_registrations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rfp_scoring_criteria: {
+        Row: {
+          created_at: string | null
+          criterion_name: string
+          criterion_type: string
+          description: string | null
+          display_order: number | null
+          id: string
+          is_required: boolean | null
+          max_points: number
+          requires_document: boolean | null
+          rfp_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          criterion_name: string
+          criterion_type: string
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          is_required?: boolean | null
+          max_points: number
+          requires_document?: boolean | null
+          rfp_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          criterion_name?: string
+          criterion_type?: string
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          is_required?: boolean | null
+          max_points?: number
+          requires_document?: boolean | null
+          rfp_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rfp_scoring_criteria_rfp_id_fkey"
+            columns: ["rfp_id"]
+            isOneToOne: false
+            referencedRelation: "rfps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rfp_scoring_options: {
+        Row: {
+          created_at: string | null
+          criteria_id: string
+          display_order: number | null
+          id: string
+          max_value: number | null
+          min_value: number | null
+          option_label: string
+          option_value: string | null
+          points: number
+        }
+        Insert: {
+          created_at?: string | null
+          criteria_id: string
+          display_order?: number | null
+          id?: string
+          max_value?: number | null
+          min_value?: number | null
+          option_label: string
+          option_value?: string | null
+          points: number
+        }
+        Update: {
+          created_at?: string | null
+          criteria_id?: string
+          display_order?: number | null
+          id?: string
+          max_value?: number | null
+          min_value?: number | null
+          option_label?: string
+          option_value?: string | null
+          points?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rfp_scoring_options_criteria_id_fkey"
+            columns: ["criteria_id"]
+            isOneToOne: false
+            referencedRelation: "rfp_scoring_criteria"
             referencedColumns: ["id"]
           },
         ]
@@ -1982,10 +2161,12 @@ export type Database = {
           currency: string | null
           delivery_terms: string | null
           description: string | null
+          enable_technical_scoring: boolean | null
           estimated_value: number | null
           evaluation_criteria: Json | null
           id: string
           minimum_eligibility_criteria: string | null
+          minimum_technical_score: number | null
           payment_terms: string | null
           pre_bid_meeting_date: string | null
           pre_bid_meeting_venue: string | null
@@ -2010,10 +2191,12 @@ export type Database = {
           currency?: string | null
           delivery_terms?: string | null
           description?: string | null
+          enable_technical_scoring?: boolean | null
           estimated_value?: number | null
           evaluation_criteria?: Json | null
           id?: string
           minimum_eligibility_criteria?: string | null
+          minimum_technical_score?: number | null
           payment_terms?: string | null
           pre_bid_meeting_date?: string | null
           pre_bid_meeting_venue?: string | null
@@ -2038,10 +2221,12 @@ export type Database = {
           currency?: string | null
           delivery_terms?: string | null
           description?: string | null
+          enable_technical_scoring?: boolean | null
           estimated_value?: number | null
           evaluation_criteria?: Json | null
           id?: string
           minimum_eligibility_criteria?: string | null
+          minimum_technical_score?: number | null
           payment_terms?: string | null
           pre_bid_meeting_date?: string | null
           pre_bid_meeting_venue?: string | null
@@ -2934,6 +3119,10 @@ export type Database = {
       begin_transaction: {
         Args: Record<PropertyKey, never>
         Returns: Json
+      }
+      calculate_technical_score: {
+        Args: { p_response_id: string }
+        Returns: number
       }
       can_assign_role: {
         Args: {
