@@ -5,7 +5,6 @@ import PageHeader from "@/components/common/PageHeader";
 import UsersList from "@/components/user-management/UsersList";
 import EnhancedRolesList from "@/components/user-management/EnhancedRolesList";
 import UserRoleAssignment from "@/components/user-management/UserRoleAssignment";
-import ApprovalHierarchy from "@/components/user-management/ApprovalHierarchy";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { UserRole } from "@/types";
@@ -40,7 +39,6 @@ const UserManagement = () => {
             <TabsTrigger value="users">Users</TabsTrigger>
             <TabsTrigger value="roles">Roles & Modules</TabsTrigger>
             <TabsTrigger value="assignments">Role Assignments</TabsTrigger>
-            <TabsTrigger value="approval">Approval Hierarchy</TabsTrigger>
           </TabsList>
           
           <TabsContent value="users" className="mt-6">
@@ -53,10 +51,6 @@ const UserManagement = () => {
           
           <TabsContent value="assignments" className="mt-6">
             <UserRoleAssignment />
-          </TabsContent>
-          
-          <TabsContent value="approval" className="mt-6">
-            <ApprovalHierarchy />
           </TabsContent>
         </Tabs>
       </div>

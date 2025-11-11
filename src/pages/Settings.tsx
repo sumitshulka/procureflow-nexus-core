@@ -10,6 +10,7 @@ import RoleManagement from "@/components/settings/RoleManagement";
 import LocationsManagement from "@/components/settings/LocationsManagement";
 import POSettings from "@/components/settings/POSettings";
 import POApprovalMatrix from "@/components/settings/POApprovalMatrix";
+import ApprovalHierarchy from "@/components/user-management/ApprovalHierarchy";
 import { useNavigate, useLocation } from "react-router-dom";
 
 const Settings = () => {
@@ -89,6 +90,12 @@ const Settings = () => {
                 Integrations
               </TabsTrigger>
               <TabsTrigger 
+                value="approvals" 
+                className="data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none border-b-2 border-transparent px-4 py-3 rounded-none"
+              >
+                Approval Settings
+              </TabsTrigger>
+              <TabsTrigger 
                 value="purchase-orders" 
                 className="data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none border-b-2 border-transparent px-4 py-3 rounded-none"
               >
@@ -121,19 +128,23 @@ const Settings = () => {
             <IntegrationSettings />
           </TabsContent>
           
-          <TabsContent value="purchase-orders" className="p-6">
-            <Tabs defaultValue="po-settings" className="space-y-4">
+          <TabsContent value="approvals" className="p-6">
+            <Tabs defaultValue="procurement-approval" className="space-y-4">
               <TabsList>
-                <TabsTrigger value="po-settings">PO Settings</TabsTrigger>
-                <TabsTrigger value="po-approval">Approval Matrix</TabsTrigger>
+                <TabsTrigger value="procurement-approval">Procurement Approval Hierarchy</TabsTrigger>
+                <TabsTrigger value="po-approval">PO Approval Matrix</TabsTrigger>
               </TabsList>
-              <TabsContent value="po-settings">
-                <POSettings />
+              <TabsContent value="procurement-approval">
+                <ApprovalHierarchy />
               </TabsContent>
               <TabsContent value="po-approval">
                 <POApprovalMatrix />
               </TabsContent>
             </Tabs>
+          </TabsContent>
+          
+          <TabsContent value="purchase-orders" className="p-6">
+            <POSettings />
           </TabsContent>
         </Tabs>
       </div>
