@@ -90,7 +90,7 @@ const UsersList = () => {
     queryFn: async () => {
       const { data: profiles, error } = await supabase
         .from("profiles")
-        .select("id, full_name, created_at, department");
+        .select("id, full_name, created_at, department_id");
 
       if (error) throw error;
       if (!profiles || profiles.length === 0) return [];
@@ -132,10 +132,8 @@ const UsersList = () => {
 
       // Join profiles with roles and emails
       return profiles.map(profile => {
-        // Find department by ID or name
-        const department =
-          departments.find(dept => dept.id === profile.department) ||
-          departments.find(dept => dept.name === profile.department);
+        // Find department by ID
+        const department = departments.find(dept => dept.id === profile.department_id);
         
         return {
           id: profile.id,
@@ -224,7 +222,7 @@ const UsersList = () => {
         const { error: profileError } = await supabase
           .from("profiles")
           .update({
-            department: departmentId
+            department_id: departmentId
           })
           .eq("id", signUpData.user.id);
           
@@ -289,7 +287,7 @@ const UsersList = () => {
         .from("profiles")
         .update({ 
           full_name: values.fullName,
-          department: departmentId 
+          department_id: departmentId 
         })
         .eq("id", currentUser.id);
 
