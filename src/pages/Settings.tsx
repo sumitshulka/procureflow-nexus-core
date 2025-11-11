@@ -9,6 +9,7 @@ import IntegrationSettings from "@/components/settings/IntegrationSettings";
 import RoleManagement from "@/components/settings/RoleManagement";
 import LocationsManagement from "@/components/settings/LocationsManagement";
 import POSettings from "@/components/settings/POSettings";
+import POApprovalMatrix from "@/components/settings/POApprovalMatrix";
 import { useNavigate, useLocation } from "react-router-dom";
 
 const Settings = () => {
@@ -121,7 +122,18 @@ const Settings = () => {
           </TabsContent>
           
           <TabsContent value="purchase-orders" className="p-6">
-            <POSettings />
+            <Tabs defaultValue="po-settings" className="space-y-4">
+              <TabsList>
+                <TabsTrigger value="po-settings">PO Settings</TabsTrigger>
+                <TabsTrigger value="po-approval">Approval Matrix</TabsTrigger>
+              </TabsList>
+              <TabsContent value="po-settings">
+                <POSettings />
+              </TabsContent>
+              <TabsContent value="po-approval">
+                <POApprovalMatrix />
+              </TabsContent>
+            </Tabs>
           </TabsContent>
         </Tabs>
       </div>

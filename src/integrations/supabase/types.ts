@@ -1088,6 +1088,144 @@ export type Database = {
         }
         Relationships: []
       }
+      po_approval_history: {
+        Row: {
+          approval_level_id: string
+          approved_at: string | null
+          approver_id: string
+          comments: string | null
+          created_at: string
+          id: string
+          purchase_order_id: string
+          rejected_at: string | null
+          status: string
+        }
+        Insert: {
+          approval_level_id: string
+          approved_at?: string | null
+          approver_id: string
+          comments?: string | null
+          created_at?: string
+          id?: string
+          purchase_order_id: string
+          rejected_at?: string | null
+          status?: string
+        }
+        Update: {
+          approval_level_id?: string
+          approved_at?: string | null
+          approver_id?: string
+          comments?: string | null
+          created_at?: string
+          id?: string
+          purchase_order_id?: string
+          rejected_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "po_approval_history_approval_level_id_fkey"
+            columns: ["approval_level_id"]
+            isOneToOne: false
+            referencedRelation: "po_approval_levels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "po_approval_history_purchase_order_id_fkey"
+            columns: ["purchase_order_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      po_approval_levels: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          level_name: string
+          level_number: number
+          max_amount: number | null
+          min_amount: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          level_name: string
+          level_number: number
+          max_amount?: number | null
+          min_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          level_name?: string
+          level_number?: number
+          max_amount?: number | null
+          min_amount?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      po_approval_matrix: {
+        Row: {
+          approval_level_id: string
+          approver_role: Database["public"]["Enums"]["user_role"] | null
+          approver_user_id: string | null
+          created_at: string
+          department_id: string | null
+          id: string
+          is_active: boolean
+          sequence_order: number
+          updated_at: string
+        }
+        Insert: {
+          approval_level_id: string
+          approver_role?: Database["public"]["Enums"]["user_role"] | null
+          approver_user_id?: string | null
+          created_at?: string
+          department_id?: string | null
+          id?: string
+          is_active?: boolean
+          sequence_order?: number
+          updated_at?: string
+        }
+        Update: {
+          approval_level_id?: string
+          approver_role?: Database["public"]["Enums"]["user_role"] | null
+          approver_user_id?: string | null
+          created_at?: string
+          department_id?: string | null
+          id?: string
+          is_active?: boolean
+          sequence_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "po_approval_matrix_approval_level_id_fkey"
+            columns: ["approval_level_id"]
+            isOneToOne: false
+            referencedRelation: "po_approval_levels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "po_approval_matrix_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       po_email_logs: {
         Row: {
           error_message: string | null
@@ -1648,11 +1786,13 @@ export type Database = {
           acknowledgment_date: string | null
           acknowledgment_notes: string | null
           actual_delivery_date: string | null
+          approval_status: string | null
           attachments: Json | null
           billing_address: Json | null
           created_at: string
           created_by: string
           currency: string | null
+          current_approval_level: number | null
           delivery_address: Json | null
           delivery_terms: string | null
           discount_amount: number | null
@@ -1668,6 +1808,7 @@ export type Database = {
           special_instructions: string | null
           specific_instructions: string | null
           status: string
+          submitted_for_approval_at: string | null
           tax_amount: number | null
           terms_and_conditions: string | null
           total_amount: number
@@ -1679,11 +1820,13 @@ export type Database = {
           acknowledgment_date?: string | null
           acknowledgment_notes?: string | null
           actual_delivery_date?: string | null
+          approval_status?: string | null
           attachments?: Json | null
           billing_address?: Json | null
           created_at?: string
           created_by: string
           currency?: string | null
+          current_approval_level?: number | null
           delivery_address?: Json | null
           delivery_terms?: string | null
           discount_amount?: number | null
@@ -1699,6 +1842,7 @@ export type Database = {
           special_instructions?: string | null
           specific_instructions?: string | null
           status?: string
+          submitted_for_approval_at?: string | null
           tax_amount?: number | null
           terms_and_conditions?: string | null
           total_amount: number
@@ -1710,11 +1854,13 @@ export type Database = {
           acknowledgment_date?: string | null
           acknowledgment_notes?: string | null
           actual_delivery_date?: string | null
+          approval_status?: string | null
           attachments?: Json | null
           billing_address?: Json | null
           created_at?: string
           created_by?: string
           currency?: string | null
+          current_approval_level?: number | null
           delivery_address?: Json | null
           delivery_terms?: string | null
           discount_amount?: number | null
@@ -1730,6 +1876,7 @@ export type Database = {
           special_instructions?: string | null
           specific_instructions?: string | null
           status?: string
+          submitted_for_approval_at?: string | null
           tax_amount?: number | null
           terms_and_conditions?: string | null
           total_amount?: number
@@ -3597,6 +3744,10 @@ export type Database = {
           updated_at: string
         }[]
       }
+      get_required_approval_level: {
+        Args: { po_amount: number }
+        Returns: string
+      }
       get_security_status: { Args: never; Returns: Json }
       has_role: {
         Args: {
@@ -3605,6 +3756,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      initiate_po_approval: { Args: { p_po_id: string }; Returns: Json }
       is_request_completed: { Args: { request_id: string }; Returns: boolean }
       log_rfp_activity: {
         Args: {

@@ -17,16 +17,21 @@ import {
   DollarSign,
   Package,
   FileText,
-  Loader2
+  Loader2,
+  Send
 } from 'lucide-react';
 import PageHeader from '@/components/common/PageHeader';
+import POApprovalStatus from '@/components/purchase-orders/POApprovalStatus';
+import { useToast } from '@/hooks/use-toast';
 
 const PurchaseOrderDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const { generatePDF, sendEmail, isGeneratingPDF, isSendingEmail } = usePOActions();
+  const [isSubmittingApproval, setIsSubmittingApproval] = React.useState(false);
 
-  const { data: po, isLoading, error } = useQuery({
+  const { data: po, isLoading, error, refetch } = useQuery({
     queryKey: ['purchase-order', id],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -48,14 +53,48 @@ const PurchaseOrderDetail = () => {
   const getStatusBadge = (status: string) => {
     const variants: Record<string, string> = {
       draft: 'bg-gray-100 text-gray-800',
+      pending_approval: 'bg-yellow-100 text-yellow-800',
+      approved: 'bg-green-100 text-green-800',
       sent: 'bg-blue-100 text-blue-800',
-      acknowledged: 'bg-yellow-100 text-yellow-800',
+      acknowledged: 'bg-purple-100 text-purple-800',
       in_progress: 'bg-orange-100 text-orange-800',
       delivered: 'bg-green-100 text-green-800',
       completed: 'bg-green-100 text-green-800',
       cancelled: 'bg-red-100 text-red-800',
     };
-    return <Badge className={variants[status] || 'bg-gray-100'}>{status.toUpperCase()}</Badge>;
+    return <Badge className={variants[status] || 'bg-gray-100'}>{status.replace('_', ' ').toUpperCase()}</Badge>;
+  };
+
+  const handleSubmitForApproval = async () => {
+    if (!id) return;
+
+    setIsSubmittingApproval(true);
+    try {
+      const { data, error } = await supabase.rpc('initiate_po_approval', {
+        p_po_id: id,
+      });
+
+      if (error) throw error;
+
+      const result = data as { success: boolean; message?: string };
+      if (result?.success) {
+        toast({
+          title: "Success",
+          description: "Purchase order submitted for approval",
+        });
+        refetch();
+      } else {
+        throw new Error(result?.message || "Failed to submit for approval");
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to submit for approval",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmittingApproval(false);
+    }
   };
 
   if (isLoading) {
@@ -96,10 +135,19 @@ const PurchaseOrderDetail = () => {
         </div>
         <div className="flex gap-2">
           {po.status === 'draft' && (
-            <Button variant="outline" onClick={() => navigate(`/purchase-orders/edit/${po.id}`)}>
-              <Edit className="h-4 w-4 mr-2" />
-              Edit
-            </Button>
+            <>
+              <Button 
+                onClick={handleSubmitForApproval} 
+                disabled={isSubmittingApproval}
+              >
+                <Send className="h-4 w-4 mr-2" />
+                {isSubmittingApproval ? 'Submitting...' : 'Submit for Approval'}
+              </Button>
+              <Button variant="outline" onClick={() => navigate(`/purchase-orders/edit/${po.id}`)}>
+                <Edit className="h-4 w-4 mr-2" />
+                Edit
+              </Button>
+            </>
           )}
           <Button 
             variant="outline"
@@ -134,6 +182,14 @@ const PurchaseOrderDetail = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Approval Status */}
+      {(po.status === 'pending_approval' || po.approval_status === 'approved' || po.approval_status === 'rejected') && (
+        <POApprovalStatus 
+          purchaseOrderId={po.id} 
+          onApprovalComplete={() => refetch()}
+        />
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Vendor Information */}
