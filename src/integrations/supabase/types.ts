@@ -1685,6 +1685,7 @@ export type Database = {
           avatar_url: string | null
           created_at: string
           department: string | null
+          department_id: string | null
           employee_id: string | null
           full_name: string | null
           id: string
@@ -1696,6 +1697,7 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string
           department?: string | null
+          department_id?: string | null
           employee_id?: string | null
           full_name?: string | null
           id: string
@@ -1707,6 +1709,7 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string
           department?: string | null
+          department_id?: string | null
           employee_id?: string | null
           full_name?: string | null
           id?: string
@@ -1714,7 +1717,15 @@ export type Database = {
           status?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       purchase_order_items: {
         Row: {
