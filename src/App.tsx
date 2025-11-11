@@ -52,6 +52,7 @@ import CreatePurchaseOrder from '@/pages/purchase-orders/CreatePurchaseOrder';
 import PendingPurchaseOrders from '@/pages/purchase-orders/PendingPurchaseOrders';
 import ActivePurchaseOrders from '@/pages/purchase-orders/ActivePurchaseOrders';
 import PurchaseOrderHistory from '@/pages/purchase-orders/PurchaseOrderHistory';
+import PurchaseOrderDetail from '@/pages/purchase-orders/PurchaseOrderDetail';
 
 // Approval Pages
 import Approvals from '@/pages/Approvals';
@@ -409,6 +410,22 @@ function App() {
             element={
               <ProtectedRoute requiredRole={UserRole.ADMIN}>
                 <Layout><PurchaseOrderHistory /></Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/purchase-orders/:id"
+            element={
+              <ProtectedRoute requiredRole={UserRole.ADMIN}>
+                <Layout><PurchaseOrderDetail /></Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/purchase-orders/edit/:id"
+            element={
+              <ProtectedRoute requiredRole={UserRole.ADMIN}>
+                <Layout><CreatePurchaseOrder /></Layout>
               </ProtectedRoute>
             }
           />
