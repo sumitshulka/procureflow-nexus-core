@@ -301,7 +301,8 @@ const POApprovalMatrix = () => {
     if (!departmentId || departmentId === "" || departmentId === "any") {
       return users;
     }
-    return users.filter(user => user.department_id === departmentId);
+    // Show users from selected department OR users with no department assigned
+    return users.filter(user => user.department_id === departmentId || user.department_id === null);
   };
 
   const handleDeleteApprover = async (matrixId: string) => {
