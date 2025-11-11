@@ -33,7 +33,7 @@ serve(async (req: Request) => {
       .from("purchase_orders")
       .select(`
         *,
-        vendor:vendor_registrations(company_name, primary_email, address, phone),
+        vendor:vendor_registrations(company_name, primary_email),
         items:purchase_order_items(*)
       `)
       .eq("id", po_id)
@@ -141,9 +141,15 @@ function generatePOHTML(po: any): string {
               <span class="info-label">Email:</span>
               <span class="info-value">${po.vendor?.primary_email || 'N/A'}</span>
             </div>
+          </div>
+          <div>
             <div class="info-item">
               <span class="info-label">Status:</span>
               <span class="info-value">${po.status.toUpperCase()}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Currency:</span>
+              <span class="info-value">${po.currency || 'USD'}</span>
             </div>
           </div>
         </div>
