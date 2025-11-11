@@ -1218,6 +1218,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "po_approval_matrix_approver_user_id_fkey"
+            columns: ["approver_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "po_approval_matrix_department_id_fkey"
             columns: ["department_id"]
             isOneToOne: false
