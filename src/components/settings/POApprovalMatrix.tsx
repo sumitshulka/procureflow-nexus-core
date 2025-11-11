@@ -53,6 +53,7 @@ interface Department {
 interface User {
   id: string;
   full_name: string;
+  department_id: string | null;
 }
 
 const POApprovalMatrix = () => {
@@ -123,10 +124,10 @@ const POApprovalMatrix = () => {
       if (deptError) throw deptError;
       setDepartments(deptData || []);
 
-      // Fetch users
+      // Fetch users with their departments
       const { data: usersData, error: usersError } = await supabase
         .from("profiles")
-        .select("id, full_name")
+        .select("id, full_name, department_id")
         .order("full_name");
 
       if (usersError) throw usersError;
@@ -280,13 +281,27 @@ const POApprovalMatrix = () => {
   };
 
   const updateMatrixItem = (levelId: string, field: string, value: string) => {
-    setNewMatrixItems(prev => ({
-      ...prev,
-      [levelId]: {
-        ...(prev[levelId] || { department_id: "", approver_user_id: "" }),
-        [field]: value
+    setNewMatrixItems(prev => {
+      const currentItem = prev[levelId] || { department_id: "", approver_user_id: "" };
+      const newItem = { ...currentItem, [field]: value };
+      
+      // Reset approver if department changes
+      if (field === "department_id") {
+        newItem.approver_user_id = "";
       }
-    }));
+      
+      return {
+        ...prev,
+        [levelId]: newItem
+      };
+    });
+  };
+
+  const getFilteredUsers = (departmentId: string | undefined) => {
+    if (!departmentId || departmentId === "" || departmentId === "any") {
+      return users;
+    }
+    return users.filter(user => user.department_id === departmentId);
   };
 
   const handleDeleteApprover = async (matrixId: string) => {
@@ -488,11 +503,17 @@ const POApprovalMatrix = () => {
                                     <SelectValue placeholder="Select approver" />
                                   </SelectTrigger>
                                   <SelectContent>
-                                    {users.map((user) => (
-                                      <SelectItem key={user.id} value={user.id}>
-                                        {user.full_name}
-                                      </SelectItem>
-                                    ))}
+                                    {getFilteredUsers(newMatrixItems[level.id]?.department_id).length === 0 ? (
+                                      <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                                        No users in selected department
+                                      </div>
+                                    ) : (
+                                      getFilteredUsers(newMatrixItems[level.id]?.department_id).map((user) => (
+                                        <SelectItem key={user.id} value={user.id}>
+                                          {user.full_name}
+                                        </SelectItem>
+                                      ))
+                                    )}
                                   </SelectContent>
                                 </Select>
                               </div>
