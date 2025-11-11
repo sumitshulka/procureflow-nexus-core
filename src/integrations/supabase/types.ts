@@ -2921,6 +2921,7 @@ export type Database = {
           email_template_subject: string | null
           id: string
           organization_id: string | null
+          po_number_format: Json | null
           standard_specific_instructions: string | null
           standard_terms_and_conditions: string | null
           updated_at: string | null
@@ -2932,6 +2933,7 @@ export type Database = {
           email_template_subject?: string | null
           id?: string
           organization_id?: string | null
+          po_number_format?: Json | null
           standard_specific_instructions?: string | null
           standard_terms_and_conditions?: string | null
           updated_at?: string | null
@@ -2943,6 +2945,7 @@ export type Database = {
           email_template_subject?: string | null
           id?: string
           organization_id?: string | null
+          po_number_format?: Json | null
           standard_specific_instructions?: string | null
           standard_terms_and_conditions?: string | null
           updated_at?: string | null
