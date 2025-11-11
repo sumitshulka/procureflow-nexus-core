@@ -124,10 +124,11 @@ const POApprovalMatrix = () => {
       if (deptError) throw deptError;
       setDepartments(deptData || []);
 
-      // Fetch users with their departments
+      // Fetch users with their departments (exclude vendor users)
       const { data: usersData, error: usersError } = await supabase
         .from("profiles")
         .select("id, full_name, department_id")
+        .eq("is_vendor", false)
         .order("full_name");
 
       if (usersError) throw usersError;
