@@ -242,6 +242,17 @@ const VendorRegistrationPage = () => {
 
       if (insertError) throw insertError;
 
+      // Mark profile as vendor user
+      const { error: profileUpdateError } = await supabase
+        .from('profiles')
+        .update({ is_vendor: true })
+        .eq('id', userId);
+
+      if (profileUpdateError) {
+        console.error('Error marking profile as vendor:', profileUpdateError);
+        // Don't throw error - this is not critical for registration
+      }
+
       // Assign vendor role (with proper authentication)
       const { data: signInForRole, error: roleSignInError } = await supabase.auth.signInWithPassword({
         email: values.primary_email,

@@ -1689,6 +1689,7 @@ export type Database = {
           employee_id: string | null
           full_name: string | null
           id: string
+          is_vendor: boolean
           mobile: string | null
           status: string | null
           updated_at: string
@@ -1701,6 +1702,7 @@ export type Database = {
           employee_id?: string | null
           full_name?: string | null
           id: string
+          is_vendor?: boolean
           mobile?: string | null
           status?: string | null
           updated_at?: string
@@ -1713,6 +1715,7 @@ export type Database = {
           employee_id?: string | null
           full_name?: string | null
           id?: string
+          is_vendor?: boolean
           mobile?: string | null
           status?: string | null
           updated_at?: string

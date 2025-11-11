@@ -90,7 +90,8 @@ const UsersList = () => {
     queryFn: async () => {
       const { data: profiles, error } = await supabase
         .from("profiles")
-        .select("id, full_name, created_at, department_id");
+        .select("id, full_name, created_at, department_id")
+        .eq("is_vendor", false);
 
       if (error) throw error;
       if (!profiles || profiles.length === 0) return [];
