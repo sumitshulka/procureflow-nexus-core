@@ -8,6 +8,7 @@ import EmailSettings from "@/components/settings/EmailSettings";
 import IntegrationSettings from "@/components/settings/IntegrationSettings";
 import RoleManagement from "@/components/settings/RoleManagement";
 import LocationsManagement from "@/components/settings/LocationsManagement";
+import POSettings from "@/components/settings/POSettings";
 import { useNavigate, useLocation } from "react-router-dom";
 
 const Settings = () => {
@@ -86,6 +87,12 @@ const Settings = () => {
               >
                 Integrations
               </TabsTrigger>
+              <TabsTrigger 
+                value="purchase-orders" 
+                className="data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none border-b-2 border-transparent px-4 py-3 rounded-none"
+              >
+                Purchase Orders
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -111,6 +118,10 @@ const Settings = () => {
           
           <TabsContent value="integrations" className="p-6">
             <IntegrationSettings />
+          </TabsContent>
+          
+          <TabsContent value="purchase-orders" className="p-6">
+            <POSettings />
           </TabsContent>
         </Tabs>
       </div>

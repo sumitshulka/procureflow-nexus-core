@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -11,16 +11,14 @@ import { usePOActions } from '@/hooks/usePOActions';
 import { 
   ShoppingCart, 
   Search, 
-  Filter, 
-  Calendar, 
-  Package,
+  Download,
+  Mail,
+  DollarSign,
+  TruckIcon,
   CheckCircle,
   AlertCircle,
   Clock,
-  Eye,
-  Download,
-  DollarSign,
-  TruckIcon,
+  Package,
 } from 'lucide-react';
 
 import { 
@@ -30,42 +28,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import PageHeader from '@/components/common/PageHeader';
 
-const VendorPurchaseOrders = () => {
+const PurchaseOrdersManagement = () => {
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const { generatePDF, isGeneratingPDF } = usePOActions();
+  const { generatePDF, sendEmail, isGeneratingPDF, isSendingEmail } = usePOActions();
 
-  // Fetch purchase orders for this vendor
   const { data: purchaseOrders, isLoading } = useQuery({
-    queryKey: ["vendor_purchase_orders_detailed", user?.id, statusFilter],
+    queryKey: ["purchase_orders_management", statusFilter],
     queryFn: async () => {
-      if (!user?.id) return [];
-      
-      // First get vendor registration to find vendor ID
-      const { data: vendorReg, error: vendorError } = await supabase
-        .from("vendor_registrations")
-        .select("id")
-        .eq("user_id", user.id)
-        .single();
-      
-      if (vendorError) throw vendorError;
-      if (!vendorReg) return [];
-      
-      // Get purchase orders for this vendor
-      const { data: pos, error: poError } = await supabase
+      const { data, error } = await supabase
         .from("purchase_orders")
         .select(`
           *,
+          vendor:vendor_registrations(company_name, primary_email),
           purchase_order_items(*)
         `)
-        .eq("vendor_id", vendorReg.id)
         .order("created_at", { ascending: false });
       
-      if (poError) throw poError;
-      
-      return pos || [];
+      if (error) throw error;
+      return data || [];
     },
     enabled: !!user?.id,
   });
@@ -73,7 +57,7 @@ const VendorPurchaseOrders = () => {
   const filteredPOs = purchaseOrders?.filter(po => {
     const matchesSearch = searchTerm === '' || 
       po.po_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      po.special_instructions?.toLowerCase().includes(searchTerm.toLowerCase());
+      po.vendor?.company_name.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = statusFilter === 'all' || po.status === statusFilter;
     
@@ -104,7 +88,7 @@ const VendorPurchaseOrders = () => {
   const getTotalStats = () => {
     const stats = {
       total: purchaseOrders?.length || 0,
-      totalValue: purchaseOrders?.reduce((sum, po) => sum + (po.total_amount || 0), 0) || 0,
+      totalValue: purchaseOrders?.reduce((sum, po) => sum + (po.final_amount || 0), 0) || 0,
       active: purchaseOrders?.filter(po => ['sent', 'acknowledged', 'in_progress'].includes(po.status)).length || 0,
       completed: purchaseOrders?.filter(po => po.status === 'completed').length || 0,
     };
@@ -115,11 +99,10 @@ const VendorPurchaseOrders = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold">Purchase Orders</h1>
-        <p className="text-muted-foreground">Manage your purchase orders and delivery status</p>
-      </div>
+      <PageHeader 
+        title="Purchase Orders Management" 
+        description="Manage all purchase orders and send to vendors"
+      />
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -173,22 +156,24 @@ const VendorPurchaseOrders = () => {
       <Card>
         <CardContent className="p-4">
           <div className="flex flex-col md:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-              <Input
-                placeholder="Search by PO number or description..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Input
+                  placeholder="Search by PO number or vendor..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[200px]">
-                <Filter className="w-4 h-4 mr-2" />
+              <SelectTrigger className="w-full md:w-[200px]">
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Orders</SelectItem>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="draft">Draft</SelectItem>
                 <SelectItem value="sent">Sent</SelectItem>
                 <SelectItem value="acknowledged">Acknowledged</SelectItem>
                 <SelectItem value="in_progress">In Progress</SelectItem>
@@ -203,108 +188,56 @@ const VendorPurchaseOrders = () => {
 
       {/* Purchase Orders List */}
       {isLoading ? (
-        <div className="py-8">
-          <div className="flex items-center gap-3">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-            <span>Loading purchase orders...</span>
-          </div>
-        </div>
+        <div className="text-center py-8">Loading purchase orders...</div>
       ) : filteredPOs.length === 0 ? (
         <Card>
-          <CardContent className="py-12">
-            <div className="flex items-center gap-4">
-              <ShoppingCart className="w-12 h-12 text-muted-foreground" />
-              <div>
-                <h3 className="text-lg font-medium mb-2">No Purchase Orders Found</h3>
-                <p className="text-muted-foreground">
-                  {searchTerm || statusFilter !== 'all' 
-                    ? 'No purchase orders match your current filters.' 
-                    : 'You have no purchase orders yet.'}
-                </p>
-              </div>
-            </div>
+          <CardContent className="text-center py-8">
+            <ShoppingCart className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+            <h3 className="text-lg font-medium mb-2">No Purchase Orders Found</h3>
+            <p className="text-muted-foreground">
+              {searchTerm || statusFilter !== 'all' 
+                ? 'Try adjusting your filters' 
+                : 'Create your first purchase order to get started'}
+            </p>
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-4">
+        <div className="grid gap-4">
           {filteredPOs.map((po) => (
-            <Card key={po.id} className="hover:shadow-md transition-shadow">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <ShoppingCart className="w-5 h-5" />
-                      {po.po_number}
-                    </CardTitle>
-                    <CardDescription className="mt-1">
-                      {po.special_instructions || 'No special instructions provided'}
-                    </CardDescription>
+            <Card key={po.id}>
+              <CardContent className="p-6">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h3 className="text-lg font-semibold">{po.po_number}</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Vendor: {po.vendor?.company_name || 'N/A'}
+                    </p>
                   </div>
-                  <div className="flex flex-col items-end gap-2">
-                    {getStatusBadge(po.status)}
-                    <span className="text-lg font-bold text-green-600">
-                      ${po.total_amount?.toLocaleString() || '0'}
-                    </span>
-                  </div>
+                  {getStatusBadge(po.status)}
                 </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Total Amount</p>
+                    <p className="font-semibold">{po.currency} {po.final_amount?.toFixed(2)}</p>
+                  </div>
                   <div>
                     <p className="text-sm text-muted-foreground">PO Date</p>
-                    <p className="font-medium flex items-center gap-1">
-                      <Calendar className="w-4 h-4" />
-                      {format(new Date(po.po_date), 'MMM dd, yyyy')}
-                    </p>
+                    <p className="font-semibold">{format(new Date(po.po_date), 'MMM dd, yyyy')}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Expected Delivery</p>
-                    <p className="font-medium">
-                      {po.expected_delivery_date 
-                        ? format(new Date(po.expected_delivery_date), 'MMM dd, yyyy')
-                        : 'Not specified'}
+                    <p className="font-semibold">
+                      {po.expected_delivery_date ? format(new Date(po.expected_delivery_date), 'MMM dd, yyyy') : 'N/A'}
                     </p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Items</p>
-                    <p className="font-medium flex items-center gap-1">
-                      <Package className="w-4 h-4" />
-                      {po.purchase_order_items?.length || 0} items
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Currency</p>
-                    <p className="font-medium">{po.currency || 'USD'}</p>
+                    <p className="font-semibold">{po.purchase_order_items?.length || 0}</p>
                   </div>
                 </div>
 
-                {/* Items Preview */}
-                {po.purchase_order_items && po.purchase_order_items.length > 0 && (
-                  <div className="mb-4">
-                    <p className="text-sm font-medium mb-2">Items:</p>
-                    <div className="bg-accent rounded-lg p-3">
-                      {po.purchase_order_items.slice(0, 3).map((item: any, index: number) => (
-                        <div key={item.id || index} className="flex justify-between items-center py-1">
-                          <span className="text-sm">{item.description || 'Item'}</span>
-                          <span className="text-sm font-medium">
-                            {item.quantity} × ${item.unit_price?.toLocaleString() || '0'}
-                          </span>
-                        </div>
-                      ))}
-                      {po.purchase_order_items.length > 3 && (
-                        <p className="text-xs text-muted-foreground mt-2">
-                          +{po.purchase_order_items.length - 3} more items
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )}
-                
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm">
-                    <Eye className="w-4 h-4 mr-2" />
-                    View Details
-                  </Button>
                   <Button 
                     variant="outline" 
                     size="sm"
@@ -314,18 +247,15 @@ const VendorPurchaseOrders = () => {
                     <Download className="w-4 h-4 mr-2" />
                     {isGeneratingPDF ? "Generating..." : "Download PDF"}
                   </Button>
-                  {po.status === 'sent' && (
-                    <Button size="sm">
-                      <CheckCircle className="w-4 h-4 mr-2" />
-                      Acknowledge
-                    </Button>
-                  )}
-                  {['acknowledged', 'in_progress'].includes(po.status) && (
-                    <Button size="sm">
-                      <TruckIcon className="w-4 h-4 mr-2" />
-                      Update Status
-                    </Button>
-                  )}
+                  <Button 
+                    variant="default" 
+                    size="sm"
+                    onClick={() => sendEmail(po.id)}
+                    disabled={isSendingEmail || po.status === 'draft'}
+                  >
+                    <Mail className="w-4 h-4 mr-2" />
+                    {isSendingEmail ? "Sending..." : "Send to Vendor"}
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -336,4 +266,4 @@ const VendorPurchaseOrders = () => {
   );
 };
 
-export default VendorPurchaseOrders;
+export default PurchaseOrdersManagement;

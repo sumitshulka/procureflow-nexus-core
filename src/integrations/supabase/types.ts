@@ -1088,6 +1088,47 @@ export type Database = {
         }
         Relationships: []
       }
+      po_email_logs: {
+        Row: {
+          error_message: string | null
+          id: string
+          purchase_order_id: string | null
+          recipient_email: string
+          sent_at: string | null
+          sent_by: string | null
+          status: string | null
+          subject: string
+        }
+        Insert: {
+          error_message?: string | null
+          id?: string
+          purchase_order_id?: string | null
+          recipient_email: string
+          sent_at?: string | null
+          sent_by?: string | null
+          status?: string | null
+          subject: string
+        }
+        Update: {
+          error_message?: string | null
+          id?: string
+          purchase_order_id?: string | null
+          recipient_email?: string
+          sent_at?: string | null
+          sent_by?: string | null
+          status?: string | null
+          subject?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "po_email_logs_purchase_order_id_fkey"
+            columns: ["purchase_order_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pricing_template_fields: {
         Row: {
           calculation_formula: string | null
@@ -1625,8 +1666,10 @@ export type Database = {
           rfp_id: string | null
           rfp_response_id: string | null
           special_instructions: string | null
+          specific_instructions: string | null
           status: string
           tax_amount: number | null
+          terms_and_conditions: string | null
           total_amount: number
           updated_at: string
           vendor_id: string
@@ -1654,8 +1697,10 @@ export type Database = {
           rfp_id?: string | null
           rfp_response_id?: string | null
           special_instructions?: string | null
+          specific_instructions?: string | null
           status?: string
           tax_amount?: number | null
+          terms_and_conditions?: string | null
           total_amount: number
           updated_at?: string
           vendor_id: string
@@ -1683,8 +1728,10 @@ export type Database = {
           rfp_id?: string | null
           rfp_response_id?: string | null
           special_instructions?: string | null
+          specific_instructions?: string | null
           status?: string
           tax_amount?: number | null
+          terms_and_conditions?: string | null
           total_amount?: number
           updated_at?: string
           vendor_id?: string
@@ -2797,7 +2844,7 @@ export type Database = {
           event_data: Json | null
           event_type: string
           id: string
-          ip_address: unknown | null
+          ip_address: unknown
           success: boolean | null
           user_agent: string | null
           user_id: string | null
@@ -2807,7 +2854,7 @@ export type Database = {
           event_data?: Json | null
           event_type: string
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           success?: boolean | null
           user_agent?: string | null
           user_id?: string | null
@@ -2817,7 +2864,7 @@ export type Database = {
           event_data?: Json | null
           event_type?: string
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           success?: boolean | null
           user_agent?: string | null
           user_id?: string | null
@@ -2863,6 +2910,42 @@ export type Database = {
           target_user_id?: string | null
           user_agent?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      standard_po_settings: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          email_template_body: string | null
+          email_template_subject: string | null
+          id: string
+          organization_id: string | null
+          standard_specific_instructions: string | null
+          standard_terms_and_conditions: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          email_template_body?: string | null
+          email_template_subject?: string | null
+          id?: string
+          organization_id?: string | null
+          standard_specific_instructions?: string | null
+          standard_terms_and_conditions?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          email_template_body?: string | null
+          email_template_subject?: string | null
+          id?: string
+          organization_id?: string | null
+          standard_specific_instructions?: string | null
+          standard_terms_and_conditions?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -3422,10 +3505,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      begin_transaction: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
+      begin_transaction: { Args: never; Returns: Json }
       calculate_technical_score: {
         Args: { p_response_id: string }
         Returns: number
@@ -3457,20 +3537,14 @@ export type Database = {
         }
         Returns: boolean
       }
-      commit_transaction: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
+      commit_transaction: { Args: never; Returns: Json }
       delete_procurement_request: {
         Args: { p_request_id: string }
         Returns: Json
       }
-      generate_vendor_number: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      generate_vendor_number: { Args: never; Returns: string }
       get_approval_requests_secure: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           approval_date: string
           approver_id: string
@@ -3490,10 +3564,7 @@ export type Database = {
         Args: { country_name: string }
         Returns: string
       }
-      get_effective_rfp_data: {
-        Args: { p_rfp_id: string }
-        Returns: Json
-      }
+      get_effective_rfp_data: { Args: { p_rfp_id: string }; Returns: Json }
       get_latest_product_price: {
         Args: { p_product_id: string }
         Returns: {
@@ -3503,7 +3574,7 @@ export type Database = {
         }[]
       }
       get_procurement_request_details_secure: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           created_at: string
           date_created: string
@@ -3523,10 +3594,7 @@ export type Database = {
           updated_at: string
         }[]
       }
-      get_security_status: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
+      get_security_status: { Args: never; Returns: Json }
       has_role: {
         Args: {
           required_role: Database["public"]["Enums"]["user_role"]
@@ -3534,10 +3602,7 @@ export type Database = {
         }
         Returns: boolean
       }
-      is_request_completed: {
-        Args: { request_id: string }
-        Returns: boolean
-      }
+      is_request_completed: { Args: { request_id: string }; Returns: boolean }
       log_rfp_activity: {
         Args: {
           p_activity_data?: Json
@@ -3564,10 +3629,7 @@ export type Database = {
         Args: { p_delivery_details: Json; transaction_id: string }
         Returns: Json
       }
-      rollback_transaction: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
+      rollback_transaction: { Args: never; Returns: Json }
       soft_delete_rfp_template: {
         Args: { p_template_id: string }
         Returns: boolean
@@ -3580,10 +3642,7 @@ export type Database = {
         Args: { p_module_name: string; p_permission: string; p_user_id: string }
         Returns: boolean
       }
-      validate_password_strength: {
-        Args: { password: string }
-        Returns: Json
-      }
+      validate_password_strength: { Args: { password: string }; Returns: Json }
     }
     Enums: {
       budget_allocation_status:

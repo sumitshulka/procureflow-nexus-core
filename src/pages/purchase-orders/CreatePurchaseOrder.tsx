@@ -38,6 +38,8 @@ const purchaseOrderSchema = z.object({
   delivery_terms: z.string().optional(),
   warranty_terms: z.string().optional(),
   special_instructions: z.string().optional(),
+  terms_and_conditions: z.string().optional(),
+  specific_instructions: z.string().optional(),
   currency: z.string().default("USD"),
   items: z.array(poItemSchema).min(1, "At least one item is required"),
 });
@@ -56,6 +58,7 @@ const CreatePurchaseOrder = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [standardSettings, setStandardSettings] = useState<any>(null);
 
   const form = useForm<PurchaseOrderFormData>({
     resolver: zodResolver(purchaseOrderSchema),
@@ -80,7 +83,35 @@ const CreatePurchaseOrder = () => {
 
   useEffect(() => {
     fetchVendors();
+    fetchStandardSettings();
   }, []);
+
+  const fetchStandardSettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("standard_po_settings")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single();
+
+      if (error && error.code !== 'PGRST116') throw error;
+      setStandardSettings(data);
+    } catch (error: any) {
+      console.error("Error fetching standard settings:", error.message);
+    }
+  };
+
+  const loadStandardTerms = () => {
+    if (standardSettings) {
+      form.setValue("terms_and_conditions", standardSettings.standard_terms_and_conditions || "");
+      form.setValue("specific_instructions", standardSettings.standard_specific_instructions || "");
+      toast({
+        title: "Standard Terms Loaded",
+        description: "Standard terms and instructions have been applied",
+      });
+    }
+  };
 
   const fetchVendors = async () => {
     try {
@@ -163,6 +194,8 @@ const CreatePurchaseOrder = () => {
           delivery_terms: data.delivery_terms,
           warranty_terms: data.warranty_terms,
           special_instructions: data.special_instructions,
+          terms_and_conditions: data.terms_and_conditions,
+          specific_instructions: data.specific_instructions,
           currency: data.currency,
           created_by: user.id,
           status: "draft",
@@ -489,6 +522,61 @@ const CreatePurchaseOrder = () => {
                   </Card>
                 ))}
               </div>
+
+              {/* Terms and Conditions Section */}
+              <Card className="p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-medium">Terms & Instructions</h3>
+                  {standardSettings && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={loadStandardTerms}
+                    >
+                      Load Standard Terms
+                    </Button>
+                  )}
+                </div>
+                
+                <div className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="terms_and_conditions"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Terms and Conditions</FormLabel>
+                        <FormControl>
+                          <Textarea 
+                            placeholder="Enter terms and conditions..."
+                            rows={6}
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="specific_instructions"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Specific Instructions</FormLabel>
+                        <FormControl>
+                          <Textarea 
+                            placeholder="Enter specific instructions for this PO..."
+                            rows={6}
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </Card>
 
               {/* Order Totals */}
               <Card className="p-4 bg-blue-50">
