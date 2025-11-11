@@ -64,7 +64,7 @@ const POApprovalMatrix = () => {
   const [matrixItems, setMatrixItems] = useState<ApprovalMatrixItem[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [users, setUsers] = useState<User[]>([]);
-  const [selectedLevel, setSelectedLevel] = useState<string | null>(null);
+  const [expandedLevelId, setExpandedLevelId] = useState<string | null>(null);
 
   const [newLevel, setNewLevel] = useState({
     level_name: "",
@@ -73,10 +73,10 @@ const POApprovalMatrix = () => {
     description: "",
   });
 
-  const [newMatrixItem, setNewMatrixItem] = useState({
-    department_id: "",
-    approver_user_id: "",
-  });
+  const [newMatrixItems, setNewMatrixItems] = useState<Record<string, {
+    department_id: string;
+    approver_user_id: string;
+  }>>({});
 
   useEffect(() => {
     fetchData();
@@ -224,11 +224,12 @@ const POApprovalMatrix = () => {
     }
   };
 
-  const handleAddApprover = async () => {
-    if (!selectedLevel || !newMatrixItem.approver_user_id) {
+  const handleAddApprover = async (levelId: string) => {
+    const matrixItem = newMatrixItems[levelId];
+    if (!matrixItem?.approver_user_id) {
       toast({
         title: "Validation Error",
-        description: "Please select a level and an approver",
+        description: "Please select an approver",
         variant: "destructive",
       });
       return;
@@ -239,16 +240,16 @@ const POApprovalMatrix = () => {
       const maxSequence = Math.max(
         0,
         ...matrixItems
-          .filter(m => m.approval_level_id === selectedLevel)
+          .filter(m => m.approval_level_id === levelId)
           .map(m => m.sequence_order)
       );
 
       const { error } = await supabase
         .from("po_approval_matrix")
         .insert([{
-          approval_level_id: selectedLevel,
-          department_id: newMatrixItem.department_id || null,
-          approver_user_id: newMatrixItem.approver_user_id,
+          approval_level_id: levelId,
+          department_id: matrixItem.department_id || null,
+          approver_user_id: matrixItem.approver_user_id,
           sequence_order: maxSequence + 1,
         }]);
 
@@ -259,11 +260,13 @@ const POApprovalMatrix = () => {
         description: "Approver added successfully",
       });
 
-      setNewMatrixItem({
-        department_id: "",
-        approver_user_id: "",
-      });
-
+      // Reset form for this level
+      setNewMatrixItems(prev => ({
+        ...prev,
+        [levelId]: { department_id: "", approver_user_id: "" }
+      }));
+      
+      setExpandedLevelId(null);
       fetchData();
     } catch (error: any) {
       toast({
@@ -274,6 +277,16 @@ const POApprovalMatrix = () => {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const updateMatrixItem = (levelId: string, field: string, value: string) => {
+    setNewMatrixItems(prev => ({
+      ...prev,
+      [levelId]: {
+        ...(prev[levelId] || { department_id: "", approver_user_id: "" }),
+        [field]: value
+      }
+    }));
   };
 
   const handleDeleteApprover = async (matrixId: string) => {
@@ -421,15 +434,97 @@ const POApprovalMatrix = () => {
                       <div className="mt-4">
                         <div className="flex items-center justify-between mb-2">
                           <Label className="text-sm font-medium">Approvers</Label>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setSelectedLevel(level.id)}
-                          >
-                            <Plus className="h-3 w-3 mr-1" />
-                            Add Approver
-                          </Button>
+                          {expandedLevelId !== level.id && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setExpandedLevelId(level.id);
+                                if (!newMatrixItems[level.id]) {
+                                  setNewMatrixItems(prev => ({
+                                    ...prev,
+                                    [level.id]: { department_id: "", approver_user_id: "" }
+                                  }));
+                                }
+                              }}
+                            >
+                              <Plus className="h-3 w-3 mr-1" />
+                              Add Approver
+                            </Button>
+                          )}
                         </div>
+                        
+                        {/* Add Approver Form - shown inline when expanded */}
+                        {expandedLevelId === level.id && (
+                          <div className="mb-3 p-3 border rounded-lg bg-background space-y-3">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                              <div>
+                                <Label htmlFor={`dept-${level.id}`} className="text-xs">Department (Optional)</Label>
+                                <Select
+                                  value={newMatrixItems[level.id]?.department_id || ""}
+                                  onValueChange={(value) => updateMatrixItem(level.id, "department_id", value)}
+                                >
+                                  <SelectTrigger className="mt-1 h-9">
+                                    <SelectValue placeholder="Select department" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="any">Any Department</SelectItem>
+                                    {departments.map((dept) => (
+                                      <SelectItem key={dept.id} value={dept.id}>
+                                        {dept.name}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              
+                              <div>
+                                <Label htmlFor={`approver-${level.id}`} className="text-xs">Approver *</Label>
+                                <Select
+                                  value={newMatrixItems[level.id]?.approver_user_id || ""}
+                                  onValueChange={(value) => updateMatrixItem(level.id, "approver_user_id", value)}
+                                >
+                                  <SelectTrigger className="mt-1 h-9">
+                                    <SelectValue placeholder="Select approver" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {users.map((user) => (
+                                      <SelectItem key={user.id} value={user.id}>
+                                        {user.full_name}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+                            
+                            <div className="flex justify-end gap-2">
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => {
+                                  setExpandedLevelId(null);
+                                  setNewMatrixItems(prev => ({
+                                    ...prev,
+                                    [level.id]: { department_id: "", approver_user_id: "" }
+                                  }));
+                                }}
+                              >
+                                Cancel
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                onClick={() => handleAddApprover(level.id)} 
+                                disabled={isSaving}
+                              >
+                                {isSaving ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Plus className="h-3 w-3 mr-1" />}
+                                Add
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* List of existing approvers */}
                         {matrixItems.filter(m => m.approval_level_id === level.id).length === 0 ? (
                           <p className="text-xs text-muted-foreground italic">No approvers assigned</p>
                         ) : (
@@ -437,7 +532,7 @@ const POApprovalMatrix = () => {
                             {matrixItems
                               .filter(m => m.approval_level_id === level.id)
                               .map((item) => (
-                                <div key={item.id} className="flex items-center justify-between bg-background p-2 rounded">
+                                <div key={item.id} className="flex items-center justify-between bg-background p-2 rounded border">
                                   <div className="flex items-center gap-2">
                                     <Users className="h-4 w-4 text-muted-foreground" />
                                     <span className="text-sm font-medium">{item.user_name}</span>
@@ -478,70 +573,6 @@ const POApprovalMatrix = () => {
           )}
         </CardContent>
       </Card>
-
-      {/* Add Approver Dialog */}
-      {selectedLevel && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Add Approver to {levels.find(l => l.id === selectedLevel)?.level_name}</CardTitle>
-            <CardDescription>
-              Assign users who can approve purchase orders at this level
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <Label htmlFor="department">Department (Optional)</Label>
-                <Select
-                  value={newMatrixItem.department_id}
-                  onValueChange={(value) => setNewMatrixItem({ ...newMatrixItem, department_id: value })}
-                >
-                  <SelectTrigger className="mt-2">
-                    <SelectValue placeholder="Select department" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="any">Any Department</SelectItem>
-                    {departments.map((dept) => (
-                      <SelectItem key={dept.id} value={dept.id}>
-                        {dept.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div>
-                <Label htmlFor="approver_user">Approver *</Label>
-                <Select
-                  value={newMatrixItem.approver_user_id}
-                  onValueChange={(value) => setNewMatrixItem({ ...newMatrixItem, approver_user_id: value })}
-                >
-                  <SelectTrigger className="mt-2">
-                    <SelectValue placeholder="Select approver" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {users.map((user) => (
-                      <SelectItem key={user.id} value={user.id}>
-                        {user.full_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="flex items-end gap-2">
-                <Button onClick={handleAddApprover} disabled={isSaving} className="flex-1">
-                  {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
-                  Add
-                </Button>
-                <Button variant="outline" onClick={() => setSelectedLevel(null)}>
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 };
