@@ -18,6 +18,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { CURRENCIES, getCurrencySymbol } from "@/utils/currencyUtils";
 
 const poItemSchema = z.object({
   description: z.string().min(1, "Description is required"),
@@ -65,6 +66,7 @@ const CreatePurchaseOrder = () => {
   const [standardSettings, setStandardSettings] = useState<any>(null);
   const [nextPoNumber, setNextPoNumber] = useState<string>("");
   const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
+  const [orgCurrency, setOrgCurrency] = useState<string>("USD");
 
   const form = useForm<PurchaseOrderFormData>({
     resolver: zodResolver(purchaseOrderSchema),
@@ -91,7 +93,25 @@ const CreatePurchaseOrder = () => {
     fetchVendors();
     fetchStandardSettings();
     fetchNextPoNumber();
+    fetchOrganizationCurrency();
   }, []);
+
+  const fetchOrganizationCurrency = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("organization_settings")
+        .select("base_currency")
+        .limit(1)
+        .maybeSingle();
+
+      if (error) throw error;
+      const currency = data?.base_currency || "USD";
+      setOrgCurrency(currency);
+      form.setValue("currency", currency);
+    } catch (error: any) {
+      console.error("Error fetching organization currency:", error.message);
+    }
+  };
 
   const fetchNextPoNumber = async () => {
     try {
@@ -366,17 +386,18 @@ const CreatePurchaseOrder = () => {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Currency</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select currency" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="USD">USD</SelectItem>
-                          <SelectItem value="EUR">EUR</SelectItem>
-                          <SelectItem value="GBP">GBP</SelectItem>
-                          <SelectItem value="INR">INR</SelectItem>
+                          {CURRENCIES.map((currency) => (
+                            <SelectItem key={currency.code} value={currency.code}>
+                              {currency.code} - {currency.symbol} ({currency.name})
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />
