@@ -41,7 +41,7 @@ const purchaseOrderSchema = z.object({
   special_instructions: z.string().optional(),
   terms_and_conditions: z.string().optional(),
   specific_instructions: z.string().optional(),
-  currency: z.string().default("USD"),
+  currency: z.string().min(1, "Currency is required"),
   items: z.array(poItemSchema).min(1, "At least one item is required"),
 });
 
