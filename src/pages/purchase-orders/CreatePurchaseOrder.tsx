@@ -66,7 +66,7 @@ const CreatePurchaseOrder = () => {
   const [standardSettings, setStandardSettings] = useState<any>(null);
   const [nextPoNumber, setNextPoNumber] = useState<string>("");
   const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
-  const [orgCurrency, setOrgCurrency] = useState<string>("USD");
+  const [orgCurrency, setOrgCurrency] = useState<string>("");
 
   const form = useForm<PurchaseOrderFormData>({
     resolver: zodResolver(purchaseOrderSchema),
@@ -397,7 +397,7 @@ const CreatePurchaseOrder = () => {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Currency</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value || orgCurrency}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select currency" />
