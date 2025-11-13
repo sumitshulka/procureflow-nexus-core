@@ -59,6 +59,7 @@ const CreatePurchaseOrder = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [standardSettings, setStandardSettings] = useState<any>(null);
+  const [nextPoNumber, setNextPoNumber] = useState<string>("");
 
   const form = useForm<PurchaseOrderFormData>({
     resolver: zodResolver(purchaseOrderSchema),
@@ -84,7 +85,18 @@ const CreatePurchaseOrder = () => {
   useEffect(() => {
     fetchVendors();
     fetchStandardSettings();
+    fetchNextPoNumber();
   }, []);
+
+  const fetchNextPoNumber = async () => {
+    try {
+      const { data, error } = await supabase.rpc('get_next_po_number');
+      if (error) throw error;
+      setNextPoNumber(data);
+    } catch (error: any) {
+      console.error("Error fetching next PO number:", error.message);
+    }
+  };
 
   const fetchStandardSettings = async () => {
     try {
@@ -253,7 +265,15 @@ const CreatePurchaseOrder = () => {
     <div className="container mx-auto py-6">
       <Card>
         <CardHeader>
-          <CardTitle>Create Purchase Order</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Create Purchase Order</CardTitle>
+            {nextPoNumber && (
+              <div className="flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-md border border-primary/20">
+                <span className="text-sm font-medium text-muted-foreground">PO Number:</span>
+                <span className="text-lg font-bold text-primary">{nextPoNumber}</span>
+              </div>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <Form {...form}>
