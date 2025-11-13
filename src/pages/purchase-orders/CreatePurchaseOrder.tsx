@@ -96,31 +96,45 @@ const CreatePurchaseOrder = () => {
     fetchOrganizationCurrency();
   }, []);
 
+  useEffect(() => {
+    const subscription = form.watch((values) => {
+      console.debug('[CreatePO] Form currency changed:', values.currency, '| orgCurrency:', orgCurrency);
+    });
+    return () => subscription?.unsubscribe?.();
+  }, [form, orgCurrency]);
+
   const fetchOrganizationCurrency = async () => {
     try {
+      console.debug('[CreatePO] Fetching organization base currency...');
       const { data, error } = await supabase
         .from("organization_settings")
-        .select("base_currency")
+        .select("base_currency, created_at, updated_at")
+        .order("updated_at", { ascending: false })
+        .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
 
-      if (error) throw error;
-      const currency = data?.base_currency || "USD";
+      if (error) {
+        console.error('[CreatePO] Error fetching org currency:', error);
+        return; // Don't fallback to USD to avoid incorrect default display
+      }
+
+      console.debug('[CreatePO] Org currency fetch result:', data);
+      const currency = data?.base_currency;
+      if (!currency) {
+        console.warn('[CreatePO] No base_currency found in organization_settings.');
+        return;
+      }
+
       setOrgCurrency(currency);
-      
-      // Use reset to properly update the form with the fetched currency
-      form.reset({
-        ...form.getValues(),
-        currency: currency,
-      });
+
+      const currentFormCurrency = form.getValues('currency');
+      if (!currentFormCurrency) {
+        form.setValue('currency', currency, { shouldDirty: false, shouldValidate: true });
+      }
     } catch (error: any) {
-      console.error("Error fetching organization currency:", error.message);
-      // Fallback to USD if fetch fails
-      setOrgCurrency("USD");
-      form.reset({
-        ...form.getValues(),
-        currency: "USD",
-      });
+      console.error('[CreatePO] Exception fetching org currency:', error?.message || error);
+      // Intentionally no fallback to USD to prevent wrong default
     }
   };
 
@@ -411,7 +425,9 @@ const CreatePurchaseOrder = () => {
                           ))}
                         </SelectContent>
                       </Select>
-                      <FormMessage />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Default: {orgCurrency ? `${orgCurrency} - ${getCurrencySymbol(orgCurrency)} ` : 'Loading...'}
+                      </p>
                     </FormItem>
                   )}
                 />
