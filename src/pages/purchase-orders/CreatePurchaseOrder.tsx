@@ -50,6 +50,10 @@ interface Vendor {
   id: string;
   company_name: string;
   primary_email: string;
+  signatory_name?: string;
+  registered_address?: any;
+  gst_number?: string;
+  pan_number?: string;
 }
 
 const CreatePurchaseOrder = () => {
@@ -60,6 +64,7 @@ const CreatePurchaseOrder = () => {
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [standardSettings, setStandardSettings] = useState<any>(null);
   const [nextPoNumber, setNextPoNumber] = useState<string>("");
+  const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
 
   const form = useForm<PurchaseOrderFormData>({
     resolver: zodResolver(purchaseOrderSchema),
@@ -90,9 +95,9 @@ const CreatePurchaseOrder = () => {
 
   const fetchNextPoNumber = async () => {
     try {
-      const { data, error } = await supabase.rpc('get_next_po_number');
+      const { data, error } = await supabase.rpc('get_next_po_number' as any);
       if (error) throw error;
-      setNextPoNumber(data);
+      setNextPoNumber(data as string);
     } catch (error: any) {
       console.error("Error fetching next PO number:", error.message);
     }
@@ -129,7 +134,7 @@ const CreatePurchaseOrder = () => {
     try {
       const { data, error } = await supabase
         .from("vendor_registrations")
-        .select("id, company_name, primary_email")
+        .select("id, company_name, primary_email, signatory_name, registered_address, gst_number, pan_number")
         .eq("status", "approved")
         .order("company_name");
 
@@ -142,6 +147,11 @@ const CreatePurchaseOrder = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const handleVendorChange = (vendorId: string) => {
+    const vendor = vendors.find(v => v.id === vendorId);
+    setSelectedVendor(vendor || null);
   };
 
   const calculateItemTotals = (item: any) => {
@@ -283,9 +293,15 @@ const CreatePurchaseOrder = () => {
                   control={form.control}
                   name="vendor_id"
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="md:col-span-2">
                       <FormLabel>Vendor *</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <Select 
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          handleVendorChange(value);
+                        }} 
+                        value={field.value}
+                      >
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select vendor" />
@@ -300,6 +316,46 @@ const CreatePurchaseOrder = () => {
                         </SelectContent>
                       </Select>
                       <FormMessage />
+                      
+                      {selectedVendor && (
+                        <div className="mt-4 p-4 bg-muted/50 rounded-lg border">
+                          <h4 className="text-sm font-semibold mb-3">Vendor Details</h4>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                            {selectedVendor.signatory_name && (
+                              <div>
+                                <span className="text-muted-foreground">Contact Person:</span>
+                                <p className="font-medium mt-1">{selectedVendor.signatory_name}</p>
+                              </div>
+                            )}
+                            {selectedVendor.registered_address && (
+                              <div>
+                                <span className="text-muted-foreground">Address:</span>
+                                <p className="font-medium mt-1">
+                                  {selectedVendor.registered_address.street}, {selectedVendor.registered_address.city}
+                                  <br />
+                                  {selectedVendor.registered_address.state}, {selectedVendor.registered_address.postal_code}
+                                  <br />
+                                  {selectedVendor.registered_address.country}
+                                </p>
+                              </div>
+                            )}
+                            {(selectedVendor.gst_number || selectedVendor.pan_number) && (
+                              <div>
+                                <span className="text-muted-foreground">Tax ID:</span>
+                                <p className="font-medium mt-1">
+                                  {selectedVendor.gst_number && (
+                                    <span>GST: {selectedVendor.gst_number}</span>
+                                  )}
+                                  {selectedVendor.gst_number && selectedVendor.pan_number && <br />}
+                                  {selectedVendor.pan_number && (
+                                    <span>PAN: {selectedVendor.pan_number}</span>
+                                  )}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </FormItem>
                   )}
                 />
