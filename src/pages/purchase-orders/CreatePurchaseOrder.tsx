@@ -71,7 +71,7 @@ const CreatePurchaseOrder = () => {
   const form = useForm<PurchaseOrderFormData>({
     resolver: zodResolver(purchaseOrderSchema),
     defaultValues: {
-      currency: "USD",
+      currency: "",
       items: [
         {
           description: "",
@@ -107,9 +107,20 @@ const CreatePurchaseOrder = () => {
       if (error) throw error;
       const currency = data?.base_currency || "USD";
       setOrgCurrency(currency);
-      form.setValue("currency", currency);
+      
+      // Use reset to properly update the form with the fetched currency
+      form.reset({
+        ...form.getValues(),
+        currency: currency,
+      });
     } catch (error: any) {
       console.error("Error fetching organization currency:", error.message);
+      // Fallback to USD if fetch fails
+      setOrgCurrency("USD");
+      form.reset({
+        ...form.getValues(),
+        currency: "USD",
+      });
     }
   };
 
