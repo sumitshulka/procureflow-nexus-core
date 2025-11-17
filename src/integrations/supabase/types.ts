@@ -3744,6 +3744,7 @@ export type Database = {
           price: number
         }[]
       }
+      get_next_po_number: { Args: never; Returns: string }
       get_procurement_request_details_secure: {
         Args: never
         Returns: {

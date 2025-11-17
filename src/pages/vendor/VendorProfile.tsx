@@ -27,6 +27,7 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { getCurrencySymbol, getCurrencyName } from '@/utils/currencyUtils';
 import VendorEditDialog from '@/components/vendor/VendorEditDialog';
+import { parseAddress } from '@/types/vendor';
 
 const VendorProfile = () => {
   const { user } = useAuth();
@@ -299,40 +300,55 @@ const VendorProfile = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div>
                 <h4 className="font-medium mb-2">Registered Address</h4>
-                {vendorProfile?.registered_address ? (
-                  <div className="text-sm space-y-1">
-                    <p>{(vendorProfile.registered_address as any)?.street}</p>
-                    <p>{(vendorProfile.registered_address as any)?.city}, {(vendorProfile.registered_address as any)?.state}</p>
-                    <p>{(vendorProfile.registered_address as any)?.postal_code}</p>
-                    <p>{(vendorProfile.registered_address as any)?.country}</p>
-                  </div>
-                ) : (
+                {vendorProfile?.registered_address ? (() => {
+                  const addr = parseAddress(vendorProfile.registered_address);
+                  return addr.street || addr.city ? (
+                    <div className="text-sm space-y-1">
+                      {addr.street && <p>{addr.street}</p>}
+                      {(addr.city || addr.state) && <p>{addr.city}{addr.city && addr.state ? ', ' : ''}{addr.state}</p>}
+                      {addr.postal_code && <p>{addr.postal_code}</p>}
+                      {addr.country && <p>{addr.country}</p>}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Not provided</p>
+                  );
+                })() : (
                   <p className="text-sm text-muted-foreground">Not provided</p>
                 )}
               </div>
               <div>
                 <h4 className="font-medium mb-2">Business Address</h4>
-                {vendorProfile?.business_address ? (
-                  <div className="text-sm space-y-1">
-                    <p>{(vendorProfile.business_address as any)?.street}</p>
-                    <p>{(vendorProfile.business_address as any)?.city}, {(vendorProfile.business_address as any)?.state}</p>
-                    <p>{(vendorProfile.business_address as any)?.postal_code}</p>
-                    <p>{(vendorProfile.business_address as any)?.country}</p>
-                  </div>
-                ) : (
+                {vendorProfile?.business_address ? (() => {
+                  const addr = parseAddress(vendorProfile.business_address);
+                  return addr.street || addr.city ? (
+                    <div className="text-sm space-y-1">
+                      {addr.street && <p>{addr.street}</p>}
+                      {(addr.city || addr.state) && <p>{addr.city}{addr.city && addr.state ? ', ' : ''}{addr.state}</p>}
+                      {addr.postal_code && <p>{addr.postal_code}</p>}
+                      {addr.country && <p>{addr.country}</p>}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Not provided</p>
+                  );
+                })() : (
                   <p className="text-sm text-muted-foreground">Not provided</p>
                 )}
               </div>
               <div>
                 <h4 className="font-medium mb-2">Billing Address</h4>
-                {vendorProfile?.billing_address ? (
-                  <div className="text-sm space-y-1">
-                    <p>{(vendorProfile.billing_address as any)?.street}</p>
-                    <p>{(vendorProfile.billing_address as any)?.city}, {(vendorProfile.billing_address as any)?.state}</p>
-                    <p>{(vendorProfile.billing_address as any)?.postal_code}</p>
-                    <p>{(vendorProfile.billing_address as any)?.country}</p>
-                  </div>
-                ) : (
+                {vendorProfile?.billing_address ? (() => {
+                  const addr = parseAddress(vendorProfile.billing_address);
+                  return addr.street || addr.city ? (
+                    <div className="text-sm space-y-1">
+                      {addr.street && <p>{addr.street}</p>}
+                      {(addr.city || addr.state) && <p>{addr.city}{addr.city && addr.state ? ', ' : ''}{addr.state}</p>}
+                      {addr.postal_code && <p>{addr.postal_code}</p>}
+                      {addr.country && <p>{addr.country}</p>}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Not provided</p>
+                  );
+                })() : (
                   <p className="text-sm text-muted-foreground">Not provided</p>
                 )}
               </div>

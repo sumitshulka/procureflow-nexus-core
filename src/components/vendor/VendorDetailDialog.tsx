@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { VendorRegistration, VendorDocument } from '@/types/vendor';
+import { VendorRegistration, VendorDocument, parseAddress } from '@/types/vendor';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 import { FileText, Building, User, CreditCard, MapPin, Download, CheckCircle, XCircle } from 'lucide-react';
@@ -230,33 +230,65 @@ const VendorDetailDialog: React.FC<VendorDetailDialogProps> = ({
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p>
-                      {vendor.registered_address.street}<br />
-                      {vendor.registered_address.city}, {vendor.registered_address.state}<br />
-                      {vendor.registered_address.postal_code}<br />
-                      {vendor.registered_address.country}
-                    </p>
+                    {(() => {
+                      const addr = parseAddress(vendor.registered_address);
+                      return addr.street || addr.city ? (
+                        <p>
+                          {addr.street && <>{addr.street}<br /></>}
+                          {(addr.city || addr.state) && <>{addr.city}{addr.city && addr.state ? ', ' : ''}{addr.state}<br /></>}
+                          {addr.postal_code && <>{addr.postal_code}<br /></>}
+                          {addr.country && addr.country}
+                        </p>
+                      ) : (
+                        <p className="text-muted-foreground">Not provided</p>
+                      );
+                    })()}
                   </CardContent>
                 </Card>
 
-                {vendor.business_address && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <MapPin className="w-4 h-4" />
-                        Business Address
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p>
-                        {vendor.business_address.street}<br />
-                        {vendor.business_address.city}, {vendor.business_address.state}<br />
-                        {vendor.business_address.postal_code}<br />
-                        {vendor.business_address.country}
-                      </p>
-                    </CardContent>
-                  </Card>
-                )}
+                {vendor.business_address && (() => {
+                  const addr = parseAddress(vendor.business_address);
+                  return (addr.street || addr.city) ? (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <MapPin className="w-4 h-4" />
+                          Business Address
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p>
+                          {addr.street && <>{addr.street}<br /></>}
+                          {(addr.city || addr.state) && <>{addr.city}{addr.city && addr.state ? ', ' : ''}{addr.state}<br /></>}
+                          {addr.postal_code && <>{addr.postal_code}<br /></>}
+                          {addr.country && addr.country}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  ) : null;
+                })()}
+
+                {vendor.billing_address && (() => {
+                  const addr = parseAddress(vendor.billing_address);
+                  return (addr.street || addr.city) ? (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <MapPin className="w-4 h-4" />
+                          Billing Address
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p>
+                          {addr.street && <>{addr.street}<br /></>}
+                          {(addr.city || addr.state) && <>{addr.city}{addr.city && addr.state ? ', ' : ''}{addr.state}<br /></>}
+                          {addr.postal_code && <>{addr.postal_code}<br /></>}
+                          {addr.country && addr.country}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  ) : null;
+                })()}
               </div>
 
               <Card>
