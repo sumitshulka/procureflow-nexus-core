@@ -27,6 +27,14 @@ interface Product {
     name: string;
     abbreviation: string;
   };
+  tax_code?: {
+    code: string;
+    name: string;
+    rates: Array<{
+      rate_name: string;
+      rate_percentage: number;
+    }>;
+  } | null;
   created_by?: {
     full_name: string;
   } | null;
@@ -100,6 +108,36 @@ const ProductDetail = () => {
         }
       }
 
+      // Fetch tax code and rates if tax_code_id exists
+      let taxCode: { code: string; name: string; rates: any[] } | null = null;
+      
+      if (data.tax_code_id) {
+        console.log("Fetching tax code for ID:", data.tax_code_id);
+        const { data: taxCodeData, error: taxCodeError } = await supabase
+          .from("tax_codes")
+          .select("code, name")
+          .eq("id", data.tax_code_id)
+          .single();
+          
+        if (!taxCodeError && taxCodeData) {
+          // Fetch tax rates for this tax code
+          const { data: ratesData } = await supabase
+            .from("tax_rates")
+            .select("rate_name, rate_percentage")
+            .eq("tax_code_id", data.tax_code_id)
+            .eq("is_active", true)
+            .order("rate_name");
+          
+          taxCode = {
+            code: taxCodeData.code,
+            name: taxCodeData.name,
+            rates: ratesData || []
+          };
+        } else {
+          console.log("Could not fetch tax code:", taxCodeError);
+        }
+      }
+
       const transformedProduct: Product = {
         id: data.id,
         name: data.name,
@@ -110,6 +148,7 @@ const ProductDetail = () => {
         tags: data.tags || [],
         category: data.category,
         unit: data.unit,
+        tax_code: taxCode,
         created_by: createdBy,
         created_at: data.created_at,
       };
@@ -260,6 +299,30 @@ const ProductDetail = () => {
                 <label className="text-sm font-medium text-muted-foreground">Classification</label>
                 <p className="mt-1 capitalize">{product.classification}</p>
               </div>
+
+              {product.tax_code && (
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Tax Code</label>
+                  <div className="mt-1">
+                    <p className="font-medium">{product.tax_code.code} - {product.tax_code.name}</p>
+                    {product.tax_code.rates.length > 0 && (
+                      <div className="mt-2 space-y-1">
+                        <p className="text-sm text-muted-foreground">Tax Rates:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {product.tax_code.rates.map((rate, index) => (
+                            <Badge key={index} variant="secondary">
+                              {rate.rate_name}: {rate.rate_percentage}%
+                            </Badge>
+                          ))}
+                        </div>
+                        <p className="text-sm font-medium mt-1">
+                          Total Tax Rate: {product.tax_code.rates.reduce((sum, rate) => sum + rate.rate_percentage, 0).toFixed(2)}%
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {product.current_price && (
                 <div>
