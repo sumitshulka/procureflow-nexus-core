@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -64,6 +64,24 @@ const TaxCodesManager = () => {
       return data;
     },
   });
+
+  // Watch tax_type_id to auto-populate rates based on tax elements
+  const selectedTaxTypeId = form.watch("tax_type_id");
+  
+  useEffect(() => {
+    if (selectedTaxTypeId && taxTypes.length > 0) {
+      const selectedType = taxTypes.find((t: any) => t.id === selectedTaxTypeId);
+      if (selectedType && Array.isArray(selectedType.tax_elements) && selectedType.tax_elements.length > 0) {
+        // Auto-populate rates from tax elements
+        const newRates = selectedType.tax_elements.map((element: any) => ({
+          rate_name: element.name,
+          tax_element_name: element.name,
+          rate_percentage: 0,
+        }));
+        form.setValue("rates", newRates);
+      }
+    }
+  }, [selectedTaxTypeId, taxTypes]);
 
   // Fetch tax codes with their rates
   const { data: taxCodes = [], isLoading } = useQuery({
@@ -364,32 +382,6 @@ const TaxCodesManager = () => {
                   )}
                 />
 
-                <FormField
-                  control={form.control}
-                  name="tax_type_id"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Tax Type</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select tax type (optional)" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          
-                          {taxTypes.map((type) => (
-                            <SelectItem key={type.id} value={type.id}>
-                              {type.code} - {type.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
                 {(() => {
                   const st = taxTypes.find((t: any) => t.id === form.watch("tax_type_id"));
                   if (st && Array.isArray(st.tax_elements) && st.tax_elements.length > 0) {
@@ -397,7 +389,7 @@ const TaxCodesManager = () => {
                       <Alert>
                         <Info className="h-4 w-4" />
                         <AlertDescription>
-                          Tax conditions are inherited from the selected Tax Type and cannot be modified here.
+                          Tax elements and their conditions are inherited from the selected Tax Type. You can only set the tax rate percentages.
                         </AlertDescription>
                       </Alert>
                     );
@@ -405,62 +397,73 @@ const TaxCodesManager = () => {
                   return null;
                 })()}
 
-
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <FormLabel>Tax Rates *</FormLabel>
-                    <Button type="button" variant="outline" size="sm" onClick={handleAddRate}>
-                      <Plus className="h-4 w-4 mr-1" />
-                      Add Rate
-                    </Button>
+                    {!selectedTaxTypeId && (
+                      <Button type="button" variant="outline" size="sm" onClick={handleAddRate}>
+                        <Plus className="h-4 w-4 mr-1" />
+                        Add Rate
+                      </Button>
+                    )}
                   </div>
 
-                  {form.watch("rates").map((_, index) => (
-                    <div key={index} className="flex gap-2 items-start">
-                      <FormField
-                        control={form.control}
-                        name={`rates.${index}.rate_name`}
-                        render={({ field }) => (
-                          <FormItem className="flex-1">
-                            <FormControl>
-                              <Input placeholder="Rate name (e.g., CGST, SGST)" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name={`rates.${index}.rate_percentage`}
-                        render={({ field }) => (
-                          <FormItem className="w-32">
-                            <FormControl>
-                              <Input
-                                type="number"
-                                step="0.01"
-                                placeholder="Rate %"
-                                {...field}
-                                onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                  {form.watch("rates").map((rate, index) => {
+                    const selectedType = taxTypes.find((t: any) => t.id === selectedTaxTypeId);
+                    const hasElements = selectedType && Array.isArray(selectedType.tax_elements) && selectedType.tax_elements.length > 0;
+                    
+                    return (
+                      <div key={index} className="flex gap-2 items-start">
+                        <FormField
+                          control={form.control}
+                          name={`rates.${index}.rate_name`}
+                          render={({ field }) => (
+                            <FormItem className="flex-1">
+                              <FormControl>
+                                <Input 
+                                  placeholder="Rate name (e.g., CGST, SGST)" 
+                                  {...field}
+                                  readOnly={hasElements}
+                                  className={hasElements ? "bg-muted" : ""}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={form.control}
+                          name={`rates.${index}.rate_percentage`}
+                          render={({ field }) => (
+                            <FormItem className="w-32">
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  placeholder="Rate %"
+                                  {...field}
+                                  onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
 
-                      {form.watch("rates").length > 1 && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleRemoveRate(index)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                  ))}
+                        {!hasElements && form.watch("rates").length > 1 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleRemoveRate(index)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
 
                 <div className="flex justify-end gap-2 pt-4">
