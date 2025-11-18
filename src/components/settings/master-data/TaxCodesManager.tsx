@@ -390,14 +390,21 @@ const TaxCodesManager = () => {
                   )}
                 />
 
-                {selectedTaxType && Array.isArray(selectedTaxType.tax_elements) && selectedTaxType.tax_elements.length > 0 && (
-                  <Alert>
-                    <Info className="h-4 w-4" />
-                    <AlertDescription>
-                      Tax conditions are inherited from the selected Tax Type and cannot be modified here.
-                    </AlertDescription>
-                  </Alert>
-                )}
+                {(() => {
+                  const st = taxTypes.find((t: any) => t.id === form.watch("tax_type_id"));
+                  if (st && Array.isArray(st.tax_elements) && st.tax_elements.length > 0) {
+                    return (
+                      <Alert>
+                        <Info className="h-4 w-4" />
+                        <AlertDescription>
+                          Tax conditions are inherited from the selected Tax Type and cannot be modified here.
+                        </AlertDescription>
+                      </Alert>
+                    );
+                  }
+                  return null;
+                })()}
+
 
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
