@@ -168,6 +168,7 @@ const EditProductForm = ({ product }: EditProductFormProps) => {
 
       // Invalidate and refetch product queries
       queryClient.invalidateQueries({ queryKey: ["product", product.id] });
+      queryClient.invalidateQueries({ queryKey: ["product_detail", product.id] });
       queryClient.invalidateQueries({ queryKey: ["products"] });
 
       // Navigate back to product detail page

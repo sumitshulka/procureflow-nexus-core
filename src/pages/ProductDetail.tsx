@@ -49,7 +49,7 @@ const ProductDetail = () => {
   console.log("ProductDetail component - Product ID:", productId);
 
   const { data: product, isLoading, error } = useQuery({
-    queryKey: ["product", productId],
+    queryKey: ["product_detail", productId],
     queryFn: async () => {
       console.log("Starting product fetch for ID:", productId);
       
