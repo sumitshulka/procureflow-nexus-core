@@ -125,7 +125,7 @@ const EditProductForm = ({ product }: EditProductFormProps) => {
         classification: values.classification,
         current_price: values.currentPrice ? parseFloat(values.currentPrice) : null,
         currency: values.currency || "USD",
-        tax_code_id: values.taxCodeId || null,
+        tax_code_id: values.taxCodeId === undefined ? product.tax_code_id : (values.taxCodeId || null),
         tags: values.tags ? values.tags.split(",").map((tag) => tag.trim()).filter(Boolean) : [],
         updated_at: new Date().toISOString(),
       };
