@@ -39,7 +39,7 @@ const CreateInvoice = () => {
   const [isTimeAndMaterial, setIsTimeAndMaterial] = useState(false);
   const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
   const [dueDate, setDueDate] = useState("");
-  const [currency, setCurrency] = useState("USD");
+  const [currency, setCurrency] = useState("");
   const [signatoryName, setSignatoryName] = useState("");
   const [signatoryDesignation, setSignatoryDesignation] = useState("");
   const [nonPOJustification, setNonPOJustification] = useState("");
@@ -72,6 +72,12 @@ const CreateInvoice = () => {
         .eq("id", selectedVendor)
         .single();
       if (error) throw error;
+      
+      // Set currency from vendor if not set by PO
+      if (isNonPO && data && !currency) {
+        setCurrency(data.currency || 'USD');
+      }
+      
       return data;
     },
     enabled: !!selectedVendor,
@@ -118,6 +124,12 @@ const CreateInvoice = () => {
     enabled: !isNonPO && !!selectedVendor,
   });
 
+  // Set currency when PO is selected
+  const selectedPOData = purchaseOrders?.find(po => po.id === selectedPO);
+  if (selectedPOData && selectedPOData.currency && currency !== selectedPOData.currency) {
+    setCurrency(selectedPOData.currency);
+  }
+
   const { data: poLineItems } = useQuery({
     queryKey: ["po-items", selectedPO],
     queryFn: async () => {
@@ -132,19 +144,55 @@ const CreateInvoice = () => {
     enabled: !isNonPO && !!selectedPO && !isTimeAndMaterial,
   });
 
-  const handleProductSelect = (index: number, productId: string) => {
+  const handleProductSelect = async (index: number, productId: string) => {
     const product = products?.find(p => p.id === productId);
-    if (!product) return;
-    const taxRates = product.tax_codes?.tax_rates || [];
-    const totalTaxRate = taxRates.reduce((sum, rate) => sum + Number(rate.rate_percentage), 0);
+    if (!product || !selectedVendor) return;
+
+    // Fetch applicable tax rates based on vendor and product
+    const { data: applicableTax, error } = await supabase.rpc('get_applicable_tax_code', {
+      p_vendor_id: selectedVendor
+    });
+
+    let taxRate = 0;
+    let taxDetails = null;
+
+    if (!error && applicableTax && applicableTax.length > 0) {
+      const tax = applicableTax[0] as any;
+      taxRate = Number(tax.total_rate || 0);
+      const ratesData = tax.rates || tax.applicable_rates;
+      if (ratesData && Array.isArray(ratesData)) {
+        taxDetails = ratesData.map((r: any) => ({ 
+          name: r.rate_name, 
+          rate: Number(r.rate_percentage) 
+        }));
+      }
+    }
+
+    // Get product price and currency from vendor_products if available
+    const { data: vendorProduct } = await supabase
+      .from('vendor_products')
+      .select('vendor_price, vendor_currency')
+      .eq('vendor_id', selectedVendor)
+      .eq('product_id', productId)
+      .single();
+
+    const unitPrice = vendorProduct?.vendor_price 
+      ? Number(vendorProduct.vendor_price) 
+      : Number(product.current_price) || 0;
+
+    // Set currency from vendor product if available and not already set
+    if (vendorProduct?.vendor_currency && !currency) {
+      setCurrency(vendorProduct.vendor_currency);
+    }
+
     const newItems = [...items];
     newItems[index] = {
       ...newItems[index],
       product_id: productId,
       description: product.name,
-      unit_price: Number(product.current_price) || 0,
-      tax_rate: totalTaxRate,
-      tax_details: taxRates.map(rate => ({ name: rate.rate_name, rate: Number(rate.rate_percentage) }))
+      unit_price: unitPrice,
+      tax_rate: taxRate,
+      tax_details: taxDetails
     };
     setItems(newItems);
   };
@@ -277,7 +325,6 @@ const CreateInvoice = () => {
   };
 
   const totals = calculateTotals();
-  const selectedPOData = purchaseOrders?.find(po => po.id === selectedPO);
 
   return (
     <div className="container mx-auto py-6">
@@ -440,6 +487,17 @@ const CreateInvoice = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2"><Label>Invoice Date *</Label><Input type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} /></div>
               <div className="space-y-2"><Label>Due Date</Label><Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} /></div>
+              <div className="space-y-2">
+                <Label>Currency</Label>
+                <Input 
+                  value={currency || (isNonPO ? 'Select vendor first' : 'Select PO first')} 
+                  readOnly 
+                  className="bg-muted"
+                />
+                <p className="text-xs text-muted-foreground">
+                  {isNonPO ? 'Auto-detected from vendor' : 'Auto-detected from Purchase Order'}
+                </p>
+              </div>
               <div className="space-y-2"><Label>Signatory Name</Label><Input value={signatoryName} onChange={(e) => setSignatoryName(e.target.value)} /></div>
               <div className="space-y-2"><Label>Signatory Designation</Label><Input value={signatoryDesignation} onChange={(e) => setSignatoryDesignation(e.target.value)} /></div>
             </div>
