@@ -125,7 +125,7 @@ const EditProductForm = ({ product }: EditProductFormProps) => {
         classification: values.classification,
         current_price: values.currentPrice ? parseFloat(values.currentPrice) : null,
         currency: values.currency || "USD",
-        tax_code_id: values.taxCodeId === undefined ? product.tax_code_id : (values.taxCodeId || null),
+        tax_code_id: (values.taxCodeId === undefined || values.taxCodeId === '') ? product.tax_code_id : values.taxCodeId,
         tags: values.tags ? values.tags.split(",").map((tag) => tag.trim()).filter(Boolean) : [],
         updated_at: new Date().toISOString(),
       };
@@ -225,7 +225,7 @@ const EditProductForm = ({ product }: EditProductFormProps) => {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Category</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} value={field.value || undefined}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select category" />
@@ -250,7 +250,7 @@ const EditProductForm = ({ product }: EditProductFormProps) => {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Unit</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} value={field.value || undefined}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select unit" />
