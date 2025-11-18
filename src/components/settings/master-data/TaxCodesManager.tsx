@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Pencil, Trash2, X } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -20,6 +21,7 @@ const taxCodeSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
   country: z.string().optional(),
+  applicability_condition: z.enum(["always", "same_state", "different_state", "international"]).default("always"),
   rates: z.array(z.object({
     rate_name: z.string().min(1, "Rate name is required"),
     rate_percentage: z.number().min(0).max(100, "Rate must be between 0 and 100"),
@@ -41,6 +43,7 @@ const TaxCodesManager = () => {
       name: "",
       description: "",
       country: "",
+      applicability_condition: "always",
       rates: [{ rate_name: "", rate_percentage: 0 }],
     },
   });
@@ -86,6 +89,7 @@ const TaxCodesManager = () => {
           name: values.name,
           description: values.description || null,
           country: values.country || null,
+          applicability_condition: values.applicability_condition,
           created_by: user.id,
         })
         .select()
@@ -135,6 +139,7 @@ const TaxCodesManager = () => {
           name: values.name,
           description: values.description || null,
           country: values.country || null,
+          applicability_condition: values.applicability_condition,
         })
         .eq("id", editingTaxCode.id);
 
@@ -308,6 +313,30 @@ const TaxCodesManager = () => {
                   )}
                 />
 
+                <FormField
+                  control={form.control}
+                  name="applicability_condition"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Applicability Condition *</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select when this tax applies" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="always">Always Applicable</SelectItem>
+                          <SelectItem value="same_state">Same State (Intra-state)</SelectItem>
+                          <SelectItem value="different_state">Different State (Inter-state)</SelectItem>
+                          <SelectItem value="international">International</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <FormLabel>Tax Rates *</FormLabel>
@@ -390,6 +419,7 @@ const TaxCodesManager = () => {
                 <TableHead>Code</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Country</TableHead>
+                <TableHead>Applicability</TableHead>
                 <TableHead>Tax Rates</TableHead>
                 <TableHead>Total Rate</TableHead>
                 <TableHead>Status</TableHead>
@@ -402,6 +432,15 @@ const TaxCodesManager = () => {
                   <TableCell className="font-medium">{taxCode.code}</TableCell>
                   <TableCell>{taxCode.name}</TableCell>
                   <TableCell>{taxCode.country || "-"}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline">
+                      {taxCode.applicability_condition === "always" && "Always"}
+                      {taxCode.applicability_condition === "same_state" && "Same State"}
+                      {taxCode.applicability_condition === "different_state" && "Different State"}
+                      {taxCode.applicability_condition === "international" && "International"}
+                      {!taxCode.applicability_condition && "Always"}
+                    </Badge>
+                  </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
                       {taxCode.rates.map((rate: any) => (
