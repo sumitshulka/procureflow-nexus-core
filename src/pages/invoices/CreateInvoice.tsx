@@ -48,7 +48,6 @@ const CreateInvoice = () => {
     { product_id: null, description: "", quantity: 1, unit_price: 0, tax_rate: 0, tax_details: null, discount_rate: 0 }
   ]);
 
-  // Fetch all vendors
   const { data: vendors } = useQuery({
     queryKey: ["all-vendors"],
     queryFn: async () => {
@@ -62,7 +61,6 @@ const CreateInvoice = () => {
     },
   });
 
-  // Fetch selected vendor details
   const { data: selectedVendorDetails } = useQuery({
     queryKey: ["vendor-details", selectedVendor],
     queryFn: async () => {
@@ -77,7 +75,6 @@ const CreateInvoice = () => {
     enabled: !!selectedVendor,
   });
 
-  // Fetch products
   const { data: products } = useQuery({
     queryKey: ["products-with-tax"],
     queryFn: async () => {
@@ -91,14 +88,13 @@ const CreateInvoice = () => {
     },
   });
 
-  // Fetch POs for selected vendor
   const { data: purchaseOrders } = useQuery({
     queryKey: ["vendor-pos", selectedVendor],
     queryFn: async () => {
       if (!selectedVendor) return [];
       const { data, error } = await supabase
         .from("purchase_orders")
-        .select("id, po_number, po_date, total_amount, final_amount, status, currency")
+        .select("id, po_number, po_date, final_amount, currency")
         .eq("vendor_id", selectedVendor)
         .in("status", ["approved", "partially_invoiced"])
         .order("po_date", { ascending: false });
@@ -120,7 +116,6 @@ const CreateInvoice = () => {
     enabled: !isNonPO && !!selectedVendor,
   });
 
-  // Fetch PO line items
   const { data: poLineItems } = useQuery({
     queryKey: ["po-items", selectedPO],
     queryFn: async () => {
@@ -202,24 +197,29 @@ const CreateInvoice = () => {
       }).select().single();
       if (invoiceError) throw invoiceError;
 
-      // Insert items
       if (isTimeAndMaterial && !isNonPO) {
-        await supabase.from("invoice_items").insert({ invoice_id: invoice.id, description: "Time & Material Services", quantity: 1, unit_price: timeMaterialAmount, total_price: timeMaterialAmount, final_amount: timeMaterialAmount, tax_rate: 0, tax_amount: 0 });
+        await supabase.from("invoice_items").insert({ 
+          invoice_id: invoice.id, description: "Time & Material Services", quantity: 1, 
+          unit_price: timeMaterialAmount, total_price: timeMaterialAmount, 
+          final_amount: timeMaterialAmount, tax_rate: 0, tax_amount: 0 
+        });
       } else if (!isNonPO && selectedPOLineItems.length > 0) {
         const selectedItems = poLineItems?.filter(item => selectedPOLineItems.includes(item.id)) || [];
         await supabase.from("invoice_items").insert(selectedItems.map(item => ({
-          invoice_id: invoice.id, po_item_id: item.id, product_id: item.product_id, description: item.description,
-          quantity: item.quantity, unit_price: item.unit_price, total_price: item.total_price, tax_rate: item.tax_rate,
-          tax_amount: Number(item.total_price) * (Number(item.tax_rate) / 100), final_amount: item.final_amount
+          invoice_id: invoice.id, po_item_id: item.id, product_id: item.product_id, 
+          description: item.description, quantity: item.quantity, unit_price: item.unit_price, 
+          total_price: item.total_price, tax_rate: item.tax_rate,
+          tax_amount: Number(item.total_price) * (Number(item.tax_rate) / 100), 
+          final_amount: item.final_amount
         })));
       } else {
         await supabase.from("invoice_items").insert(invoiceData.items.map((item: InvoiceItem) => {
           const itemTotal = item.quantity * item.unit_price;
           return {
-            invoice_id: invoice.id, product_id: item.product_id, description: item.description, quantity: item.quantity,
-            unit_price: item.unit_price, total_price: itemTotal, tax_rate: item.tax_rate,
-            tax_amount: itemTotal * (item.tax_rate / 100), discount_rate: item.discount_rate,
-            discount_amount: itemTotal * (item.discount_rate / 100),
+            invoice_id: invoice.id, product_id: item.product_id, description: item.description, 
+            quantity: item.quantity, unit_price: item.unit_price, total_price: itemTotal, 
+            tax_rate: item.tax_rate, tax_amount: itemTotal * (item.tax_rate / 100), 
+            discount_rate: item.discount_rate, discount_amount: itemTotal * (item.discount_rate / 100),
             final_amount: itemTotal + itemTotal * (item.tax_rate / 100) - itemTotal * (item.discount_rate / 100)
           };
         }));
@@ -263,277 +263,8 @@ const CreateInvoice = () => {
 
   return (
     <div className="container mx-auto py-6">
-      <PageHeader title="Create Invoice" subtitle="Create invoice for payment" />
+      <PageHeader title="Create Invoice" />
       <form onSubmit={(e) => { e.preventDefault(); createInvoiceMutation.mutate({ items }); }} className="space-y-6">
-        
-        <Card>
-          <CardHeader>
-            <CardTitle>Invoice Details</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Non-PO Invoice Checkbox */}
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="non-po"
-                checked={isNonPO}
-                onCheckedChange={(checked) => {
-                  setIsNonPO(checked as boolean);
-                  setSelectedPO("");
-                  setSelectedVendor("");
-                }}
-              />
-              <Label htmlFor="non-po" className="text-sm font-medium">
-                This is a non-PO invoice
-              </Label>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {isNonPO ? (
-                <div className="space-y-2">
-                  <Label>Vendor *</Label>
-                  <Select value={selectedVendor} onValueChange={setSelectedVendor}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select vendor" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {vendors?.map((vendor) => (
-                        <SelectItem key={vendor.id} value={vendor.id}>
-                          {vendor.company_name} {vendor.vendor_number ? `(${vendor.vendor_number})` : ''}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <Label>Purchase Order *</Label>
-                  <Select value={selectedPO} onValueChange={setSelectedPO}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select PO" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {purchaseOrders?.map((po) => (
-                        <SelectItem key={po.id} value={po.id}>
-                          {po.po_number}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              <div className="space-y-2">
-                <Label>Invoice Date *</Label>
-                <Input
-                  type="date"
-                  value={invoiceDate}
-                  onChange={(e) => setInvoiceDate(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Due Date</Label>
-                <Input
-                  type="date"
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Currency *</Label>
-                <Select value={currency} onValueChange={setCurrency}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="USD">USD</SelectItem>
-                    <SelectItem value="EUR">EUR</SelectItem>
-                    <SelectItem value="GBP">GBP</SelectItem>
-                    <SelectItem value="INR">INR</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {isNonPO && (
-              <div className="space-y-2">
-                <Label>Justification for Non-PO Invoice *</Label>
-                <Textarea
-                  value={nonPOJustification}
-                  onChange={(e) => setNonPOJustification(e.target.value)}
-                  placeholder="Explain why this invoice doesn't require a PO..."
-                  required
-                />
-              </div>
-            )}
-
-            {/* Vendor Details Display */}
-            {isNonPO && selectedVendorDetails && (
-              <Card className="bg-muted/50">
-                <CardHeader>
-                  <CardTitle className="text-base">Vendor Information</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Company Name</Label>
-                      <p className="font-medium">{selectedVendorDetails.company_name}</p>
-                    </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Vendor Number</Label>
-                      <p className="font-medium">{selectedVendorDetails.vendor_number || 'N/A'}</p>
-                    </div>
-                    {selectedVendorDetails.gst_number && (
-                      <div>
-                        <Label className="text-xs text-muted-foreground">GST Number</Label>
-                        <p className="font-medium">{selectedVendorDetails.gst_number}</p>
-                      </div>
-                    )}
-                    {selectedVendorDetails.pan_number && (
-                      <div>
-                        <Label className="text-xs text-muted-foreground">PAN Number</Label>
-                        <p className="font-medium">{selectedVendorDetails.pan_number}</p>
-                      </div>
-                    )}
-                  </div>
-                  
-                  {selectedVendorDetails.billing_address && (
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Billing Address</Label>
-                      <p className="text-sm">
-                        {(selectedVendorDetails.billing_address as any).street}, {(selectedVendorDetails.billing_address as any).city}, 
-                        {(selectedVendorDetails.billing_address as any).state} - {(selectedVendorDetails.billing_address as any).postal_code}, 
-                        {(selectedVendorDetails.billing_address as any).country}
-                      </p>
-                    </div>
-                  )}
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Email</Label>
-                      <p className="text-sm">{selectedVendorDetails.primary_email}</p>
-                    </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Phone</Label>
-                      <p className="text-sm">{selectedVendorDetails.primary_phone}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            <Separator />
-
-            {/* Invoice Items */}
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-semibold">Invoice Items</h3>
-                <Button type="button" variant="outline" size="sm" onClick={addItem}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Item
-                </Button>
-              </div>
-
-              {items.map((item, index) => (
-                <Card key={index} className="p-4">
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <h4 className="font-medium">Item {index + 1}</h4>
-                      {items.length > 1 && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeItem(index)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-                      <div className="lg:col-span-2 space-y-2">
-                        <Label>Product</Label>
-                        <Select 
-                          value={item.product_id || "custom"} 
-                          onValueChange={(value) => {
-                            if (value === "custom") {
-                              updateItem(index, "product_id", null);
-                            } else {
-                              handleProductSelect(index, value);
-                            }
-                          }}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select product" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="custom">Custom</SelectItem>
-                            {products?.map((product) => (
-                              <SelectItem key={product.id} value={product.id}>
-                                {product.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="lg:col-span-3 space-y-2">
-                        <Label>Description</Label>
-                        <Input
-                          type="text"
-                          value={item.description}
-                          onChange={(e) => updateItem(index, "description", e.target.value)}
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label>Quantity</Label>
-                        <Input
-                          type="number"
-                          value={item.quantity}
-                          onChange={(e) => updateItem(index, "quantity", Number(e.target.value))}
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label>Unit Price</Label>
-                        <Input
-                          type="number"
-                          value={item.unit_price}
-                          onChange={(e) => updateItem(index, "unit_price", Number(e.target.value))}
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label>Discount (%)</Label>
-                        <Input
-                          type="number"
-                          value={item.discount_rate}
-                          onChange={(e) => updateItem(index, "discount_rate", Number(e.target.value))}
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label>Tax (%)</Label>
-                        <Input
-                          type="number"
-                          value={item.tax_rate}
-                          onChange={(e) => updateItem(index, "tax_rate", Number(e.target.value))}
-                          disabled
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
         
         <Card>
           <CardHeader><CardTitle>Invoice Type</CardTitle></CardHeader>
@@ -546,11 +277,7 @@ const CreateInvoice = () => {
               <Label>Select Vendor *</Label>
               <Select value={selectedVendor} onValueChange={(value) => { setSelectedVendor(value); setSelectedPO(""); setSelectedPOLineItems([]); }}>
                 <SelectTrigger><SelectValue placeholder="Select vendor" /></SelectTrigger>
-                <SelectContent>
-                  {vendors?.map((vendor) => (
-                    <SelectItem key={vendor.id} value={vendor.id}>{vendor.company_name} ({vendor.vendor_number})</SelectItem>
-                  ))}
-                </SelectContent>
+                <SelectContent>{vendors?.map((vendor) => (<SelectItem key={vendor.id} value={vendor.id}>{vendor.company_name} ({vendor.vendor_number})</SelectItem>))}</SelectContent>
               </Select>
             </div>
             {isNonPO ? (
@@ -564,12 +291,7 @@ const CreateInvoice = () => {
                   <Label>Select Purchase Order *</Label>
                   <Select value={selectedPO} onValueChange={(value) => { setSelectedPO(value); setSelectedPOLineItems([]); setIsTimeAndMaterial(false); }}>
                     <SelectTrigger><SelectValue placeholder="Select PO" /></SelectTrigger>
-                    <SelectContent>
-                      {purchaseOrders?.map((po) => (
-                        <SelectItem key={po.id} value={po.id}>{po.po_number} - {po.currency} {po.pending_amount.toFixed(2)} pending</SelectItem>
-                      ))
-                      }
-                    </SelectContent>
+                    <SelectContent>{purchaseOrders?.map((po) => (<SelectItem key={po.id} value={po.id}>{po.po_number} - {new Date(po.po_date).toLocaleDateString()} - {po.currency} {po.pending_amount.toFixed(2)} pending</SelectItem>))}</SelectContent>
                   </Select>
                 </div>
                 {selectedPO && (
@@ -592,6 +314,9 @@ const CreateInvoice = () => {
                 <div><Label className="text-muted-foreground">Vendor #</Label><p className="font-medium">{selectedVendorDetails.vendor_number}</p></div>
                 {selectedVendorDetails.gst_number && <div><Label className="text-muted-foreground">GST</Label><p>{selectedVendorDetails.gst_number}</p></div>}
                 {selectedVendorDetails.pan_number && <div><Label className="text-muted-foreground">PAN</Label><p>{selectedVendorDetails.pan_number}</p></div>}
+                {selectedVendorDetails.billing_address && (
+                  <div className="col-span-2"><Label className="text-muted-foreground">Billing Address</Label><p className="text-sm">{(selectedVendorDetails.billing_address as any).street}, {(selectedVendorDetails.billing_address as any).city}, {(selectedVendorDetails.billing_address as any).state} - {(selectedVendorDetails.billing_address as any).postal_code}, {(selectedVendorDetails.billing_address as any).country}</p></div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -614,97 +339,89 @@ const CreateInvoice = () => {
                       <Checkbox checked={selectedPOLineItems.includes(item.id)} onCheckedChange={() => handlePOLineItemToggle(item.id)} />
                       <div className="flex-1">
                         <div className="font-medium">{item.description}</div>
-                        <div className="text-sm text-muted-foreground">Qty: {item.quantity} × {currency} {item.unit_price}</div>
+                        <div className="text-sm text-muted-foreground">Qty: {item.quantity} × {currency} {item.unit_price} = {currency} {item.total_price}</div>
+                        {item.tax_rate > 0 && <div className="text-sm text-muted-foreground">Tax: {item.tax_rate}%</div>}
                       </div>
                       <div className="font-medium">{currency} {item.final_amount}</div>
                     </div>
                   ))}
+                  {(!poLineItems || poLineItems.length === 0) && <p className="text-muted-foreground text-center py-4">No line items found</p>}
                 </div>
               )}
             </CardContent>
           </Card>
         )}
 
-        
+        {isNonPO && (
+          <Card>
+            <CardHeader><CardTitle>Invoice Items</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              {items.map((item, index) => (
+                <div key={index} className="space-y-4 p-4 border rounded-lg">
+                  <div className="flex justify-between items-center">
+                    <h4 className="font-medium">Item {index + 1}</h4>
+                    {items.length > 1 && <Button type="button" variant="ghost" size="sm" onClick={() => removeItem(index)}><Trash2 className="w-4 h-4" /></Button>}
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2 md:col-span-2">
+                      <Label>Product (Optional)</Label>
+                      <Select value={item.product_id || ""} onValueChange={(value) => handleProductSelect(index, value)}>
+                        <SelectTrigger><SelectValue placeholder="Select or enter manually" /></SelectTrigger>
+                        <SelectContent>{products?.map((product) => (<SelectItem key={product.id} value={product.id}>{product.name} - {product.currency} {product.current_price}</SelectItem>))}</SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2 md:col-span-2">
+                      <Label>Description *</Label>
+                      <Input value={item.description} onChange={(e) => updateItem(index, "description", e.target.value)} disabled={!!item.product_id} />
+                    </div>
+                    <div className="space-y-2"><Label>Quantity *</Label><Input type="number" min="1" value={item.quantity} onChange={(e) => updateItem(index, "quantity", Number(e.target.value))} /></div>
+                    <div className="space-y-2"><Label>Unit Price *</Label><Input type="number" step="0.01" value={item.unit_price} onChange={(e) => updateItem(index, "unit_price", Number(e.target.value))} disabled={!!item.product_id} /></div>
+                    <div className="space-y-2">
+                      <Label>Tax Rate (%)</Label>
+                      {item.product_id && item.tax_details ? (
+                        <div className="p-2 border rounded-md bg-muted">
+                          {item.tax_details.map((tax, idx) => (<div key={idx} className="text-sm">{tax.name}: {tax.rate}%</div>))}
+                          <div className="text-sm font-medium mt-1">Total: {item.tax_rate}%</div>
+                        </div>
+                      ) : (<Input type="number" step="0.01" value={item.tax_rate} onChange={(e) => updateItem(index, "tax_rate", Number(e.target.value))} />)}
+                    </div>
+                    <div className="space-y-2"><Label>Discount Rate (%)</Label><Input type="number" step="0.01" value={item.discount_rate} onChange={(e) => updateItem(index, "discount_rate", Number(e.target.value))} /></div>
+                  </div>
+                  <div className="flex justify-end"><div className="text-right"><Label className="text-muted-foreground">Item Total</Label><p className="text-lg font-medium">{currency} {(item.quantity * item.unit_price * (1 + item.tax_rate / 100) * (1 - item.discount_rate / 100)).toFixed(2)}</p></div></div>
+                </div>
+              ))}
+              <Button type="button" variant="outline" onClick={addItem} className="w-full"><Plus className="w-4 h-4 mr-2" />Add Item</Button>
+            </CardContent>
+          </Card>
+        )}
+
         <Card>
-        <CardHeader>
-          <CardTitle>Additional Details</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Signatory Name</Label>
-              <Input
-                type="text"
-                value={signatoryName}
-                onChange={(e) => setSignatoryName(e.target.value)}
-              />
+          <CardHeader><CardTitle>Invoice Details</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2"><Label>Invoice Date *</Label><Input type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} /></div>
+              <div className="space-y-2"><Label>Due Date</Label><Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} /></div>
+              <div className="space-y-2"><Label>Signatory Name</Label><Input value={signatoryName} onChange={(e) => setSignatoryName(e.target.value)} /></div>
+              <div className="space-y-2"><Label>Signatory Designation</Label><Input value={signatoryDesignation} onChange={(e) => setSignatoryDesignation(e.target.value)} /></div>
             </div>
+            <div className="space-y-2"><Label>Notes</Label><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
+          </CardContent>
+        </Card>
 
-            <div className="space-y-2">
-              <Label>Signatory Designation</Label>
-              <Input
-                type="text"
-                value={signatoryDesignation}
-                onChange={(e) => setSignatoryDesignation(e.target.value)}
-              />
-            </div>
-          </div>
+        <Card>
+          <CardHeader><CardTitle>Invoice Summary</CardTitle></CardHeader>
+          <CardContent className="space-y-2">
+            <div className="flex justify-between"><span>Subtotal:</span><span>{currency} {totals.subtotal.toFixed(2)}</span></div>
+            <div className="flex justify-between"><span>Tax:</span><span>{currency} {totals.tax.toFixed(2)}</span></div>
+            {totals.discount > 0 && <div className="flex justify-between text-red-600"><span>Discount:</span><span>-{currency} {totals.discount.toFixed(2)}</span></div>}
+            <Separator />
+            <div className="flex justify-between text-lg font-bold"><span>Total:</span><span>{currency} {totals.total.toFixed(2)}</span></div>
+          </CardContent>
+        </Card>
 
-          <div className="space-y-2">
-            <Label>Notes</Label>
-            <Textarea
-              placeholder="Additional notes for this invoice..."
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Invoice Summary</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label className="text-muted-foreground">Subtotal</Label>
-              <p className="font-medium">
-                {currency} {totals.subtotal.toFixed(2)}
-              </p>
-            </div>
-
-            <div>
-              <Label className="text-muted-foreground">Discount</Label>
-              <p className="font-medium">
-                {currency} {totals.discount.toFixed(2)}
-              </p>
-            </div>
-
-            <div>
-              <Label className="text-muted-foreground">Tax</Label>
-              <p className="font-medium">
-                {currency} {totals.tax.toFixed(2)}
-              </p>
-            </div>
-
-            <div>
-              <Label className="text-muted-foreground">Total</Label>
-              <p className="font-semibold text-lg">
-                {currency} {totals.total.toFixed(2)}
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-        
         <div className="flex justify-end gap-4">
           <Button type="button" variant="outline" onClick={() => navigate("/invoices")}>Cancel</Button>
-          <Button type="submit" disabled={createInvoiceMutation.isPending || !selectedVendor || (!isNonPO && !selectedPO) || (!isNonPO && !isTimeAndMaterial && selectedPOLineItems.length === 0) || (!isNonPO && isTimeAndMaterial && (timeMaterialAmount <= 0 || (selectedPOData && timeMaterialAmount > selectedPOData.pending_amount))) || (isNonPO && !nonPOJustification)}>
-            Create Invoice
-          </Button>
+          <Button type="submit" disabled={createInvoiceMutation.isPending || !selectedVendor || (!isNonPO && !selectedPO) || (!isNonPO && !isTimeAndMaterial && selectedPOLineItems.length === 0) || (!isNonPO && isTimeAndMaterial && (timeMaterialAmount <= 0 || (selectedPOData && timeMaterialAmount > selectedPOData.pending_amount))) || (isNonPO && !nonPOJustification) || (isNonPO && items.some(item => !item.description || item.quantity <= 0 || item.unit_price < 0))}>Create Invoice</Button>
         </div>
       </form>
     </div>
@@ -712,4 +429,3 @@ const CreateInvoice = () => {
 };
 
 export default CreateInvoice;
-
