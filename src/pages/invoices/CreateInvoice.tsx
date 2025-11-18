@@ -45,6 +45,7 @@ const CreateInvoice = () => {
   const [nonPOJustification, setNonPOJustification] = useState("");
   const [notes, setNotes] = useState("");
   const [timeMaterialAmount, setTimeMaterialAmount] = useState(0);
+  const [invoicePdfFile, setInvoicePdfFile] = useState<File | null>(null);
   const [items, setItems] = useState<InvoiceItem[]>([
     { product_id: null, description: "", quantity: 1, unit_price: 0, tax_rate: 0, tax_details: null, discount_rate: 0 }
   ]);
@@ -177,6 +178,21 @@ const CreateInvoice = () => {
         });
       }
 
+      // Upload invoice PDF if provided
+      let invoicePdfUrl = null;
+      if (invoicePdfFile) {
+        const fileExt = invoicePdfFile.name.split('.').pop();
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+        const filePath = `${user!.id}/${fileName}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('invoice-documents')
+          .upload(filePath, invoicePdfFile);
+        
+        if (uploadError) throw uploadError;
+        invoicePdfUrl = filePath;
+      }
+
       const { data: invoice, error: invoiceError } = await supabase.from("invoices").insert({
         invoice_number: newNumber,
         vendor_id: selectedVendor,
@@ -193,6 +209,7 @@ const CreateInvoice = () => {
         signatory_name: signatoryName || null,
         signatory_designation: signatoryDesignation || null,
         notes: notes || null,
+        invoice_pdf_url: invoicePdfUrl,
         status: "submitted",
         created_by: user!.id,
       }).select().single();
@@ -425,6 +442,24 @@ const CreateInvoice = () => {
               <div className="space-y-2"><Label>Due Date</Label><Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} /></div>
               <div className="space-y-2"><Label>Signatory Name</Label><Input value={signatoryName} onChange={(e) => setSignatoryName(e.target.value)} /></div>
               <div className="space-y-2"><Label>Signatory Designation</Label><Input value={signatoryDesignation} onChange={(e) => setSignatoryDesignation(e.target.value)} /></div>
+            </div>
+            <div className="space-y-2">
+              <Label>Invoice PDF Attachment</Label>
+              <Input 
+                type="file" 
+                accept=".pdf,.jpg,.jpeg,.png"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    setInvoicePdfFile(file);
+                  }
+                }}
+              />
+              {invoicePdfFile && (
+                <p className="text-sm text-muted-foreground">
+                  Selected: {invoicePdfFile.name} ({(invoicePdfFile.size / 1024).toFixed(2)} KB)
+                </p>
+              )}
             </div>
             <div className="space-y-2"><Label>Notes</Label><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
           </CardContent>
