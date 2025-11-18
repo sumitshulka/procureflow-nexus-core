@@ -31,6 +31,7 @@ const CreateInvoice = () => {
 
   const [isNonPO, setIsNonPO] = useState(false);
   const [selectedPO, setSelectedPO] = useState("");
+  const [selectedVendor, setSelectedVendor] = useState("");
   const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
   const [dueDate, setDueDate] = useState("");
   const [currency, setCurrency] = useState("USD");
@@ -41,6 +42,22 @@ const CreateInvoice = () => {
   const [items, setItems] = useState<InvoiceItem[]>([
     { description: "", quantity: 1, unit_price: 0, tax_rate: 0, discount_rate: 0 }
   ]);
+
+  // Fetch all vendors for non-PO invoices
+  const { data: vendors } = useQuery({
+    queryKey: ["all-vendors"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("vendor_registrations")
+        .select("id, company_name, vendor_number")
+        .eq("status", "approved")
+        .order("company_name");
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: isNonPO,
+  });
 
   // Fetch vendor's purchase orders
   const { data: purchaseOrders } = useQuery({
@@ -106,20 +123,31 @@ const CreateInvoice = () => {
 
   const createInvoiceMutation = useMutation({
     mutationFn: async () => {
-      const { data: vendorReg } = await supabase
-        .from("vendor_registrations")
-        .select("id")
-        .eq("user_id", user?.id)
-        .single();
+      // Get vendor ID
+      let vendorId: string;
+      
+      if (isNonPO) {
+        // For non-PO invoices, use the selected vendor
+        if (!selectedVendor) throw new Error("Please select a vendor");
+        vendorId = selectedVendor;
+      } else {
+        // For PO invoices, use the current user's vendor registration
+        const { data: vendorReg } = await supabase
+          .from("vendor_registrations")
+          .select("id")
+          .eq("user_id", user?.id)
+          .single();
 
-      if (!vendorReg) throw new Error("Vendor registration not found");
+        if (!vendorReg) throw new Error("Vendor registration not found");
+        vendorId = vendorReg.id;
+      }
 
       const totals = calculateTotals();
 
       const { data: invoice, error: invoiceError } = await supabase
         .from("invoices")
         .insert({
-          vendor_id: vendorReg.id,
+          vendor_id: vendorId,
           purchase_order_id: isNonPO ? null : selectedPO || null,
           invoice_date: invoiceDate,
           due_date: dueDate || null,
@@ -199,7 +227,11 @@ const CreateInvoice = () => {
             <Checkbox
               id="non-po"
               checked={isNonPO}
-              onCheckedChange={(checked) => setIsNonPO(checked as boolean)}
+              onCheckedChange={(checked) => {
+                setIsNonPO(checked as boolean);
+                setSelectedPO("");
+                setSelectedVendor("");
+              }}
             />
             <Label htmlFor="non-po" className="text-sm font-medium">
               This is a non-PO invoice
@@ -207,7 +239,23 @@ const CreateInvoice = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {!isNonPO && (
+            {isNonPO ? (
+              <div className="space-y-2">
+                <Label>Vendor *</Label>
+                <Select value={selectedVendor} onValueChange={setSelectedVendor}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select vendor" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {vendors?.map((vendor) => (
+                      <SelectItem key={vendor.id} value={vendor.id}>
+                        {vendor.company_name} {vendor.vendor_number ? `(${vendor.vendor_number})` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : (
               <div className="space-y-2">
                 <Label>Purchase Order *</Label>
                 <Select value={selectedPO} onValueChange={setSelectedPO}>
@@ -439,7 +487,12 @@ const CreateInvoice = () => {
             </Button>
             <Button
               onClick={() => createInvoiceMutation.mutate()}
-              disabled={createInvoiceMutation.isPending || items.length === 0}
+              disabled={
+                createInvoiceMutation.isPending || 
+                items.length === 0 || 
+                (isNonPO && !selectedVendor) ||
+                (!isNonPO && !selectedPO)
+              }
             >
               Create Invoice
             </Button>
