@@ -1621,6 +1621,7 @@ export type Database = {
           is_active: boolean | null
           name: string
           tags: string[] | null
+          tax_code_id: string | null
           unit_id: string
           updated_at: string | null
         }
@@ -1637,6 +1638,7 @@ export type Database = {
           is_active?: boolean | null
           name: string
           tags?: string[] | null
+          tax_code_id?: string | null
           unit_id: string
           updated_at?: string | null
         }
@@ -1653,6 +1655,7 @@ export type Database = {
           is_active?: boolean | null
           name?: string
           tags?: string[] | null
+          tax_code_id?: string | null
           unit_id?: string
           updated_at?: string | null
         }
@@ -1669,6 +1672,13 @@ export type Database = {
             columns: ["classification_id"]
             isOneToOne: false
             referencedRelation: "product_classifications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_tax_code_id_fkey"
+            columns: ["tax_code_id"]
+            isOneToOne: false
+            referencedRelation: "tax_codes"
             referencedColumns: ["id"]
           },
           {
@@ -1744,6 +1754,7 @@ export type Database = {
           quantity: number
           specifications: string | null
           tax_amount: number | null
+          tax_code_id: string | null
           tax_rate: number | null
           total_price: number
           unit_price: number
@@ -1762,6 +1773,7 @@ export type Database = {
           quantity: number
           specifications?: string | null
           tax_amount?: number | null
+          tax_code_id?: string | null
           tax_rate?: number | null
           total_price: number
           unit_price: number
@@ -1780,6 +1792,7 @@ export type Database = {
           quantity?: number
           specifications?: string | null
           tax_amount?: number | null
+          tax_code_id?: string | null
           tax_rate?: number | null
           total_price?: number
           unit_price?: number
@@ -1798,6 +1811,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_order_items_tax_code_id_fkey"
+            columns: ["tax_code_id"]
+            isOneToOne: false
+            referencedRelation: "tax_codes"
             referencedColumns: ["id"]
           },
         ]
@@ -3154,6 +3174,77 @@ export type Database = {
             columns: ["menu_item_id"]
             isOneToOne: false
             referencedRelation: "menu_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tax_codes: {
+        Row: {
+          code: string
+          country: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          code: string
+          country?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          code?: string
+          country?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      tax_rates: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          rate_name: string
+          rate_percentage: number
+          tax_code_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          rate_name: string
+          rate_percentage: number
+          tax_code_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          rate_name?: string
+          rate_percentage?: number
+          tax_code_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tax_rates_tax_code_id_fkey"
+            columns: ["tax_code_id"]
+            isOneToOne: false
+            referencedRelation: "tax_codes"
             referencedColumns: ["id"]
           },
         ]

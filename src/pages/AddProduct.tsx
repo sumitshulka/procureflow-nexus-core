@@ -26,6 +26,7 @@ const productSchema = z.object({
   classification: z.string().min(1, "Classification is required"),
   currentPrice: z.number().min(0, "Price must be positive").optional(),
   currency: z.string().min(1, "Currency is required"),
+  taxCodeId: z.string().optional(),
   tags: z.array(z.string()).optional(),
 });
 
@@ -102,6 +103,21 @@ const AddProduct = () => {
     },
   });
 
+  // Fetch tax codes
+  const { data: taxCodes = [] } = useQuery({
+    queryKey: ["tax_codes"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tax_codes")
+        .select("*")
+        .eq("is_active", true)
+        .order("code");
+      
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const form = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
     defaultValues: {
@@ -113,6 +129,7 @@ const AddProduct = () => {
       classification: "",
       currentPrice: undefined,
       currency: orgSettings?.base_currency || "USD",
+      taxCodeId: "",
       tags: [],
     },
   });
@@ -153,6 +170,7 @@ const AddProduct = () => {
           classification: data.classification,
           current_price: data.currentPrice,
           currency: data.currency,
+          tax_code_id: data.taxCodeId || null,
           tags: data.tags || [],
         })
         .select()
@@ -369,6 +387,32 @@ const AddProduct = () => {
                   )}
                 />
               </div>
+
+              <FormField
+                control={form.control}
+                name="taxCodeId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tax Code (Optional)</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select tax code" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="">None</SelectItem>
+                        {taxCodes.map((taxCode) => (
+                          <SelectItem key={taxCode.id} value={taxCode.id}>
+                            {taxCode.code} - {taxCode.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <FormField
                 control={form.control}
