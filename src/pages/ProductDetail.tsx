@@ -66,7 +66,16 @@ const ProductDetail = () => {
         .select(`
           *,
           category:category_id(name),
-          unit:unit_id(name, abbreviation)
+          unit:unit_id(name, abbreviation),
+          tax_code:tax_code_id(
+            code,
+            name,
+            tax_rates(
+              rate_name,
+              rate_percentage,
+              is_active
+            )
+          )
         `)
         .eq("id", productId)
         .single();
@@ -108,33 +117,40 @@ const ProductDetail = () => {
         }
       }
 
-      // Fetch tax code and rates if tax_code_id exists
+      // Build tax code info from nested select
       let taxCode: { code: string; name: string; rates: any[] } | null = null;
-      
-      if (data.tax_code_id) {
-        console.log("Fetching tax code for ID:", data.tax_code_id);
-        const { data: taxCodeData, error: taxCodeError } = await supabase
+      if (data.tax_code) {
+        const rates = Array.isArray((data as any).tax_code.tax_rates)
+          ? (data as any).tax_code.tax_rates
+          : [];
+        taxCode = {
+          code: (data as any).tax_code.code,
+          name: (data as any).tax_code.name,
+          rates: rates
+            .filter((r: any) => r == null || r.is_active == null || r.is_active === true)
+            .map((r: any) => ({ rate_name: r.rate_name, rate_percentage: r.rate_percentage })),
+        };
+      }
+
+      // Fallback: direct queries if nested tax_code not returned
+      if (!taxCode && data.tax_code_id) {
+        const { data: taxCodeData } = await supabase
           .from("tax_codes")
           .select("code, name")
           .eq("id", data.tax_code_id)
           .single();
-          
-        if (!taxCodeError && taxCodeData) {
-          // Fetch tax rates for this tax code
+        if (taxCodeData) {
           const { data: ratesData } = await supabase
             .from("tax_rates")
             .select("rate_name, rate_percentage")
             .eq("tax_code_id", data.tax_code_id)
             .eq("is_active", true)
             .order("rate_name");
-          
           taxCode = {
             code: taxCodeData.code,
             name: taxCodeData.name,
-            rates: ratesData || []
+            rates: ratesData || [],
           };
-        } else {
-          console.log("Could not fetch tax code:", taxCodeError);
         }
       }
 
