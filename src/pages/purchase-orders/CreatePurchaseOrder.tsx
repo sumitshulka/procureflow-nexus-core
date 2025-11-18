@@ -624,7 +624,7 @@ const CreatePurchaseOrder = () => {
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  <SelectItem value="">None</SelectItem>
+                                  
                                   {products.map((product) => (
                                     <SelectItem key={product.id} value={product.id}>
                                       {product.name}
@@ -671,7 +671,7 @@ const CreatePurchaseOrder = () => {
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  <SelectItem value="">No Tax (0%)</SelectItem>
+                                  
                                   {taxCodes.map((taxCode) => (
                                     <SelectItem key={taxCode.id} value={taxCode.id}>
                                       {taxCode.code} - {taxCode.name}

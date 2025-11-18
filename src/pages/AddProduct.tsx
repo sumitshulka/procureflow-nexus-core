@@ -401,7 +401,7 @@ const AddProduct = () => {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">None</SelectItem>
+                        
                         {taxCodes.map((taxCode) => (
                           <SelectItem key={taxCode.id} value={taxCode.id}>
                             {taxCode.code} - {taxCode.name}
