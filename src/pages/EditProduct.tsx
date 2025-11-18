@@ -16,6 +16,7 @@ interface Product {
   classification: string;
   current_price?: number;
   currency?: string;
+  tax_code_id?: string;
   tags: string[];
   category_id: string;
   unit_id: string;
@@ -84,6 +85,7 @@ const EditProduct = () => {
         classification: data.classification,
         current_price: data.current_price,
         currency: data.currency,
+        tax_code_id: data.tax_code_id,
         tags: data.tags || [],
         category_id: data.category_id,
         unit_id: data.unit_id,
