@@ -7,6 +7,7 @@ import CategoriesManager from "./master-data/CategoriesManager";
 import UnitsManager from "./master-data/UnitsManager";
 import UserTypesManager from "./master-data/UserTypesManager";
 import ProductClassificationsManager from "./master-data/ProductClassificationsManager";
+import TaxCodesManager from "./master-data/TaxCodesManager";
 
 const MasterDataManagement = () => {
   return (
@@ -25,6 +26,7 @@ const MasterDataManagement = () => {
           <TabsTrigger value="classifications">Product Classifications</TabsTrigger>
           <TabsTrigger value="units">Product Units</TabsTrigger>
           <TabsTrigger value="user-types">User Types</TabsTrigger>
+          <TabsTrigger value="tax-codes">Tax Codes</TabsTrigger>
         </TabsList>
         
         <TabsContent value="departments">
@@ -45,6 +47,10 @@ const MasterDataManagement = () => {
         
         <TabsContent value="user-types">
           <UserTypesManager />
+        </TabsContent>
+        
+        <TabsContent value="tax-codes">
+          <TaxCodesManager />
         </TabsContent>
       </Tabs>
     </div>

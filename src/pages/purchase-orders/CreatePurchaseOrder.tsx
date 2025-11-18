@@ -21,9 +21,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { CURRENCIES, getCurrencySymbol } from "@/utils/currencyUtils";
 
 const poItemSchema = z.object({
+  product_id: z.string().optional(),
   description: z.string().min(1, "Description is required"),
   quantity: z.number().min(1, "Quantity must be at least 1"),
   unit_price: z.number().min(0, "Unit price must be positive"),
+  tax_code_id: z.string().optional(),
   tax_rate: z.number().min(0).max(100).default(0),
   discount_rate: z.number().min(0).max(100).default(0),
   delivery_date: z.date().optional(),
@@ -67,6 +69,8 @@ const CreatePurchaseOrder = () => {
   const [nextPoNumber, setNextPoNumber] = useState<string>("");
   const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
   const [orgCurrency, setOrgCurrency] = useState<string>("");
+  const [taxCodes, setTaxCodes] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
 
   const form = useForm<PurchaseOrderFormData>({
     resolver: zodResolver(purchaseOrderSchema),
@@ -94,6 +98,8 @@ const CreatePurchaseOrder = () => {
     fetchStandardSettings();
     fetchNextPoNumber();
     fetchOrganizationCurrency();
+    fetchTaxCodes();
+    fetchProducts();
   }, []);
 
   useEffect(() => {
@@ -175,6 +181,49 @@ const CreatePurchaseOrder = () => {
     }
   };
 
+  const fetchTaxCodes = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("tax_codes")
+        .select(`
+          *,
+          tax_rates (
+            id,
+            rate_name,
+            rate_percentage
+          )
+        `)
+        .eq("is_active", true)
+        .order("code");
+
+      if (error) throw error;
+      setTaxCodes(data || []);
+    } catch (error: any) {
+      console.error("Error fetching tax codes:", error.message);
+    }
+  };
+
+  const fetchProducts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("products")
+        .select(`
+          id,
+          name,
+          tax_code_id,
+          current_price,
+          currency
+        `)
+        .eq("is_active", true)
+        .order("name");
+
+      if (error) throw error;
+      setProducts(data || []);
+    } catch (error: any) {
+      console.error("Error fetching products:", error.message);
+    }
+  };
+
   const fetchVendors = async () => {
     try {
       const { data, error } = await supabase
@@ -197,6 +246,49 @@ const CreatePurchaseOrder = () => {
   const handleVendorChange = (vendorId: string) => {
     const vendor = vendors.find(v => v.id === vendorId);
     setSelectedVendor(vendor || null);
+  };
+
+  const handleProductSelection = (index: number, productId: string) => {
+    const product = products.find(p => p.id === productId);
+    if (!product) return;
+
+    // Set product_id
+    form.setValue(`items.${index}.product_id` as any, productId);
+
+    // Auto-populate price if available
+    if (product.current_price) {
+      form.setValue(`items.${index}.unit_price`, product.current_price);
+    }
+
+    // Auto-populate tax code if product has one
+    if (product.tax_code_id) {
+      form.setValue(`items.${index}.tax_code_id` as any, product.tax_code_id);
+      
+      // Calculate and set total tax rate from the tax code
+      const taxCode = taxCodes.find(tc => tc.id === product.tax_code_id);
+      if (taxCode && taxCode.tax_rates) {
+        const totalRate = taxCode.tax_rates.reduce((sum: number, rate: any) => sum + rate.rate_percentage, 0);
+        form.setValue(`items.${index}.tax_rate`, totalRate);
+      }
+    }
+  };
+
+  const handleTaxCodeChange = (index: number, taxCodeId: string) => {
+    if (!taxCodeId) {
+      // Allow clearing tax code
+      form.setValue(`items.${index}.tax_code_id` as any, "");
+      form.setValue(`items.${index}.tax_rate`, 0);
+      return;
+    }
+
+    form.setValue(`items.${index}.tax_code_id` as any, taxCodeId);
+    
+    // Calculate total tax rate from selected tax code
+    const taxCode = taxCodes.find(tc => tc.id === taxCodeId);
+    if (taxCode && taxCode.tax_rates) {
+      const totalRate = taxCode.tax_rates.reduce((sum: number, rate: any) => sum + rate.rate_percentage, 0);
+      form.setValue(`items.${index}.tax_rate`, totalRate);
+    }
   };
 
   const calculateItemTotals = (item: any) => {
@@ -278,9 +370,11 @@ const CreatePurchaseOrder = () => {
         const totals = calculateItemTotals(item);
         return {
           po_id: poData.id,
+          product_id: (item as any).product_id || null,
           description: item.description,
           quantity: item.quantity,
           unit_price: item.unit_price,
+          tax_code_id: (item as any).tax_code_id || null,
           tax_rate: item.tax_rate,
           discount_rate: item.discount_rate,
           delivery_date: item.delivery_date?.toISOString(),
@@ -513,6 +607,38 @@ const CreatePurchaseOrder = () => {
                       <div className="md:col-span-2">
                         <FormField
                           control={form.control}
+                          name={`items.${index}.product_id` as any}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Product (Optional)</FormLabel>
+                              <Select
+                                onValueChange={(value) => {
+                                  field.onChange(value);
+                                  handleProductSelection(index, value);
+                                }}
+                                value={field.value}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select product" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="">None</SelectItem>
+                                  {products.map((product) => (
+                                    <SelectItem key={product.id} value={product.id}>
+                                      {product.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <FormField
+                          control={form.control}
                           name={`items.${index}.description`}
                           render={({ field }) => (
                             <FormItem>
@@ -525,23 +651,59 @@ const CreatePurchaseOrder = () => {
                           )}
                         />
                       </div>
-                      <FormField
-                        control={form.control}
-                        name={`items.${index}.quantity`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Quantity *</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                {...field}
-                                onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                      <div className="md:col-span-2">
+                        <FormField
+                          control={form.control}
+                          name={`items.${index}.tax_code_id` as any}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Tax Code</FormLabel>
+                              <Select
+                                onValueChange={(value) => {
+                                  field.onChange(value);
+                                  handleTaxCodeChange(index, value);
+                                }}
+                                value={field.value || ""}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select tax code or 0" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="">No Tax (0%)</SelectItem>
+                                  {taxCodes.map((taxCode) => (
+                                    <SelectItem key={taxCode.id} value={taxCode.id}>
+                                      {taxCode.code} - {taxCode.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-4">
+                      <div className="md:col-span-2">
+                        <FormField
+                          control={form.control}
+                          name={`items.${index}.quantity`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Quantity *</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  {...field}
+                                  onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
                       <FormField
                         control={form.control}
                         name={`items.${index}.unit_price`}

@@ -22,6 +22,7 @@ const formSchema = z.object({
   classification: z.string().min(1, "Classification is required"),
   currentPrice: z.string().optional(),
   currency: z.string().optional(),
+  taxCodeId: z.string().optional(),
   tags: z.string().optional(),
 });
 
@@ -32,6 +33,7 @@ interface Product {
   classification: string;
   current_price?: number;
   currency?: string;
+  tax_code_id?: string;
   tags: string[];
   category_id: string;
   unit_id: string;
@@ -56,6 +58,7 @@ const EditProductForm = ({ product }: EditProductFormProps) => {
       classification: product.classification || "",
       currentPrice: product.current_price?.toString() || "",
       currency: product.currency || "USD",
+      taxCodeId: product.tax_code_id || "",
       tags: product.tags?.join(", ") || "",
     },
   });
@@ -90,6 +93,21 @@ const EditProductForm = ({ product }: EditProductFormProps) => {
     },
   });
 
+  // Fetch tax codes
+  const { data: taxCodes = [] } = useQuery({
+    queryKey: ["tax_codes"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tax_codes")
+        .select("*")
+        .eq("is_active", true)
+        .order("code");
+
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const updateProductMutation = useMutation({
     mutationFn: async (values: z.infer<typeof formSchema>) => {
       console.log("[EditProductForm] Starting product update with values:", values);
@@ -107,6 +125,7 @@ const EditProductForm = ({ product }: EditProductFormProps) => {
         classification: values.classification,
         current_price: values.currentPrice ? parseFloat(values.currentPrice) : null,
         currency: values.currency || "USD",
+        tax_code_id: values.taxCodeId || null,
         tags: values.tags ? values.tags.split(",").map((tag) => tag.trim()).filter(Boolean) : [],
         updated_at: new Date().toISOString(),
       };
@@ -288,6 +307,32 @@ const EditProductForm = ({ product }: EditProductFormProps) => {
             )}
           />
         </div>
+
+        <FormField
+          control={form.control}
+          name="taxCodeId"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Tax Code (Optional)</FormLabel>
+              <Select onValueChange={field.onChange} value={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select tax code" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="">None</SelectItem>
+                  {taxCodes.map((taxCode) => (
+                    <SelectItem key={taxCode.id} value={taxCode.id}>
+                      {taxCode.code} - {taxCode.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <FormField
           control={form.control}
