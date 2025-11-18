@@ -332,7 +332,7 @@ const ProductDetail = () => {
                           ))}
                         </div>
                         <p className="text-sm font-medium mt-1">
-                          Total Tax Rate: {product.tax_code.rates.reduce((sum, rate) => sum + rate.rate_percentage, 0).toFixed(2)}%
+                          Applicable tax rate varies by conditions
                         </p>
                       </div>
                     )}
