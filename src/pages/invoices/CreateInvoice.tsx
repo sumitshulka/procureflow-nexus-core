@@ -16,10 +16,12 @@ import { Plus, Trash2, Upload } from "lucide-react";
 import PageHeader from "@/components/common/PageHeader";
 
 interface InvoiceItem {
+  product_id: string | null;
   description: string;
   quantity: number;
   unit_price: number;
   tax_rate: number;
+  tax_details: Array<{ name: string; rate: number }> | null;
   discount_rate: number;
 }
 
@@ -40,7 +42,7 @@ const CreateInvoice = () => {
   const [nonPOJustification, setNonPOJustification] = useState("");
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState<InvoiceItem[]>([
-    { description: "", quantity: 1, unit_price: 0, tax_rate: 0, discount_rate: 0 }
+    { product_id: null, description: "", quantity: 1, unit_price: 0, tax_rate: 0, tax_details: null, discount_rate: 0 }
   ]);
 
   // Fetch all vendors for non-PO invoices
@@ -57,6 +59,52 @@ const CreateInvoice = () => {
       return data;
     },
     enabled: isNonPO,
+  });
+
+  // Fetch selected vendor details
+  const { data: selectedVendorDetails } = useQuery({
+    queryKey: ["vendor-details", selectedVendor],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("vendor_registrations")
+        .select("*")
+        .eq("id", selectedVendor)
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!selectedVendor && isNonPO,
+  });
+
+  // Fetch products for line items
+  const { data: products } = useQuery({
+    queryKey: ["products-with-tax"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("products")
+        .select(`
+          id, 
+          name, 
+          current_price,
+          currency,
+          tax_code_id,
+          tax_codes (
+            id,
+            code,
+            name,
+            tax_rates (
+              rate_name,
+              rate_percentage
+            )
+          )
+        `)
+        .eq("is_active", true)
+        .order("name");
+
+      if (error) throw error;
+      return data;
+    },
   });
 
   // Fetch vendor's purchase orders
@@ -84,7 +132,29 @@ const CreateInvoice = () => {
   });
 
   const addItem = () => {
-    setItems([...items, { description: "", quantity: 1, unit_price: 0, tax_rate: 0, discount_rate: 0 }]);
+    setItems([...items, { product_id: null, description: "", quantity: 1, unit_price: 0, tax_rate: 0, tax_details: null, discount_rate: 0 }]);
+  };
+
+  const handleProductSelect = (index: number, productId: string) => {
+    const product = products?.find(p => p.id === productId);
+    if (!product) return;
+
+    const newItems = [...items];
+    
+    // Calculate total tax rate from all tax rates
+    const taxRates = (product.tax_codes as any)?.tax_rates || [];
+    const totalTaxRate = taxRates.reduce((sum: number, rate: any) => sum + (parseFloat(rate.rate_percentage) || 0), 0);
+    
+    newItems[index] = {
+      ...newItems[index],
+      product_id: productId,
+      description: product.name,
+      unit_price: product.current_price || 0,
+      tax_rate: totalTaxRate,
+      tax_details: taxRates.map((r: any) => ({ name: r.rate_name, rate: parseFloat(r.rate_percentage) })),
+    };
+    
+    setItems(newItems);
   };
 
   const removeItem = (index: number) => {
@@ -172,6 +242,7 @@ const CreateInvoice = () => {
       // Insert invoice items
       const invoiceItems = items.map(item => ({
         invoice_id: invoice.id,
+        product_id: item.product_id,
         description: item.description,
         quantity: item.quantity,
         unit_price: item.unit_price,
@@ -320,6 +391,61 @@ const CreateInvoice = () => {
             </div>
           )}
 
+          {/* Vendor Details Display */}
+          {isNonPO && selectedVendorDetails && (
+            <Card className="bg-muted/50">
+              <CardHeader>
+                <CardTitle className="text-base">Vendor Information</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Company Name</Label>
+                    <p className="font-medium">{selectedVendorDetails.company_name}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Vendor Number</Label>
+                    <p className="font-medium">{selectedVendorDetails.vendor_number || 'N/A'}</p>
+                  </div>
+                  {selectedVendorDetails.gst_number && (
+                    <div>
+                      <Label className="text-xs text-muted-foreground">GST Number</Label>
+                      <p className="font-medium">{selectedVendorDetails.gst_number}</p>
+                    </div>
+                  )}
+                  {selectedVendorDetails.pan_number && (
+                    <div>
+                      <Label className="text-xs text-muted-foreground">PAN Number</Label>
+                      <p className="font-medium">{selectedVendorDetails.pan_number}</p>
+                    </div>
+                  )}
+                </div>
+                
+                {selectedVendorDetails.billing_address && (
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Billing Address</Label>
+                    <p className="text-sm">
+                      {(selectedVendorDetails.billing_address as any).street}, {(selectedVendorDetails.billing_address as any).city}, 
+                      {(selectedVendorDetails.billing_address as any).state} - {(selectedVendorDetails.billing_address as any).postal_code}, 
+                      {(selectedVendorDetails.billing_address as any).country}
+                    </p>
+                  </div>
+                )}
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Email</Label>
+                    <p className="text-sm">{selectedVendorDetails.primary_email}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Phone</Label>
+                    <p className="text-sm">{selectedVendorDetails.primary_phone}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <Separator />
 
           {/* Invoice Items */}
@@ -349,13 +475,42 @@ const CreateInvoice = () => {
                     )}
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+                    <div className="lg:col-span-2 space-y-2">
+                      <Label>Product</Label>
+                      <Select 
+                        value={item.product_id || "custom"} 
+                        onValueChange={(value) => {
+                          if (value === "custom") {
+                            updateItem(index, "product_id", null);
+                            updateItem(index, "tax_details", null);
+                          } else {
+                            handleProductSelect(index, value);
+                          }
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select product or custom" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="custom">Custom Item (Manual Entry)</SelectItem>
+                          <Separator className="my-1" />
+                          {products?.map((product) => (
+                            <SelectItem key={product.id} value={product.id}>
+                              {product.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
                     <div className="lg:col-span-2 space-y-2">
                       <Label>Description *</Label>
                       <Input
                         value={item.description}
                         onChange={(e) => updateItem(index, "description", e.target.value)}
                         placeholder="Item description"
+                        disabled={!!item.product_id}
                         required
                       />
                     </div>
@@ -380,26 +535,25 @@ const CreateInvoice = () => {
                         step="0.01"
                         value={item.unit_price}
                         onChange={(e) => updateItem(index, "unit_price", parseFloat(e.target.value) || 0)}
+                        disabled={!!item.product_id}
                         required
                       />
                     </div>
 
                     <div className="space-y-2">
-                      <Label>Total</Label>
-                      <Input
-                        value={calculateItemTotal(item).toFixed(2)}
-                        disabled
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Tax Rate (%)</Label>
+                      <Label>Tax Rate (%) {item.product_id && item.tax_details && (
+                        <span className="text-xs text-muted-foreground">
+                          ({item.tax_details.map(t => `${t.name}: ${t.rate}%`).join(', ')})
+                        </span>
+                      )}</Label>
                       <Input
                         type="number"
                         min="0"
                         step="0.01"
                         value={item.tax_rate}
                         onChange={(e) => updateItem(index, "tax_rate", parseFloat(e.target.value) || 0)}
+                        disabled={!!item.product_id}
+                        title={item.product_id ? "Tax rate is auto-calculated from product's tax code" : ""}
                       />
                     </div>
 
@@ -412,6 +566,14 @@ const CreateInvoice = () => {
                         step="0.01"
                         value={item.discount_rate}
                         onChange={(e) => updateItem(index, "discount_rate", parseFloat(e.target.value) || 0)}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Total</Label>
+                      <Input
+                        value={calculateItemTotal(item).toFixed(2)}
+                        disabled
                       />
                     </div>
                   </div>
