@@ -943,6 +943,400 @@ export type Database = {
           },
         ]
       }
+      invoice_approval_history: {
+        Row: {
+          approval_level_id: string
+          approved_at: string | null
+          approver_id: string
+          comments: string | null
+          created_at: string
+          id: string
+          invoice_id: string
+          rejected_at: string | null
+          status: string
+        }
+        Insert: {
+          approval_level_id: string
+          approved_at?: string | null
+          approver_id: string
+          comments?: string | null
+          created_at?: string
+          id?: string
+          invoice_id: string
+          rejected_at?: string | null
+          status?: string
+        }
+        Update: {
+          approval_level_id?: string
+          approved_at?: string | null
+          approver_id?: string
+          comments?: string | null
+          created_at?: string
+          id?: string
+          invoice_id?: string
+          rejected_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_approval_history_approval_level_id_fkey"
+            columns: ["approval_level_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_approval_levels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_approval_history_approver_id_fkey"
+            columns: ["approver_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_approval_history_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoice_approval_levels: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          level_name: string
+          level_number: number
+          max_amount: number | null
+          min_amount: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          level_name: string
+          level_number: number
+          max_amount?: number | null
+          min_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          level_name?: string
+          level_number?: number
+          max_amount?: number | null
+          min_amount?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      invoice_approval_matrix: {
+        Row: {
+          approval_level_id: string
+          approver_role: Database["public"]["Enums"]["user_role"] | null
+          approver_user_id: string | null
+          created_at: string
+          department_id: string | null
+          id: string
+          is_active: boolean
+          sequence_order: number
+          updated_at: string
+        }
+        Insert: {
+          approval_level_id: string
+          approver_role?: Database["public"]["Enums"]["user_role"] | null
+          approver_user_id?: string | null
+          created_at?: string
+          department_id?: string | null
+          id?: string
+          is_active?: boolean
+          sequence_order?: number
+          updated_at?: string
+        }
+        Update: {
+          approval_level_id?: string
+          approver_role?: Database["public"]["Enums"]["user_role"] | null
+          approver_user_id?: string | null
+          created_at?: string
+          department_id?: string | null
+          id?: string
+          is_active?: boolean
+          sequence_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_approval_matrix_approval_level_id_fkey"
+            columns: ["approval_level_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_approval_levels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_approval_matrix_approver_user_id_fkey"
+            columns: ["approver_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_approval_matrix_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoice_items: {
+        Row: {
+          created_at: string
+          description: string
+          discount_amount: number | null
+          discount_rate: number | null
+          final_amount: number
+          id: string
+          invoice_id: string
+          notes: string | null
+          po_item_id: string | null
+          product_id: string | null
+          quantity: number
+          tax_amount: number | null
+          tax_rate: number | null
+          total_price: number
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          discount_amount?: number | null
+          discount_rate?: number | null
+          final_amount: number
+          id?: string
+          invoice_id: string
+          notes?: string | null
+          po_item_id?: string | null
+          product_id?: string | null
+          quantity: number
+          tax_amount?: number | null
+          tax_rate?: number | null
+          total_price: number
+          unit_price: number
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          discount_amount?: number | null
+          discount_rate?: number | null
+          final_amount?: number
+          id?: string
+          invoice_id?: string
+          notes?: string | null
+          po_item_id?: string | null
+          product_id?: string | null
+          quantity?: number
+          tax_amount?: number | null
+          tax_rate?: number | null
+          total_price?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_items_po_item_id_fkey"
+            columns: ["po_item_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_order_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoices: {
+        Row: {
+          approval_status: string | null
+          attachments: Json | null
+          corrective_action_required: string | null
+          created_at: string
+          created_by: string
+          currency: string
+          current_approval_level: number | null
+          discount_amount: number | null
+          disputed_at: string | null
+          disputed_by: string | null
+          disputed_reason: string | null
+          due_date: string | null
+          id: string
+          invoice_date: string
+          invoice_number: string
+          invoice_pdf_url: string | null
+          is_non_po_invoice: boolean
+          non_po_justification: string | null
+          notes: string | null
+          paid_by: string | null
+          payment_date: string | null
+          payment_method: string | null
+          payment_notes: string | null
+          payment_reference: string | null
+          purchase_order_id: string | null
+          rejected_at: string | null
+          rejected_by: string | null
+          rejected_reason: string | null
+          signatory_designation: string | null
+          signatory_name: string | null
+          status: string
+          submitted_for_approval_at: string | null
+          subtotal_amount: number
+          tax_amount: number
+          terms_and_conditions: string | null
+          total_amount: number
+          updated_at: string
+          vendor_id: string
+        }
+        Insert: {
+          approval_status?: string | null
+          attachments?: Json | null
+          corrective_action_required?: string | null
+          created_at?: string
+          created_by: string
+          currency?: string
+          current_approval_level?: number | null
+          discount_amount?: number | null
+          disputed_at?: string | null
+          disputed_by?: string | null
+          disputed_reason?: string | null
+          due_date?: string | null
+          id?: string
+          invoice_date?: string
+          invoice_number: string
+          invoice_pdf_url?: string | null
+          is_non_po_invoice?: boolean
+          non_po_justification?: string | null
+          notes?: string | null
+          paid_by?: string | null
+          payment_date?: string | null
+          payment_method?: string | null
+          payment_notes?: string | null
+          payment_reference?: string | null
+          purchase_order_id?: string | null
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejected_reason?: string | null
+          signatory_designation?: string | null
+          signatory_name?: string | null
+          status?: string
+          submitted_for_approval_at?: string | null
+          subtotal_amount?: number
+          tax_amount?: number
+          terms_and_conditions?: string | null
+          total_amount: number
+          updated_at?: string
+          vendor_id: string
+        }
+        Update: {
+          approval_status?: string | null
+          attachments?: Json | null
+          corrective_action_required?: string | null
+          created_at?: string
+          created_by?: string
+          currency?: string
+          current_approval_level?: number | null
+          discount_amount?: number | null
+          disputed_at?: string | null
+          disputed_by?: string | null
+          disputed_reason?: string | null
+          due_date?: string | null
+          id?: string
+          invoice_date?: string
+          invoice_number?: string
+          invoice_pdf_url?: string | null
+          is_non_po_invoice?: boolean
+          non_po_justification?: string | null
+          notes?: string | null
+          paid_by?: string | null
+          payment_date?: string | null
+          payment_method?: string | null
+          payment_notes?: string | null
+          payment_reference?: string | null
+          purchase_order_id?: string | null
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejected_reason?: string | null
+          signatory_designation?: string | null
+          signatory_name?: string | null
+          status?: string
+          submitted_for_approval_at?: string | null
+          subtotal_amount?: number
+          tax_amount?: number
+          terms_and_conditions?: string | null
+          total_amount?: number
+          updated_at?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_disputed_by_fkey"
+            columns: ["disputed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_paid_by_fkey"
+            columns: ["paid_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_purchase_order_id_fkey"
+            columns: ["purchase_order_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_rejected_by_fkey"
+            columns: ["rejected_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_registrations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       locations: {
         Row: {
           address: string | null
@@ -3946,6 +4340,10 @@ export type Database = {
         Args: { po_amount: number }
         Returns: string
       }
+      get_required_invoice_approval_level: {
+        Args: { invoice_amount: number }
+        Returns: string
+      }
       get_security_status: { Args: never; Returns: Json }
       has_role: {
         Args: {
@@ -3953,6 +4351,10 @@ export type Database = {
           user_id: string
         }
         Returns: boolean
+      }
+      initiate_invoice_approval: {
+        Args: { p_invoice_id: string }
+        Returns: Json
       }
       initiate_po_approval: { Args: { p_po_id: string }; Returns: Json }
       is_request_completed: { Args: { request_id: string }; Returns: boolean }

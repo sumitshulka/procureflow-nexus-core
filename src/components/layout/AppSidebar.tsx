@@ -33,6 +33,7 @@ import {
   Shield,
   AlertTriangle,
   BookOpen,
+  Receipt,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -133,6 +134,12 @@ const AppSidebar = () => {
           href: "/purchase-orders/history",
         },
       ],
+    },
+    {
+      title: "Invoice Management",
+      icon: FileText,
+      href: "/invoices",
+      roles: ["admin", "finance_officer"],
     },
     {
       title: "Approvals",
