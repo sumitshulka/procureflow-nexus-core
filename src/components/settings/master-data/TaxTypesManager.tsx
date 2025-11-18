@@ -65,6 +65,17 @@ const TaxTypesManager = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
       
+      // Check if code already exists
+      const { data: existing } = await supabase
+        .from("tax_types")
+        .select("code")
+        .eq("code", values.code)
+        .single();
+      
+      if (existing) {
+        throw new Error(`Tax type with code "${values.code}" already exists. Please use a different code.`);
+      }
+      
       const { data, error } = await supabase.from("tax_types").insert({
         code: values.code,
         name: values.name,
@@ -74,7 +85,12 @@ const TaxTypesManager = () => {
         created_by: user.id
       }).select().single();
       
-      if (error) throw error;
+      if (error) {
+        if (error.code === '23505') {
+          throw new Error(`Tax type with code "${values.code}" already exists. Please use a different code.`);
+        }
+        throw error;
+      }
       return data;
     },
     onSuccess: () => {
