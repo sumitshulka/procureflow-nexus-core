@@ -83,6 +83,13 @@ const TaxTypesManager = () => {
       setIsDialogOpen(false);
       form.reset();
     },
+    onError: (error: any) => {
+      toast({
+        title: "Error creating tax type",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
 
   const updateTaxTypeMutation = useMutation({
@@ -103,6 +110,13 @@ const TaxTypesManager = () => {
       setIsDialogOpen(false);
       setEditingTaxType(null);
       form.reset();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error updating tax type",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
