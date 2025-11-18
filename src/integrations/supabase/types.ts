@@ -3180,7 +3180,9 @@ export type Database = {
       }
       tax_codes: {
         Row: {
+          applicability_condition: string | null
           code: string
+          condition_rules: Json | null
           country: string | null
           created_at: string | null
           created_by: string | null
@@ -3191,7 +3193,9 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          applicability_condition?: string | null
           code: string
+          condition_rules?: Json | null
           country?: string | null
           created_at?: string | null
           created_by?: string | null
@@ -3202,7 +3206,9 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          applicability_condition?: string | null
           code?: string
+          condition_rules?: Json | null
           country?: string | null
           created_at?: string | null
           created_by?: string | null
@@ -3805,6 +3811,16 @@ export type Database = {
         Returns: Json
       }
       generate_vendor_number: { Args: never; Returns: string }
+      get_applicable_tax_code: {
+        Args: { p_buyer_state?: string; p_vendor_id: string }
+        Returns: {
+          rates: Json
+          tax_code: string
+          tax_code_id: string
+          tax_name: string
+          total_rate: number
+        }[]
+      }
       get_approval_requests_secure: {
         Args: never
         Returns: {
