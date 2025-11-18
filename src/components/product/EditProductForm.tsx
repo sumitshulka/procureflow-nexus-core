@@ -314,14 +314,13 @@ const EditProductForm = ({ product }: EditProductFormProps) => {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Tax Code (Optional)</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value}>
+              <Select onValueChange={field.onChange} value={field.value || undefined}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Select tax code" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  
                   {taxCodes.map((taxCode) => (
                     <SelectItem key={taxCode.id} value={taxCode.id}>
                       {taxCode.code} - {taxCode.name}
