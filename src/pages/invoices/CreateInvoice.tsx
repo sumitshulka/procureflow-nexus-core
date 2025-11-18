@@ -148,20 +148,52 @@ const CreateInvoice = () => {
     const product = products?.find(p => p.id === productId);
     if (!product || !selectedVendor) return;
 
-    // Fetch applicable tax rates based on vendor and product
-    const { data: applicableTax, error } = await supabase.rpc('get_applicable_tax_code', {
-      p_vendor_id: selectedVendor
-    });
-
     let taxRate = 0;
     let taxDetails = null;
 
-    if (!error && applicableTax && applicableTax.length > 0) {
-      const tax = applicableTax[0] as any;
-      taxRate = Number(tax.total_rate || 0);
-      const ratesData = tax.rates || tax.applicable_rates;
-      if (ratesData && Array.isArray(ratesData)) {
-        taxDetails = ratesData.map((r: any) => ({ 
+    // Get tax rates from product
+    const taxRates = product.tax_codes?.tax_rates || [];
+    
+    if (taxRates.length > 0) {
+      // Fetch vendor location
+      const { data: vendorData } = await supabase
+        .from('vendor_registrations')
+        .select('registered_address, business_address')
+        .eq('id', selectedVendor)
+        .single();
+      
+      // Fetch organization location (first active location as buyer location)
+      const { data: orgLocation } = await supabase
+        .from('locations')
+        .select('state, country')
+        .eq('is_active', true)
+        .limit(1)
+        .single();
+      
+      // Determine vendor state using parseAddress
+      const vendorAddr = parseAddress(vendorData?.business_address || vendorData?.registered_address);
+      const vendorState = vendorAddr.state;
+      const buyerState = orgLocation?.state;
+      
+      // Determine if intra-state or inter-state
+      const isIntraState = vendorState && buyerState && vendorState === buyerState;
+      
+      // Filter applicable tax rates
+      if (isIntraState) {
+        // Intra-state: Use CGST + SGST (exclude IGST)
+        const applicableRates = taxRates.filter((r: any) => 
+          r.rate_name !== 'IGST' && (r.rate_name === 'CGST' || r.rate_name === 'SGST')
+        );
+        taxRate = applicableRates.reduce((sum: number, r: any) => sum + Number(r.rate_percentage), 0);
+        taxDetails = applicableRates.map((r: any) => ({ 
+          name: r.rate_name, 
+          rate: Number(r.rate_percentage) 
+        }));
+      } else {
+        // Inter-state: Use IGST only (exclude CGST, SGST)
+        const applicableRates = taxRates.filter((r: any) => r.rate_name === 'IGST');
+        taxRate = applicableRates.reduce((sum: number, r: any) => sum + Number(r.rate_percentage), 0);
+        taxDetails = applicableRates.map((r: any) => ({ 
           name: r.rate_name, 
           rate: Number(r.rate_percentage) 
         }));
