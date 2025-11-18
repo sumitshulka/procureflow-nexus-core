@@ -15,6 +15,7 @@ import { Separator } from "@/components/ui/separator";
 import { Plus, Trash2 } from "lucide-react";
 import PageHeader from "@/components/common/PageHeader";
 import { parseAddress } from "@/types/vendor";
+import { formatCurrencyAmount, amountToWords } from "@/utils/numberFormatting";
 
 interface InvoiceItem {
   product_id: string | null;
@@ -357,6 +358,14 @@ const CreateInvoice = () => {
   };
 
   const totals = calculateTotals();
+  
+  // Determine if Indian currency (INR) for proper formatting
+  const isIndianCurrency = currency === 'INR';
+  const formattedSubtotal = formatCurrencyAmount(totals.subtotal, currency || 'USD', isIndianCurrency);
+  const formattedTax = formatCurrencyAmount(totals.tax, currency || 'USD', isIndianCurrency);
+  const formattedDiscount = formatCurrencyAmount(totals.discount, currency || 'USD', isIndianCurrency);
+  const formattedTotal = formatCurrencyAmount(totals.total, currency || 'USD', isIndianCurrency);
+  const totalInWords = amountToWords(totals.total, currency || 'USD', isIndianCurrency);
 
   return (
     <div className="container mx-auto py-6">
@@ -558,11 +567,16 @@ const CreateInvoice = () => {
         <Card>
           <CardHeader><CardTitle>Invoice Summary</CardTitle></CardHeader>
           <CardContent className="space-y-2">
-            <div className="flex justify-between"><span>Subtotal:</span><span>{currency} {totals.subtotal.toFixed(2)}</span></div>
-            <div className="flex justify-between"><span>Tax:</span><span>{currency} {totals.tax.toFixed(2)}</span></div>
-            {totals.discount > 0 && <div className="flex justify-between text-red-600"><span>Discount:</span><span>-{currency} {totals.discount.toFixed(2)}</span></div>}
+            <div className="flex justify-between"><span>Subtotal:</span><span className="font-medium">{formattedSubtotal}</span></div>
+            <div className="flex justify-between"><span>Tax:</span><span className="font-medium">{formattedTax}</span></div>
+            {totals.discount > 0 && <div className="flex justify-between text-red-600"><span>Discount:</span><span className="font-medium">-{formattedDiscount}</span></div>}
             <Separator />
-            <div className="flex justify-between text-lg font-bold"><span>Total:</span><span>{currency} {totals.total.toFixed(2)}</span></div>
+            <div className="flex justify-between text-lg font-bold"><span>Total:</span><span>{formattedTotal}</span></div>
+            <Separator className="my-3" />
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground font-medium">Amount in Words:</p>
+              <p className="text-sm font-semibold italic leading-relaxed">{totalInWords}</p>
+            </div>
           </CardContent>
         </Card>
 
