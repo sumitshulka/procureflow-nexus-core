@@ -380,7 +380,7 @@ const TaxCodesManager = () => {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">None</SelectItem>
+                          
                           {taxTypes.map((type) => (
                             <SelectItem key={type.id} value={type.id}>
                               {type.code} - {type.name}
