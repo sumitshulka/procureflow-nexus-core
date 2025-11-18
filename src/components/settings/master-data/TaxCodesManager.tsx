@@ -11,10 +11,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Pencil, Trash2, X } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Info } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const taxCodeSchema = z.object({
   code: z.string().min(1, "Tax code is required"),
@@ -278,6 +279,39 @@ const TaxCodesManager = () => {
             </DialogHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <Alert>
+                  <Info className="h-4 w-4" />
+                  <AlertDescription>
+                    Tax codes are specific implementations of tax types. For example, for GST tax type, you might create IGST, CGST, and SGST tax codes.
+                  </AlertDescription>
+                </Alert>
+
+                <FormField
+                  control={form.control}
+                  name="tax_type_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tax Type</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select tax type (optional)" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="">None</SelectItem>
+                          {taxTypes.map((type) => (
+                            <SelectItem key={type.id} value={type.id}>
+                              {type.name} ({type.code})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
                 <FormField
                   control={form.control}
                   name="code"
@@ -285,7 +319,7 @@ const TaxCodesManager = () => {
                     <FormItem>
                       <FormLabel>Tax Code *</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., GST, VAT" {...field} />
+                        <Input placeholder="e.g., IGST, CGST, SGST" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -465,6 +499,7 @@ const TaxCodesManager = () => {
               <TableRow>
                 <TableHead>Code</TableHead>
                 <TableHead>Name</TableHead>
+                <TableHead>Tax Type</TableHead>
                 <TableHead>Country</TableHead>
                 <TableHead>Applicability</TableHead>
                 <TableHead>Tax Rates</TableHead>
@@ -478,6 +513,13 @@ const TaxCodesManager = () => {
                 <TableRow key={taxCode.id}>
                   <TableCell className="font-medium">{taxCode.code}</TableCell>
                   <TableCell>{taxCode.name}</TableCell>
+                  <TableCell>
+                    {taxCode.tax_type_id ? (
+                      <Badge variant="outline">
+                        {taxTypes.find(t => t.id === taxCode.tax_type_id)?.name || "Unknown"}
+                      </Badge>
+                    ) : "-"}
+                  </TableCell>
                   <TableCell>{taxCode.country || "-"}</TableCell>
                   <TableCell>
                     <Badge variant="outline">
