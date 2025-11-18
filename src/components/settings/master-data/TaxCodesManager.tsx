@@ -21,6 +21,7 @@ const taxCodeSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
   country: z.string().optional(),
+  tax_type_id: z.string().optional(),
   applicability_condition: z.enum(["always", "same_state", "different_state", "international"]).default("always"),
   rates: z.array(z.object({
     rate_name: z.string().min(1, "Rate name is required"),
@@ -43,8 +44,24 @@ const TaxCodesManager = () => {
       name: "",
       description: "",
       country: "",
+      tax_type_id: "",
       applicability_condition: "always",
       rates: [{ rate_name: "", rate_percentage: 0 }],
+    },
+  });
+
+  // Fetch tax types for dropdown
+  const { data: taxTypes = [] } = useQuery({
+    queryKey: ["tax_types"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tax_types")
+        .select("id, code, name")
+        .eq("is_active", true)
+        .order("name");
+      
+      if (error) throw error;
+      return data;
     },
   });
 
@@ -89,6 +106,7 @@ const TaxCodesManager = () => {
           name: values.name,
           description: values.description || null,
           country: values.country || null,
+          tax_type_id: values.tax_type_id || null,
           applicability_condition: values.applicability_condition,
           created_by: user.id,
         })
@@ -139,6 +157,7 @@ const TaxCodesManager = () => {
           name: values.name,
           description: values.description || null,
           country: values.country || null,
+          tax_type_id: values.tax_type_id || null,
           applicability_condition: values.applicability_condition,
         })
         .eq("id", editingTaxCode.id);
@@ -208,6 +227,8 @@ const TaxCodesManager = () => {
       name: taxCode.name,
       description: taxCode.description || "",
       country: taxCode.country || "",
+      tax_type_id: taxCode.tax_type_id || "",
+      applicability_condition: taxCode.applicability_condition || "always",
       rates: taxCode.rates.map((r: any) => ({
         rate_name: r.rate_name,
         rate_percentage: r.rate_percentage,
@@ -308,6 +329,32 @@ const TaxCodesManager = () => {
                       <FormControl>
                         <Input placeholder="e.g., India, USA" {...field} />
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="tax_type_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tax Type</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select tax type (optional)" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="">None</SelectItem>
+                          {taxTypes.map((type) => (
+                            <SelectItem key={type.id} value={type.id}>
+                              {type.code} - {type.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}

@@ -3190,6 +3190,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           name: string
+          tax_type_id: string | null
           updated_at: string | null
         }
         Insert: {
@@ -3203,6 +3204,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name: string
+          tax_type_id?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -3216,9 +3218,18 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name?: string
+          tax_type_id?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tax_codes_tax_type_id_fkey"
+            columns: ["tax_type_id"]
+            isOneToOne: false
+            referencedRelation: "tax_types"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tax_rates: {
         Row: {
@@ -3254,6 +3265,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      tax_types: {
+        Row: {
+          applicability_rules: Json | null
+          code: string
+          country: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          applicability_rules?: Json | null
+          code: string
+          country?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          applicability_rules?: Json | null
+          code?: string
+          country?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       units: {
         Row: {
@@ -3818,6 +3868,8 @@ export type Database = {
           tax_code: string
           tax_code_id: string
           tax_name: string
+          tax_type_code: string
+          tax_type_name: string
           total_rate: number
         }[]
       }
