@@ -291,7 +291,7 @@ const TaxCodesManager = () => {
                   name="tax_type_id"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Tax Type</FormLabel>
+                      <FormLabel>Tax Type (Optional)</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
@@ -299,7 +299,6 @@ const TaxCodesManager = () => {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">None</SelectItem>
                           {taxTypes.map((type) => (
                             <SelectItem key={type.id} value={type.id}>
                               {type.name} ({type.code})
