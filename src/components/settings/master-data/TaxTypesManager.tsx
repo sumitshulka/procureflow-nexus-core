@@ -49,7 +49,11 @@ const TaxTypesManager = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
       const { data, error } = await supabase.from("tax_types").insert({
-        ...values, description: values.description || null, country: values.country || null, created_by: user.id
+        code: values.code,
+        name: values.name,
+        description: values.description || null,
+        country: values.country || null,
+        created_by: user.id
       }).select().single();
       if (error) throw error;
       return data;
@@ -65,7 +69,10 @@ const TaxTypesManager = () => {
   const updateTaxTypeMutation = useMutation({
     mutationFn: async (values: TaxTypeForm) => {
       const { error } = await supabase.from("tax_types").update({
-        ...values, description: values.description || null, country: values.country || null
+        code: values.code,
+        name: values.name,
+        description: values.description || null,
+        country: values.country || null
       }).eq("id", editingTaxType.id);
       if (error) throw error;
     },
