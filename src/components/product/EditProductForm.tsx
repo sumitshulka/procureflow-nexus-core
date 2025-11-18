@@ -108,6 +108,16 @@ const EditProductForm = ({ product }: EditProductFormProps) => {
     },
   });
 
+  // Ensure selects prefill when options load
+  React.useEffect(() => {
+    const vals = form.getValues();
+    if (!vals.categoryId && product.category_id) form.setValue("categoryId", product.category_id);
+    if (!vals.unitId && product.unit_id) form.setValue("unitId", product.unit_id);
+    if ((vals.taxCodeId === undefined || vals.taxCodeId === "") && product.tax_code_id) {
+      form.setValue("taxCodeId", product.tax_code_id);
+    }
+  }, [categories, units, taxCodes, product, form]);
+
   const updateProductMutation = useMutation({
     mutationFn: async (values: z.infer<typeof formSchema>) => {
       console.log("[EditProductForm] Starting product update with values:", values);
@@ -202,7 +212,7 @@ const EditProductForm = ({ product }: EditProductFormProps) => {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Classification</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} value={field.value || undefined}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select classification" />
