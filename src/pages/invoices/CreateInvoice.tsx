@@ -14,6 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { Plus, Trash2 } from "lucide-react";
 import PageHeader from "@/components/common/PageHeader";
+import { parseAddress } from "@/types/vendor";
 
 interface InvoiceItem {
   product_id: string | null;
@@ -305,22 +306,43 @@ const CreateInvoice = () => {
           </CardContent>
         </Card>
 
-        {selectedVendor && selectedVendorDetails && (
-          <Card>
-            <CardHeader><CardTitle>Vendor Information</CardTitle></CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-4">
-                <div><Label className="text-muted-foreground">Company</Label><p className="font-medium">{selectedVendorDetails.company_name}</p></div>
-                <div><Label className="text-muted-foreground">Vendor #</Label><p className="font-medium">{selectedVendorDetails.vendor_number}</p></div>
-                {selectedVendorDetails.gst_number && <div><Label className="text-muted-foreground">GST</Label><p>{selectedVendorDetails.gst_number}</p></div>}
-                {selectedVendorDetails.pan_number && <div><Label className="text-muted-foreground">PAN</Label><p>{selectedVendorDetails.pan_number}</p></div>}
-                {selectedVendorDetails.billing_address && (
-                  <div className="col-span-2"><Label className="text-muted-foreground">Billing Address</Label><p className="text-sm">{(selectedVendorDetails.billing_address as any).street}, {(selectedVendorDetails.billing_address as any).city}, {(selectedVendorDetails.billing_address as any).state} - {(selectedVendorDetails.billing_address as any).postal_code}, {(selectedVendorDetails.billing_address as any).country}</p></div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        {selectedVendor && selectedVendorDetails && (() => {
+          const billingAddr = parseAddress(selectedVendorDetails.billing_address);
+          const registeredAddr = parseAddress(selectedVendorDetails.registered_address);
+          const businessAddr = parseAddress(selectedVendorDetails.business_address);
+          
+          return (
+            <Card>
+              <CardHeader><CardTitle>Vendor Information</CardTitle></CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-4">
+                  <div><Label className="text-muted-foreground">Company</Label><p className="font-medium">{selectedVendorDetails.company_name}</p></div>
+                  <div><Label className="text-muted-foreground">Vendor #</Label><p className="font-medium">{selectedVendorDetails.vendor_number}</p></div>
+                  {selectedVendorDetails.gst_number && <div><Label className="text-muted-foreground">GST</Label><p>{selectedVendorDetails.gst_number}</p></div>}
+                  {selectedVendorDetails.pan_number && <div><Label className="text-muted-foreground">PAN</Label><p>{selectedVendorDetails.pan_number}</p></div>}
+                  {billingAddr.street && (
+                    <div className="col-span-2">
+                      <Label className="text-muted-foreground">Billing Address</Label>
+                      <p className="text-sm">{billingAddr.street}, {billingAddr.city}, {billingAddr.state} - {billingAddr.postal_code}, {billingAddr.country}</p>
+                    </div>
+                  )}
+                  {registeredAddr.street && (
+                    <div className="col-span-2">
+                      <Label className="text-muted-foreground">Registered Address</Label>
+                      <p className="text-sm">{registeredAddr.street}, {registeredAddr.city}, {registeredAddr.state} - {registeredAddr.postal_code}, {registeredAddr.country}</p>
+                    </div>
+                  )}
+                  {businessAddr.street && (
+                    <div className="col-span-2">
+                      <Label className="text-muted-foreground">Business Address</Label>
+                      <p className="text-sm">{businessAddr.street}, {businessAddr.city}, {businessAddr.state} - {businessAddr.postal_code}, {businessAddr.country}</p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })()}
 
         {!isNonPO && selectedPO && (
           <Card>
