@@ -10,8 +10,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2 } from "lucide-react";
-import { useForm } from "react-hook-form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Plus, Pencil, Trash2, X } from "lucide-react";
+import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
@@ -20,6 +21,10 @@ const taxTypeSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
   country: z.string().optional(),
+  tax_elements: z.array(z.object({
+    name: z.string().min(1, "Element name is required"),
+    applicability_condition: z.enum(["always", "intra_state", "inter_state", "international"]),
+  })).min(1, "At least one tax element is required"),
 });
 
 type TaxTypeForm = z.infer<typeof taxTypeSchema>;
@@ -32,7 +37,18 @@ const TaxTypesManager = () => {
 
   const form = useForm<TaxTypeForm>({
     resolver: zodResolver(taxTypeSchema),
-    defaultValues: { code: "", name: "", description: "", country: "" },
+    defaultValues: {
+      code: "",
+      name: "",
+      description: "",
+      country: "",
+      tax_elements: [{ name: "", applicability_condition: "always" }],
+    },
+  });
+
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "tax_elements",
   });
 
   const { data: taxTypes = [], isLoading } = useQuery({
@@ -48,13 +64,16 @@ const TaxTypesManager = () => {
     mutationFn: async (values: TaxTypeForm) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
+      
       const { data, error } = await supabase.from("tax_types").insert({
         code: values.code,
         name: values.name,
         description: values.description || null,
         country: values.country || null,
+        tax_elements: values.tax_elements,
         created_by: user.id
       }).select().single();
+      
       if (error) throw error;
       return data;
     },
@@ -72,8 +91,10 @@ const TaxTypesManager = () => {
         code: values.code,
         name: values.name,
         description: values.description || null,
-        country: values.country || null
+        country: values.country || null,
+        tax_elements: values.tax_elements
       }).eq("id", editingTaxType.id);
+      
       if (error) throw error;
     },
     onSuccess: () => {
@@ -96,68 +117,197 @@ const TaxTypesManager = () => {
     },
   });
 
+  const handleEdit = (taxType: any) => {
+    setEditingTaxType(taxType);
+    const tax_elements = Array.isArray(taxType.tax_elements) 
+      ? taxType.tax_elements 
+      : [{ name: "", applicability_condition: "always" }];
+    
+    form.reset({
+      code: taxType.code,
+      name: taxType.name,
+      description: taxType.description || "",
+      country: taxType.country || "",
+      tax_elements,
+    });
+    setIsDialogOpen(true);
+  };
+
+  const onSubmit = async (data: TaxTypeForm) => {
+    if (editingTaxType) {
+      await updateTaxTypeMutation.mutateAsync(data);
+    } else {
+      await createTaxTypeMutation.mutateAsync(data);
+    }
+  };
+
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-        <div>
-          <CardTitle>Tax Types</CardTitle>
-          <p className="text-sm text-muted-foreground mt-1">
-            Define tax categories (e.g., GST, VAT, Sales Tax)
-          </p>
-        </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle>Tax Types</CardTitle>
+        <Dialog open={isDialogOpen} onOpenChange={(open) => {
+          setIsDialogOpen(open);
+          if (!open) {
+            setEditingTaxType(null);
+            form.reset();
+          }
+        }}>
           <DialogTrigger asChild>
-            <Button onClick={() => { setEditingTaxType(null); form.reset(); }}>
-              <Plus className="h-4 w-4 mr-2" />Add Tax Type
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Tax Type
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingTaxType ? "Edit Tax Type" : "Add Tax Type"}</DialogTitle>
             </DialogHeader>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit((values) => editingTaxType ? updateTaxTypeMutation.mutate(values) : createTaxTypeMutation.mutate(values))} className="space-y-4">
-                <FormField control={form.control} name="code" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Tax Type Code *</FormLabel>
-                    <FormControl><Input placeholder="e.g., GST, VAT" {...field} /></FormControl>
-                    <FormDescription>Unique identifier</FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="name" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Name *</FormLabel>
-                    <FormControl><Input placeholder="e.g., Goods and Services Tax" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="description" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description</FormLabel>
-                    <FormControl><Textarea placeholder="Describe this tax type" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="country" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Country</FormLabel>
-                    <FormControl><Input placeholder="e.g., India" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <div className="flex justify-end gap-2 pt-4">
-                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-                  <Button type="submit">{editingTaxType ? "Update" : "Create"}</Button>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="code"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Code</FormLabel>
+                      <FormControl>
+                        <Input placeholder="GST" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Goods and Services Tax" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="country"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Country (Optional)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="India" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description (Optional)</FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="Tax type description" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <FormLabel>Tax Elements</FormLabel>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => append({ name: "", applicability_condition: "always" })}
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add Element
+                    </Button>
+                  </div>
+                  <FormDescription>
+                    Define the tax components (e.g., IGST, SGST, CGST) and their applicability conditions
+                  </FormDescription>
+                  
+                  <div className="space-y-3 border rounded-md p-4">
+                    {fields.map((field, index) => (
+                      <div key={field.id} className="flex gap-2 items-start">
+                        <FormField
+                          control={form.control}
+                          name={`tax_elements.${index}.name`}
+                          render={({ field }) => (
+                            <FormItem className="flex-1">
+                              <FormControl>
+                                <Input placeholder="Element name (e.g., IGST)" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={form.control}
+                          name={`tax_elements.${index}.applicability_condition`}
+                          render={({ field }) => (
+                            <FormItem className="flex-1">
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Condition" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="always">Always</SelectItem>
+                                  <SelectItem value="intra_state">Intra-State</SelectItem>
+                                  <SelectItem value="inter_state">Inter-State</SelectItem>
+                                  <SelectItem value="international">International</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        {fields.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => remove(index)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2">
+                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={createTaxTypeMutation.isPending || updateTaxTypeMutation.isPending}>
+                    {editingTaxType ? "Update" : "Create"}
+                  </Button>
                 </div>
               </form>
             </Form>
           </DialogContent>
         </Dialog>
       </CardHeader>
+
       <CardContent>
-        {isLoading ? <p>Loading...</p> : taxTypes.length === 0 ? (
-          <p className="text-muted-foreground text-center py-8">No tax types found.</p>
+        {isLoading ? (
+          <div>Loading...</div>
         ) : (
           <Table>
             <TableHeader>
@@ -165,7 +315,7 @@ const TaxTypesManager = () => {
                 <TableHead>Code</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Country</TableHead>
-                <TableHead>Description</TableHead>
+                <TableHead>Tax Elements</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -176,14 +326,38 @@ const TaxTypesManager = () => {
                   <TableCell className="font-medium">{taxType.code}</TableCell>
                   <TableCell>{taxType.name}</TableCell>
                   <TableCell>{taxType.country || "-"}</TableCell>
-                  <TableCell className="max-w-xs truncate">{taxType.description || "-"}</TableCell>
-                  <TableCell><Badge variant={taxType.is_active ? "default" : "secondary"}>{taxType.is_active ? "Active" : "Inactive"}</Badge></TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap gap-1">
+                      {Array.isArray(taxType.tax_elements) && taxType.tax_elements.length > 0 ? (
+                        taxType.tax_elements.map((element: any, idx: number) => (
+                          <Badge key={idx} variant="outline" className="text-xs">
+                            {element.name} ({element.applicability_condition})
+                          </Badge>
+                        ))
+                      ) : (
+                        <span className="text-muted-foreground text-sm">No elements</span>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={taxType.is_active ? "default" : "secondary"}>
+                      {taxType.is_active ? "Active" : "Inactive"}
+                    </Badge>
+                  </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
-                      <Button variant="ghost" size="icon" onClick={() => { setEditingTaxType(taxType); form.reset(taxType); setIsDialogOpen(true); }}>
+                      <Button variant="ghost" size="sm" onClick={() => handleEdit(taxType)}>
                         <Pencil className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => confirm("Delete this tax type?") && deleteTaxTypeMutation.mutate(taxType.id)}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          if (confirm("Are you sure you want to delete this tax type?")) {
+                            deleteTaxTypeMutation.mutate(taxType.id);
+                          }
+                        }}
+                      >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>

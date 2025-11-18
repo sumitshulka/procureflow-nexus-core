@@ -23,9 +23,9 @@ const taxCodeSchema = z.object({
   description: z.string().optional(),
   country: z.string().optional(),
   tax_type_id: z.string().optional(),
-  applicability_condition: z.enum(["always", "same_state", "different_state", "international"]).default("always"),
   rates: z.array(z.object({
     rate_name: z.string().min(1, "Rate name is required"),
+    tax_element_name: z.string().optional(),
     rate_percentage: z.number().min(0).max(100, "Rate must be between 0 and 100"),
   })).min(1, "At least one tax rate is required"),
 });
@@ -46,8 +46,7 @@ const TaxCodesManager = () => {
       description: "",
       country: "",
       tax_type_id: "",
-      applicability_condition: "always",
-      rates: [{ rate_name: "", rate_percentage: 0 }],
+      rates: [{ rate_name: "", tax_element_name: "", rate_percentage: 0 }],
     },
   });
 
@@ -57,7 +56,7 @@ const TaxCodesManager = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("tax_types")
-        .select("id, code, name")
+        .select("id, code, name, tax_elements")
         .eq("is_active", true)
         .order("name");
       
@@ -103,13 +102,12 @@ const TaxCodesManager = () => {
       const { data: taxCode, error: taxCodeError } = await supabase
         .from("tax_codes")
         .insert({
-          code: values.code,
-          name: values.name,
-          description: values.description || null,
-          country: values.country || null,
-          tax_type_id: values.tax_type_id || null,
-          applicability_condition: values.applicability_condition,
-          created_by: user.id,
+        code: values.code,
+        name: values.name,
+        description: values.description || null,
+        country: values.country || null,
+        tax_type_id: values.tax_type_id || null,
+        created_by: user.id,
         })
         .select()
         .single();
@@ -154,14 +152,13 @@ const TaxCodesManager = () => {
       const { error: taxCodeError } = await supabase
         .from("tax_codes")
         .update({
-          code: values.code,
-          name: values.name,
-          description: values.description || null,
-          country: values.country || null,
-          tax_type_id: values.tax_type_id || null,
-          applicability_condition: values.applicability_condition,
-        })
-        .eq("id", editingTaxCode.id);
+        code: values.code,
+        name: values.name,
+        description: values.description || null,
+        country: values.country || null,
+        tax_type_id: values.tax_type_id || null,
+      })
+      .eq("id", editingTaxCode.id);
 
       if (taxCodeError) throw taxCodeError;
 
@@ -229,9 +226,9 @@ const TaxCodesManager = () => {
       description: taxCode.description || "",
       country: taxCode.country || "",
       tax_type_id: taxCode.tax_type_id || "",
-      applicability_condition: taxCode.applicability_condition || "always",
       rates: taxCode.rates.map((r: any) => ({
         rate_name: r.rate_name,
+        tax_element_name: r.tax_element_name || r.rate_name,
         rate_percentage: r.rate_percentage,
       })),
     });
@@ -393,29 +390,14 @@ const TaxCodesManager = () => {
                   )}
                 />
 
-                <FormField
-                  control={form.control}
-                  name="applicability_condition"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Applicability Condition *</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select when this tax applies" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="always">Always Applicable</SelectItem>
-                          <SelectItem value="same_state">Same State (Intra-state)</SelectItem>
-                          <SelectItem value="different_state">Different State (Inter-state)</SelectItem>
-                          <SelectItem value="international">International</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                {selectedTaxType && Array.isArray(selectedTaxType.tax_elements) && selectedTaxType.tax_elements.length > 0 && (
+                  <Alert>
+                    <Info className="h-4 w-4" />
+                    <AlertDescription>
+                      Tax conditions are inherited from the selected Tax Type and cannot be modified here.
+                    </AlertDescription>
+                  </Alert>
+                )}
 
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
@@ -521,13 +503,23 @@ const TaxCodesManager = () => {
                   </TableCell>
                   <TableCell>{taxCode.country || "-"}</TableCell>
                   <TableCell>
-                    <Badge variant="outline">
-                      {taxCode.applicability_condition === "always" && "Always"}
-                      {taxCode.applicability_condition === "same_state" && "Same State"}
-                      {taxCode.applicability_condition === "different_state" && "Different State"}
-                      {taxCode.applicability_condition === "international" && "International"}
-                      {!taxCode.applicability_condition && "Always"}
-                    </Badge>
+                    {taxCode.tax_type_id ? (
+                      <div className="flex flex-wrap gap-1">
+                        {(() => {
+                          const taxType = taxTypes.find(t => t.id === taxCode.tax_type_id);
+                          if (!taxType || !Array.isArray(taxType.tax_elements) || taxType.tax_elements.length === 0) {
+                            return <span className="text-muted-foreground text-sm">No conditions</span>;
+                          }
+                          return taxType.tax_elements.map((element: any, idx: number) => (
+                            <Badge key={idx} variant="secondary" className="text-xs">
+                              {element.applicability_condition}
+                            </Badge>
+                          ));
+                        })()}
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground text-sm">-</span>
+                    )}
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">

@@ -3180,7 +3180,6 @@ export type Database = {
       }
       tax_codes: {
         Row: {
-          applicability_condition: string | null
           code: string
           condition_rules: Json | null
           country: string | null
@@ -3194,7 +3193,6 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
-          applicability_condition?: string | null
           code: string
           condition_rules?: Json | null
           country?: string | null
@@ -3208,7 +3206,6 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
-          applicability_condition?: string | null
           code?: string
           condition_rules?: Json | null
           country?: string | null
@@ -3239,6 +3236,7 @@ export type Database = {
           rate_name: string
           rate_percentage: number
           tax_code_id: string
+          tax_element_name: string | null
         }
         Insert: {
           created_at?: string | null
@@ -3247,6 +3245,7 @@ export type Database = {
           rate_name: string
           rate_percentage: number
           tax_code_id: string
+          tax_element_name?: string | null
         }
         Update: {
           created_at?: string | null
@@ -3255,6 +3254,7 @@ export type Database = {
           rate_name?: string
           rate_percentage?: number
           tax_code_id?: string
+          tax_element_name?: string | null
         }
         Relationships: [
           {
@@ -3277,6 +3277,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           name: string
+          tax_elements: Json | null
           updated_at: string | null
         }
         Insert: {
@@ -3289,6 +3290,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name: string
+          tax_elements?: Json | null
           updated_at?: string | null
         }
         Update: {
@@ -3301,6 +3303,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name?: string
+          tax_elements?: Json | null
           updated_at?: string | null
         }
         Relationships: []
@@ -3861,18 +3864,32 @@ export type Database = {
         Returns: Json
       }
       generate_vendor_number: { Args: never; Returns: string }
-      get_applicable_tax_code: {
-        Args: { p_buyer_state?: string; p_vendor_id: string }
-        Returns: {
-          rates: Json
-          tax_code: string
-          tax_code_id: string
-          tax_name: string
-          tax_type_code: string
-          tax_type_name: string
-          total_rate: number
-        }[]
-      }
+      get_applicable_tax_code:
+        | {
+            Args: { p_buyer_state?: string; p_vendor_id: string }
+            Returns: {
+              rates: Json
+              tax_code: string
+              tax_code_id: string
+              tax_name: string
+              tax_type_code: string
+              tax_type_name: string
+              total_rate: number
+            }[]
+          }
+        | {
+            Args: {
+              p_buyer_location_id?: string
+              p_product_id: string
+              p_seller_location_id?: string
+            }
+            Returns: {
+              applicable_rates: Json
+              tax_code_code: string
+              tax_code_id: string
+              tax_code_name: string
+            }[]
+          }
       get_approval_requests_secure: {
         Args: never
         Returns: {
