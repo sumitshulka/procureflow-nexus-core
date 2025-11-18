@@ -47,6 +47,11 @@ import CreateRfpTemplate from '@/pages/rfp/CreateRfpTemplate';
 import CreatePricingTemplate from '@/pages/rfp/CreatePricingTemplate';
 import CreateRfpWizard from '@/pages/rfp/CreateRfpWizard';
 
+// Invoice Pages
+import InvoiceManagement from '@/pages/invoices/InvoiceManagement';
+import CreateInvoice from '@/pages/invoices/CreateInvoice';
+import InvoiceDetail from '@/pages/invoices/InvoiceDetail';
+
 // Purchase Order Pages
 import CreatePurchaseOrder from '@/pages/purchase-orders/CreatePurchaseOrder';
 import PendingPurchaseOrders from '@/pages/purchase-orders/PendingPurchaseOrders';
@@ -381,6 +386,32 @@ function App() {
               </ProtectedRoute>
             }
           />
+          {/* Invoice Management */}
+          <Route
+            path="/invoices"
+            element={
+              <ProtectedRoute requiredRole={UserRole.ADMIN}>
+                <Layout><InvoiceManagement /></Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/invoices/create"
+            element={
+              <ProtectedRoute requiredRole={UserRole.ADMIN}>
+                <Layout><CreateInvoice /></Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/invoices/:id"
+            element={
+              <ProtectedRoute requiredRole={UserRole.ADMIN}>
+                <Layout><InvoiceDetail /></Layout>
+              </ProtectedRoute>
+            }
+          />
+
           <Route
             path="/purchase-orders/create"
             element={
