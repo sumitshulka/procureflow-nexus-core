@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -73,16 +73,17 @@ const CreateInvoice = () => {
         .eq("id", selectedVendor)
         .single();
       if (error) throw error;
-      
-      // Set currency from vendor if not set by PO
-      if (isNonPO && data && !currency) {
-        setCurrency(data.currency || 'USD');
-      }
-      
       return data;
     },
     enabled: !!selectedVendor,
   });
+
+  // Auto-detect currency when vendor is selected for non-PO invoices
+  useEffect(() => {
+    if (isNonPO && selectedVendorDetails) {
+      setCurrency(selectedVendorDetails.currency || 'USD');
+    }
+  }, [isNonPO, selectedVendorDetails]);
 
   const { data: products } = useQuery({
     queryKey: ["products-with-tax"],
