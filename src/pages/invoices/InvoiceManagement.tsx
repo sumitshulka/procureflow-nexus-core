@@ -19,6 +19,10 @@ const InvoiceManagement = () => {
   const { data: invoices, isLoading } = useQuery({
     queryKey: ["invoices", statusFilter],
     queryFn: async () => {
+      // Debug: Check auth state
+      const { data: { session } } = await supabase.auth.getSession();
+      console.log("Invoice query - Auth session:", session?.user?.id);
+      
       let query = supabase
         .from("invoices")
         .select(`
@@ -34,7 +38,11 @@ const InvoiceManagement = () => {
       }
 
       const { data, error } = await query;
-      if (error) throw error;
+      console.log("Invoice query result:", { data, error, count: data?.length });
+      if (error) {
+        console.error("Invoice query error:", error);
+        throw error;
+      }
       return data;
     },
   });
