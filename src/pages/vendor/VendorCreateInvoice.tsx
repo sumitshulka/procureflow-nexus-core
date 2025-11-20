@@ -137,7 +137,7 @@ const VendorCreateInvoice = () => {
         invoice_number: invoiceNumber,
         invoice_date: invoiceDate,
         due_date: dueDate || null,
-        purchase_order_id: selectedPO || null,
+        purchase_order_id: selectedPO && selectedPO !== 'none' ? selectedPO : null,
         currency,
         subtotal_amount: totals.subtotal,
         tax_amount: totals.taxAmount,
@@ -265,7 +265,7 @@ const VendorCreateInvoice = () => {
                     <SelectValue placeholder="Select a PO (optional)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="none">None</SelectItem>
                     {purchaseOrders?.map((po) => (
                       <SelectItem key={po.id} value={po.id}>
                         {po.po_number} - {po.currency} {Number(po.total_amount).toLocaleString()}
