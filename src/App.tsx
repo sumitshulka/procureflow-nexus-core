@@ -99,6 +99,8 @@ import VendorRfpDetail from '@/pages/vendor/VendorRfpDetail';
 import VendorRfpResponse from '@/pages/vendor/VendorRfpResponse';
 import VendorRfpResponseTwoPart from '@/pages/vendor/VendorRfpResponseTwoPart';
 import VendorResponseView from '@/pages/vendor/VendorResponseView';
+import VendorInvoices from '@/pages/vendor/VendorInvoices';
+import VendorCreateInvoice from '@/pages/vendor/VendorCreateInvoice';
 import VendorPurchaseOrders from '@/pages/vendor/VendorPurchaseOrders';
 import VendorProducts from '@/pages/vendor/VendorProducts';
 import VendorFinances from '@/pages/vendor/VendorFinances';
@@ -671,6 +673,22 @@ function App() {
             element={
               <ProtectedRoute requireVendor={true}>
                 <VendorLayout><VendorPurchaseOrders /></VendorLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/vendor/invoices"
+            element={
+              <ProtectedRoute requireVendor={true}>
+                <VendorLayout><VendorInvoices /></VendorLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/vendor/invoices/create"
+            element={
+              <ProtectedRoute requireVendor={true}>
+                <VendorLayout><VendorCreateInvoice /></VendorLayout>
               </ProtectedRoute>
             }
           />
