@@ -40,6 +40,7 @@ const CreateInvoice = () => {
   const [isTimeAndMaterial, setIsTimeAndMaterial] = useState(false);
   const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
   const [dueDate, setDueDate] = useState("");
+  const [invoiceNumber, setInvoiceNumber] = useState("");
   const [currency, setCurrency] = useState("");
   const [signatoryName, setSignatoryName] = useState("");
   const [signatoryDesignation, setSignatoryDesignation] = useState("");
@@ -238,9 +239,14 @@ const CreateInvoice = () => {
   const createInvoiceMutation = useMutation({
     mutationFn: async (invoiceData: any) => {
       if (!selectedVendor) throw new Error("Vendor required");
-      const { data: lastInvoice } = await supabase.from("invoices").select("invoice_number").order("created_at", { ascending: false }).limit(1).single();
-      const lastNumber = lastInvoice?.invoice_number?.match(/\d+$/)?.[0] || "0";
-      const newNumber = `INV-${String(Number(lastNumber) + 1).padStart(6, "0")}`;
+      
+      // Use the provided invoice number or generate a new one
+      let finalInvoiceNumber = invoiceNumber.trim();
+      if (!finalInvoiceNumber) {
+        const { data: lastInvoice } = await supabase.from("invoices").select("invoice_number").order("created_at", { ascending: false }).limit(1).single();
+        const lastNumber = lastInvoice?.invoice_number?.match(/\d+$/)?.[0] || "0";
+        finalInvoiceNumber = `INV-${String(Number(lastNumber) + 1).padStart(6, "0")}`;
+      }
 
       let subtotal = 0, totalTax = 0, totalDiscount = 0;
       if (isTimeAndMaterial && !isNonPO) {
@@ -276,7 +282,7 @@ const CreateInvoice = () => {
       }
 
       const { data: invoice, error: invoiceError } = await supabase.from("invoices").insert({
-        invoice_number: newNumber,
+        invoice_number: finalInvoiceNumber,
         vendor_id: selectedVendor,
         purchase_order_id: !isNonPO && selectedPO ? selectedPO : null,
         is_non_po_invoice: isNonPO,
@@ -527,6 +533,15 @@ const CreateInvoice = () => {
           <CardHeader><CardTitle>Invoice Details</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Invoice Number</Label>
+                <Input 
+                  value={invoiceNumber} 
+                  onChange={(e) => setInvoiceNumber(e.target.value)} 
+                  placeholder="Leave blank to auto-generate"
+                />
+                <p className="text-xs text-muted-foreground">Enter vendor's invoice number or leave blank to auto-generate</p>
+              </div>
               <div className="space-y-2"><Label>Invoice Date *</Label><Input type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} /></div>
               <div className="space-y-2"><Label>Due Date</Label><Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} /></div>
               <div className="space-y-2">
