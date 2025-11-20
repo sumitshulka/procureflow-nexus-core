@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, FileText, DollarSign, CheckCircle, XCircle, Clock, AlertTriangle } from "lucide-react";
+import { Plus, Search, FileText, DollarSign, CheckCircle, XCircle, Clock, AlertTriangle, ArrowRight, Eye } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import PageHeader from "@/components/common/PageHeader";
 
@@ -222,10 +222,12 @@ const InvoiceManagement = () => {
                   )}
                 </div>
                 <Button
-                  variant="outline"
                   onClick={() => navigate(`/invoices/${invoice.id}`)}
+                  className="group relative overflow-hidden bg-primary hover:bg-primary/90 text-primary-foreground shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105"
                 >
-                  View Details
+                  <Eye className="h-4 w-4 mr-2 transition-transform group-hover:scale-110" />
+                  <span className="font-medium">View Details</span>
+                  <ArrowRight className="h-4 w-4 ml-2 transition-transform group-hover:translate-x-1" />
                 </Button>
               </div>
             </Card>
