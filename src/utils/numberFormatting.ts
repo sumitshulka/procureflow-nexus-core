@@ -133,17 +133,27 @@ export function numberToWordsInternational(num: number): string {
 }
 
 /**
+ * Check if currency uses Indian numbering system
+ */
+function isIndianCurrency(currency: string): boolean {
+  const indianCurrencies = ['INR', 'NPR', 'PKR', 'BDT', 'LKR'];
+  return indianCurrencies.includes(currency.toUpperCase());
+}
+
+/**
  * Format currency based on whether it's Indian or international
  */
-export function formatCurrencyAmount(amount: number, currency: string, isIndian: boolean = false): string {
-  const formatted = isIndian ? formatIndianNumber(amount) : formatInternationalNumber(amount);
+export function formatCurrencyAmount(amount: number, currency: string, isIndian?: boolean): string {
+  const useIndian = isIndian !== undefined ? isIndian : isIndianCurrency(currency);
+  const formatted = useIndian ? formatIndianNumber(amount) : formatInternationalNumber(amount);
   return `${currency} ${formatted}`;
 }
 
 /**
  * Convert amount to words with currency
  */
-export function amountToWords(amount: number, currency: string, isIndian: boolean = false): string {
-  const words = isIndian ? numberToWordsIndian(amount) : numberToWordsInternational(amount);
+export function amountToWords(amount: number, currency: string, isIndian?: boolean): string {
+  const useIndian = isIndian !== undefined ? isIndian : isIndianCurrency(currency);
+  const words = useIndian ? numberToWordsIndian(amount) : numberToWordsInternational(amount);
   return `${currency} ${words}`;
 }
