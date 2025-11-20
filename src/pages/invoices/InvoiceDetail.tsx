@@ -47,10 +47,10 @@ const InvoiceDetail = () => {
           invoice_items(*, product:products(name)),
           invoice_approval_history(
             *,
-            approver:profiles(full_name, email),
+            approver:profiles(full_name),
             approval_level:invoice_approval_levels(level_name)
           ),
-          created_by_user:profiles!invoices_created_by_fkey(full_name, email)
+          created_by_user:profiles!invoices_created_by_fkey(full_name)
         `)
         .eq("id", id)
         .maybeSingle();
@@ -764,7 +764,7 @@ const InvoiceDetail = () => {
                       </Badge>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      {history.approval_level?.level_name} • {history.approver?.email}
+                      {history.approval_level?.level_name}
                     </p>
                     {history.comments && (
                       <p className="text-sm mt-2">{history.comments}</p>
