@@ -266,7 +266,7 @@ const VendorInvoices = () => {
                   <div className="flex gap-2">
                     <Button
                       variant="outline"
-                      onClick={() => navigate(`/invoices/${invoice.id}`)}
+                      onClick={() => navigate(`/vendor/invoices/${invoice.id}`)}
                     >
                       <Eye className="w-4 h-4 mr-2" />
                       View Details
