@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import PageHeader from "@/components/common/PageHeader";
 import { useState } from "react";
+import { formatCurrencyAmount, amountToWords } from "@/utils/numberFormatting";
 
 const InvoiceDetail = () => {
   const { id } = useParams();
@@ -69,6 +70,20 @@ const InvoiceDetail = () => {
         .eq("user_id", user?.id);
       if (error) throw error;
       return data.map(r => r.role);
+    },
+  });
+
+  const { data: organizationSettings } = useQuery({
+    queryKey: ["organization_settings"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("organization_settings")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single();
+      if (error) throw error;
+      return data;
     },
   });
 
@@ -543,10 +558,10 @@ const InvoiceDetail = () => {
             <div>
               <h3 className="text-sm font-semibold text-muted-foreground uppercase mb-3">Bill To</h3>
               <div className="space-y-1">
-                <p className="font-bold text-lg">[Organization Name]</p>
-                <p className="text-sm">[Organization Address]</p>
-                <p className="text-sm">[City, State, Postal Code]</p>
-                <p className="text-sm">[Country]</p>
+                <p className="font-bold text-lg">{organizationSettings?.organization_name || "Organization Name"}</p>
+                <p className="text-sm text-muted-foreground">
+                  {invoice.created_by_user?.full_name && `Created by: ${invoice.created_by_user.full_name}`}
+                </p>
               </div>
             </div>
           </div>
@@ -586,49 +601,59 @@ const InvoiceDetail = () => {
           )}
 
           {/* Line Items Table */}
-          <div>
+          <div className="space-y-3">
+            <h3 className="text-lg font-semibold">Line Items</h3>
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/50">
-                  <TableHead className="font-bold">Description</TableHead>
+                  <TableHead className="font-bold w-16">S.No</TableHead>
+                  <TableHead className="font-bold">Item/Description</TableHead>
                   <TableHead className="text-right font-bold">Qty</TableHead>
                   <TableHead className="text-right font-bold">Unit Price</TableHead>
+                  <TableHead className="text-right font-bold">Item Value</TableHead>
                   <TableHead className="text-right font-bold">Tax</TableHead>
                   <TableHead className="text-right font-bold">Discount</TableHead>
                   <TableHead className="text-right font-bold">Amount</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {invoice.invoice_items?.map((item: any, index: number) => (
-                  <TableRow key={item.id} className={index % 2 === 0 ? 'bg-muted/20' : ''}>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{item.description}</p>
-                        {item.product?.name && (
-                          <p className="text-xs text-muted-foreground">Product: {item.product.name}</p>
-                        )}
-                        {item.notes && (
-                          <p className="text-xs text-muted-foreground italic">{item.notes}</p>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">{item.quantity}</TableCell>
-                    <TableCell className="text-right">
-                      {invoice.currency} {Number(item.unit_price).toFixed(2)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {item.tax_amount ? `${invoice.currency} ${Number(item.tax_amount).toFixed(2)}` : '-'}
-                      {item.tax_rate > 0 && <span className="text-xs text-muted-foreground block">({item.tax_rate}%)</span>}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {item.discount_amount ? `${invoice.currency} ${Number(item.discount_amount).toFixed(2)}` : '-'}
-                      {item.discount_rate > 0 && <span className="text-xs text-muted-foreground block">({item.discount_rate}%)</span>}
-                    </TableCell>
-                    <TableCell className="text-right font-semibold">
-                      {invoice.currency} {Number(item.final_amount).toFixed(2)}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {invoice.invoice_items?.map((item: any, index: number) => {
+                  const itemValue = item.quantity * item.unit_price;
+                  return (
+                    <TableRow key={item.id} className={index % 2 === 0 ? 'bg-muted/20' : ''}>
+                      <TableCell className="font-medium">{index + 1}</TableCell>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium">{item.description}</p>
+                          {item.product?.name && (
+                            <p className="text-xs text-muted-foreground">Product: {item.product.name}</p>
+                          )}
+                          {item.notes && (
+                            <p className="text-xs text-muted-foreground italic">{item.notes}</p>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">{item.quantity}</TableCell>
+                      <TableCell className="text-right">
+                        {formatCurrencyAmount(item.unit_price, invoice.currency)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {formatCurrencyAmount(itemValue, invoice.currency)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {item.tax_amount ? formatCurrencyAmount(item.tax_amount, invoice.currency) : '-'}
+                        {item.tax_rate > 0 && <span className="text-xs text-muted-foreground block">({item.tax_rate}%)</span>}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {item.discount_amount ? formatCurrencyAmount(item.discount_amount, invoice.currency) : '-'}
+                        {item.discount_rate > 0 && <span className="text-xs text-muted-foreground block">({item.discount_rate}%)</span>}
+                      </TableCell>
+                      <TableCell className="text-right font-semibold">
+                        {formatCurrencyAmount(item.final_amount, invoice.currency)}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
@@ -638,19 +663,19 @@ const InvoiceDetail = () => {
             <div className="w-full max-w-sm space-y-3">
               <div className="flex justify-between text-sm border-t pt-3">
                 <span className="text-muted-foreground">Subtotal:</span>
-                <span className="font-medium">{invoice.currency} {Number(invoice.subtotal_amount).toFixed(2)}</span>
+                <span className="font-medium">{formatCurrencyAmount(invoice.subtotal_amount, invoice.currency)}</span>
               </div>
               
               {invoice.discount_amount > 0 && (
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Discount:</span>
-                  <span className="font-medium text-destructive">-{invoice.currency} {Number(invoice.discount_amount).toFixed(2)}</span>
+                  <span className="font-medium text-destructive">-{formatCurrencyAmount(invoice.discount_amount, invoice.currency)}</span>
                 </div>
               )}
               
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Tax:</span>
-                <span className="font-medium">{invoice.currency} {Number(invoice.tax_amount).toFixed(2)}</span>
+                <span className="font-medium">{formatCurrencyAmount(invoice.tax_amount, invoice.currency)}</span>
               </div>
               
               <Separator className="my-2" />
@@ -658,17 +683,13 @@ const InvoiceDetail = () => {
               <div className="flex justify-between items-center bg-primary/5 p-3 rounded-lg">
                 <span className="text-lg font-bold">Total Amount:</span>
                 <span className="text-2xl font-bold text-primary">
-                  {invoice.currency} {Number(invoice.total_amount).toFixed(2)}
+                  {formatCurrencyAmount(invoice.total_amount, invoice.currency)}
                 </span>
               </div>
               
               {invoice.total_amount && (
                 <p className="text-xs text-muted-foreground italic text-right">
-                  Amount in words: {(() => {
-                    // Simple number to words conversion for display
-                    const amount = Math.floor(Number(invoice.total_amount));
-                    return `${invoice.currency} ${amount.toLocaleString()} only`;
-                  })()}
+                  Amount in words: {amountToWords(invoice.total_amount, invoice.currency)}
                 </p>
               )}
             </div>
@@ -735,6 +756,55 @@ const InvoiceDetail = () => {
               )}
             </div>
           )}
+
+          {/* Invoice Audit Control Information */}
+          <div className="border-t pt-6">
+            <h3 className="text-sm font-semibold mb-4">Invoice Audit Control</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <div>
+                <p className="text-muted-foreground">Created By</p>
+                <p className="font-medium">{invoice.created_by_user?.full_name || 'N/A'}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Creation Date</p>
+                <p className="font-medium">{new Date(invoice.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Status</p>
+                <p className="font-medium capitalize">{invoice.status.replace('_', ' ')}</p>
+              </div>
+              {invoice.approval_status && (
+                <div>
+                  <p className="text-muted-foreground">Approval Status</p>
+                  <p className="font-medium capitalize">{invoice.approval_status.replace('_', ' ')}</p>
+                </div>
+              )}
+              {invoice.submitted_for_approval_at && (
+                <div>
+                  <p className="text-muted-foreground">Submitted for Approval</p>
+                  <p className="font-medium">{new Date(invoice.submitted_for_approval_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</p>
+                </div>
+              )}
+              {invoice.payment_date && (
+                <div>
+                  <p className="text-muted-foreground">Payment Date</p>
+                  <p className="font-medium">{new Date(invoice.payment_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</p>
+                </div>
+              )}
+              {invoice.disputed_at && (
+                <div>
+                  <p className="text-muted-foreground">Disputed At</p>
+                  <p className="font-medium">{new Date(invoice.disputed_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</p>
+                </div>
+              )}
+              {invoice.rejected_at && (
+                <div>
+                  <p className="text-muted-foreground">Rejected At</p>
+                  <p className="font-medium">{new Date(invoice.rejected_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</p>
+                </div>
+              )}
+            </div>
+          </div>
         </CardContent>
       </Card>
 
