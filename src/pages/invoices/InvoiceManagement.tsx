@@ -239,7 +239,7 @@ const InvoiceManagement = () => {
                     <div>
                       <span className="text-muted-foreground">Amount:</span>
                       <p className="font-medium">
-                        {invoice.currency} {Number(invoice.total_amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        {formatCurrencyAmount(Number(invoice.total_amount), invoice.currency)}
                       </p>
                     </div>
                     <div>
