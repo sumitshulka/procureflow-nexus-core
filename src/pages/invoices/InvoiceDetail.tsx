@@ -35,24 +35,25 @@ const InvoiceDetail = () => {
   const [paymentNotes, setPaymentNotes] = useState("");
   const [approvalComments, setApprovalComments] = useState("");
 
-  const { data: invoice, isLoading } = useQuery({
+  const { data: invoice, isLoading, error: invoiceError } = useQuery({
     queryKey: ["invoice", id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("invoices")
         .select(`
           *,
-          vendor:vendor_registrations(id, company_name),
+          vendor:vendor_registrations(id, company_name, billing_address, gst_number, pan_number),
           purchase_order:purchase_orders(po_number, po_date),
-          invoice_items(*),
+          invoice_items(*, product:products(name)),
           invoice_approval_history(
             *,
             approver:profiles(full_name, email),
             approval_level:invoice_approval_levels(level_name)
-          )
+          ),
+          created_by_user:profiles!invoices_created_by_fkey(full_name, email)
         `)
         .eq("id", id)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       return data;
@@ -226,8 +227,17 @@ const InvoiceDetail = () => {
   if (!invoice) {
     return (
       <div className="container mx-auto py-6">
-        <Card className="p-8 text-center">
-          <p className="text-muted-foreground">Invoice not found</p>
+        <Card className="p-8 text-center space-y-4">
+          <AlertTriangle className="h-12 w-12 text-destructive mx-auto" />
+          <div>
+            <p className="text-lg font-semibold">Invoice Not Found</p>
+            <p className="text-sm text-muted-foreground mt-2">
+              {invoiceError ? "You don't have permission to view this invoice or it doesn't exist." : "This invoice could not be loaded."}
+            </p>
+          </div>
+          <Button onClick={() => navigate("/invoices")} variant="outline">
+            Back to Invoices
+          </Button>
         </Card>
       </div>
     );
@@ -266,20 +276,39 @@ const InvoiceDetail = () => {
         />
       </div>
 
-      {/* Status and Actions */}
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-4">
-              <CardTitle>Invoice Details</CardTitle>
-              {getStatusBadge(invoice.status)}
-              {invoice.is_non_po_invoice && (
-                <Badge variant="outline">Non-PO Invoice</Badge>
-              )}
-            </div>
-            <div className="flex gap-2">
+      {/* Action Buttons */}
+      {(isAdmin || hasPendingApproval) && (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex flex-wrap gap-2 justify-end">
               {isAdmin && invoice.status === "submitted" && (
                 <>
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" size="sm">
+                        <Send className="h-4 w-4 mr-2" />
+                        Submit for Approval
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Submit Invoice for Approval</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        <p className="text-sm text-muted-foreground">
+                          This will initiate the approval workflow for this invoice.
+                        </p>
+                        <Button
+                          onClick={() => submitForApprovalMutation.mutate()}
+                          disabled={submitForApprovalMutation.isPending}
+                          className="w-full"
+                        >
+                          Submit for Approval
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+
                   <Dialog>
                     <DialogTrigger asChild>
                       <Button variant="destructive" size="sm">
@@ -305,20 +334,11 @@ const InvoiceDetail = () => {
                           disabled={!disputeReason || disputeMutation.isPending}
                           className="w-full"
                         >
-                          Submit Dispute
+                          Dispute Invoice
                         </Button>
                       </div>
                     </DialogContent>
                   </Dialog>
-
-                  <Button
-                    size="sm"
-                    onClick={() => submitForApprovalMutation.mutate()}
-                    disabled={submitForApprovalMutation.isPending}
-                  >
-                    <Send className="h-4 w-4 mr-2" />
-                    Submit for Approval
-                  </Button>
                 </>
               )}
 
@@ -341,7 +361,7 @@ const InvoiceDetail = () => {
                           <Textarea
                             value={rejectReason}
                             onChange={(e) => setRejectReason(e.target.value)}
-                            placeholder="Explain why you're rejecting..."
+                            placeholder="Explain why you're rejecting this invoice..."
                           />
                         </div>
                         <div className="space-y-2">
@@ -451,157 +471,272 @@ const InvoiceDetail = () => {
                 </Dialog>
               )}
             </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <p className="text-sm text-muted-foreground">Invoice Date</p>
-              <p className="font-medium">
-                {new Date(invoice.invoice_date).toLocaleDateString()}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Due Date</p>
-              <p className="font-medium">
-                {invoice.due_date ? new Date(invoice.due_date).toLocaleDateString() : "N/A"}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">PO Number</p>
-              <p className="font-medium">{invoice.purchase_order?.po_number || "N/A"}</p>
-            </div>
-          </div>
+          </CardContent>
+        </Card>
+      )}
 
-          {invoice.disputed_reason && (
-            <div className="bg-destructive/10 border border-destructive/20 p-4 rounded-md">
-              <p className="text-sm font-medium text-destructive mb-2">Dispute Reason:</p>
-              <p className="text-sm">{invoice.disputed_reason}</p>
-            </div>
-          )}
-
-          {invoice.rejected_reason && (
-            <div className="bg-destructive/10 border border-destructive/20 p-4 rounded-md space-y-2">
-              <div>
-                <p className="text-sm font-medium text-destructive">Rejection Reason:</p>
-                <p className="text-sm">{invoice.rejected_reason}</p>
+      {/* Professional Invoice Display */}
+      <Card className="print:shadow-none">
+        <CardContent className="p-8 space-y-8">
+          {/* Invoice Header */}
+          <div className="flex justify-between items-start border-b-2 border-border pb-6">
+            <div className="space-y-2">
+              <h1 className="text-4xl font-bold text-primary">INVOICE</h1>
+              <div className="text-sm space-y-1">
+                <p className="font-semibold">Invoice #: {invoice.invoice_number}</p>
+                <p>Date: {new Date(invoice.invoice_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                {invoice.due_date && (
+                  <p>Due Date: {new Date(invoice.due_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                )}
+                {invoice.purchase_order?.po_number && (
+                  <p>PO #: {invoice.purchase_order.po_number}</p>
+                )}
               </div>
-              {invoice.corrective_action_required && (
-                <div>
-                  <p className="text-sm font-medium text-destructive">Corrective Action Required:</p>
-                  <p className="text-sm">{invoice.corrective_action_required}</p>
+            </div>
+            <div className="text-right space-y-1">
+              <div className="inline-block">
+                {getStatusBadge(invoice.status)}
+              </div>
+              {invoice.is_non_po_invoice && (
+                <div className="mt-2">
+                  <Badge variant="outline" className="text-xs">Non-PO Invoice</Badge>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* From/To Section */}
+          <div className="grid grid-cols-2 gap-8">
+            {/* Vendor (From) */}
+            <div>
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase mb-3">From</h3>
+              <div className="space-y-1">
+                <p className="font-bold text-lg">{invoice.vendor?.company_name}</p>
+                {(() => {
+                  const address = invoice.vendor?.billing_address;
+                  if (typeof address === 'string') {
+                    const parsed = JSON.parse(address || '{}');
+                    return (
+                      <>
+                        {parsed.street && <p className="text-sm">{parsed.street}</p>}
+                        {(parsed.city || parsed.state || parsed.postal_code) && (
+                          <p className="text-sm">
+                            {[parsed.city, parsed.state, parsed.postal_code].filter(Boolean).join(', ')}
+                          </p>
+                        )}
+                        {parsed.country && <p className="text-sm">{parsed.country}</p>}
+                      </>
+                    );
+                  }
+                  return null;
+                })()}
+                {invoice.vendor?.gst_number && (
+                  <p className="text-sm"><span className="font-medium">GST:</span> {invoice.vendor.gst_number}</p>
+                )}
+                {invoice.vendor?.pan_number && (
+                  <p className="text-sm"><span className="font-medium">PAN:</span> {invoice.vendor.pan_number}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Organization (To) */}
+            <div>
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase mb-3">Bill To</h3>
+              <div className="space-y-1">
+                <p className="font-bold text-lg">[Organization Name]</p>
+                <p className="text-sm">[Organization Address]</p>
+                <p className="text-sm">[City, State, Postal Code]</p>
+                <p className="text-sm">[Country]</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Alerts/Notices */}
+          {(invoice.disputed_reason || invoice.rejected_reason || invoice.is_non_po_invoice && invoice.non_po_justification) && (
+            <div className="space-y-3">
+              {invoice.disputed_reason && (
+                <div className="bg-destructive/10 border-l-4 border-destructive p-4 rounded">
+                  <p className="text-sm font-semibold text-destructive mb-1">Dispute Reason</p>
+                  <p className="text-sm">{invoice.disputed_reason}</p>
+                </div>
+              )}
+              
+              {invoice.rejected_reason && (
+                <div className="bg-destructive/10 border-l-4 border-destructive p-4 rounded space-y-2">
+                  <div>
+                    <p className="text-sm font-semibold text-destructive">Rejection Reason</p>
+                    <p className="text-sm">{invoice.rejected_reason}</p>
+                  </div>
+                  {invoice.corrective_action_required && (
+                    <div>
+                      <p className="text-sm font-semibold text-destructive">Corrective Action Required</p>
+                      <p className="text-sm">{invoice.corrective_action_required}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              {invoice.is_non_po_invoice && invoice.non_po_justification && (
+                <div className="bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-500 p-4 rounded">
+                  <p className="text-sm font-semibold mb-1">Non-PO Invoice Justification</p>
+                  <p className="text-sm">{invoice.non_po_justification}</p>
                 </div>
               )}
             </div>
           )}
 
-          {invoice.is_non_po_invoice && (
-            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 p-4 rounded-md">
-              <p className="text-sm font-medium mb-2">Non-PO Invoice Justification:</p>
-              <p className="text-sm">{invoice.non_po_justification}</p>
+          {/* Line Items Table */}
+          <div>
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/50">
+                  <TableHead className="font-bold">Description</TableHead>
+                  <TableHead className="text-right font-bold">Qty</TableHead>
+                  <TableHead className="text-right font-bold">Unit Price</TableHead>
+                  <TableHead className="text-right font-bold">Tax</TableHead>
+                  <TableHead className="text-right font-bold">Discount</TableHead>
+                  <TableHead className="text-right font-bold">Amount</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {invoice.invoice_items?.map((item: any, index: number) => (
+                  <TableRow key={item.id} className={index % 2 === 0 ? 'bg-muted/20' : ''}>
+                    <TableCell>
+                      <div>
+                        <p className="font-medium">{item.description}</p>
+                        {item.product?.name && (
+                          <p className="text-xs text-muted-foreground">Product: {item.product.name}</p>
+                        )}
+                        {item.notes && (
+                          <p className="text-xs text-muted-foreground italic">{item.notes}</p>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right">{item.quantity}</TableCell>
+                    <TableCell className="text-right">
+                      {invoice.currency} {Number(item.unit_price).toFixed(2)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {item.tax_amount ? `${invoice.currency} ${Number(item.tax_amount).toFixed(2)}` : '-'}
+                      {item.tax_rate > 0 && <span className="text-xs text-muted-foreground block">({item.tax_rate}%)</span>}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {item.discount_amount ? `${invoice.currency} ${Number(item.discount_amount).toFixed(2)}` : '-'}
+                      {item.discount_rate > 0 && <span className="text-xs text-muted-foreground block">({item.discount_rate}%)</span>}
+                    </TableCell>
+                    <TableCell className="text-right font-semibold">
+                      {invoice.currency} {Number(item.final_amount).toFixed(2)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Totals Section */}
+          <div className="flex justify-end">
+            <div className="w-full max-w-sm space-y-3">
+              <div className="flex justify-between text-sm border-t pt-3">
+                <span className="text-muted-foreground">Subtotal:</span>
+                <span className="font-medium">{invoice.currency} {Number(invoice.subtotal_amount).toFixed(2)}</span>
+              </div>
+              
+              {invoice.discount_amount > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Discount:</span>
+                  <span className="font-medium text-destructive">-{invoice.currency} {Number(invoice.discount_amount).toFixed(2)}</span>
+                </div>
+              )}
+              
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Tax:</span>
+                <span className="font-medium">{invoice.currency} {Number(invoice.tax_amount).toFixed(2)}</span>
+              </div>
+              
+              <Separator className="my-2" />
+              
+              <div className="flex justify-between items-center bg-primary/5 p-3 rounded-lg">
+                <span className="text-lg font-bold">Total Amount:</span>
+                <span className="text-2xl font-bold text-primary">
+                  {invoice.currency} {Number(invoice.total_amount).toFixed(2)}
+                </span>
+              </div>
+              
+              {invoice.total_amount && (
+                <p className="text-xs text-muted-foreground italic text-right">
+                  Amount in words: {(() => {
+                    // Simple number to words conversion for display
+                    const amount = Math.floor(Number(invoice.total_amount));
+                    return `${invoice.currency} ${amount.toLocaleString()} only`;
+                  })()}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Terms and Signatory */}
+          <div className="grid grid-cols-2 gap-8 pt-6 border-t">
+            {/* Terms */}
+            <div>
+              {invoice.terms_and_conditions && (
+                <div className="space-y-2">
+                  <h3 className="text-sm font-semibold">Terms & Conditions</h3>
+                  <p className="text-xs text-muted-foreground whitespace-pre-wrap">{invoice.terms_and_conditions}</p>
+                </div>
+              )}
+              {invoice.notes && (
+                <div className="space-y-2 mt-4">
+                  <h3 className="text-sm font-semibold">Notes</h3>
+                  <p className="text-xs text-muted-foreground">{invoice.notes}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Authorized Signatory */}
+            {invoice.signatory_name && (
+              <div className="text-right">
+                <div className="inline-block text-left">
+                  <h3 className="text-sm font-semibold mb-4">Authorized Signatory</h3>
+                  <div className="border-t-2 border-foreground pt-2 mt-16 min-w-[200px]">
+                    <p className="font-semibold">{invoice.signatory_name}</p>
+                    {invoice.signatory_designation && (
+                      <p className="text-sm text-muted-foreground">{invoice.signatory_designation}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Payment Information (if paid) */}
+          {invoice.status === 'paid' && invoice.payment_method && (
+            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-4 rounded-lg">
+              <h3 className="text-sm font-semibold text-green-900 dark:text-green-100 mb-2">Payment Information</h3>
+              <div className="grid grid-cols-3 gap-4 text-sm">
+                <div>
+                  <span className="text-muted-foreground">Method:</span>
+                  <p className="font-medium capitalize">{invoice.payment_method.replace('_', ' ')}</p>
+                </div>
+                {invoice.payment_reference && (
+                  <div>
+                    <span className="text-muted-foreground">Reference:</span>
+                    <p className="font-medium">{invoice.payment_reference}</p>
+                  </div>
+                )}
+                {invoice.payment_date && (
+                  <div>
+                    <span className="text-muted-foreground">Date:</span>
+                    <p className="font-medium">{new Date(invoice.payment_date).toLocaleDateString()}</p>
+                  </div>
+                )}
+              </div>
+              {invoice.payment_notes && (
+                <p className="text-xs text-muted-foreground mt-2">{invoice.payment_notes}</p>
+              )}
             </div>
           )}
         </CardContent>
       </Card>
-
-      {/* Invoice Items */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Invoice Items</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Description</TableHead>
-                <TableHead className="text-right">Quantity</TableHead>
-                <TableHead className="text-right">Unit Price</TableHead>
-                <TableHead className="text-right">Tax</TableHead>
-                <TableHead className="text-right">Discount</TableHead>
-                <TableHead className="text-right">Total</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {invoice.invoice_items?.map((item: any) => (
-                <TableRow key={item.id}>
-                  <TableCell>
-                    <div>
-                      <p className="font-medium">{item.description}</p>
-                      {item.notes && (
-                        <p className="text-sm text-muted-foreground">{item.notes}</p>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right">{item.quantity}</TableCell>
-                  <TableCell className="text-right">
-                    {invoice.currency} {Number(item.unit_price).toFixed(2)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {invoice.currency} {Number(item.tax_amount).toFixed(2)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {invoice.currency} {Number(item.discount_amount).toFixed(2)}
-                  </TableCell>
-                  <TableCell className="text-right font-medium">
-                    {invoice.currency} {Number(item.final_amount).toFixed(2)}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-
-          <Separator className="my-4" />
-
-          <div className="space-y-2 max-w-sm ml-auto">
-            <div className="flex justify-between text-sm">
-              <span>Subtotal:</span>
-              <span className="font-medium">
-                {invoice.currency} {Number(invoice.subtotal_amount).toFixed(2)}
-              </span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span>Discount:</span>
-              <span className="font-medium">
-                -{invoice.currency} {Number(invoice.discount_amount).toFixed(2)}
-              </span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span>Tax:</span>
-              <span className="font-medium">
-                {invoice.currency} {Number(invoice.tax_amount).toFixed(2)}
-              </span>
-            </div>
-            <Separator />
-            <div className="flex justify-between text-lg font-bold">
-              <span>Total:</span>
-              <span>
-                {invoice.currency} {Number(invoice.total_amount).toFixed(2)}
-              </span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Signatory */}
-      {invoice.signatory_name && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Authorized Signatory</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Name</p>
-                <p className="font-medium">{invoice.signatory_name}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Designation</p>
-                <p className="font-medium">{invoice.signatory_designation}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Approval History */}
       {invoice.invoice_approval_history && invoice.invoice_approval_history.length > 0 && (
