@@ -4225,6 +4225,18 @@ export type Database = {
         Args: { p_response_id: string }
         Returns: number
       }
+      can_access_invoice_as_approver: {
+        Args: { p_invoice_id: string; p_user_id: string }
+        Returns: boolean
+      }
+      can_access_invoice_as_staff: {
+        Args: { p_user_id: string }
+        Returns: boolean
+      }
+      can_access_invoice_as_vendor: {
+        Args: { p_user_id: string; p_vendor_id: string }
+        Returns: boolean
+      }
       can_assign_role: {
         Args: {
           role_to_assign: Database["public"]["Enums"]["user_role"]
