@@ -43,7 +43,15 @@ const InvoiceDetail = () => {
         .from("invoices")
         .select(`
           *,
-          vendor:vendor_registrations(id, company_name, billing_address, gst_number, pan_number),
+          vendor:vendor_registrations(
+            id, 
+            company_name, 
+            billing_address, 
+            registered_address,
+            business_address,
+            gst_number, 
+            pan_number
+          ),
           purchase_order:purchase_orders(po_number, po_date),
           invoice_items(*, product:products(name)),
           invoice_approval_history(
@@ -528,25 +536,41 @@ const InvoiceDetail = () => {
               <div className="space-y-1">
                 <p className="font-bold text-lg">{invoice.vendor?.company_name}</p>
                 {(() => {
-                  const address = invoice.vendor?.billing_address;
-                  if (typeof address === 'string') {
-                    const parsed = JSON.parse(address || '{}');
+                  const parseAddress = (addr: any) => {
+                    if (!addr) return null;
+                    if (typeof addr === 'string') {
+                      try {
+                        return JSON.parse(addr);
+                      } catch {
+                        return null;
+                      }
+                    }
+                    return addr;
+                  };
+
+                  const billingAddr = parseAddress(invoice.vendor?.billing_address);
+                  const registeredAddr = parseAddress(invoice.vendor?.registered_address);
+                  
+                  // Use billing address first, fallback to registered address
+                  const address = billingAddr || registeredAddr;
+                  
+                  if (address) {
                     return (
                       <>
-                        {parsed.street && <p className="text-sm">{parsed.street}</p>}
-                        {(parsed.city || parsed.state || parsed.postal_code) && (
+                        {address.street && <p className="text-sm">{address.street}</p>}
+                        {(address.city || address.state || address.postal_code) && (
                           <p className="text-sm">
-                            {[parsed.city, parsed.state, parsed.postal_code].filter(Boolean).join(', ')}
+                            {[address.city, address.state, address.postal_code].filter(Boolean).join(', ')}
                           </p>
                         )}
-                        {parsed.country && <p className="text-sm">{parsed.country}</p>}
+                        {address.country && <p className="text-sm">{address.country}</p>}
                       </>
                     );
                   }
                   return null;
                 })()}
                 {invoice.vendor?.gst_number && (
-                  <p className="text-sm"><span className="font-medium">GST:</span> {invoice.vendor.gst_number}</p>
+                  <p className="text-sm mt-2"><span className="font-medium">GST:</span> {invoice.vendor.gst_number}</p>
                 )}
                 {invoice.vendor?.pan_number && (
                   <p className="text-sm"><span className="font-medium">PAN:</span> {invoice.vendor.pan_number}</p>
