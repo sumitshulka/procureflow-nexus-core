@@ -10,6 +10,7 @@ import RoleManagement from "@/components/settings/RoleManagement";
 import LocationsManagement from "@/components/settings/LocationsManagement";
 import POSettings from "@/components/settings/POSettings";
 import POApprovalMatrix from "@/components/settings/POApprovalMatrix";
+import InvoiceApprovalMatrix from "@/components/settings/InvoiceApprovalMatrix";
 import ApprovalHierarchy from "@/components/user-management/ApprovalHierarchy";
 import { useNavigate, useLocation } from "react-router-dom";
 
@@ -133,12 +134,16 @@ const Settings = () => {
               <TabsList>
                 <TabsTrigger value="procurement-approval">Procurement Approval Hierarchy</TabsTrigger>
                 <TabsTrigger value="po-approval">PO Approval Matrix</TabsTrigger>
+                <TabsTrigger value="invoice-approval">Invoice Approval Matrix</TabsTrigger>
               </TabsList>
               <TabsContent value="procurement-approval">
                 <ApprovalHierarchy />
               </TabsContent>
               <TabsContent value="po-approval">
                 <POApprovalMatrix />
+              </TabsContent>
+              <TabsContent value="invoice-approval">
+                <InvoiceApprovalMatrix />
               </TabsContent>
             </Tabs>
           </TabsContent>
