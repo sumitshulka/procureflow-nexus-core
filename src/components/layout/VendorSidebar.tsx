@@ -21,6 +21,7 @@ import {
   Package,
   MessageSquare,
   BarChart3,
+  Receipt,
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -72,6 +73,11 @@ const VendorSidebar = () => {
       title: "Purchase Orders",
       icon: ShoppingCart,
       href: "/vendor/purchase-orders",
+    },
+    {
+      title: "Invoices",
+      icon: Receipt,
+      href: "/vendor/invoices",
     },
     {
       title: "Products",
