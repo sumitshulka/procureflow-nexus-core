@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Search, FileText, DollarSign, CheckCircle, XCircle, Clock, AlertTriangle, ArrowRight, Eye } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import PageHeader from "@/components/common/PageHeader";
+import { formatCurrencyAmount } from "@/utils/numberFormatting";
 
 
 const InvoiceManagement = () => {
@@ -63,9 +64,17 @@ const InvoiceManagement = () => {
   const { data: stats } = useQuery({
     queryKey: ["invoice-stats"],
     queryFn: async () => {
+      // Fetch organization base currency
+      const { data: orgSettings } = await supabase
+        .from("organization_settings")
+        .select("base_currency")
+        .single();
+      
+      const baseCurrency = orgSettings?.base_currency || "USD";
+      
       const { data, error } = await supabase
         .from("invoices")
-        .select("status, total_amount");
+        .select("status, total_amount, currency");
       
       if (error) throw error;
 
@@ -73,9 +82,25 @@ const InvoiceManagement = () => {
       const underApproval = data.filter(i => i.status === "under_approval").length;
       const approved = data.filter(i => i.status === "approved").length;
       const disputed = data.filter(i => i.status === "disputed").length;
-      const totalValue = data.reduce((sum, i) => sum + Number(i.total_amount), 0);
+      
+      // Group totals by currency
+      const currencyTotals = data.reduce((acc, invoice) => {
+        const currency = invoice.currency || baseCurrency;
+        if (!acc[currency]) {
+          acc[currency] = 0;
+        }
+        acc[currency] += Number(invoice.total_amount);
+        return acc;
+      }, {} as Record<string, number>);
 
-      return { submitted, underApproval, approved, disputed, totalValue };
+      return { 
+        submitted, 
+        underApproval, 
+        approved, 
+        disputed, 
+        currencyTotals,
+        baseCurrency 
+      };
     },
   });
 
@@ -131,10 +156,18 @@ const InvoiceManagement = () => {
           <div className="text-2xl font-bold text-destructive">{stats?.disputed || 0}</div>
         </Card>
         <Card className="p-4">
-          <div className="text-sm text-muted-foreground">Total Value</div>
-          <div className="text-2xl font-bold">
-            ${(stats?.totalValue || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </div>
+          <div className="text-sm text-muted-foreground mb-2">Total Value</div>
+          {stats?.currencyTotals && Object.keys(stats.currencyTotals).length > 0 ? (
+            <div className="space-y-1">
+              {Object.entries(stats.currencyTotals).map(([currency, amount]) => (
+                <div key={currency} className="text-lg font-bold">
+                  {formatCurrencyAmount(amount, currency)}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-2xl font-bold">-</div>
+          )}
         </Card>
       </div>
 
