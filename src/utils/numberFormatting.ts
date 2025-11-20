@@ -133,6 +133,35 @@ export function numberToWordsInternational(num: number): string {
 }
 
 /**
+ * Currency symbols mapping
+ */
+const currencySymbols: Record<string, string> = {
+  'INR': '₹',
+  'USD': '$',
+  'EUR': '€',
+  'GBP': '£',
+  'JPY': '¥',
+  'CNY': '¥',
+  'AUD': 'A$',
+  'CAD': 'C$',
+  'CHF': 'CHF',
+  'SGD': 'S$',
+  'AED': 'AED',
+  'SAR': 'SAR',
+  'NPR': 'Rs.',
+  'PKR': 'Rs.',
+  'BDT': '৳',
+  'LKR': 'Rs.'
+};
+
+/**
+ * Get currency symbol or code
+ */
+function getCurrencySymbol(currency: string): string {
+  return currencySymbols[currency.toUpperCase()] || currency;
+}
+
+/**
  * Check if currency uses Indian numbering system
  */
 function isIndianCurrency(currency: string): boolean {
@@ -146,7 +175,8 @@ function isIndianCurrency(currency: string): boolean {
 export function formatCurrencyAmount(amount: number, currency: string, isIndian?: boolean): string {
   const useIndian = isIndian !== undefined ? isIndian : isIndianCurrency(currency);
   const formatted = useIndian ? formatIndianNumber(amount) : formatInternationalNumber(amount);
-  return `${currency} ${formatted}`;
+  const symbol = getCurrencySymbol(currency);
+  return `${symbol} ${formatted}`;
 }
 
 /**
