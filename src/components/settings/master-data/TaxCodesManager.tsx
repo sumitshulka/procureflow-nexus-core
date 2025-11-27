@@ -273,8 +273,45 @@ const TaxCodesManager = () => {
     }
   };
 
-  const calculateTotalRate = (rates: any[]) => {
-    return rates.reduce((sum, rate) => sum + (rate.rate_percentage || 0), 0).toFixed(2);
+  const calculateTotalRate = (taxCode: any) => {
+    const rates = taxCode.rates || [];
+    
+    // If tax code has a tax type with elements, group by applicability
+    if (taxCode.tax_type_id) {
+      const taxType = taxTypes.find(t => t.id === taxCode.tax_type_id);
+      if (taxType && Array.isArray(taxType.tax_elements) && taxType.tax_elements.length > 0) {
+        // Group rates by applicability condition
+        const ratesByCondition: Record<string, number> = {};
+        
+        taxType.tax_elements.forEach((element: any) => {
+          const matchingRate = rates.find((r: any) => r.rate_name === element.name);
+          if (matchingRate) {
+            const condition = element.applicability_condition || "always";
+            if (!ratesByCondition[condition]) {
+              ratesByCondition[condition] = 0;
+            }
+            ratesByCondition[condition] += matchingRate.rate_percentage || 0;
+          }
+        });
+        
+        // Return formatted string with conditions
+        const conditionEntries = Object.entries(ratesByCondition);
+        if (conditionEntries.length === 0) {
+          return "0.00%";
+        }
+        if (conditionEntries.length === 1 && conditionEntries[0][0] === "always") {
+          return `${conditionEntries[0][1].toFixed(2)}%`;
+        }
+        
+        return conditionEntries
+          .map(([condition, rate]) => `${rate.toFixed(2)}% (${condition.replace(/_/g, ' ')})`)
+          .join(", ");
+      }
+    }
+    
+    // If no tax type or elements, simple sum
+    const total = rates.reduce((sum: number, rate: any) => sum + (rate.rate_percentage || 0), 0);
+    return `${total.toFixed(2)}%`;
   };
 
   return (
@@ -540,7 +577,7 @@ const TaxCodesManager = () => {
                       ))}
                     </div>
                   </TableCell>
-                  <TableCell className="font-semibold">{calculateTotalRate(taxCode.rates)}%</TableCell>
+                  <TableCell className="font-semibold text-sm">{calculateTotalRate(taxCode)}</TableCell>
                   <TableCell>
                     <Badge variant={taxCode.is_active ? "default" : "secondary"}>
                       {taxCode.is_active ? "Active" : "Inactive"}
