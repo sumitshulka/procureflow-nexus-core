@@ -29,7 +29,8 @@ const BudgetSubmissions = ({ isAdmin }: BudgetSubmissionsProps) => {
           department:departments(name),
           submitter:profiles(full_name)
         `)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(200);
 
       // If not admin, filter by user's submissions
       if (!isAdmin) {
