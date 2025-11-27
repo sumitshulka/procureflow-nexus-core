@@ -35,6 +35,9 @@ const formSchema = z.object({
   }).max(365, {
     message: "RFP reopen time limit cannot exceed 365 days.",
   }),
+  inventoryValuationMethod: z.enum(["fifo", "lifo", "weighted_average"], {
+    required_error: "Please select an inventory valuation method.",
+  }),
 });
 
 const OrganizationSettings = () => {
@@ -85,6 +88,7 @@ const OrganizationSettings = () => {
       timeZone: "UTC",
       logoUrl: "",
       rfpReopenTimeLimitDays: 30,
+      inventoryValuationMethod: "weighted_average",
     },
   });
 
@@ -92,6 +96,7 @@ const OrganizationSettings = () => {
   useEffect(() => {
     if (orgSettings) {
       console.log("[OrganizationSettings] Updating form with fetched data:", orgSettings);
+      const valuationMethod = orgSettings.inventory_valuation_method || "weighted_average";
       form.reset({
         organizationName: orgSettings.organization_name || "Acme Corporation",
         baseCurrency: orgSettings.base_currency || "USD",
@@ -100,6 +105,9 @@ const OrganizationSettings = () => {
         timeZone: "UTC",
         logoUrl: "",
         rfpReopenTimeLimitDays: orgSettings.rfp_reopen_time_limit_days || 30,
+        inventoryValuationMethod: (valuationMethod === "fifo" || valuationMethod === "lifo" || valuationMethod === "weighted_average") 
+          ? valuationMethod 
+          : "weighted_average",
       });
     }
   }, [orgSettings, form]);
@@ -127,6 +135,7 @@ const OrganizationSettings = () => {
             organization_name: values.organizationName,
             base_currency: values.baseCurrency,
             rfp_reopen_time_limit_days: values.rfpReopenTimeLimitDays,
+            inventory_valuation_method: values.inventoryValuationMethod,
           })
           .eq('id', orgSettings.id)
           .select()
@@ -147,6 +156,7 @@ const OrganizationSettings = () => {
           organization_name: values.organizationName,
           base_currency: values.baseCurrency,
           rfp_reopen_time_limit_days: values.rfpReopenTimeLimitDays,
+          inventory_valuation_method: values.inventoryValuationMethod,
           created_by: user.id,
         };
 
@@ -385,6 +395,35 @@ const OrganizationSettings = () => {
                       </FormControl>
                       <FormDescription>
                         Number of days after closing within which a closed RFP can be reopened by publishing an addendum. Default is 30 days.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="border-t pt-6">
+                <h3 className="text-lg font-semibold mb-4">Inventory Settings</h3>
+                <FormField
+                  control={form.control}
+                  name="inventoryValuationMethod"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Inventory Valuation Method</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select valuation method" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="fifo">FIFO (First In, First Out)</SelectItem>
+                          <SelectItem value="lifo">LIFO (Last In, First Out)</SelectItem>
+                          <SelectItem value="weighted_average">Weighted Average</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        Method used for inventory valuation in reports. FIFO uses the first purchase price, LIFO uses the latest purchase price, and Weighted Average calculates based on all purchases.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
