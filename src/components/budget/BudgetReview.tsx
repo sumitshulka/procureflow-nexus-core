@@ -33,10 +33,11 @@ const BudgetReview = () => {
           head:budget_heads(name, code),
           department:departments(name),
           submitter:profiles(full_name),
-          line_items:budget_line_items(*)
+          line_items:budget_line_items(count)
         `)
         .in('status', ['submitted', 'under_review'])
-        .order('submitted_at', { ascending: true });
+        .order('submitted_at', { ascending: true })
+        .limit(100);
 
       if (error) throw error;
       return data;
