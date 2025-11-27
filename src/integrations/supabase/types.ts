@@ -1471,6 +1471,56 @@ export type Database = {
           },
         ]
       }
+      notification_events: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          event_category: string
+          event_key: string
+          event_name: string
+          id: string
+          is_active: boolean | null
+          is_system: boolean | null
+          recipient_config: Json | null
+          template_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          event_category: string
+          event_key: string
+          event_name: string
+          id?: string
+          is_active?: boolean | null
+          is_system?: boolean | null
+          recipient_config?: Json | null
+          template_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          event_category?: string
+          event_key?: string
+          event_name?: string
+          id?: string
+          is_active?: boolean | null
+          is_system?: boolean | null
+          recipient_config?: Json | null
+          template_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_events_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "email_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_settings: {
         Row: {
           base_currency: string

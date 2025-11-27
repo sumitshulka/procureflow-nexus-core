@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useEmailService } from "@/hooks/useEmailService";
 import EmailTemplatesManager from "./EmailTemplatesManager";
+import NotificationEventsManager from "./NotificationEventsManager";
 
 interface EmailProvider {
   id: string;
@@ -434,7 +435,7 @@ const EmailSettings = () => {
       )}
 
       <Tabs defaultValue="setup" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="setup" className="flex items-center gap-2">
             <Settings className="h-4 w-4" />
             Provider Setup
@@ -442,6 +443,10 @@ const EmailSettings = () => {
           <TabsTrigger value="templates" className="flex items-center gap-2">
             <Mail className="h-4 w-4" />
             Email Templates
+          </TabsTrigger>
+          <TabsTrigger value="notifications" className="flex items-center gap-2">
+            <Settings className="h-4 w-4" />
+            Notification Events
           </TabsTrigger>
         </TabsList>
 
@@ -731,6 +736,10 @@ const EmailSettings = () => {
 
         <TabsContent value="templates">
           <EmailTemplatesManager />
+        </TabsContent>
+
+        <TabsContent value="notifications">
+          <NotificationEventsManager />
         </TabsContent>
       </Tabs>
     </div>
