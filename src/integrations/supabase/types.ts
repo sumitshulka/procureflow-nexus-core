@@ -816,6 +816,54 @@ export type Database = {
         }
         Relationships: []
       }
+      email_templates: {
+        Row: {
+          available_variables: Json | null
+          body_template: string
+          category: string
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          is_system: boolean | null
+          name: string
+          subject_template: string
+          template_key: string
+          updated_at: string | null
+        }
+        Insert: {
+          available_variables?: Json | null
+          body_template: string
+          category?: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_system?: boolean | null
+          name: string
+          subject_template: string
+          template_key: string
+          updated_at?: string | null
+        }
+        Update: {
+          available_variables?: Json | null
+          body_template?: string
+          category?: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_system?: boolean | null
+          name?: string
+          subject_template?: string
+          template_key?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       inventory_items: {
         Row: {
           id: string
