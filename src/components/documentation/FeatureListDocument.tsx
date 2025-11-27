@@ -2,7 +2,7 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileDown, Package, ShoppingCart, FileText, Users, TrendingUp, Shield, AlertTriangle, Calculator, Building2, Store, Settings, LayoutDashboard, ListChecks, ClipboardList } from "lucide-react";
+import { FileDown, Package, ShoppingCart, FileText, Users, TrendingUp, Shield, AlertTriangle, Calculator, Building2, Store, Settings, LayoutDashboard, ListChecks, ClipboardList, Receipt, Wallet, BarChart3, Clock } from "lucide-react";
 import jsPDF from "jspdf";
 
 interface Feature {
@@ -56,9 +56,21 @@ const FeatureListDocument = () => {
       category: "Inventory Management"
     },
     {
-      title: "Inventory Reports",
-      description: "Comprehensive reporting suite including stock movement reports, aging analysis, valuation reports, and customizable inventory analytics.",
-      icon: FileText,
+      title: "Inventory Valuation Reports",
+      description: "Advanced inventory valuation with support for FIFO, LIFO, and Weighted Average costing methods. Provides detailed cost calculations, total inventory value, and valuation method indicators for financial compliance and accurate inventory costing.",
+      icon: Calculator,
+      category: "Inventory Management"
+    },
+    {
+      title: "Stock Movement Reports",
+      description: "Comprehensive tracking of all inventory movements including check-ins, check-outs, transfers, and adjustments. Filterable by warehouse, product, and transaction type with detailed audit trails and exportable reports.",
+      icon: TrendingUp,
+      category: "Inventory Management"
+    },
+    {
+      title: "Stock Aging Reports",
+      description: "Identify slow-moving and stagnant inventory with aging analysis showing days since last update. Categorizes stock as fresh, aging, slow-moving, or stagnant to optimize inventory turnover and reduce carrying costs.",
+      icon: Clock,
       category: "Inventory Management"
     },
     
@@ -92,6 +104,32 @@ const FeatureListDocument = () => {
       description: "Complete purchase order lifecycle from creation to delivery tracking, including PO generation from RFP responses, vendor management, and delivery scheduling.",
       icon: ShoppingCart,
       category: "Procurement Process"
+    },
+    
+    // Invoice Management
+    {
+      title: "Invoice Management",
+      description: "Comprehensive invoice lifecycle management with multi-currency support, PO linkage, line item tracking, and payment status monitoring. Supports both PO-based and non-PO invoices with complete audit trails and approval workflows.",
+      icon: Receipt,
+      category: "Invoice Management"
+    },
+    {
+      title: "Invoice Approval Matrix",
+      description: "Configurable multi-level invoice approval system with amount-based routing, role-based approvers, department-specific workflows, and sequential approval tracking. Ensures financial controls and compliance with organizational policies.",
+      icon: ClipboardList,
+      category: "Invoice Management"
+    },
+    {
+      title: "Vendor Invoice Creation",
+      description: "Self-service invoice creation portal for vendors with product selection from their portfolio, custom line items, multi-currency support, tax calculations, and PDF attachment capabilities. Vendors can track invoice status and approval progress in real-time.",
+      icon: Wallet,
+      category: "Invoice Management"
+    },
+    {
+      title: "Invoice Tracking & Payment",
+      description: "Complete invoice status tracking from draft to payment with approval history, payment recording, dispute management, and professional invoice formatting. Supports multiple currencies with proper symbol display and amount-in-words conversion.",
+      icon: BarChart3,
+      category: "Invoice Management"
     },
     
     // Approval System
@@ -156,20 +194,26 @@ const FeatureListDocument = () => {
     
     // Budget Management
     {
-      title: "Budget Management",
-      description: "Budget planning, allocation, and tracking system with department-wise budget controls, spending limits, variance analysis, and automated alerts for budget compliance.",
+      title: "Budget Cycles",
+      description: "Time-based budget management with configurable fiscal periods (annual, quarterly, monthly). Supports budget cycle status tracking, department-specific access controls, and period-based budget allocations for structured financial planning.",
+      icon: Calculator,
+      category: "Budget Management"
+    },
+    {
+      title: "Budget Heads",
+      description: "Structured budget categorization with hierarchical budget heads for income and expenses. Supports department-specific sub-items, custom codes, and flexible budget allocation structures for comprehensive financial organization.",
       icon: Calculator,
       category: "Budget Management"
     },
     {
       title: "Budget Allocation",
-      description: "Strategic budget distribution across departments, categories, and time periods with approval workflows and real-time tracking of allocations versus actual spending.",
+      description: "Strategic budget distribution across departments, categories, and time periods with multi-level approval workflows, submission tracking, and real-time monitoring of allocations versus actual spending.",
       icon: Calculator,
       category: "Budget Management"
     },
     {
       title: "Budget Reports",
-      description: "Detailed budget performance reporting with variance analysis, spending trends, forecast accuracy, and budget utilization metrics for financial control.",
+      description: "Detailed budget performance reporting with variance analysis, spending trends, forecast accuracy, and budget utilization metrics for financial control and strategic decision-making.",
       icon: FileText,
       category: "Budget Management"
     },
