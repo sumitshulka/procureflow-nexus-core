@@ -36,7 +36,7 @@ const VendorCreateInvoice = () => {
   const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
   const [dueDate, setDueDate] = useState('');
   const [selectedPO, setSelectedPO] = useState('');
-  const [currency, setCurrency] = useState('USD');
+  const [currency, setCurrency] = useState('');
   const [notes, setNotes] = useState('');
   const [items, setItems] = useState<InvoiceItem[]>([{
     description: '',
@@ -55,7 +55,7 @@ const VendorCreateInvoice = () => {
       
       const { data, error } = await supabase
         .from("vendor_registrations")
-        .select("id")
+        .select("id, currency")
         .eq("user_id", user.id)
         .eq("status", "approved")
         .single();
@@ -65,6 +65,20 @@ const VendorCreateInvoice = () => {
     },
     enabled: !!user?.id,
   });
+
+  // Set default currency based on vendor's business currency
+  React.useEffect(() => {
+    if (vendorReg) {
+      if (vendorReg.currency) {
+        setCurrency(vendorReg.currency);
+      } else {
+        setCurrency('USD');
+        toast.warning('Business currency not set', {
+          description: 'Please update your business currency in profile settings for accurate invoicing.'
+        });
+      }
+    }
+  }, [vendorReg]);
 
   // Fetch approved purchase orders for this vendor
   const { data: purchaseOrders } = useQuery({
