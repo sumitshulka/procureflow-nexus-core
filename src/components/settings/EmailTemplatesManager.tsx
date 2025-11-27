@@ -34,6 +34,67 @@ const templateSchema = z.object({
 
 type TemplateForm = z.infer<typeof templateSchema>;
 
+// Predefined variables for each category
+const CATEGORY_VARIABLES: Record<string, Array<{ name: string; description: string }>> = {
+  general: [
+    { name: "organization_name", description: "Organization name" },
+    { name: "sender_name", description: "Name of person sending the email" },
+    { name: "sender_email", description: "Email address of sender" },
+    { name: "date", description: "Current date" },
+  ],
+  purchase_orders: [
+    { name: "po_number", description: "Purchase Order number" },
+    { name: "vendor_name", description: "Vendor/supplier name" },
+    { name: "vendor_email", description: "Vendor email address" },
+    { name: "po_date", description: "Purchase Order date" },
+    { name: "total_amount", description: "Total PO amount with currency" },
+    { name: "delivery_date", description: "Expected delivery date" },
+    { name: "payment_terms", description: "Payment terms" },
+    { name: "created_by", description: "User who created the PO" },
+    { name: "organization_name", description: "Organization name" },
+  ],
+  invoices: [
+    { name: "invoice_number", description: "Invoice number" },
+    { name: "vendor_name", description: "Vendor name" },
+    { name: "invoice_date", description: "Invoice date" },
+    { name: "due_date", description: "Payment due date" },
+    { name: "total_amount", description: "Total invoice amount with currency" },
+    { name: "po_number", description: "Related Purchase Order number" },
+    { name: "created_by", description: "User who created the invoice" },
+    { name: "organization_name", description: "Organization name" },
+  ],
+  rfp: [
+    { name: "rfp_title", description: "RFP/RFQ title" },
+    { name: "rfp_number", description: "RFP/RFQ reference number" },
+    { name: "vendor_name", description: "Vendor name" },
+    { name: "submission_deadline", description: "Submission deadline" },
+    { name: "opening_date", description: "Technical/financial opening date" },
+    { name: "rfp_type", description: "RFP type (single part, two part)" },
+    { name: "created_by", description: "User who created the RFP" },
+    { name: "organization_name", description: "Organization name" },
+  ],
+  users: [
+    { name: "user_name", description: "User's full name" },
+    { name: "user_email", description: "User's email address" },
+    { name: "username", description: "Username for login" },
+    { name: "temporary_password", description: "Temporary password (for new users)" },
+    { name: "reset_link", description: "Password reset link" },
+    { name: "role", description: "User's role" },
+    { name: "department", description: "User's department" },
+    { name: "organization_name", description: "Organization name" },
+  ],
+  inventory: [
+    { name: "product_name", description: "Product name" },
+    { name: "product_code", description: "Product code/SKU" },
+    { name: "warehouse_name", description: "Warehouse name" },
+    { name: "quantity", description: "Quantity" },
+    { name: "transaction_type", description: "Transaction type (check-in, check-out, transfer)" },
+    { name: "transaction_date", description: "Transaction date" },
+    { name: "requested_by", description: "User who requested" },
+    { name: "organization_name", description: "Organization name" },
+  ],
+};
+
 const EmailTemplatesManager = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -304,7 +365,15 @@ const EmailTemplatesManager = () => {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Category *</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <Select 
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          // Auto-populate available variables based on category
+                          const categoryVars = CATEGORY_VARIABLES[value] || CATEGORY_VARIABLES.general;
+                          form.setValue("available_variables", categoryVars);
+                        }} 
+                        value={field.value}
+                      >
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select category" />
@@ -319,6 +388,9 @@ const EmailTemplatesManager = () => {
                           <SelectItem value="inventory">Inventory</SelectItem>
                         </SelectContent>
                       </Select>
+                      <FormDescription>
+                        Selecting a category will auto-populate available variables
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -376,7 +448,8 @@ const EmailTemplatesManager = () => {
                   </div>
                   <Alert>
                     <AlertDescription className="text-xs">
-                      Define the variables that can be used in this template. These will serve as documentation for users.
+                      Variables are automatically populated based on the selected category. You can add custom variables or modify the existing ones.
+                      Use these variables in your subject and body templates like: &#123;&#123;variable_name&#125;&#125;
                     </AlertDescription>
                   </Alert>
 
