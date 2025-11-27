@@ -29,8 +29,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Download, Filter, Calendar } from "lucide-react";
+import { Download, Filter } from "lucide-react";
 import { format } from "date-fns";
+import ColumnSelectionDialog, { ColumnOption } from "@/components/inventory/ColumnSelectionDialog";
+import { exportInventoryReportToPDF } from "@/utils/pdfExport";
 
 interface ValuationReportData {
   id: string;
@@ -63,20 +65,32 @@ const InventoryValuationReport = () => {
     productName: "",
   });
 
+  const [showColumnDialog, setShowColumnDialog] = useState(false);
+  const [columnOptions, setColumnOptions] = useState<ColumnOption[]>([
+    { id: "product_name", label: "Product Name", selected: true },
+    { id: "category_name", label: "Category", selected: true },
+    { id: "classification_name", label: "Classification", selected: true },
+    { id: "warehouse_name", label: "Warehouse", selected: true },
+    { id: "quantity", label: "Quantity", selected: true },
+    { id: "current_price", label: "Unit Price", selected: true },
+    { id: "total_value", label: "Total Value", selected: true },
+    { id: "last_updated", label: "Last Updated", selected: true },
+  ]);
+
   // Fetch organization settings to get base currency and valuation method
   const { data: organizationSettings } = useQuery({
     queryKey: ["organization_settings"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("organization_settings")
-        .select("base_currency, inventory_valuation_method")
+        .select("base_currency, inventory_valuation_method, organization_name")
         .order("created_at", { ascending: false })
         .limit(1)
         .single();
 
       if (error) {
         console.error("Error fetching organization settings:", error);
-        return { base_currency: "USD", inventory_valuation_method: "weighted_average" }; // fallback
+        return { base_currency: "USD", inventory_valuation_method: "weighted_average", organization_name: "Organization" }; // fallback
       }
 
       return data;
@@ -268,81 +282,88 @@ const InventoryValuationReport = () => {
     refetch();
   };
 
-  const exportToPDF = async () => {
+  const handleColumnToggle = (columnId: string) => {
+    setColumnOptions((prev) =>
+      prev.map((col) =>
+        col.id === columnId ? { ...col, selected: !col.selected } : col
+      )
+    );
+  };
+
+  const handleSelectAll = () => {
+    setColumnOptions((prev) => prev.map((col) => ({ ...col, selected: true })));
+  };
+
+  const handleDeselectAll = () => {
+    setColumnOptions((prev) => prev.map((col) => ({ ...col, selected: false })));
+  };
+
+  const openExportDialog = () => {
+    setShowColumnDialog(true);
+  };
+
+  const exportToPDF = () => {
     try {
-      // Create a simple HTML table for PDF export
-      const htmlContent = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <title>Inventory Valuation Report</title>
-          <style>
-            body { font-family: Arial, sans-serif; margin: 20px; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-            th { background-color: #f2f2f2; font-weight: bold; }
-            .header { text-align: center; margin-bottom: 20px; }
-            .summary { margin-bottom: 20px; padding: 10px; background-color: #f9f9f9; }
-            .total { font-weight: bold; background-color: #e8f4f8; }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h2>Inventory Valuation Report</h2>
-            <p>Generated on: ${format(new Date(), "PPP")}</p>
-          </div>
-          <div class="summary">
-            <p><strong>Total Items:</strong> ${reportData.length}</p>
-            <p><strong>Total Value:</strong> ${baseCurrency} ${reportData.reduce((sum, item) => sum + item.total_value, 0).toLocaleString()}</p>
-          </div>
-          <table>
-            <thead>
-              <tr>
-                <th>Product</th>
-                <th>Category</th>
-                <th>Classification</th>
-                <th>Warehouse</th>
-                <th>Quantity</th>
-                <th>Unit Price</th>
-                <th>Total Value</th>
-                <th>Last Updated</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${reportData.map(item => `
-                <tr>
-                  <td>${item.product_name}</td>
-                  <td>${item.category_name}</td>
-                  <td>${item.classification_name}</td>
-                  <td>${item.warehouse_name}</td>
-                  <td>${item.quantity} ${item.unit_abbreviation}</td>
-                  <td>${baseCurrency} ${item.current_price.toLocaleString()}</td>
-                  <td>${baseCurrency} ${item.total_value.toLocaleString()}</td>
-                  <td>${format(new Date(item.last_updated), "PPP")}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </body>
-        </html>
-      `;
+      const selectedColumns = columnOptions.filter((col) => col.selected);
+      
+      if (selectedColumns.length === 0) {
+        toast({
+          title: "Error",
+          description: "Please select at least one column to export",
+          variant: "destructive",
+        });
+        return;
+      }
 
-      // Create a blob and download
-      const blob = new Blob([htmlContent], { type: 'text/html' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `inventory-valuation-report-${format(new Date(), "yyyy-MM-dd")}.html`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      // Prepare data for export
+      const exportData = reportData.map((item) => {
+        const row: any = {};
+        selectedColumns.forEach((col) => {
+          if (col.id === "quantity") {
+            row[col.id] = `${item.quantity} ${item.unit_abbreviation}`;
+          } else if (col.id === "current_price") {
+            row[col.id] = `${baseCurrency} ${item.current_price.toLocaleString()}`;
+          } else if (col.id === "total_value") {
+            row[col.id] = `${baseCurrency} ${item.total_value.toLocaleString()}`;
+          } else if (col.id === "last_updated") {
+            row[col.id] = format(new Date(item.last_updated), "PPP");
+          } else {
+            row[col.id] = item[col.id as keyof ValuationReportData];
+          }
+        });
+        return row;
+      });
 
+      // Prepare columns for PDF
+      const pdfColumns = selectedColumns.map((col) => ({
+        header: col.label,
+        dataKey: col.id,
+      }));
+
+      const valuationMethodLabel =
+        valuationMethod === "fifo"
+          ? "FIFO (First In, First Out)"
+          : valuationMethod === "lifo"
+          ? "LIFO (Last In, First Out)"
+          : "Weighted Average";
+
+      exportInventoryReportToPDF({
+        title: "Inventory Valuation Report",
+        data: exportData,
+        columns: pdfColumns,
+        organizationName: organizationSettings?.organization_name || "Organization",
+        baseCurrency,
+        valuationMethod: valuationMethodLabel,
+        totalValue,
+      });
+
+      setShowColumnDialog(false);
       toast({
         title: "Success",
-        description: "Report exported successfully",
+        description: "Report exported successfully as PDF",
       });
     } catch (error) {
+      console.error("Error exporting PDF:", error);
       toast({
         title: "Error",
         description: "Failed to export report",
@@ -365,11 +386,21 @@ const InventoryValuationReport = () => {
             : "Weighted Average"
         } method`}
         actions={
-          <Button onClick={exportToPDF} disabled={reportData.length === 0}>
+          <Button onClick={openExportDialog} disabled={reportData.length === 0}>
             <Download className="mr-2 h-4 w-4" />
             Export PDF
           </Button>
         }
+      />
+
+      <ColumnSelectionDialog
+        open={showColumnDialog}
+        onOpenChange={setShowColumnDialog}
+        columns={columnOptions}
+        onColumnToggle={handleColumnToggle}
+        onExport={exportToPDF}
+        onSelectAll={handleSelectAll}
+        onDeselectAll={handleDeselectAll}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
