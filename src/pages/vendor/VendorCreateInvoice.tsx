@@ -17,8 +17,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 interface InvoiceItem {
+  item_type: 'product' | 'custom';
+  product_id: string | null;
   description: string;
   quantity: number;
   unit_price: number;
@@ -39,6 +42,8 @@ const VendorCreateInvoice = () => {
   const [currency, setCurrency] = useState('');
   const [notes, setNotes] = useState('');
   const [items, setItems] = useState<InvoiceItem[]>([{
+    item_type: 'custom',
+    product_id: null,
     description: '',
     quantity: 1,
     unit_price: 0,
@@ -99,8 +104,38 @@ const VendorCreateInvoice = () => {
     enabled: !!vendorReg?.id,
   });
 
+  // Fetch vendor's registered products
+  const { data: vendorProducts } = useQuery({
+    queryKey: ["vendor_products", vendorReg?.id],
+    queryFn: async () => {
+      if (!vendorReg?.id) return [];
+      
+      const { data, error } = await supabase
+        .from("vendor_products")
+        .select(`
+          id,
+          product_id,
+          vendor_price,
+          vendor_currency,
+          products (
+            id,
+            name,
+            description
+          )
+        `)
+        .eq("vendor_id", vendorReg.id)
+        .eq("is_active", true);
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!vendorReg?.id,
+  });
+
   const addItem = () => {
     setItems([...items, {
+      item_type: 'custom',
+      product_id: null,
       description: '',
       quantity: 1,
       unit_price: 0,
@@ -119,6 +154,26 @@ const VendorCreateInvoice = () => {
   const updateItem = (index: number, field: keyof InvoiceItem, value: any) => {
     const updatedItems = [...items];
     updatedItems[index] = { ...updatedItems[index], [field]: value };
+    
+    // If switching item type, reset product-specific fields
+    if (field === 'item_type') {
+      if (value === 'custom') {
+        updatedItems[index].product_id = null;
+        updatedItems[index].description = '';
+        updatedItems[index].unit_price = 0;
+      }
+    }
+    
+    // If selecting a product, auto-fill details
+    if (field === 'product_id' && value) {
+      const product = vendorProducts?.find(vp => vp.product_id === value);
+      if (product && product.products) {
+        updatedItems[index].description = product.products.name;
+        if (product.vendor_price) {
+          updatedItems[index].unit_price = Number(product.vendor_price);
+        }
+      }
+    }
     
     // Recalculate totals
     const item = updatedItems[index];
@@ -173,6 +228,7 @@ const VendorCreateInvoice = () => {
       // Insert invoice items
       const itemsData = items.map(item => ({
         invoice_id: invoice.id,
+        product_id: item.product_id,
         description: item.description,
         quantity: item.quantity,
         unit_price: item.unit_price,
@@ -330,14 +386,71 @@ const VendorCreateInvoice = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Description *</Label>
-                    <Input
-                      value={item.description}
-                      onChange={(e) => updateItem(index, 'description', e.target.value)}
-                      placeholder="Item description"
-                      required
-                    />
+                    <Label>Item Type *</Label>
+                    <RadioGroup
+                      value={item.item_type}
+                      onValueChange={(value) => updateItem(index, 'item_type', value as 'product' | 'custom')}
+                      className="flex gap-4"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="product" id={`product-${index}`} />
+                        <Label htmlFor={`product-${index}`} className="font-normal cursor-pointer">
+                          Select Product
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="custom" id={`custom-${index}`} />
+                        <Label htmlFor={`custom-${index}`} className="font-normal cursor-pointer">
+                          Custom Item
+                        </Label>
+                      </div>
+                    </RadioGroup>
                   </div>
+
+                  {item.item_type === 'product' ? (
+                    <>
+                      <div className="space-y-2">
+                        <Label>Select Product *</Label>
+                        <Select
+                          value={item.product_id || ''}
+                          onValueChange={(value) => updateItem(index, 'product_id', value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Choose a product" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {vendorProducts?.map((vp) => (
+                              <SelectItem key={vp.product_id} value={vp.product_id}>
+                                {vp.products?.name}
+                                {vp.vendor_price && ` - ${vp.vendor_currency || currency} ${Number(vp.vendor_price).toLocaleString()}`}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      {item.product_id && (
+                        <div className="space-y-2">
+                          <Label>Description</Label>
+                          <Input
+                            value={item.description}
+                            onChange={(e) => updateItem(index, 'description', e.target.value)}
+                            placeholder="Auto-filled from product"
+                            className="bg-muted"
+                          />
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="space-y-2">
+                      <Label>Description *</Label>
+                      <Input
+                        value={item.description}
+                        onChange={(e) => updateItem(index, 'description', e.target.value)}
+                        placeholder="Item description"
+                        required
+                      />
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div className="space-y-2">
