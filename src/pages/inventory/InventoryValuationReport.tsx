@@ -63,20 +63,20 @@ const InventoryValuationReport = () => {
     productName: "",
   });
 
-  // Fetch organization settings to get base currency
+  // Fetch organization settings to get base currency and valuation method
   const { data: organizationSettings } = useQuery({
     queryKey: ["organization_settings"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("organization_settings")
-        .select("base_currency")
+        .select("base_currency, inventory_valuation_method")
         .order("created_at", { ascending: false })
         .limit(1)
         .single();
 
       if (error) {
         console.error("Error fetching organization settings:", error);
-        return { base_currency: "USD" }; // fallback to USD
+        return { base_currency: "USD", inventory_valuation_method: "weighted_average" }; // fallback
       }
 
       return data;
@@ -84,10 +84,11 @@ const InventoryValuationReport = () => {
   });
 
   const baseCurrency = organizationSettings?.base_currency || "USD";
+  const valuationMethod = organizationSettings?.inventory_valuation_method || "weighted_average";
 
   // Fetch report data based on filters
   const { data: reportData = [], isLoading: isLoadingReport, refetch } = useQuery({
-    queryKey: ["inventory_valuation_report", filters],
+    queryKey: ["inventory_valuation_report", filters, valuationMethod],
     queryFn: async () => {
       let query = supabase
         .from("inventory_items")
@@ -96,6 +97,7 @@ const InventoryValuationReport = () => {
           quantity,
           last_updated,
           product:product_id(
+            id,
             name,
             current_price,
             category:category_id(name),
@@ -127,21 +129,69 @@ const InventoryValuationReport = () => {
         throw error;
       }
 
+      // Get unique product IDs
+      const productIds = [...new Set(data.map((item: any) => item.product?.id).filter(Boolean))];
+
+      // Fetch price history for all products
+      const { data: priceHistory, error: priceError } = await supabase
+        .from("product_price_history")
+        .select("product_id, price, effective_date, currency")
+        .in("product_id", productIds)
+        .order("effective_date", { ascending: true });
+
+      if (priceError) {
+        console.error("Error fetching price history:", priceError);
+      }
+
+      // Calculate unit price based on valuation method
+      const calculateUnitPrice = (productId: string, currentPrice: number): number => {
+        if (!priceHistory || priceHistory.length === 0) {
+          return currentPrice;
+        }
+
+        const productPrices = priceHistory.filter((ph: any) => ph.product_id === productId);
+        
+        if (productPrices.length === 0) {
+          return currentPrice;
+        }
+
+        switch (valuationMethod) {
+          case "fifo":
+            // Use the first (oldest) purchase price
+            return productPrices[0].price;
+          
+          case "lifo":
+            // Use the last (most recent) purchase price
+            return productPrices[productPrices.length - 1].price;
+          
+          case "weighted_average":
+            // Calculate weighted average (simple average for now)
+            const total = productPrices.reduce((sum: number, ph: any) => sum + ph.price, 0);
+            return total / productPrices.length;
+          
+          default:
+            return currentPrice;
+        }
+      };
+
       // Transform and filter data
       let transformedData = data
         .filter((item: any) => item.product && item.warehouse)
-        .map((item: any) => ({
-          id: item.id,
-          product_name: item.product.name,
-          category_name: item.product.category?.name || "Uncategorized",
-          classification_name: item.product.classification?.name || "Unclassified",
-          warehouse_name: item.warehouse.name,
-          quantity: item.quantity,
-          current_price: item.product.current_price || 0,
-          total_value: item.quantity * (item.product.current_price || 0),
-          unit_abbreviation: item.product.unit?.abbreviation || "",
-          last_updated: item.last_updated,
-        }));
+        .map((item: any) => {
+          const unitPrice = calculateUnitPrice(item.product.id, item.product.current_price || 0);
+          return {
+            id: item.id,
+            product_name: item.product.name,
+            category_name: item.product.category?.name || "Uncategorized",
+            classification_name: item.product.classification?.name || "Unclassified",
+            warehouse_name: item.warehouse.name,
+            quantity: item.quantity,
+            current_price: unitPrice,
+            total_value: item.quantity * unitPrice,
+            unit_abbreviation: item.product.unit?.abbreviation || "",
+            last_updated: item.last_updated,
+          };
+        });
 
       // Apply additional filters
       if (filters.productName) {
@@ -167,6 +217,7 @@ const InventoryValuationReport = () => {
 
       return transformedData as ValuationReportData[];
     },
+    enabled: !!valuationMethod,
   });
 
   // Fetch classifications for filter
@@ -306,7 +357,13 @@ const InventoryValuationReport = () => {
     <div className="page-container">
       <PageHeader
         title="Inventory Valuation Report"
-        description="Generate detailed inventory valuation reports with filtering and export capabilities"
+        description={`Generate detailed inventory valuation reports using ${
+          valuationMethod === "fifo" 
+            ? "FIFO (First In, First Out)" 
+            : valuationMethod === "lifo" 
+            ? "LIFO (Last In, First Out)" 
+            : "Weighted Average"
+        } method`}
         actions={
           <Button onClick={exportToPDF} disabled={reportData.length === 0}>
             <Download className="mr-2 h-4 w-4" />

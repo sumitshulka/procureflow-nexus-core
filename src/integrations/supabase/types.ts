@@ -1429,6 +1429,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: string
+          inventory_valuation_method: string
           organization_name: string | null
           rfp_reopen_time_limit_days: number | null
           updated_at: string
@@ -1438,6 +1439,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          inventory_valuation_method?: string
           organization_name?: string | null
           rfp_reopen_time_limit_days?: number | null
           updated_at?: string
@@ -1447,6 +1449,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          inventory_valuation_method?: string
           organization_name?: string | null
           rfp_reopen_time_limit_days?: number | null
           updated_at?: string
