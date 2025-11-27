@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useEmailService } from "@/hooks/useEmailService";
+import EmailTemplatesManager from "./EmailTemplatesManager";
 
 interface EmailProvider {
   id: string;
@@ -729,26 +730,7 @@ const EmailSettings = () => {
         </TabsContent>
 
         <TabsContent value="templates">
-          <Card>
-            <CardHeader>
-              <CardTitle>Email Templates</CardTitle>
-              <CardDescription>
-                Customize email notification templates (Available after provider setup).
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {!currentProvider ? (
-                <Alert>
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    Please configure an email provider first to manage email templates.
-                  </AlertDescription>
-                </Alert>
-              ) : (
-                <p className="text-muted-foreground">Email template management will be available here.</p>
-              )}
-            </CardContent>
-          </Card>
+          <EmailTemplatesManager />
         </TabsContent>
       </Tabs>
     </div>
