@@ -466,7 +466,37 @@ const InventoryValuationReport = () => {
         </div>
 
         {/* Report Content */}
-        <div className="lg:col-span-3">
+        <div className="lg:col-span-3 space-y-4">
+          {/* Valuation Method Info Card */}
+          <Card className="bg-muted/50">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <div className="text-sm font-medium text-muted-foreground">
+                    Valuation Method in Use
+                  </div>
+                  <div className="text-xl font-semibold">
+                    {valuationMethod === "fifo" 
+                      ? "FIFO (First In, First Out)" 
+                      : valuationMethod === "lifo" 
+                      ? "LIFO (Last In, First Out)" 
+                      : "Weighted Average"}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    {valuationMethod === "fifo" 
+                      ? "Using the first purchase price for inventory valuation" 
+                      : valuationMethod === "lifo" 
+                      ? "Using the latest purchase price for inventory valuation" 
+                      : "Using weighted average of all purchase prices for valuation"}
+                  </div>
+                </div>
+                <Badge variant="secondary" className="text-base px-4 py-2">
+                  {valuationMethod.toUpperCase()}
+                </Badge>
+              </div>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <div className="flex justify-between items-center">
