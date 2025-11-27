@@ -114,15 +114,31 @@ const Warehouses = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [currentWarehouse, setCurrentWarehouse] = useState<WarehouseWithLocations | null>(null);
 
-  // Fetch warehouses with their locations
+  // Fetch warehouses with their locations (optimized single query)
   const { data: warehouses = [], isLoading: isLoadingWarehouses } = useQuery({
     queryKey: ["warehouses_with_locations"],
     queryFn: async () => {
-      // Fetch warehouses
-      const { data: warehousesData, error: warehousesError } = await supabase
-        .from("warehouses")
-        .select("*")
-        .order("name");
+      // Fetch all data in parallel with a single optimized query using joins
+      const [warehousesResult, managersResult] = await Promise.all([
+        supabase
+          .from("warehouses")
+          .select(`
+            *,
+            warehouse_locations!inner (
+              location_id,
+              is_primary,
+              locations!inner (
+                id,
+                name
+              )
+            )
+          `)
+          .order("name"),
+        // Fetch managers separately (only if needed)
+        supabase.functions.invoke('admin-list-users').catch(() => ({ data: null, error: null }))
+      ]);
+
+      const { data: warehousesData, error: warehousesError } = warehousesResult;
       
       if (warehousesError) {
         toast({
@@ -133,67 +149,19 @@ const Warehouses = () => {
         throw warehousesError;
       }
       
-      // Fetch warehouse locations
-      const { data: warehouseLocationsData, error: warehouseLocationsError } = await supabase
-        .from("warehouse_locations")
-        .select("*");
+      // Extract managers from result
+      const managers: SupabaseUser[] = managersResult?.data?.data?.users || [];
       
-      if (warehouseLocationsError) {
-        toast({
-          title: "Error",
-          description: "Failed to fetch warehouse locations",
-          variant: "destructive",
-        });
-        throw warehouseLocationsError;
-      }
-      
-      // Fetch locations
-      const { data: locationsData, error: locationsError } = await supabase
-        .from("locations")
-        .select("*");
-      
-      if (locationsError) {
-        toast({
-          title: "Error",
-          description: "Failed to fetch locations",
-          variant: "destructive",
-        });
-        throw locationsError;
-      }
-      
-      // Fetch managers using secure Edge Function
-      let managers: SupabaseUser[] = [];
-      try {
-        const { data: managersData, error: managersError } = await supabase.functions.invoke('admin-list-users');
+      // Transform the data structure
+      const warehousesWithLocations = warehousesData.map((warehouse: any) => {
+        // Transform warehouse_locations to the expected format
+        const locations = warehouse.warehouse_locations.map((wl: any) => ({
+          id: wl.locations.id,
+          name: wl.locations.name,
+          is_primary: wl.is_primary,
+        }));
         
-        if (managersError) {
-          console.error("Failed to fetch managers:", managersError);
-        } else if (managersData?.data?.users) {
-          managers = managersData.data.users as SupabaseUser[];
-        }
-      } catch (error) {
-        console.error("Failed to fetch managers (this might be expected if not admin):", error);
-        // Don't throw, just continue with empty managers
-      }
-      
-      // Combine data
-      const warehousesWithLocations = warehousesData.map((warehouse: Warehouse) => {
-        // Find warehouse locations
-        const warehouseLocations = warehouseLocationsData.filter(
-          (wl: WarehouseLocation) => wl.warehouse_id === warehouse.id
-        );
-        
-        // Map locations data
-        const locations = warehouseLocations.map((wl: WarehouseLocation) => {
-          const location = locationsData.find((l: Location) => l.id === wl.location_id);
-          return {
-            id: wl.location_id,
-            name: location?.name || "Unknown Location",
-            is_primary: wl.is_primary,
-          };
-        });
-        
-        // Find manager
+        // Find manager if exists
         let manager;
         if (warehouse.manager_id) {
           const managerData = managers.find(m => m.id === warehouse.manager_id);
@@ -206,8 +174,11 @@ const Warehouses = () => {
           }
         }
         
+        // Remove warehouse_locations from warehouse object and add transformed data
+        const { warehouse_locations, ...warehouseBase } = warehouse;
+        
         return {
-          ...warehouse,
+          ...warehouseBase,
           locations,
           manager,
         };
