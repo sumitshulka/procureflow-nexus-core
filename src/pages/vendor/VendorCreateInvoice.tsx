@@ -41,6 +41,8 @@ const VendorCreateInvoice = () => {
   const [selectedPO, setSelectedPO] = useState('');
   const [currency, setCurrency] = useState('');
   const [notes, setNotes] = useState('');
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [isUploadingPdf, setIsUploadingPdf] = useState(false);
   const [items, setItems] = useState<InvoiceItem[]>([{
     item_type: 'custom',
     product_id: null,
@@ -201,6 +203,33 @@ const VendorCreateInvoice = () => {
       
       const totals = calculateTotals();
       
+      // Upload PDF if provided
+      let pdfUrl: string | null = null;
+      if (pdfFile) {
+        setIsUploadingPdf(true);
+        const fileExt = pdfFile.name.split('.').pop();
+        const fileName = `${vendorReg.id}/${invoiceNumber}-${Date.now()}.${fileExt}`;
+        
+        const { error: uploadError, data } = await supabase.storage
+          .from('invoice-pdfs')
+          .upload(fileName, pdfFile, {
+            cacheControl: '3600',
+            upsert: false
+          });
+
+        if (uploadError) {
+          setIsUploadingPdf(false);
+          throw new Error(`Failed to upload PDF: ${uploadError.message}`);
+        }
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('invoice-pdfs')
+          .getPublicUrl(fileName);
+        
+        pdfUrl = publicUrl;
+        setIsUploadingPdf(false);
+      }
+      
       const invoiceData = {
         vendor_id: vendorReg.id,
         invoice_number: invoiceNumber,
@@ -215,6 +244,7 @@ const VendorCreateInvoice = () => {
         status: isDraft ? 'draft' : 'submitted',
         is_non_po_invoice: !selectedPO,
         created_by: user!.id,
+        invoice_pdf_url: pdfUrl,
       };
 
       const { data: invoice, error: invoiceError } = await supabase
@@ -354,6 +384,36 @@ const VendorCreateInvoice = () => {
                   placeholder="Additional notes or comments..."
                   rows={3}
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="pdfFile">Attach Invoice PDF (Optional)</Label>
+                <Input
+                  id="pdfFile"
+                  type="file"
+                  accept=".pdf"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      if (file.type !== 'application/pdf') {
+                        toast.error('Please select a PDF file');
+                        e.target.value = '';
+                        return;
+                      }
+                      if (file.size > 10 * 1024 * 1024) { // 10MB limit
+                        toast.error('File size must be less than 10MB');
+                        e.target.value = '';
+                        return;
+                      }
+                      setPdfFile(file);
+                    }
+                  }}
+                />
+                {pdfFile && (
+                  <p className="text-sm text-muted-foreground">
+                    Selected: {pdfFile.name} ({(pdfFile.size / 1024 / 1024).toFixed(2)} MB)
+                  </p>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -527,15 +587,15 @@ const VendorCreateInvoice = () => {
                 <Button
                   className="w-full"
                   onClick={() => createInvoiceMutation.mutate(false)}
-                  disabled={!invoiceNumber || items.some(i => !i.description) || createInvoiceMutation.isPending}
+                  disabled={!invoiceNumber || items.some(i => !i.description) || createInvoiceMutation.isPending || isUploadingPdf}
                 >
-                  Submit Invoice
+                  {isUploadingPdf ? 'Uploading PDF...' : 'Submit Invoice'}
                 </Button>
                 <Button
                   variant="outline"
                   className="w-full"
                   onClick={() => createInvoiceMutation.mutate(true)}
-                  disabled={!invoiceNumber || items.some(i => !i.description) || createInvoiceMutation.isPending}
+                  disabled={!invoiceNumber || items.some(i => !i.description) || createInvoiceMutation.isPending || isUploadingPdf}
                 >
                   Save as Draft
                 </Button>
