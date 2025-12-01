@@ -95,6 +95,20 @@ const InvoiceDetail = () => {
     },
   });
 
+  const { data: approvalLevels } = useQuery({
+    queryKey: ["invoice-approval-levels"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("invoice_approval_levels")
+        .select("id")
+        .eq("is_active", true);
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const hasApprovalLevels = approvalLevels && approvalLevels.length > 0;
+
   const isAdmin = userRoles?.includes("admin") || userRoles?.includes("finance_officer");
 
   const disputeMutation = useMutation({
@@ -119,6 +133,11 @@ const InvoiceDetail = () => {
 
   const submitForApprovalMutation = useMutation({
     mutationFn: async () => {
+      // Check if approval levels are configured
+      if (!hasApprovalLevels) {
+        throw new Error("No approval levels configured");
+      }
+      
       const { data, error } = await supabase.rpc("initiate_invoice_approval", {
         p_invoice_id: id,
       });
@@ -130,6 +149,21 @@ const InvoiceDetail = () => {
     onSuccess: () => {
       toast({ title: "Success", description: "Invoice submitted for approval" });
       queryClient.invalidateQueries({ queryKey: ["invoice", id] });
+    },
+    onError: (error: any) => {
+      if (error.message === "No approval levels configured") {
+        toast({
+          title: "Configuration Required",
+          description: "Please configure invoice approval levels in Settings before submitting for approval.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to submit for approval",
+          variant: "destructive",
+        });
+      }
     },
   });
 
@@ -306,31 +340,66 @@ const InvoiceDetail = () => {
             <div className="flex flex-wrap gap-2 justify-end">
               {isAdmin && invoice.status === "submitted" && (
                 <>
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button variant="outline" size="sm">
-                        <Send className="h-4 w-4 mr-2" />
-                        Submit for Approval
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Submit Invoice for Approval</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4 py-4">
-                        <p className="text-sm text-muted-foreground">
-                          This will initiate the approval workflow for this invoice.
-                        </p>
-                        <Button
-                          onClick={() => submitForApprovalMutation.mutate()}
-                          disabled={submitForApprovalMutation.isPending}
-                          className="w-full"
-                        >
+                  {!hasApprovalLevels ? (
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="sm">
+                          <Send className="h-4 w-4 mr-2" />
                           Submit for Approval
                         </Button>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Approval Levels Not Configured</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4">
+                          <div className="flex items-start gap-3 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                            <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
+                            <div className="flex-1 space-y-2">
+                              <p className="text-sm font-medium text-yellow-900">
+                                No Invoice Approval Levels Found
+                              </p>
+                              <p className="text-sm text-yellow-700">
+                                You need to configure at least one invoice approval level before submitting invoices for approval.
+                              </p>
+                            </div>
+                          </div>
+                          <Button
+                            onClick={() => navigate("/settings#invoice-approvals")}
+                            className="w-full"
+                          >
+                            Go to Invoice Approval Settings
+                          </Button>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  ) : (
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="sm">
+                          <Send className="h-4 w-4 mr-2" />
+                          Submit for Approval
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Submit Invoice for Approval</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4">
+                          <p className="text-sm text-muted-foreground">
+                            This will initiate the approval workflow for this invoice.
+                          </p>
+                          <Button
+                            onClick={() => submitForApprovalMutation.mutate()}
+                            disabled={submitForApprovalMutation.isPending}
+                            className="w-full"
+                          >
+                            Submit for Approval
+                          </Button>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  )}
 
                   <Dialog>
                     <DialogTrigger asChild>

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -18,11 +18,13 @@ import {
   Package,
   FileText,
   Loader2,
-  Send
+  Send,
+  AlertTriangle
 } from 'lucide-react';
 import PageHeader from '@/components/common/PageHeader';
 import POApprovalStatus from '@/components/purchase-orders/POApprovalStatus';
 import { useToast } from '@/hooks/use-toast';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 const PurchaseOrderDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -30,6 +32,7 @@ const PurchaseOrderDetail = () => {
   const { toast } = useToast();
   const { generatePDF, sendEmail, isGeneratingPDF, isSendingEmail } = usePOActions();
   const [isSubmittingApproval, setIsSubmittingApproval] = React.useState(false);
+  const [showApprovalDialog, setShowApprovalDialog] = useState(false);
 
   const { data: po, isLoading, error, refetch } = useQuery({
     queryKey: ['purchase-order', id],
@@ -50,6 +53,20 @@ const PurchaseOrderDetail = () => {
     enabled: !!id,
   });
 
+  const { data: approvalLevels } = useQuery({
+    queryKey: ["po-approval-levels"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("po_approval_levels")
+        .select("id")
+        .eq("is_active", true);
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const hasApprovalLevels = approvalLevels && approvalLevels.length > 0;
+
   const getStatusBadge = (status: string) => {
     const variants: Record<string, string> = {
       draft: 'bg-gray-100 text-gray-800',
@@ -68,6 +85,16 @@ const PurchaseOrderDetail = () => {
   const handleSubmitForApproval = async () => {
     if (!id) return;
 
+    // Check if approval levels are configured
+    if (!hasApprovalLevels) {
+      toast({
+        title: "Configuration Required",
+        description: "Please configure PO approval levels in Settings before submitting for approval.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSubmittingApproval(true);
     try {
       const { data, error } = await supabase.rpc('initiate_po_approval', {
@@ -82,6 +109,7 @@ const PurchaseOrderDetail = () => {
           title: "Success",
           description: "Purchase order submitted for approval",
         });
+        setShowApprovalDialog(false);
         refetch();
       } else {
         throw new Error(result?.message || "Failed to submit for approval");
@@ -136,13 +164,66 @@ const PurchaseOrderDetail = () => {
         <div className="flex gap-2">
           {po.status === 'draft' && (
             <>
-              <Button 
-                onClick={handleSubmitForApproval} 
-                disabled={isSubmittingApproval}
-              >
-                <Send className="h-4 w-4 mr-2" />
-                {isSubmittingApproval ? 'Submitting...' : 'Submit for Approval'}
-              </Button>
+              {!hasApprovalLevels ? (
+                <Dialog open={showApprovalDialog} onOpenChange={setShowApprovalDialog}>
+                  <DialogTrigger asChild>
+                    <Button disabled={isSubmittingApproval}>
+                      <Send className="h-4 w-4 mr-2" />
+                      {isSubmittingApproval ? 'Submitting...' : 'Submit for Approval'}
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Approval Levels Not Configured</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <div className="flex items-start gap-3 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
+                        <div className="flex-1 space-y-2">
+                          <p className="text-sm font-medium text-yellow-900">
+                            No PO Approval Levels Found
+                          </p>
+                          <p className="text-sm text-yellow-700">
+                            You need to configure at least one purchase order approval level before submitting POs for approval.
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        onClick={() => navigate("/settings#po-approvals")}
+                        className="w-full"
+                      >
+                        Go to PO Approval Settings
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              ) : (
+                <Dialog open={showApprovalDialog} onOpenChange={setShowApprovalDialog}>
+                  <DialogTrigger asChild>
+                    <Button disabled={isSubmittingApproval}>
+                      <Send className="h-4 w-4 mr-2" />
+                      {isSubmittingApproval ? 'Submitting...' : 'Submit for Approval'}
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Submit Purchase Order for Approval</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <p className="text-sm text-muted-foreground">
+                        This will initiate the approval workflow for this purchase order.
+                      </p>
+                      <Button
+                        onClick={handleSubmitForApproval}
+                        disabled={isSubmittingApproval}
+                        className="w-full"
+                      >
+                        {isSubmittingApproval ? 'Submitting...' : 'Submit for Approval'}
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              )}
               <Button variant="outline" onClick={() => navigate(`/purchase-orders/edit/${po.id}`)}>
                 <Edit className="h-4 w-4 mr-2" />
                 Edit
