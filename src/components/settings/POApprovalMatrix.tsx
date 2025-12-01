@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Plus, Trash2, Users, DollarSign, ChevronRight } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { getCurrencySymbol } from "@/utils/currencyUtils";
 import {
   Table,
   TableBody,
@@ -66,6 +67,8 @@ const POApprovalMatrix = () => {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [expandedLevelId, setExpandedLevelId] = useState<string | null>(null);
+  const [baseCurrency, setBaseCurrency] = useState<string>("USD");
+  const [currencySymbol, setCurrencySymbol] = useState<string>("$");
 
   const [newLevel, setNewLevel] = useState({
     level_name: "",
@@ -86,6 +89,20 @@ const POApprovalMatrix = () => {
   const fetchData = async () => {
     setIsLoading(true);
     try {
+      // Fetch organization settings for base currency
+      const { data: orgData, error: orgError } = await supabase
+        .from("organization_settings")
+        .select("base_currency")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (!orgError && orgData) {
+        setBaseCurrency(orgData.base_currency || "USD");
+        const symbol = getCurrencySymbol(orgData.base_currency || "USD");
+        setCurrencySymbol(symbol);
+      }
+
       // Fetch approval levels
       const { data: levelsData, error: levelsError } = await supabase
         .from("po_approval_levels")
@@ -355,7 +372,8 @@ const POApprovalMatrix = () => {
             Configure Approval Levels
           </CardTitle>
           <CardDescription>
-            Define approval levels based on purchase order amount thresholds
+            Define approval levels based on purchase order amount thresholds (in {baseCurrency}). 
+            For POs in other currencies, amounts will be converted to {baseCurrency} for approval matching.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -436,13 +454,13 @@ const POApprovalMatrix = () => {
                         </span>
                         <h3 className="font-semibold text-lg">{level.level_name}</h3>
                       </div>
-                      <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
-                        <DollarSign className="h-4 w-4" />
-                        <span>
-                          ${level.min_amount.toLocaleString()} 
-                          {level.max_amount ? ` - $${level.max_amount.toLocaleString()}` : " and above"}
-                        </span>
-                      </div>
+                       <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
+                         <DollarSign className="h-4 w-4" />
+                         <span>
+                           {currencySymbol}{level.min_amount.toLocaleString()} 
+                           {level.max_amount ? ` - ${currencySymbol}${level.max_amount.toLocaleString()}` : " and above"}
+                         </span>
+                       </div>
                       {level.description && (
                         <p className="mt-2 text-sm text-muted-foreground">{level.description}</p>
                       )}

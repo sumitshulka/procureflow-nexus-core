@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Plus, Trash2, Edit } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { getCurrencySymbol } from "@/utils/currencyUtils";
 
 const InvoiceApprovalMatrix = () => {
   const { toast } = useToast();
@@ -23,6 +24,24 @@ const InvoiceApprovalMatrix = () => {
   const [minAmount, setMinAmount] = useState("");
   const [maxAmount, setMaxAmount] = useState("");
   const [description, setDescription] = useState("");
+
+  const { data: orgSettings } = useQuery({
+    queryKey: ["organization_settings"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("organization_settings")
+        .select("base_currency")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const baseCurrency = orgSettings?.base_currency || "USD";
+  const currencySymbol = getCurrencySymbol(baseCurrency);
 
   const { data: approvalLevels, isLoading } = useQuery({
     queryKey: ["invoice-approval-levels"],
@@ -133,7 +152,8 @@ const InvoiceApprovalMatrix = () => {
           <div>
             <CardTitle>Invoice Approval Levels</CardTitle>
             <CardDescription>
-              Configure approval levels based on invoice amounts
+              Configure approval levels based on invoice amounts (in {baseCurrency}). 
+              For invoices in other currencies, amounts will be converted to {baseCurrency} for approval matching.
             </CardDescription>
           </div>
           <Dialog open={isDialogOpen} onOpenChange={(open) => {
@@ -233,9 +253,9 @@ const InvoiceApprovalMatrix = () => {
                 <TableRow key={level.id}>
                   <TableCell className="font-medium">{level.level_number}</TableCell>
                   <TableCell>{level.level_name}</TableCell>
-                  <TableCell>${level.min_amount.toLocaleString()}</TableCell>
+                  <TableCell>{currencySymbol}{level.min_amount.toLocaleString()}</TableCell>
                   <TableCell>
-                    {level.max_amount ? `$${level.max_amount.toLocaleString()}` : "Unlimited"}
+                    {level.max_amount ? `${currencySymbol}${level.max_amount.toLocaleString()}` : "Unlimited"}
                   </TableCell>
                   <TableCell>
                     <Badge variant={level.is_active ? "default" : "secondary"}>
