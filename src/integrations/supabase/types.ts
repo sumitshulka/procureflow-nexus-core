@@ -4419,6 +4419,10 @@ export type Database = {
         Returns: string
       }
       get_effective_rfp_data: { Args: { p_rfp_id: string }; Returns: Json }
+      get_invoice_approval_level: {
+        Args: { invoice_amount: number }
+        Returns: string
+      }
       get_latest_product_price: {
         Args: { p_product_id: string }
         Returns: {
@@ -4428,6 +4432,8 @@ export type Database = {
         }[]
       }
       get_next_po_number: { Args: never; Returns: string }
+      get_organization_base_currency: { Args: never; Returns: string }
+      get_po_approval_level: { Args: { po_amount: number }; Returns: string }
       get_procurement_request_details_secure: {
         Args: never
         Returns: {
