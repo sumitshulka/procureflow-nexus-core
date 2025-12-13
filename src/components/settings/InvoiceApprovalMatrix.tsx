@@ -133,10 +133,40 @@ const InvoiceApprovalMatrix = () => {
   };
 
   const handleSubmit = () => {
+    if (!levelNumber || !levelName || !minAmount) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields (Level Number, Level Name, and Minimum Amount)",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const parsedLevelNumber = parseInt(levelNumber);
+    const parsedMinAmount = parseFloat(minAmount);
+
+    if (isNaN(parsedLevelNumber) || parsedLevelNumber < 1) {
+      toast({
+        title: "Validation Error",
+        description: "Level Number must be a valid positive number",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (isNaN(parsedMinAmount) || parsedMinAmount < 0) {
+      toast({
+        title: "Validation Error",
+        description: "Minimum Amount must be a valid non-negative number",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const levelData = {
-      level_number: parseInt(levelNumber),
+      level_number: parsedLevelNumber,
       level_name: levelName,
-      min_amount: parseFloat(minAmount),
+      min_amount: parsedMinAmount,
       max_amount: maxAmount ? parseFloat(maxAmount) : null,
       description,
       is_active: true,
