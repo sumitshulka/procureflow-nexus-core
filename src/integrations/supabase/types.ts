@@ -4373,18 +4373,6 @@ export type Database = {
       generate_vendor_number: { Args: never; Returns: string }
       get_applicable_tax_code:
         | {
-            Args: { p_buyer_state?: string; p_vendor_id: string }
-            Returns: {
-              rates: Json
-              tax_code: string
-              tax_code_id: string
-              tax_name: string
-              tax_type_code: string
-              tax_type_name: string
-              total_rate: number
-            }[]
-          }
-        | {
             Args: {
               p_buyer_location_id?: string
               p_product_id: string
@@ -4395,6 +4383,18 @@ export type Database = {
               tax_code_code: string
               tax_code_id: string
               tax_code_name: string
+            }[]
+          }
+        | {
+            Args: { p_buyer_state?: string; p_vendor_id: string }
+            Returns: {
+              rates: Json
+              tax_code: string
+              tax_code_id: string
+              tax_name: string
+              tax_type_code: string
+              tax_type_name: string
+              total_rate: number
             }[]
           }
       get_approval_requests_secure: {
