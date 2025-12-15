@@ -107,25 +107,42 @@ const InvoiceDetail = () => {
     },
   });
 
-  // Check if current user can approve this invoice via approval matrix
+  // Check if current user can approve this invoice via approval matrix or role
   const { data: canApproveViaMatrix } = useQuery({
-    queryKey: ["invoice-can-approve", id, user?.id],
+    queryKey: ["invoice-can-approve", id, user?.id, invoice?.current_approval_level, userRoles],
     queryFn: async () => {
       if (!user?.id || !invoice?.current_approval_level) return false;
       
+      // First, get the approval level ID from level_number
+      const { data: levelData } = await supabase
+        .from("invoice_approval_levels")
+        .select("id")
+        .eq("level_number", invoice.current_approval_level)
+        .eq("is_active", true)
+        .maybeSingle();
+      
+      if (!levelData) {
+        // No approval level found - fallback to admin/finance_officer check
+        return userRoles?.includes("admin") || userRoles?.includes("finance_officer");
+      }
+      
       // Check if user is assigned as approver for the current level
-      const { data: matrixEntry, error } = await supabase
+      const { data: matrixEntries } = await supabase
         .from("invoice_approval_matrix")
         .select("id, approver_user_id, approver_role")
         .eq("is_active", true)
-        .eq("approval_level_id", invoice.current_approval_level.toString())
-        .maybeSingle();
+        .eq("approval_level_id", levelData.id);
       
-      if (error || !matrixEntry) return false;
+      if (!matrixEntries || matrixEntries.length === 0) {
+        // No matrix entries - fallback to admin/finance_officer check
+        return userRoles?.includes("admin") || userRoles?.includes("finance_officer");
+      }
       
-      // Check if user matches the approver or has the required role
-      if (matrixEntry.approver_user_id === user.id) return true;
-      if (matrixEntry.approver_role && userRoles?.includes(matrixEntry.approver_role)) return true;
+      // Check if user matches any approver or has the required role
+      for (const entry of matrixEntries) {
+        if (entry.approver_user_id === user.id) return true;
+        if (entry.approver_role && userRoles?.includes(entry.approver_role)) return true;
+      }
       
       return false;
     },
