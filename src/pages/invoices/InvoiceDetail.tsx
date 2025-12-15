@@ -107,6 +107,31 @@ const InvoiceDetail = () => {
     },
   });
 
+  // Check if current user can approve this invoice via approval matrix
+  const { data: canApproveViaMatrix } = useQuery({
+    queryKey: ["invoice-can-approve", id, user?.id],
+    queryFn: async () => {
+      if (!user?.id || !invoice?.current_approval_level) return false;
+      
+      // Check if user is assigned as approver for the current level
+      const { data: matrixEntry, error } = await supabase
+        .from("invoice_approval_matrix")
+        .select("id, approver_user_id, approver_role")
+        .eq("is_active", true)
+        .eq("approval_level_id", invoice.current_approval_level.toString())
+        .maybeSingle();
+      
+      if (error || !matrixEntry) return false;
+      
+      // Check if user matches the approver or has the required role
+      if (matrixEntry.approver_user_id === user.id) return true;
+      if (matrixEntry.approver_role && userRoles?.includes(matrixEntry.approver_role)) return true;
+      
+      return false;
+    },
+    enabled: !!user?.id && !!invoice?.current_approval_level && invoice?.status === 'pending_approval',
+  });
+
   const hasApprovalLevels = approvalLevels && approvalLevels.length > 0;
 
   const isAdmin = userRoles?.includes("admin") || userRoles?.includes("finance_officer");
@@ -169,23 +194,49 @@ const InvoiceDetail = () => {
 
   const approveMutation = useMutation({
     mutationFn: async () => {
-      // Find pending approval for current user
+      // Find pending approval for current user in history
       const pendingApproval = invoice?.invoice_approval_history?.find(
         (h: any) => h.approver_id === user?.id && h.status === "pending"
       );
 
-      if (!pendingApproval) throw new Error("No pending approval found");
+      if (pendingApproval) {
+        // Update existing approval history entry
+        const { error } = await supabase
+          .from("invoice_approval_history")
+          .update({
+            status: "approved",
+            approved_at: new Date().toISOString(),
+            comments: approvalComments,
+          })
+          .eq("id", pendingApproval.id);
 
-      const { error } = await supabase
-        .from("invoice_approval_history")
-        .update({
-          status: "approved",
-          approved_at: new Date().toISOString(),
-          comments: approvalComments,
-        })
-        .eq("id", pendingApproval.id);
+        if (error) throw error;
+      } else if (canApproveViaMatrix) {
+        // Create a new approval history entry for matrix-based approval
+        const { data: currentLevel } = await supabase
+          .from("invoice_approval_levels")
+          .select("id")
+          .eq("level_number", invoice?.current_approval_level)
+          .eq("is_active", true)
+          .maybeSingle();
+        
+        if (currentLevel) {
+          const { error } = await supabase
+            .from("invoice_approval_history")
+            .insert({
+              invoice_id: id,
+              approver_id: user?.id,
+              approval_level_id: currentLevel.id,
+              status: "approved",
+              approved_at: new Date().toISOString(),
+              comments: approvalComments,
+            });
 
-      if (error) throw error;
+          if (error) throw error;
+        }
+      } else {
+        throw new Error("You are not authorized to approve this invoice");
+      }
 
       // Update invoice status to approved
       const { error: invoiceError } = await supabase
@@ -201,7 +252,15 @@ const InvoiceDetail = () => {
     onSuccess: () => {
       toast({ title: "Success", description: "Invoice approved successfully" });
       queryClient.invalidateQueries({ queryKey: ["invoice", id] });
+      queryClient.invalidateQueries({ queryKey: ["approvals"] });
       setApprovalComments("");
+    },
+    onError: (error: Error) => {
+      toast({ 
+        title: "Error", 
+        description: error.message || "Failed to approve invoice",
+        variant: "destructive"
+      });
     },
   });
 
@@ -211,18 +270,43 @@ const InvoiceDetail = () => {
         (h: any) => h.approver_id === user?.id && h.status === "pending"
       );
 
-      if (!pendingApproval) throw new Error("No pending approval found");
+      if (pendingApproval) {
+        const { error } = await supabase
+          .from("invoice_approval_history")
+          .update({
+            status: "rejected",
+            rejected_at: new Date().toISOString(),
+            comments: rejectReason,
+          })
+          .eq("id", pendingApproval.id);
 
-      const { error } = await supabase
-        .from("invoice_approval_history")
-        .update({
-          status: "rejected",
-          rejected_at: new Date().toISOString(),
-          comments: rejectReason,
-        })
-        .eq("id", pendingApproval.id);
+        if (error) throw error;
+      } else if (canApproveViaMatrix) {
+        // Create a new rejection entry for matrix-based approval
+        const { data: currentLevel } = await supabase
+          .from("invoice_approval_levels")
+          .select("id")
+          .eq("level_number", invoice?.current_approval_level)
+          .eq("is_active", true)
+          .maybeSingle();
+        
+        if (currentLevel) {
+          const { error } = await supabase
+            .from("invoice_approval_history")
+            .insert({
+              invoice_id: id,
+              approver_id: user?.id,
+              approval_level_id: currentLevel.id,
+              status: "rejected",
+              rejected_at: new Date().toISOString(),
+              comments: rejectReason,
+            });
 
-      if (error) throw error;
+          if (error) throw error;
+        }
+      } else {
+        throw new Error("You are not authorized to reject this invoice");
+      }
 
       const { error: invoiceError } = await supabase
         .from("invoices")
@@ -240,8 +324,16 @@ const InvoiceDetail = () => {
     onSuccess: () => {
       toast({ title: "Success", description: "Invoice rejected" });
       queryClient.invalidateQueries({ queryKey: ["invoice", id] });
+      queryClient.invalidateQueries({ queryKey: ["approvals"] });
       setRejectReason("");
       setCorrectiveAction("");
+    },
+    onError: (error: Error) => {
+      toast({ 
+        title: "Error", 
+        description: error.message || "Failed to reject invoice",
+        variant: "destructive"
+      });
     },
   });
 
@@ -269,9 +361,13 @@ const InvoiceDetail = () => {
     },
   });
 
-  const hasPendingApproval = invoice?.invoice_approval_history?.some(
+  const hasPendingApprovalInHistory = invoice?.invoice_approval_history?.some(
     (h: any) => h.approver_id === user?.id && h.status === "pending"
   );
+  
+  // Show approval banner if user has pending approval in history OR can approve via matrix
+  const hasPendingApproval = hasPendingApprovalInHistory || 
+    (canApproveViaMatrix && invoice?.status === 'pending_approval');
 
   if (isLoading) {
     return (
