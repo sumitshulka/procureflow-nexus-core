@@ -1,11 +1,12 @@
 
 import React, { useState } from 'react';
-import { MoreVertical, Check, X, HelpCircle, History } from 'lucide-react';
+import { MoreVertical, Check, X, HelpCircle, History, Eye } from 'lucide-react';
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
   DropdownMenuItem, 
-  DropdownMenuTrigger 
+  DropdownMenuTrigger,
+  DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
@@ -38,6 +39,7 @@ interface ApprovalActionMenuProps {
   approval: ApprovalRequest;
   onActionComplete?: () => void;
   displayAsButtons?: boolean;
+  onQuickView?: () => void;
 }
 
 type ActionType = 'approve' | 'reject' | 'more_info';
@@ -45,7 +47,8 @@ type ActionType = 'approve' | 'reject' | 'more_info';
 const ApprovalActionMenu = ({ 
   approval, 
   onActionComplete, 
-  displayAsButtons = false 
+  displayAsButtons = false,
+  onQuickView
 }: ApprovalActionMenuProps) => {
   const [loading, setLoading] = useState<ActionType | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -212,7 +215,7 @@ const ApprovalActionMenu = ({
     }
   };
 
-  if (!isPending && !displayAsButtons) {
+  if (!isPending && !displayAsButtons && !onQuickView) {
     return (
       <Button variant="ghost" size="sm" disabled>
         <MoreVertical className="h-4 w-4" />
@@ -296,6 +299,14 @@ const ApprovalActionMenu = ({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
+        {onQuickView && (
+          <>
+            <DropdownMenuItem onClick={onQuickView}>
+              <Eye className="mr-2 h-4 w-4 text-primary" /> View Details
+            </DropdownMenuItem>
+            {isPending && <DropdownMenuSeparator />}
+          </>
+        )}
         {isPending && (
           <>
             <DropdownMenuItem onClick={() => handleAction('approve')}>
@@ -309,7 +320,7 @@ const ApprovalActionMenu = ({
             </DropdownMenuItem>
           </>
         )}
-        {!isPending && (
+        {!isPending && !onQuickView && (
           <DropdownMenuItem disabled>
             <History className="mr-2 h-4 w-4" /> {approval.status.charAt(0).toUpperCase() + approval.status.slice(1)}
           </DropdownMenuItem>

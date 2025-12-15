@@ -9,9 +9,11 @@ import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import ApprovalActionMenu from '@/components/approval/ApprovalActionMenu';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, CheckCircle, XCircle, AlertTriangle, Loader2 } from 'lucide-react';
+import { AlertCircle, CheckCircle, XCircle, AlertTriangle, Loader2, Eye } from 'lucide-react';
 import { ApprovalTimeline } from '@/components/approval';
 import { useToast } from '@/components/ui/use-toast';
+import { useNavigate } from 'react-router-dom';
+import { getCurrencySymbol } from '@/utils/currencyUtils';
 
 interface ApprovalRequest {
   id: string;
@@ -26,14 +28,19 @@ interface ApprovalRequest {
   comments?: string;
   approval_date?: string;
   approver_id?: string;
+  // Additional enriched fields
+  amount?: number;
+  currency?: string;
+  vendor_name?: string;
 }
 
 const Approvals = () => {
   const [activeTab, setActiveTab] = useState<string>('pending');
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
-  // Fetch approvals
+  // Fetch approvals and enrich with additional data
   const { data: approvalRequests, isLoading, refetch } = useQuery({
     queryKey: ['approvals', activeTab],
     queryFn: async () => {
@@ -48,12 +55,125 @@ const Approvals = () => {
         throw new Error('Failed to fetch approvals');
       }
       
-      console.log(`Found ${data?.length} approval requests with status ${activeTab}`, data);
-      return (data || []).filter(item => 
+      const filteredData = (data || []).filter(item => 
         activeTab === 'all' || item.status === activeTab
       ) as ApprovalRequest[];
+      
+      // Enrich with amount and vendor data
+      const enrichedData = await enrichApprovalData(filteredData);
+      
+      console.log(`Found ${enrichedData?.length} approval requests with status ${activeTab}`, enrichedData);
+      return enrichedData;
     }
   });
+
+  // Function to fetch additional details for approvals
+  const enrichApprovalData = async (approvals: ApprovalRequest[]): Promise<ApprovalRequest[]> => {
+    if (!approvals || approvals.length === 0) return approvals;
+
+    // Group by entity type for batch fetching
+    const invoiceIds = approvals.filter(a => a.entity_type === 'invoice').map(a => a.entity_id);
+    const poIds = approvals.filter(a => a.entity_type === 'purchase_order').map(a => a.entity_id);
+    const prIds = approvals.filter(a => a.entity_type === 'procurement_request').map(a => a.entity_id);
+
+    // Fetch invoice details
+    let invoiceMap: Record<string, { amount: number; currency: string; vendor_name: string }> = {};
+    if (invoiceIds.length > 0) {
+      const { data: invoices } = await supabase
+        .from('invoices')
+        .select('id, total_amount, currency, vendor_id')
+        .in('id', invoiceIds);
+      
+      if (invoices && invoices.length > 0) {
+        const vendorIds = invoices.map(i => i.vendor_id).filter(Boolean);
+        const { data: vendors } = await supabase
+          .from('vendor_registrations')
+          .select('id, company_name')
+          .in('id', vendorIds);
+        
+        const vendorMap = (vendors || []).reduce((acc, v) => ({ ...acc, [v.id]: v.company_name }), {});
+        
+        invoiceMap = (invoices || []).reduce((acc, inv) => ({
+          ...acc,
+          [inv.id]: {
+            amount: inv.total_amount,
+            currency: inv.currency || 'USD',
+            vendor_name: vendorMap[inv.vendor_id] || 'Unknown'
+          }
+        }), {});
+      }
+    }
+
+    // Fetch PO details
+    let poMap: Record<string, { amount: number; currency: string; vendor_name: string }> = {};
+    if (poIds.length > 0) {
+      const { data: pos } = await supabase
+        .from('purchase_orders')
+        .select('id, final_amount, currency, vendor_id')
+        .in('id', poIds);
+      
+      if (pos && pos.length > 0) {
+        const vendorIds = pos.map(p => p.vendor_id).filter(Boolean);
+        const { data: vendors } = await supabase
+          .from('vendor_registrations')
+          .select('id, company_name')
+          .in('id', vendorIds);
+        
+        const vendorMap = (vendors || []).reduce((acc, v) => ({ ...acc, [v.id]: v.company_name }), {});
+        
+        poMap = (pos || []).reduce((acc, po) => ({
+          ...acc,
+          [po.id]: {
+            amount: po.final_amount,
+            currency: po.currency || 'USD',
+            vendor_name: vendorMap[po.vendor_id] || 'Unknown'
+          }
+        }), {});
+      }
+    }
+
+    // Fetch procurement request details
+    let prMap: Record<string, { amount: number }> = {};
+    if (prIds.length > 0) {
+      const { data: prs } = await supabase
+        .from('procurement_requests')
+        .select('id, estimated_value')
+        .in('id', prIds);
+      
+      prMap = (prs || []).reduce((acc, pr) => ({
+        ...acc,
+        [pr.id]: { amount: pr.estimated_value }
+      }), {});
+    }
+
+    // Enrich approvals with fetched data
+    return approvals.map(approval => {
+      if (approval.entity_type === 'invoice' && invoiceMap[approval.entity_id]) {
+        return { ...approval, ...invoiceMap[approval.entity_id] };
+      }
+      if (approval.entity_type === 'purchase_order' && poMap[approval.entity_id]) {
+        return { ...approval, ...poMap[approval.entity_id] };
+      }
+      if (approval.entity_type === 'procurement_request' && prMap[approval.entity_id]) {
+        return { ...approval, amount: prMap[approval.entity_id].amount };
+      }
+      return approval;
+    });
+  };
+
+  // Get navigation path for quick view based on entity type
+  const getQuickViewPath = (row: ApprovalRequest): string | null => {
+    switch (row.entity_type) {
+      case 'invoice':
+        return `/invoices/${row.entity_id}`;
+      case 'purchase_order':
+        return `/purchase-orders/${row.entity_id}`;
+      case 'procurement_request':
+        return `/procurement-requests/${row.entity_id}`;
+      default:
+        return null;
+    }
+  };
 
   const columns = [
     {
@@ -72,7 +192,29 @@ const Approvals = () => {
         // Extract title from comments if it exists (used for inventory checkout)
         const titleMatch = row.comments?.match(/Title: (.*)/);
         const title = titleMatch ? titleMatch[1] : (row.request_title || 'Untitled');
-        return <span>{title}</span>;
+        return <span className="font-medium">{title}</span>;
+      },
+    },
+    {
+      id: 'vendor',
+      header: 'Vendor',
+      cell: (row: ApprovalRequest) => (
+        <span className="text-muted-foreground">
+          {row.vendor_name || '-'}
+        </span>
+      ),
+    },
+    {
+      id: 'amount',
+      header: 'Amount',
+      cell: (row: ApprovalRequest) => {
+        if (row.amount == null) return <span className="text-muted-foreground">-</span>;
+        const symbol = getCurrencySymbol(row.currency || 'USD');
+        return (
+          <span className="font-medium">
+            {symbol}{row.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </span>
+        );
       },
     },
     {
@@ -122,15 +264,6 @@ const Approvals = () => {
       },
     },
     {
-      id: 'entity_status',
-      header: 'Entity Status',
-      cell: (row: ApprovalRequest) => (
-        <Badge variant="outline" className="capitalize">
-          {row.entity_status ? row.entity_status.replace('_', ' ') : 'N/A'}
-        </Badge>
-      ),
-    },
-    {
       id: 'actions',
       header: 'Actions',
       cell: (row: ApprovalRequest) => (
@@ -140,7 +273,8 @@ const Approvals = () => {
             refetch();
             queryClient.invalidateQueries({ queryKey: ['approvals'] });
             queryClient.invalidateQueries({ queryKey: ['inventory_transactions'] });
-          }} 
+          }}
+          onQuickView={getQuickViewPath(row) ? () => navigate(getQuickViewPath(row)!) : undefined}
         />
       ),
     },
