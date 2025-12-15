@@ -324,7 +324,7 @@ const InvoiceDetail = () => {
   return (
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="sm" onClick={() => navigate("/invoices")}>
+        <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <PageHeader
@@ -333,12 +333,102 @@ const InvoiceDetail = () => {
         />
       </div>
 
-      {/* Action Buttons */}
-      {(isAdmin || hasPendingApproval) && (
+      {/* Pending Approval Banner for Approvers */}
+      {hasPendingApproval && (
+        <Card className="border-primary/50 bg-primary/5">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <AlertTriangle className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">Approval Required</h3>
+                  <p className="text-sm text-muted-foreground">This invoice is awaiting your approval</p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm" className="border-destructive text-destructive hover:bg-destructive/10">
+                      <XCircle className="h-4 w-4 mr-2" />
+                      Reject
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Reject Invoice</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <div className="space-y-2">
+                        <Label>Rejection Reason *</Label>
+                        <Textarea
+                          value={rejectReason}
+                          onChange={(e) => setRejectReason(e.target.value)}
+                          placeholder="Explain why you're rejecting this invoice..."
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Corrective Action Required</Label>
+                        <Textarea
+                          value={correctiveAction}
+                          onChange={(e) => setCorrectiveAction(e.target.value)}
+                          placeholder="What needs to be corrected..."
+                        />
+                      </div>
+                      <Button
+                        onClick={() => rejectMutation.mutate()}
+                        disabled={!rejectReason || rejectMutation.isPending}
+                        className="w-full"
+                      >
+                        Reject Invoice
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button size="sm">
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Approve
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Approve Invoice</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <div className="space-y-2">
+                        <Label>Comments (Optional)</Label>
+                        <Textarea
+                          value={approvalComments}
+                          onChange={(e) => setApprovalComments(e.target.value)}
+                          placeholder="Add any comments..."
+                        />
+                      </div>
+                      <Button
+                        onClick={() => approveMutation.mutate()}
+                        disabled={approveMutation.isPending}
+                        className="w-full"
+                      >
+                        Approve Invoice
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Action Buttons for Admin */}
+      {isAdmin && (invoice.status === "submitted" || invoice.status === "approved") && (
         <Card>
           <CardContent className="pt-6">
             <div className="flex flex-wrap gap-2 justify-end">
-              {isAdmin && invoice.status === "submitted" && (
+              {invoice.status === "submitted" && (
                 <>
                   {!hasApprovalLevels ? (
                     <Dialog>
@@ -434,81 +524,7 @@ const InvoiceDetail = () => {
                 </>
               )}
 
-              {hasPendingApproval && (
-                <>
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button variant="destructive" size="sm">
-                        <XCircle className="h-4 w-4 mr-2" />
-                        Reject
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Reject Invoice</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4 py-4">
-                        <div className="space-y-2">
-                          <Label>Rejection Reason *</Label>
-                          <Textarea
-                            value={rejectReason}
-                            onChange={(e) => setRejectReason(e.target.value)}
-                            placeholder="Explain why you're rejecting this invoice..."
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Corrective Action Required</Label>
-                          <Textarea
-                            value={correctiveAction}
-                            onChange={(e) => setCorrectiveAction(e.target.value)}
-                            placeholder="What needs to be corrected..."
-                          />
-                        </div>
-                        <Button
-                          onClick={() => rejectMutation.mutate()}
-                          disabled={!rejectReason || rejectMutation.isPending}
-                          className="w-full"
-                        >
-                          Reject Invoice
-                        </Button>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button size="sm">
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                        Approve
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Approve Invoice</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4 py-4">
-                        <div className="space-y-2">
-                          <Label>Comments (Optional)</Label>
-                          <Textarea
-                            value={approvalComments}
-                            onChange={(e) => setApprovalComments(e.target.value)}
-                            placeholder="Add any comments..."
-                          />
-                        </div>
-                        <Button
-                          onClick={() => approveMutation.mutate()}
-                          disabled={approveMutation.isPending}
-                          className="w-full"
-                        >
-                          Approve Invoice
-                        </Button>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                </>
-              )}
-
-              {isAdmin && invoice.status === "approved" && (
+              {invoice.status === "approved" && (
                 <Dialog>
                   <DialogTrigger asChild>
                     <Button size="sm">
@@ -532,6 +548,7 @@ const InvoiceDetail = () => {
                             <SelectItem value="cheque">Cheque</SelectItem>
                             <SelectItem value="cash">Cash</SelectItem>
                             <SelectItem value="credit_card">Credit Card</SelectItem>
+                            <SelectItem value="online">Online Payment</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -540,7 +557,7 @@ const InvoiceDetail = () => {
                         <Input
                           value={paymentReference}
                           onChange={(e) => setPaymentReference(e.target.value)}
-                          placeholder="Transaction ID or reference number"
+                          placeholder="Transaction/Check number"
                         />
                       </div>
                       <div className="space-y-2">

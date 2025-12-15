@@ -33,7 +33,8 @@ import {
   CheckCircle,
   XCircle,
   HelpCircle,
-  ClipboardList
+  ClipboardList,
+  ArrowLeft
 } from 'lucide-react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
@@ -539,10 +540,14 @@ const ProcurementRequestDetail = () => {
 
   return (
     <div className="page-container">
-      <PageHeader
-        title={`Request ${requestDetail.request_number}`}
-        description={requestDetail.title}
-        actions={
+      <div className="flex items-center gap-4 mb-4">
+        <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
+          <ArrowLeft className="h-4 w-4" />
+        </Button>
+        <PageHeader
+          title={`Request ${requestDetail.request_number}`}
+          description={requestDetail.title}
+          actions={
           canEditRequest() && (
             <div className="flex items-center gap-2">
               {isEditing ? (
@@ -609,7 +614,8 @@ const ProcurementRequestDetail = () => {
             </div>
           )
         }
-      />
+        />
+      </div>
 
       <Tabs defaultValue="details" className="w-full">
         <TabsList>

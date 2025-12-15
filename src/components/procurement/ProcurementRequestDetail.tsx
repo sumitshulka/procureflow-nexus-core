@@ -355,8 +355,8 @@ const ProcurementRequestDetail = () => {
               )}
             </>
           ) : (
-            <Button variant="outline" onClick={() => navigate("/requests")}>
-              Back to Requests
+            <Button variant="outline" onClick={() => navigate(-1)}>
+              Back
             </Button>
           )
         }
