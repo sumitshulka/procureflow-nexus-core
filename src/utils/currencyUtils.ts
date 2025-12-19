@@ -141,7 +141,7 @@ export const getCurrencyName = (currencyCode: string): string => {
 /**
  * Format amount with currency symbol
  */
-export const formatCurrency = (amount: number, currencyCode: string): string => {
+export const formatCurrency = (amount: number, currencyCode: string = 'USD'): string => {
   const symbol = getCurrencySymbol(currencyCode);
   return `${symbol}${amount.toLocaleString()}`;
 };
