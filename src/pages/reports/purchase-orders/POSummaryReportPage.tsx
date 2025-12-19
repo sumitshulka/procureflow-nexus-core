@@ -254,8 +254,8 @@ const POSummaryReportPage = () => {
                   />
                 </div>
               </div>
-              <DatePicker date={startDate} setDate={setStartDate} />
-              <DatePicker date={endDate} setDate={setEndDate} />
+              <DatePicker date={startDate} onDateChange={setStartDate} />
+              <DatePicker date={endDate} onDateChange={setEndDate} />
               <Select value={selectedStatus} onValueChange={setSelectedStatus}>
                 <SelectTrigger className="w-[150px]">
                   <SelectValue placeholder="Status" />
