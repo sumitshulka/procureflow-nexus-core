@@ -83,6 +83,46 @@ import SpendAnalysis from '@/pages/analytics/SpendAnalysis';
 import VendorPerformance from '@/pages/analytics/VendorPerformance';
 import CustomReports from '@/pages/analytics/CustomReports';
 
+// Reports Center
+import ReportsIndex from '@/pages/reports/ReportsIndex';
+
+// Report Pages - Inventory
+import InventoryValuationReportPage from '@/pages/reports/inventory/InventoryValuationReportPage';
+import StockAgingReportPage from '@/pages/reports/inventory/StockAgingReportPage';
+import StockMovementReportPage from '@/pages/reports/inventory/StockMovementReportPage';
+import ReorderLevelReportPage from '@/pages/reports/inventory/ReorderLevelReportPage';
+import WarehouseSummaryReportPage from '@/pages/reports/inventory/WarehouseSummaryReportPage';
+
+// Report Pages - Purchase Orders
+import POSummaryReportPage from '@/pages/reports/purchase-orders/POSummaryReportPage';
+import POFulfillmentReportPage from '@/pages/reports/purchase-orders/POFulfillmentReportPage';
+import POAgingReportPage from '@/pages/reports/purchase-orders/POAgingReportPage';
+import POSpendReportPage from '@/pages/reports/purchase-orders/POSpendReportPage';
+
+// Report Pages - Vendors
+import VendorPerformanceReportPage from '@/pages/reports/vendors/VendorPerformanceReportPage';
+import VendorSpendReportPage from '@/pages/reports/vendors/VendorSpendReportPage';
+import VendorComparisonReportPage from '@/pages/reports/vendors/VendorComparisonReportPage';
+import VendorRiskReportPage from '@/pages/reports/vendors/VendorRiskReportPage';
+
+// Report Pages - Invoices
+import InvoiceSummaryReportPage from '@/pages/reports/invoices/InvoiceSummaryReportPage';
+import InvoiceAgingReportPage from '@/pages/reports/invoices/InvoiceAgingReportPage';
+import PaymentHistoryReportPage from '@/pages/reports/invoices/PaymentHistoryReportPage';
+import InvoiceReconciliationReportPage from '@/pages/reports/invoices/InvoiceReconciliationReportPage';
+
+// Report Pages - Procurement
+import ProcurementSummaryReportPage from '@/pages/reports/procurement/ProcurementSummaryReportPage';
+import ApprovalCycleReportPage from '@/pages/reports/procurement/ApprovalCycleReportPage';
+import DepartmentSpendReportPage from '@/pages/reports/procurement/DepartmentSpendReportPage';
+import RfpAnalysisReportPage from '@/pages/reports/procurement/RfpAnalysisReportPage';
+
+// Report Pages - Analytics
+import SpendAnalyticsReportPage from '@/pages/reports/analytics/SpendAnalyticsReportPage';
+import PerformanceMetricsReportPage from '@/pages/reports/analytics/PerformanceMetricsReportPage';
+import BudgetVarianceReportPage from '@/pages/reports/analytics/BudgetVarianceReportPage';
+import SavingsAnalysisReportPage from '@/pages/reports/analytics/SavingsAnalysisReportPage';
+
 // Vendor Pages
 import VendorManagement from '@/pages/VendorManagement';
 import VendorPortal from '@/pages/VendorPortal';
@@ -552,36 +592,224 @@ function App() {
             }
           />
 
-          {/* Analytics & Reports */}
+          {/* Reports Center */}
           <Route
-            path="/analytics/performance"
+            path="/reports"
             element={
               <ProtectedRoute requiredRole={UserRole.ADMIN}>
-                <Layout><PerformanceAnalytics /></Layout>
+                <Layout><ReportsIndex /></Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Inventory Reports */}
+          <Route
+            path="/reports/inventory/valuation"
+            element={
+              <ProtectedRoute requiredRole={UserRole.ADMIN}>
+                <Layout><InventoryValuationReportPage /></Layout>
               </ProtectedRoute>
             }
           />
           <Route
-            path="/analytics/spend"
+            path="/reports/inventory/aging"
             element={
               <ProtectedRoute requiredRole={UserRole.ADMIN}>
-                <Layout><SpendAnalysis /></Layout>
+                <Layout><StockAgingReportPage /></Layout>
               </ProtectedRoute>
             }
           />
           <Route
-            path="/analytics/vendor-performance"
+            path="/reports/inventory/movement"
             element={
               <ProtectedRoute requiredRole={UserRole.ADMIN}>
-                <Layout><VendorPerformance /></Layout>
+                <Layout><StockMovementReportPage /></Layout>
               </ProtectedRoute>
             }
           />
           <Route
-            path="/analytics/custom"
+            path="/reports/inventory/reorder"
             element={
               <ProtectedRoute requiredRole={UserRole.ADMIN}>
-                <Layout><CustomReports /></Layout>
+                <Layout><ReorderLevelReportPage /></Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/reports/inventory/warehouse-summary"
+            element={
+              <ProtectedRoute requiredRole={UserRole.ADMIN}>
+                <Layout><WarehouseSummaryReportPage /></Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Purchase Order Reports */}
+          <Route
+            path="/reports/purchase-orders/summary"
+            element={
+              <ProtectedRoute requiredRole={UserRole.ADMIN}>
+                <Layout><POSummaryReportPage /></Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/reports/purchase-orders/fulfillment"
+            element={
+              <ProtectedRoute requiredRole={UserRole.ADMIN}>
+                <Layout><POFulfillmentReportPage /></Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/reports/purchase-orders/aging"
+            element={
+              <ProtectedRoute requiredRole={UserRole.ADMIN}>
+                <Layout><POAgingReportPage /></Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/reports/purchase-orders/spend"
+            element={
+              <ProtectedRoute requiredRole={UserRole.ADMIN}>
+                <Layout><POSpendReportPage /></Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Vendor Reports */}
+          <Route
+            path="/reports/vendors/performance"
+            element={
+              <ProtectedRoute requiredRole={UserRole.ADMIN}>
+                <Layout><VendorPerformanceReportPage /></Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/reports/vendors/spend"
+            element={
+              <ProtectedRoute requiredRole={UserRole.ADMIN}>
+                <Layout><VendorSpendReportPage /></Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/reports/vendors/comparison"
+            element={
+              <ProtectedRoute requiredRole={UserRole.ADMIN}>
+                <Layout><VendorComparisonReportPage /></Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/reports/vendors/risk"
+            element={
+              <ProtectedRoute requiredRole={UserRole.ADMIN}>
+                <Layout><VendorRiskReportPage /></Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Invoice Reports */}
+          <Route
+            path="/reports/invoices/summary"
+            element={
+              <ProtectedRoute requiredRole={UserRole.ADMIN}>
+                <Layout><InvoiceSummaryReportPage /></Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/reports/invoices/aging"
+            element={
+              <ProtectedRoute requiredRole={UserRole.ADMIN}>
+                <Layout><InvoiceAgingReportPage /></Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/reports/invoices/payments"
+            element={
+              <ProtectedRoute requiredRole={UserRole.ADMIN}>
+                <Layout><PaymentHistoryReportPage /></Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/reports/invoices/reconciliation"
+            element={
+              <ProtectedRoute requiredRole={UserRole.ADMIN}>
+                <Layout><InvoiceReconciliationReportPage /></Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Procurement Reports */}
+          <Route
+            path="/reports/procurement/summary"
+            element={
+              <ProtectedRoute requiredRole={UserRole.ADMIN}>
+                <Layout><ProcurementSummaryReportPage /></Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/reports/procurement/approval-cycle"
+            element={
+              <ProtectedRoute requiredRole={UserRole.ADMIN}>
+                <Layout><ApprovalCycleReportPage /></Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/reports/procurement/department-spend"
+            element={
+              <ProtectedRoute requiredRole={UserRole.ADMIN}>
+                <Layout><DepartmentSpendReportPage /></Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/reports/procurement/rfp-analysis"
+            element={
+              <ProtectedRoute requiredRole={UserRole.ADMIN}>
+                <Layout><RfpAnalysisReportPage /></Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Analytics Reports */}
+          <Route
+            path="/reports/analytics/spend"
+            element={
+              <ProtectedRoute requiredRole={UserRole.ADMIN}>
+                <Layout><SpendAnalyticsReportPage /></Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/reports/analytics/performance"
+            element={
+              <ProtectedRoute requiredRole={UserRole.ADMIN}>
+                <Layout><PerformanceMetricsReportPage /></Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/reports/analytics/budget-variance"
+            element={
+              <ProtectedRoute requiredRole={UserRole.ADMIN}>
+                <Layout><BudgetVarianceReportPage /></Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/reports/analytics/savings"
+            element={
+              <ProtectedRoute requiredRole={UserRole.ADMIN}>
+                <Layout><SavingsAnalysisReportPage /></Layout>
               </ProtectedRoute>
             }
           />

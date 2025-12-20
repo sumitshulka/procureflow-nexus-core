@@ -208,28 +208,10 @@ const AppSidebar = () => {
       ],
     },
     {
-      title: "Analytics & Reports",
-      icon: TrendingUp,
-      href: "/analytics",
+      title: "Reports",
+      icon: BarChart,
+      href: "/reports",
       roles: ["admin", "procurement_officer"],
-      subItems: [
-        {
-          title: "Performance Analytics",
-          href: "/analytics/performance",
-        },
-        {
-          title: "Spend Analysis",
-          href: "/analytics/spend",
-        },
-        {
-          title: "Vendor Performance",
-          href: "/analytics/vendor-performance",
-        },
-        {
-          title: "Custom Reports",
-          href: "/analytics/custom",
-        },
-      ],
     },
     {
       title: "Vendor Management",
