@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { format, differenceInDays } from 'date-fns';
 import { usePOActions } from '@/hooks/usePOActions';
 import { formatCurrencyAmount } from '@/utils/numberFormatting';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { 
   ShoppingCart, 
   Search, 
@@ -27,6 +28,8 @@ import {
   ChevronsUpDown,
   Check,
   CalendarClock,
+  ChevronDown,
+  Filter,
 } from 'lucide-react';
 import { 
   Select,
@@ -50,6 +53,7 @@ const PurchaseOrdersManagement = () => {
   const [vendorFilter, setVendorFilter] = useState('all');
   const [poDateRange, setPoDateRange] = useState<DateRange | undefined>();
   const [deliveryDateRange, setDeliveryDateRange] = useState<DateRange | undefined>();
+  const [filtersOpen, setFiltersOpen] = useState(false);
   
   // Applied filters state
   const [appliedFilters, setAppliedFilters] = useState({
@@ -274,120 +278,135 @@ const PurchaseOrdersManagement = () => {
       </div>
 
       {/* Filters */}
-      <Card className="p-4 space-y-4">
-        <h3 className="font-semibold text-lg">Search & Filter Purchase Orders</h3>
-        <div className="flex flex-col lg:flex-row gap-4">
-          <div className="flex-1">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-              <Input
-                placeholder="Search by PO number or vendor..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-              />
-            </div>
-          </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-full lg:w-[180px]">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="draft">Draft</SelectItem>
-              <SelectItem value="pending_approval">Pending Approval</SelectItem>
-              <SelectItem value="approved">Approved</SelectItem>
-              <SelectItem value="sent">Sent</SelectItem>
-              <SelectItem value="acknowledged">Acknowledged</SelectItem>
-              <SelectItem value="in_progress">In Progress</SelectItem>
-              <SelectItem value="delivered">Delivered</SelectItem>
-              <SelectItem value="completed">Completed</SelectItem>
-              <SelectItem value="cancelled">Cancelled</SelectItem>
-            </SelectContent>
-          </Select>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                role="combobox"
-                className="w-full lg:w-[250px] justify-between"
-              >
-                {vendorFilter === "all"
-                  ? "All Vendors"
-                  : vendors?.find((v) => v.id === vendorFilter)?.company_name || "Select vendor..."}
-                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-[250px] p-0 bg-popover z-50" align="start">
-              <Command>
-                <CommandInput placeholder="Search vendor..." />
-                <CommandList>
-                  <CommandEmpty>No vendor found.</CommandEmpty>
-                  <CommandGroup>
-                    <CommandItem
-                      value="all"
-                      onSelect={() => setVendorFilter("all")}
-                    >
-                      <Check
-                        className={cn(
-                          "mr-2 h-4 w-4",
-                          vendorFilter === "all" ? "opacity-100" : "opacity-0"
-                        )}
-                      />
-                      All Vendors
-                    </CommandItem>
-                    {vendors?.map((vendor) => (
-                      <CommandItem
-                        key={vendor.id}
-                        value={vendor.company_name}
-                        onSelect={() => setVendorFilter(vendor.id)}
-                      >
-                        <Check
-                          className={cn(
-                            "mr-2 h-4 w-4",
-                            vendorFilter === vendor.id ? "opacity-100" : "opacity-0"
-                          )}
-                        />
-                        {vendor.company_name}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
-        </div>
-        
-        <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-end">
-          <div className="flex flex-col gap-1">
-            <span className="text-xs text-muted-foreground">PO Date</span>
-            <DatePickerWithRange
-              date={poDateRange}
-              onDateChange={setPoDateRange}
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <span className="text-xs text-muted-foreground">Expected Delivery</span>
-            <DatePickerWithRange
-              date={deliveryDateRange}
-              onDateChange={setDeliveryDateRange}
-            />
-          </div>
-          <div className="flex gap-2">
-            <Button onClick={handleSearch}>
-              <Search className="h-4 w-4 mr-2" />
-              Search
+      <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
+        <Card className="p-4">
+          <CollapsibleTrigger asChild>
+            <Button variant="ghost" className="w-full flex justify-between items-center p-0 h-auto hover:bg-transparent">
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4" />
+                <h3 className="font-semibold text-lg">Search & Filter Purchase Orders</h3>
+                {hasActiveFilters && (
+                  <Badge variant="secondary" className="ml-2">Filters Active</Badge>
+                )}
+              </div>
+              <ChevronDown className={cn("h-5 w-5 transition-transform", filtersOpen && "rotate-180")} />
             </Button>
-            {hasActiveFilters && (
-              <Button variant="outline" onClick={clearFilters}>
-                <X className="h-4 w-4 mr-1" />
-                Clear
-              </Button>
-            )}
-          </div>
-        </div>
-      </Card>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="pt-4 space-y-4">
+            <div className="flex flex-col lg:flex-row gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                  <Input
+                    placeholder="Search by PO number or vendor..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                    onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                  />
+                </div>
+              </div>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-full lg:w-[180px]">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="draft">Draft</SelectItem>
+                  <SelectItem value="pending_approval">Pending Approval</SelectItem>
+                  <SelectItem value="approved">Approved</SelectItem>
+                  <SelectItem value="sent">Sent</SelectItem>
+                  <SelectItem value="acknowledged">Acknowledged</SelectItem>
+                  <SelectItem value="in_progress">In Progress</SelectItem>
+                  <SelectItem value="delivered">Delivered</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    className="w-full lg:w-[250px] justify-between"
+                  >
+                    {vendorFilter === "all"
+                      ? "All Vendors"
+                      : vendors?.find((v) => v.id === vendorFilter)?.company_name || "Select vendor..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[250px] p-0 bg-popover z-50" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search vendor..." />
+                    <CommandList>
+                      <CommandEmpty>No vendor found.</CommandEmpty>
+                      <CommandGroup>
+                        <CommandItem
+                          value="all"
+                          onSelect={() => setVendorFilter("all")}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              vendorFilter === "all" ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          All Vendors
+                        </CommandItem>
+                        {vendors?.map((vendor) => (
+                          <CommandItem
+                            key={vendor.id}
+                            value={vendor.company_name}
+                            onSelect={() => setVendorFilter(vendor.id)}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                vendorFilter === vendor.id ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            {vendor.company_name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
+            
+            <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-end">
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-muted-foreground">PO Date</span>
+                <DatePickerWithRange
+                  date={poDateRange}
+                  onDateChange={setPoDateRange}
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-muted-foreground">Expected Delivery</span>
+                <DatePickerWithRange
+                  date={deliveryDateRange}
+                  onDateChange={setDeliveryDateRange}
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={handleSearch}>
+                  <Search className="h-4 w-4 mr-2" />
+                  Search
+                </Button>
+                {hasActiveFilters && (
+                  <Button variant="outline" onClick={clearFilters}>
+                    <X className="h-4 w-4 mr-1" />
+                    Clear
+                  </Button>
+                )}
+              </div>
+            </div>
+          </CollapsibleContent>
+        </Card>
+      </Collapsible>
 
       {/* Purchase Orders List */}
       <div className="space-y-4">
