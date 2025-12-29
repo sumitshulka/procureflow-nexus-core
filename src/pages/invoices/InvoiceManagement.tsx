@@ -23,6 +23,14 @@ const InvoiceManagement = () => {
   const [vendorFilter, setVendorFilter] = useState("all");
   const [invoiceDateRange, setInvoiceDateRange] = useState<DateRange | undefined>();
   const [dueDateRange, setDueDateRange] = useState<DateRange | undefined>();
+  
+  // Applied filters state - only updates when Search is clicked
+  const [appliedFilters, setAppliedFilters] = useState({
+    searchTerm: "",
+    vendorFilter: "all",
+    invoiceDateRange: undefined as DateRange | undefined,
+    dueDateRange: undefined as DateRange | undefined,
+  });
 
   const { data: invoices, isLoading, refetch } = useQuery({
     queryKey: ["invoices", statusFilter],
@@ -127,37 +135,46 @@ const InvoiceManagement = () => {
 
   const filteredInvoices = useMemo(() => {
     return invoices?.filter(invoice => {
-      // Text search filter
-      const matchesSearch = searchTerm === "" ||
-        invoice.invoice_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        invoice.vendor?.company_name?.toLowerCase().includes(searchTerm.toLowerCase());
+      // Text search filter - uses applied filters
+      const matchesSearch = appliedFilters.searchTerm === "" ||
+        invoice.invoice_number.toLowerCase().includes(appliedFilters.searchTerm.toLowerCase()) ||
+        invoice.vendor?.company_name?.toLowerCase().includes(appliedFilters.searchTerm.toLowerCase());
 
-      // Vendor filter
-      const matchesVendor = vendorFilter === "all" || invoice.vendor_id === vendorFilter;
+      // Vendor filter - uses applied filters
+      const matchesVendor = appliedFilters.vendorFilter === "all" || invoice.vendor_id === appliedFilters.vendorFilter;
 
-      // Invoice date range filter
+      // Invoice date range filter - uses applied filters
       let matchesInvoiceDate = true;
-      if (invoiceDateRange?.from) {
+      if (appliedFilters.invoiceDateRange?.from) {
         const invoiceDate = new Date(invoice.invoice_date);
-        matchesInvoiceDate = invoiceDate >= invoiceDateRange.from;
-        if (invoiceDateRange.to) {
-          matchesInvoiceDate = matchesInvoiceDate && invoiceDate <= invoiceDateRange.to;
+        matchesInvoiceDate = invoiceDate >= appliedFilters.invoiceDateRange.from;
+        if (appliedFilters.invoiceDateRange.to) {
+          matchesInvoiceDate = matchesInvoiceDate && invoiceDate <= appliedFilters.invoiceDateRange.to;
         }
       }
 
-      // Due date range filter
+      // Due date range filter - uses applied filters
       let matchesDueDate = true;
-      if (dueDateRange?.from && invoice.due_date) {
+      if (appliedFilters.dueDateRange?.from && invoice.due_date) {
         const dueDate = new Date(invoice.due_date);
-        matchesDueDate = dueDate >= dueDateRange.from;
-        if (dueDateRange.to) {
-          matchesDueDate = matchesDueDate && dueDate <= dueDateRange.to;
+        matchesDueDate = dueDate >= appliedFilters.dueDateRange.from;
+        if (appliedFilters.dueDateRange.to) {
+          matchesDueDate = matchesDueDate && dueDate <= appliedFilters.dueDateRange.to;
         }
       }
 
       return matchesSearch && matchesVendor && matchesInvoiceDate && matchesDueDate;
     });
-  }, [invoices, searchTerm, vendorFilter, invoiceDateRange, dueDateRange]);
+  }, [invoices, appliedFilters]);
+
+  const handleSearch = () => {
+    setAppliedFilters({
+      searchTerm,
+      vendorFilter,
+      invoiceDateRange,
+      dueDateRange,
+    });
+  };
 
   const clearFilters = () => {
     setSearchTerm("");
@@ -165,9 +182,15 @@ const InvoiceManagement = () => {
     setVendorFilter("all");
     setInvoiceDateRange(undefined);
     setDueDateRange(undefined);
+    setAppliedFilters({
+      searchTerm: "",
+      vendorFilter: "all",
+      invoiceDateRange: undefined,
+      dueDateRange: undefined,
+    });
   };
 
-  const hasActiveFilters = searchTerm !== "" || statusFilter !== "all" || vendorFilter !== "all" || invoiceDateRange || dueDateRange;
+  const hasActiveFilters = appliedFilters.searchTerm !== "" || appliedFilters.vendorFilter !== "all" || appliedFilters.invoiceDateRange || appliedFilters.dueDateRange;
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, { variant: any; icon: any }> = {
@@ -192,10 +215,16 @@ const InvoiceManagement = () => {
 
   return (
     <div className="container mx-auto py-6 space-y-6">
-      <PageHeader
-        title="Invoice Management"
-        description="Manage vendor invoices and payment processing"
-      />
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <PageHeader
+          title="Invoice Management"
+          description="Manage vendor invoices and payment processing"
+        />
+        <Button onClick={() => navigate("/invoices/create")} size="lg">
+          <Plus className="h-4 w-4 mr-2" />
+          Create Invoice
+        </Button>
+      </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
@@ -233,6 +262,7 @@ const InvoiceManagement = () => {
 
       {/* Filters */}
       <Card className="p-4 space-y-4">
+        <h3 className="font-semibold text-lg">Search & Filter Invoices</h3>
         <div className="flex flex-col lg:flex-row gap-4">
           <div className="flex-1">
             <div className="relative">
@@ -242,6 +272,7 @@ const InvoiceManagement = () => {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
               />
             </div>
           </div>
@@ -310,13 +341,9 @@ const InvoiceManagement = () => {
               </Command>
             </PopoverContent>
           </Popover>
-          <Button onClick={() => navigate("/invoices/create")}>
-            <Plus className="h-4 w-4 mr-2" />
-            Create Invoice
-          </Button>
         </div>
         
-        <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center">
+        <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-end">
           <div className="flex flex-col gap-1">
             <span className="text-xs text-muted-foreground">Invoice Date</span>
             <DatePickerWithRange
@@ -331,12 +358,18 @@ const InvoiceManagement = () => {
               onDateChange={setDueDateRange}
             />
           </div>
-          {hasActiveFilters && (
-            <Button variant="ghost" size="sm" onClick={clearFilters} className="lg:mt-5">
-              <X className="h-4 w-4 mr-1" />
-              Clear Filters
+          <div className="flex gap-2">
+            <Button onClick={handleSearch}>
+              <Search className="h-4 w-4 mr-2" />
+              Search
             </Button>
-          )}
+            {hasActiveFilters && (
+              <Button variant="outline" onClick={clearFilters}>
+                <X className="h-4 w-4 mr-1" />
+                Clear
+              </Button>
+            )}
+          </div>
         </div>
       </Card>
 
