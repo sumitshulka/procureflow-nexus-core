@@ -476,12 +476,12 @@ const InvoiceManagement = () => {
                   )}
                 </div>
                 <Button
+                  size="icon"
                   onClick={() => navigate(`/invoices/${invoice.id}`)}
-                  className="group relative overflow-hidden bg-primary hover:bg-primary/90 text-primary-foreground shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105"
+                  title="View Details"
                 >
-                  <Eye className="h-4 w-4 mr-2 transition-transform group-hover:scale-110" />
-                  <span className="font-medium">View Details</span>
-                  <ArrowRight className="h-4 w-4 ml-2 transition-transform group-hover:translate-x-1" />
+                  <Eye className="h-4 w-4" />
                 </Button>
               </div>
             </Card>
