@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
@@ -6,16 +6,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, FileText, DollarSign, CheckCircle, XCircle, Clock, AlertTriangle, ArrowRight, Eye } from "lucide-react";
+import { Plus, Search, FileText, DollarSign, CheckCircle, XCircle, Clock, AlertTriangle, ArrowRight, Eye, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import PageHeader from "@/components/common/PageHeader";
 import { formatCurrencyAmount } from "@/utils/numberFormatting";
-
+import { DatePickerWithRange } from "@/components/ui/date-picker";
+import { DateRange } from "react-day-picker";
 
 const InvoiceManagement = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [vendorFilter, setVendorFilter] = useState("all");
+  const [invoiceDateRange, setInvoiceDateRange] = useState<DateRange | undefined>();
+  const [dueDateRange, setDueDateRange] = useState<DateRange | undefined>();
 
   const { data: invoices, isLoading, refetch } = useQuery({
     queryKey: ["invoices", statusFilter],
@@ -104,10 +108,63 @@ const InvoiceManagement = () => {
     },
   });
 
-  const filteredInvoices = invoices?.filter(invoice =>
-    invoice.invoice_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    invoice.vendor?.company_name?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Fetch vendors for filter dropdown
+  const { data: vendors } = useQuery({
+    queryKey: ["vendors-for-filter"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("vendor_registrations")
+        .select("id, company_name")
+        .eq("status", "approved")
+        .order("company_name");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const filteredInvoices = useMemo(() => {
+    return invoices?.filter(invoice => {
+      // Text search filter
+      const matchesSearch = searchTerm === "" ||
+        invoice.invoice_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        invoice.vendor?.company_name?.toLowerCase().includes(searchTerm.toLowerCase());
+
+      // Vendor filter
+      const matchesVendor = vendorFilter === "all" || invoice.vendor_id === vendorFilter;
+
+      // Invoice date range filter
+      let matchesInvoiceDate = true;
+      if (invoiceDateRange?.from) {
+        const invoiceDate = new Date(invoice.invoice_date);
+        matchesInvoiceDate = invoiceDate >= invoiceDateRange.from;
+        if (invoiceDateRange.to) {
+          matchesInvoiceDate = matchesInvoiceDate && invoiceDate <= invoiceDateRange.to;
+        }
+      }
+
+      // Due date range filter
+      let matchesDueDate = true;
+      if (dueDateRange?.from && invoice.due_date) {
+        const dueDate = new Date(invoice.due_date);
+        matchesDueDate = dueDate >= dueDateRange.from;
+        if (dueDateRange.to) {
+          matchesDueDate = matchesDueDate && dueDate <= dueDateRange.to;
+        }
+      }
+
+      return matchesSearch && matchesVendor && matchesInvoiceDate && matchesDueDate;
+    });
+  }, [invoices, searchTerm, vendorFilter, invoiceDateRange, dueDateRange]);
+
+  const clearFilters = () => {
+    setSearchTerm("");
+    setStatusFilter("all");
+    setVendorFilter("all");
+    setInvoiceDateRange(undefined);
+    setDueDateRange(undefined);
+  };
+
+  const hasActiveFilters = searchTerm !== "" || statusFilter !== "all" || vendorFilter !== "all" || invoiceDateRange || dueDateRange;
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, { variant: any; icon: any }> = {
@@ -172,8 +229,8 @@ const InvoiceManagement = () => {
       </div>
 
       {/* Filters */}
-      <Card className="p-4">
-        <div className="flex flex-col md:flex-row gap-4">
+      <Card className="p-4 space-y-4">
+        <div className="flex flex-col lg:flex-row gap-4">
           <div className="flex-1">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -186,8 +243,8 @@ const InvoiceManagement = () => {
             </div>
           </div>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-full md:w-[200px]">
-              <SelectValue />
+            <SelectTrigger className="w-full lg:w-[180px]">
+              <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Status</SelectItem>
@@ -199,10 +256,46 @@ const InvoiceManagement = () => {
               <SelectItem value="paid">Paid</SelectItem>
             </SelectContent>
           </Select>
+          <Select value={vendorFilter} onValueChange={setVendorFilter}>
+            <SelectTrigger className="w-full lg:w-[200px]">
+              <SelectValue placeholder="Vendor" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Vendors</SelectItem>
+              {vendors?.map((vendor) => (
+                <SelectItem key={vendor.id} value={vendor.id}>
+                  {vendor.company_name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Button onClick={() => navigate("/invoices/create")}>
             <Plus className="h-4 w-4 mr-2" />
             Create Invoice
           </Button>
+        </div>
+        
+        <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center">
+          <div className="flex flex-col gap-1">
+            <span className="text-xs text-muted-foreground">Invoice Date</span>
+            <DatePickerWithRange
+              date={invoiceDateRange}
+              onDateChange={setInvoiceDateRange}
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="text-xs text-muted-foreground">Due Date</span>
+            <DatePickerWithRange
+              date={dueDateRange}
+              onDateChange={setDueDateRange}
+            />
+          </div>
+          {hasActiveFilters && (
+            <Button variant="ghost" size="sm" onClick={clearFilters} className="lg:mt-5">
+              <X className="h-4 w-4 mr-1" />
+              Clear Filters
+            </Button>
+          )}
         </div>
       </Card>
 
