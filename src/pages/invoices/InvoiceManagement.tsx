@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, FileText, DollarSign, CheckCircle, XCircle, Clock, AlertTriangle, ArrowRight, Eye, X, ChevronsUpDown, Check } from "lucide-react";
+import { Plus, Search, FileText, DollarSign, CheckCircle, XCircle, Clock, AlertTriangle, ArrowRight, Eye, X, ChevronsUpDown, Check, CalendarClock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import PageHeader from "@/components/common/PageHeader";
 import { formatCurrencyAmount } from "@/utils/numberFormatting";
@@ -15,6 +15,7 @@ import { DateRange } from "react-day-picker";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
+import { differenceInDays } from "date-fns";
 
 const InvoiceManagement = () => {
   const navigate = useNavigate();
@@ -392,7 +393,7 @@ const InvoiceManagement = () => {
                       <Badge variant="outline">Non-PO Invoice</Badge>
                     )}
                   </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
                     <div>
                       <span className="text-muted-foreground">Vendor:</span>
                       <p className="font-medium">{invoice.vendor?.company_name}</p>
@@ -412,6 +413,59 @@ const InvoiceManagement = () => {
                     <div>
                       <span className="text-muted-foreground">PO Number:</span>
                       <p className="font-medium">{invoice.purchase_order?.po_number || "N/A"}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Due Status:</span>
+                      {invoice.due_date ? (
+                        (() => {
+                          const today = new Date();
+                          today.setHours(0, 0, 0, 0);
+                          const dueDate = new Date(invoice.due_date);
+                          dueDate.setHours(0, 0, 0, 0);
+                          const daysUntilDue = differenceInDays(dueDate, today);
+                          
+                          if (invoice.status === 'paid') {
+                            return (
+                              <p className="font-medium text-green-600 flex items-center gap-1">
+                                <CheckCircle className="h-3 w-3" />
+                                Paid
+                              </p>
+                            );
+                          }
+                          
+                          if (daysUntilDue < 0) {
+                            return (
+                              <p className="font-medium text-destructive flex items-center gap-1">
+                                <AlertTriangle className="h-3 w-3" />
+                                {Math.abs(daysUntilDue)} day{Math.abs(daysUntilDue) !== 1 ? 's' : ''} overdue
+                              </p>
+                            );
+                          } else if (daysUntilDue === 0) {
+                            return (
+                              <p className="font-medium text-amber-600 flex items-center gap-1">
+                                <CalendarClock className="h-3 w-3" />
+                                Due today
+                              </p>
+                            );
+                          } else if (daysUntilDue <= 7) {
+                            return (
+                              <p className="font-medium text-amber-600 flex items-center gap-1">
+                                <CalendarClock className="h-3 w-3" />
+                                {daysUntilDue} day{daysUntilDue !== 1 ? 's' : ''} left
+                              </p>
+                            );
+                          } else {
+                            return (
+                              <p className="font-medium text-green-600 flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                {daysUntilDue} days left
+                              </p>
+                            );
+                          }
+                        })()
+                      ) : (
+                        <p className="font-medium text-muted-foreground">No due date</p>
+                      )}
                     </div>
                   </div>
                   {invoice.disputed_reason && (
