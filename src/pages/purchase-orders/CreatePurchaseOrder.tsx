@@ -19,6 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { CURRENCIES, getCurrencySymbol } from "@/utils/currencyUtils";
+import { parseAddress } from "@/types/vendor";
 
 const poItemSchema = z.object({
   product_id: z.string().optional(),
@@ -466,18 +467,21 @@ const CreatePurchaseOrder = () => {
                                 <p className="font-medium mt-1">{selectedVendor.signatory_name}</p>
                               </div>
                             )}
-                            {selectedVendor.registered_address && (
-                              <div>
-                                <span className="text-muted-foreground">Address:</span>
-                                <p className="font-medium mt-1">
-                                  {selectedVendor.registered_address.street}, {selectedVendor.registered_address.city}
-                                  <br />
-                                  {selectedVendor.registered_address.state}, {selectedVendor.registered_address.postal_code}
-                                  <br />
-                                  {selectedVendor.registered_address.country}
-                                </p>
-                              </div>
-                            )}
+                            {selectedVendor.registered_address && (() => {
+                              const addr = parseAddress(selectedVendor.registered_address);
+                              return (addr.street || addr.city) ? (
+                                <div>
+                                  <span className="text-muted-foreground">Address:</span>
+                                  <p className="font-medium mt-1">
+                                    {addr.street && <>{addr.street}<br /></>}
+                                    {addr.city && <>{addr.city}</>}
+                                    {addr.state && <>, {addr.state}</>}
+                                    {addr.postal_code && <> - {addr.postal_code}</>}
+                                    {addr.country && <><br />{addr.country}</>}
+                                  </p>
+                                </div>
+                              ) : null;
+                            })()}
                             {(selectedVendor.gst_number || selectedVendor.pan_number) && (
                               <div>
                                 <span className="text-muted-foreground">Tax ID:</span>
