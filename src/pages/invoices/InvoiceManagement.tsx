@@ -77,14 +77,14 @@ const InvoiceManagement = () => {
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [refetch]);
 
-  const { data: stats } = useQuery({
+  const { data: stats, refetch: refetchStats } = useQuery({
     queryKey: ["invoice-stats"],
     queryFn: async () => {
       // Fetch organization base currency
       const { data: orgSettings } = await supabase
         .from("organization_settings")
         .select("base_currency")
-        .single();
+        .maybeSingle();
       
       const baseCurrency = orgSettings?.base_currency || "USD";
       
@@ -94,15 +94,15 @@ const InvoiceManagement = () => {
       
       if (error) throw error;
 
-      const draft = data.filter(i => i.status === "draft").length;
-      const pendingApproval = data.filter(i => i.status === "pending_approval").length;
-      const approved = data.filter(i => i.status === "approved").length;
-      const paid = data.filter(i => i.status === "paid").length;
-      const disputed = data.filter(i => i.status === "disputed").length;
-      const rejected = data.filter(i => i.status === "rejected").length;
+      const draft = data?.filter(i => i.status === "draft").length || 0;
+      const pendingApproval = data?.filter(i => i.status === "pending_approval").length || 0;
+      const approved = data?.filter(i => i.status === "approved").length || 0;
+      const paid = data?.filter(i => i.status === "paid").length || 0;
+      const disputed = data?.filter(i => i.status === "disputed").length || 0;
+      const rejected = data?.filter(i => i.status === "rejected").length || 0;
       
       // Group totals by currency
-      const currencyTotals = data.reduce((acc, invoice) => {
+      const currencyTotals = (data || []).reduce((acc, invoice) => {
         const currency = invoice.currency || baseCurrency;
         if (!acc[currency]) {
           acc[currency] = 0;
@@ -118,11 +118,13 @@ const InvoiceManagement = () => {
         paid,
         disputed, 
         rejected,
-        total: data.length,
+        total: data?.length || 0,
         currencyTotals,
         baseCurrency 
       };
     },
+    staleTime: 0,
+    refetchOnMount: true,
   });
 
   // Fetch vendors for filter dropdown
