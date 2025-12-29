@@ -6,12 +6,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, FileText, DollarSign, CheckCircle, XCircle, Clock, AlertTriangle, ArrowRight, Eye, X } from "lucide-react";
+import { Plus, Search, FileText, DollarSign, CheckCircle, XCircle, Clock, AlertTriangle, ArrowRight, Eye, X, ChevronsUpDown, Check } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import PageHeader from "@/components/common/PageHeader";
 import { formatCurrencyAmount } from "@/utils/numberFormatting";
 import { DatePickerWithRange } from "@/components/ui/date-picker";
 import { DateRange } from "react-day-picker";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { cn } from "@/lib/utils";
 
 const InvoiceManagement = () => {
   const navigate = useNavigate();
@@ -256,19 +259,57 @@ const InvoiceManagement = () => {
               <SelectItem value="paid">Paid</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={vendorFilter} onValueChange={setVendorFilter}>
-            <SelectTrigger className="w-full lg:w-[200px]">
-              <SelectValue placeholder="Vendor" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Vendors</SelectItem>
-              {vendors?.map((vendor) => (
-                <SelectItem key={vendor.id} value={vendor.id}>
-                  {vendor.company_name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                className="w-full lg:w-[250px] justify-between"
+              >
+                {vendorFilter === "all"
+                  ? "All Vendors"
+                  : vendors?.find((v) => v.id === vendorFilter)?.company_name || "Select vendor..."}
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[250px] p-0 bg-popover z-50" align="start">
+              <Command>
+                <CommandInput placeholder="Search vendor..." />
+                <CommandList>
+                  <CommandEmpty>No vendor found.</CommandEmpty>
+                  <CommandGroup>
+                    <CommandItem
+                      value="all"
+                      onSelect={() => setVendorFilter("all")}
+                    >
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          vendorFilter === "all" ? "opacity-100" : "opacity-0"
+                        )}
+                      />
+                      All Vendors
+                    </CommandItem>
+                    {vendors?.map((vendor) => (
+                      <CommandItem
+                        key={vendor.id}
+                        value={vendor.company_name}
+                        onSelect={() => setVendorFilter(vendor.id)}
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 h-4 w-4",
+                            vendorFilter === vendor.id ? "opacity-100" : "opacity-0"
+                          )}
+                        />
+                        {vendor.company_name}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
           <Button onClick={() => navigate("/invoices/create")}>
             <Plus className="h-4 w-4 mr-2" />
             Create Invoice
