@@ -53,6 +53,7 @@ import CreateInvoice from '@/pages/invoices/CreateInvoice';
 import InvoiceDetail from '@/pages/invoices/InvoiceDetail';
 
 // Purchase Order Pages
+import PurchaseOrdersManagement from '@/pages/purchase-orders/PurchaseOrdersManagement';
 import CreatePurchaseOrder from '@/pages/purchase-orders/CreatePurchaseOrder';
 import PendingPurchaseOrders from '@/pages/purchase-orders/PendingPurchaseOrders';
 import ActivePurchaseOrders from '@/pages/purchase-orders/ActivePurchaseOrders';
@@ -455,6 +456,14 @@ function App() {
             }
           />
 
+          <Route
+            path="/purchase-orders"
+            element={
+              <ProtectedRoute requiredRole={UserRole.ADMIN}>
+                <Layout><PurchaseOrdersManagement /></Layout>
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/purchase-orders/create"
             element={
