@@ -116,24 +116,6 @@ const AppSidebar = () => {
       icon: ShoppingCart,
       href: "/purchase-orders",
       roles: ["admin", "procurement_officer"],
-      subItems: [
-        {
-          title: "Create PO",
-          href: "/purchase-orders/create",
-        },
-        {
-          title: "Pending POs",
-          href: "/purchase-orders/pending",
-        },
-        {
-          title: "Active POs",
-          href: "/purchase-orders/active",
-        },
-        {
-          title: "PO History",
-          href: "/purchase-orders/history",
-        },
-      ],
     },
     {
       title: "Invoice Management",
