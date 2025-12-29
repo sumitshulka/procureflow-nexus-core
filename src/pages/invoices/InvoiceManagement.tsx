@@ -94,10 +94,12 @@ const InvoiceManagement = () => {
       
       if (error) throw error;
 
-      const submitted = data.filter(i => i.status === "submitted").length;
-      const underApproval = data.filter(i => i.status === "under_approval").length;
+      const draft = data.filter(i => i.status === "draft").length;
+      const pendingApproval = data.filter(i => i.status === "pending_approval").length;
       const approved = data.filter(i => i.status === "approved").length;
+      const paid = data.filter(i => i.status === "paid").length;
       const disputed = data.filter(i => i.status === "disputed").length;
+      const rejected = data.filter(i => i.status === "rejected").length;
       
       // Group totals by currency
       const currencyTotals = data.reduce((acc, invoice) => {
@@ -110,10 +112,13 @@ const InvoiceManagement = () => {
       }, {} as Record<string, number>);
 
       return { 
-        submitted, 
-        underApproval, 
+        draft,
+        pendingApproval, 
         approved, 
+        paid,
         disputed, 
+        rejected,
+        total: data.length,
         currencyTotals,
         baseCurrency 
       };
@@ -228,22 +233,26 @@ const InvoiceManagement = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
         <Card className="p-4">
-          <div className="text-sm text-muted-foreground">Submitted</div>
-          <div className="text-2xl font-bold">{stats?.submitted || 0}</div>
+          <div className="text-sm text-muted-foreground">Total</div>
+          <div className="text-2xl font-bold">{stats?.total || 0}</div>
         </Card>
         <Card className="p-4">
-          <div className="text-sm text-muted-foreground">Under Approval</div>
-          <div className="text-2xl font-bold">{stats?.underApproval || 0}</div>
+          <div className="text-sm text-muted-foreground">Draft</div>
+          <div className="text-2xl font-bold">{stats?.draft || 0}</div>
+        </Card>
+        <Card className="p-4">
+          <div className="text-sm text-muted-foreground">Pending Approval</div>
+          <div className="text-2xl font-bold text-yellow-600">{stats?.pendingApproval || 0}</div>
         </Card>
         <Card className="p-4">
           <div className="text-sm text-muted-foreground">Approved</div>
-          <div className="text-2xl font-bold">{stats?.approved || 0}</div>
+          <div className="text-2xl font-bold text-green-600">{stats?.approved || 0}</div>
         </Card>
         <Card className="p-4">
-          <div className="text-sm text-muted-foreground">Disputed</div>
-          <div className="text-2xl font-bold text-destructive">{stats?.disputed || 0}</div>
+          <div className="text-sm text-muted-foreground">Paid</div>
+          <div className="text-2xl font-bold text-blue-600">{stats?.paid || 0}</div>
         </Card>
         <Card className="p-4">
           <div className="text-sm text-muted-foreground mb-2">Total Value</div>
