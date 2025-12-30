@@ -864,6 +864,170 @@ export type Database = {
         }
         Relationships: []
       }
+      erp_integrations: {
+        Row: {
+          auth_config: Json | null
+          auth_type: string
+          auto_sync: boolean | null
+          base_url: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          endpoint_mappings: Json | null
+          erp_type: Database["public"]["Enums"]["erp_type"]
+          field_mappings: Json | null
+          id: string
+          is_active: boolean | null
+          last_sync_at: string | null
+          last_sync_status:
+            | Database["public"]["Enums"]["erp_sync_status"]
+            | null
+          name: string
+          request_headers: Json | null
+          request_timeout_seconds: number | null
+          retry_attempts: number | null
+          sync_frequency_minutes: number | null
+          sync_invoices: boolean | null
+          sync_products: boolean | null
+          sync_purchase_orders: boolean | null
+          sync_vendors: boolean | null
+          updated_at: string
+        }
+        Insert: {
+          auth_config?: Json | null
+          auth_type?: string
+          auto_sync?: boolean | null
+          base_url: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          endpoint_mappings?: Json | null
+          erp_type: Database["public"]["Enums"]["erp_type"]
+          field_mappings?: Json | null
+          id?: string
+          is_active?: boolean | null
+          last_sync_at?: string | null
+          last_sync_status?:
+            | Database["public"]["Enums"]["erp_sync_status"]
+            | null
+          name: string
+          request_headers?: Json | null
+          request_timeout_seconds?: number | null
+          retry_attempts?: number | null
+          sync_frequency_minutes?: number | null
+          sync_invoices?: boolean | null
+          sync_products?: boolean | null
+          sync_purchase_orders?: boolean | null
+          sync_vendors?: boolean | null
+          updated_at?: string
+        }
+        Update: {
+          auth_config?: Json | null
+          auth_type?: string
+          auto_sync?: boolean | null
+          base_url?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          endpoint_mappings?: Json | null
+          erp_type?: Database["public"]["Enums"]["erp_type"]
+          field_mappings?: Json | null
+          id?: string
+          is_active?: boolean | null
+          last_sync_at?: string | null
+          last_sync_status?:
+            | Database["public"]["Enums"]["erp_sync_status"]
+            | null
+          name?: string
+          request_headers?: Json | null
+          request_timeout_seconds?: number | null
+          retry_attempts?: number | null
+          sync_frequency_minutes?: number | null
+          sync_invoices?: boolean | null
+          sync_products?: boolean | null
+          sync_purchase_orders?: boolean | null
+          sync_vendors?: boolean | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      erp_sync_logs: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          duration_ms: number | null
+          entity_id: string
+          entity_reference: string | null
+          entity_type: Database["public"]["Enums"]["erp_sync_entity"]
+          erp_reference_id: string | null
+          erp_reference_number: string | null
+          error_details: Json | null
+          error_message: string | null
+          id: string
+          integration_id: string
+          request_payload: Json | null
+          response_code: number | null
+          response_payload: Json | null
+          retry_count: number | null
+          started_at: string | null
+          status: Database["public"]["Enums"]["erp_sync_status"]
+          sync_direction: string
+          triggered_by: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          entity_id: string
+          entity_reference?: string | null
+          entity_type: Database["public"]["Enums"]["erp_sync_entity"]
+          erp_reference_id?: string | null
+          erp_reference_number?: string | null
+          error_details?: Json | null
+          error_message?: string | null
+          id?: string
+          integration_id: string
+          request_payload?: Json | null
+          response_code?: number | null
+          response_payload?: Json | null
+          retry_count?: number | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["erp_sync_status"]
+          sync_direction?: string
+          triggered_by?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          entity_id?: string
+          entity_reference?: string | null
+          entity_type?: Database["public"]["Enums"]["erp_sync_entity"]
+          erp_reference_id?: string | null
+          erp_reference_number?: string | null
+          error_details?: Json | null
+          error_message?: string | null
+          id?: string
+          integration_id?: string
+          request_payload?: Json | null
+          response_code?: number | null
+          response_payload?: Json | null
+          retry_count?: number | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["erp_sync_status"]
+          sync_direction?: string
+          triggered_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "erp_sync_logs_integration_id_fkey"
+            columns: ["integration_id"]
+            isOneToOne: false
+            referencedRelation: "erp_integrations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory_items: {
         Row: {
           id: string
@@ -4527,6 +4691,24 @@ export type Database = {
         | "rejected"
       budget_cycle_status: "draft" | "open" | "closed" | "archived"
       budget_period_type: "monthly" | "quarterly"
+      erp_sync_entity: "invoice" | "purchase_order" | "vendor" | "product"
+      erp_sync_status:
+        | "pending"
+        | "in_progress"
+        | "success"
+        | "failed"
+        | "partial"
+      erp_type:
+        | "sap_s4hana"
+        | "sap_business_one"
+        | "oracle_netsuite"
+        | "oracle_fusion"
+        | "microsoft_dynamics_365"
+        | "microsoft_dynamics_nav"
+        | "sage_intacct"
+        | "quickbooks_enterprise"
+        | "tally_prime"
+        | "custom_rest"
       request_priority: "low" | "medium" | "high" | "urgent"
       request_status:
         | "draft"
@@ -4687,6 +4869,26 @@ export const Constants = {
       ],
       budget_cycle_status: ["draft", "open", "closed", "archived"],
       budget_period_type: ["monthly", "quarterly"],
+      erp_sync_entity: ["invoice", "purchase_order", "vendor", "product"],
+      erp_sync_status: [
+        "pending",
+        "in_progress",
+        "success",
+        "failed",
+        "partial",
+      ],
+      erp_type: [
+        "sap_s4hana",
+        "sap_business_one",
+        "oracle_netsuite",
+        "oracle_fusion",
+        "microsoft_dynamics_365",
+        "microsoft_dynamics_nav",
+        "sage_intacct",
+        "quickbooks_enterprise",
+        "tally_prime",
+        "custom_rest",
+      ],
       request_priority: ["low", "medium", "high", "urgent"],
       request_status: [
         "draft",
