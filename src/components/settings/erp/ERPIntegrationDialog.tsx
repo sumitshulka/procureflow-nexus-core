@@ -208,19 +208,36 @@ const ERPIntegrationDialog: React.FC<ERPIntegrationDialogProps> = ({
 
   const saveMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      const payload = {
-        ...data,
-        created_by: user?.id,
-      };
-
       if (isEditing) {
         const { error } = await supabase
           .from("erp_integrations")
-          .update(payload)
+          .update({
+            ...data,
+            created_by: user?.id,
+          })
           .eq("id", integration.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("erp_integrations").insert(payload);
+        const { error } = await supabase.from("erp_integrations").insert({
+          name: data.name,
+          erp_type: data.erp_type,
+          base_url: data.base_url,
+          description: data.description,
+          auth_type: data.auth_type,
+          auth_config: data.auth_config,
+          sync_invoices: data.sync_invoices,
+          sync_purchase_orders: data.sync_purchase_orders,
+          sync_vendors: data.sync_vendors,
+          sync_products: data.sync_products,
+          auto_sync: data.auto_sync,
+          sync_frequency_minutes: data.sync_frequency_minutes,
+          request_timeout_seconds: data.request_timeout_seconds,
+          retry_attempts: data.retry_attempts,
+          endpoint_mappings: data.endpoint_mappings,
+          field_mappings: data.field_mappings,
+          request_headers: data.request_headers,
+          created_by: user?.id,
+        });
         if (error) throw error;
       }
     },
