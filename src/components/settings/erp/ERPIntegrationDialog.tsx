@@ -55,6 +55,314 @@ const AUTH_TYPES = [
   { value: "oauth2", label: "OAuth 2.0" },
 ];
 
+// Type definitions for presets
+type EndpointMapping = {
+  invoice: { create: string; update: string; method: string };
+  purchase_order: { create: string; update: string; method: string };
+};
+
+type FieldMapping = {
+  invoice: Record<string, string>;
+  purchase_order: Record<string, string>;
+};
+
+type ERPPreset = {
+  description: string;
+  auth_type: string;
+  base_url_template: string;
+  endpoint_mappings: EndpointMapping;
+  field_mappings: FieldMapping;
+  request_headers: Record<string, string>;
+};
+
+// ERP-specific presets with typical configurations
+const ERP_PRESETS: Record<string, ERPPreset> = {
+  sap_s4hana: {
+    description: "SAP S/4HANA Cloud or On-Premise integration using OData APIs",
+    auth_type: "oauth2",
+    base_url_template: "https://{your-sap-host}/sap/opu/odata/sap",
+    endpoint_mappings: {
+      invoice: { create: "/API_SUPPLIERINVOICE_PROCESS_SRV/A_SupplierInvoice", update: "/API_SUPPLIERINVOICE_PROCESS_SRV/A_SupplierInvoice('{id}')", method: "POST" },
+      purchase_order: { create: "/API_PURCHASEORDER_PROCESS_SRV/A_PurchaseOrder", update: "/API_PURCHASEORDER_PROCESS_SRV/A_PurchaseOrder('{id}')", method: "POST" },
+    },
+    field_mappings: {
+      invoice: {
+        invoice_number: "SupplierInvoice",
+        vendor_id: "InvoicingParty",
+        total_amount: "InvoiceGrossAmount",
+        tax_amount: "TaxAmount",
+        invoice_date: "DocumentDate",
+        due_date: "DueCalculationBaseDate",
+        status: "SupplierInvoiceStatus",
+      },
+      purchase_order: {
+        po_number: "PurchaseOrder",
+        vendor_id: "Supplier",
+        total_amount: "TotalNetAmount",
+        po_date: "PurchaseOrderDate",
+        status: "PurchasingProcessingStatus",
+      },
+    },
+    request_headers: { "Content-Type": "application/json", "Accept": "application/json" },
+  },
+  sap_business_one: {
+    description: "SAP Business One integration using Service Layer REST API",
+    auth_type: "basic",
+    base_url_template: "https://{your-server}:50000/b1s/v1",
+    endpoint_mappings: {
+      invoice: { create: "/PurchaseInvoices", update: "/PurchaseInvoices({id})", method: "POST" },
+      purchase_order: { create: "/PurchaseOrders", update: "/PurchaseOrders({id})", method: "POST" },
+    },
+    field_mappings: {
+      invoice: {
+        invoice_number: "DocNum",
+        vendor_id: "CardCode",
+        total_amount: "DocTotal",
+        tax_amount: "VatSum",
+        invoice_date: "DocDate",
+        due_date: "DocDueDate",
+        status: "DocumentStatus",
+      },
+      purchase_order: {
+        po_number: "DocNum",
+        vendor_id: "CardCode",
+        total_amount: "DocTotal",
+        po_date: "DocDate",
+        status: "DocumentStatus",
+      },
+    },
+    request_headers: { "Content-Type": "application/json", "Accept": "application/json" },
+  },
+  oracle_netsuite: {
+    description: "Oracle NetSuite integration using SuiteTalk REST Web Services",
+    auth_type: "oauth2",
+    base_url_template: "https://{account-id}.suitetalk.api.netsuite.com/services/rest/record/v1",
+    endpoint_mappings: {
+      invoice: { create: "/vendorBill", update: "/vendorBill/{id}", method: "POST" },
+      purchase_order: { create: "/purchaseOrder", update: "/purchaseOrder/{id}", method: "POST" },
+    },
+    field_mappings: {
+      invoice: {
+        invoice_number: "tranId",
+        vendor_id: "entity",
+        total_amount: "total",
+        tax_amount: "taxTotal",
+        invoice_date: "tranDate",
+        due_date: "dueDate",
+        status: "status",
+      },
+      purchase_order: {
+        po_number: "tranId",
+        vendor_id: "entity",
+        total_amount: "total",
+        po_date: "tranDate",
+        status: "status",
+      },
+    },
+    request_headers: { "Content-Type": "application/json", "Accept": "application/json", "prefer": "transient" },
+  },
+  oracle_fusion: {
+    description: "Oracle Fusion Cloud integration using REST APIs",
+    auth_type: "oauth2",
+    base_url_template: "https://{your-host}/fscmRestApi/resources/11.13.18.05",
+    endpoint_mappings: {
+      invoice: { create: "/payablesInvoices", update: "/payablesInvoices/{id}", method: "POST" },
+      purchase_order: { create: "/purchaseOrders", update: "/purchaseOrders/{id}", method: "POST" },
+    },
+    field_mappings: {
+      invoice: {
+        invoice_number: "InvoiceNumber",
+        vendor_id: "VendorId",
+        total_amount: "InvoiceAmount",
+        tax_amount: "TotalTaxAmount",
+        invoice_date: "InvoiceDate",
+        due_date: "DueDate",
+        status: "InvoiceStatus",
+      },
+      purchase_order: {
+        po_number: "OrderNumber",
+        vendor_id: "VendorId",
+        total_amount: "TotalAmount",
+        po_date: "OrderedDate",
+        status: "Status",
+      },
+    },
+    request_headers: { "Content-Type": "application/json", "Accept": "application/json" },
+  },
+  microsoft_dynamics_365: {
+    description: "Microsoft Dynamics 365 Finance & Operations integration using OData APIs",
+    auth_type: "oauth2",
+    base_url_template: "https://{your-environment}.operations.dynamics.com/data",
+    endpoint_mappings: {
+      invoice: { create: "/VendorInvoiceHeaders", update: "/VendorInvoiceHeaders('{id}')", method: "POST" },
+      purchase_order: { create: "/PurchaseOrderHeaders", update: "/PurchaseOrderHeaders('{id}')", method: "POST" },
+    },
+    field_mappings: {
+      invoice: {
+        invoice_number: "InvoiceNumber",
+        vendor_id: "VendorAccountNumber",
+        total_amount: "InvoiceAmount",
+        tax_amount: "SalesTaxAmount",
+        invoice_date: "InvoiceDate",
+        due_date: "DueDate",
+        status: "DocumentState",
+      },
+      purchase_order: {
+        po_number: "PurchaseOrderNumber",
+        vendor_id: "VendorAccountNumber",
+        total_amount: "TotalPurchaseOrderAmount",
+        po_date: "OrderDate",
+        status: "PurchaseOrderStatus",
+      },
+    },
+    request_headers: { "Content-Type": "application/json", "Accept": "application/json", "OData-Version": "4.0" },
+  },
+  microsoft_dynamics_nav: {
+    description: "Microsoft Dynamics NAV/Business Central integration using OData APIs",
+    auth_type: "basic",
+    base_url_template: "https://{your-server}/BC/ODataV4/Company('{company-name}')",
+    endpoint_mappings: {
+      invoice: { create: "/purchaseInvoices", update: "/purchaseInvoices('{id}')", method: "POST" },
+      purchase_order: { create: "/purchaseOrders", update: "/purchaseOrders('{id}')", method: "POST" },
+    },
+    field_mappings: {
+      invoice: {
+        invoice_number: "number",
+        vendor_id: "vendorNumber",
+        total_amount: "totalAmountIncludingTax",
+        tax_amount: "totalTaxAmount",
+        invoice_date: "invoiceDate",
+        due_date: "dueDate",
+        status: "status",
+      },
+      purchase_order: {
+        po_number: "number",
+        vendor_id: "vendorNumber",
+        total_amount: "totalAmountIncludingTax",
+        po_date: "orderDate",
+        status: "status",
+      },
+    },
+    request_headers: { "Content-Type": "application/json", "Accept": "application/json" },
+  },
+  sage_intacct: {
+    description: "Sage Intacct integration using Web Services API",
+    auth_type: "api_key",
+    base_url_template: "https://api.intacct.com/ia/xml/xmlgw.phtml",
+    endpoint_mappings: {
+      invoice: { create: "/objects/ap-bill", update: "/objects/ap-bill/{id}", method: "POST" },
+      purchase_order: { create: "/objects/purchasing-transaction", update: "/objects/purchasing-transaction/{id}", method: "POST" },
+    },
+    field_mappings: {
+      invoice: {
+        invoice_number: "RECORDNO",
+        vendor_id: "VENDORID",
+        total_amount: "TOTALDUE",
+        tax_amount: "TOTALTAX",
+        invoice_date: "WHENCREATED",
+        due_date: "WHENDUE",
+        status: "STATE",
+      },
+      purchase_order: {
+        po_number: "DOCNO",
+        vendor_id: "VENDORID",
+        total_amount: "TOTAL",
+        po_date: "WHENCREATED",
+        status: "STATE",
+      },
+    },
+    request_headers: { "Content-Type": "application/xml", "Accept": "application/xml" },
+  },
+  quickbooks_enterprise: {
+    description: "QuickBooks Enterprise/Online integration using REST APIs",
+    auth_type: "oauth2",
+    base_url_template: "https://quickbooks.api.intuit.com/v3/company/{realm-id}",
+    endpoint_mappings: {
+      invoice: { create: "/bill", update: "/bill?operation=update", method: "POST" },
+      purchase_order: { create: "/purchaseorder", update: "/purchaseorder?operation=update", method: "POST" },
+    },
+    field_mappings: {
+      invoice: {
+        invoice_number: "DocNumber",
+        vendor_id: "VendorRef.value",
+        total_amount: "TotalAmt",
+        tax_amount: "TxnTaxDetail.TotalTax",
+        invoice_date: "TxnDate",
+        due_date: "DueDate",
+        status: "Balance",
+      },
+      purchase_order: {
+        po_number: "DocNumber",
+        vendor_id: "VendorRef.value",
+        total_amount: "TotalAmt",
+        po_date: "TxnDate",
+        status: "POStatus",
+      },
+    },
+    request_headers: { "Content-Type": "application/json", "Accept": "application/json" },
+  },
+  tally_prime: {
+    description: "Tally Prime integration using XML/JSON Gateway",
+    auth_type: "basic",
+    base_url_template: "http://{tally-server}:9000",
+    endpoint_mappings: {
+      invoice: { create: "/tally/import/voucher", update: "/tally/import/voucher", method: "POST" },
+      purchase_order: { create: "/tally/import/voucher", update: "/tally/import/voucher", method: "POST" },
+    },
+    field_mappings: {
+      invoice: {
+        invoice_number: "VOUCHERNUMBER",
+        vendor_id: "PARTYNAME",
+        total_amount: "AMOUNT",
+        tax_amount: "TAXAMOUNT",
+        invoice_date: "DATE",
+        due_date: "DUEDATE",
+        status: "STATUS",
+      },
+      purchase_order: {
+        po_number: "ORDERNUMBER",
+        vendor_id: "PARTYNAME",
+        total_amount: "AMOUNT",
+        po_date: "DATE",
+        status: "STATUS",
+      },
+    },
+    request_headers: { "Content-Type": "application/xml", "Accept": "application/xml" },
+  },
+  custom_rest: {
+    description: "Custom REST API integration - configure all settings manually",
+    auth_type: "api_key",
+    base_url_template: "https://your-api-server.com/api",
+    endpoint_mappings: {
+      invoice: { create: "/invoices", update: "/invoices/{id}", method: "POST" },
+      purchase_order: { create: "/purchase-orders", update: "/purchase-orders/{id}", method: "POST" },
+    },
+    field_mappings: {
+      invoice: {
+        invoice_number: "documentNumber",
+        vendor_id: "vendorId",
+        total_amount: "totalAmount",
+        tax_amount: "taxAmount",
+        invoice_date: "documentDate",
+        due_date: "dueDate",
+        status: "status",
+      },
+      purchase_order: {
+        po_number: "documentNumber",
+        vendor_id: "vendorId",
+        total_amount: "totalAmount",
+        po_date: "documentDate",
+        status: "status",
+      },
+    },
+    request_headers: { "Content-Type": "application/json", "Accept": "application/json" },
+  },
+};
+
+// Default values to avoid undefined issues
+const DEFAULT_ENDPOINT_MAPPINGS = ERP_PRESETS.custom_rest.endpoint_mappings;
+const DEFAULT_FIELD_MAPPINGS = ERP_PRESETS.custom_rest.field_mappings;
+
 const formSchema = z.object({
   name: z.string().min(1, "Name is required"),
   erp_type: z.enum(["sap_s4hana", "sap_business_one", "oracle_netsuite", "oracle_fusion", "microsoft_dynamics_365", "microsoft_dynamics_nav", "sage_intacct", "quickbooks_enterprise", "tally_prime", "custom_rest"]),
@@ -105,29 +413,6 @@ interface ERPIntegrationDialogProps {
   integration?: any;
 }
 
-const DEFAULT_ENDPOINT_MAPPINGS = {
-  invoice: { create: "/api/invoices", update: "/api/invoices/{id}", method: "POST" },
-  purchase_order: { create: "/api/purchase-orders", update: "/api/purchase-orders/{id}", method: "POST" },
-};
-
-const DEFAULT_FIELD_MAPPINGS = {
-  invoice: {
-    invoice_number: "documentNumber",
-    vendor_id: "vendorId",
-    total_amount: "totalAmount",
-    tax_amount: "taxAmount",
-    invoice_date: "documentDate",
-    due_date: "dueDate",
-    status: "status",
-  },
-  purchase_order: {
-    po_number: "documentNumber",
-    vendor_id: "vendorId",
-    total_amount: "totalAmount",
-    po_date: "documentDate",
-    status: "status",
-  },
-};
 
 const ERPIntegrationDialog: React.FC<ERPIntegrationDialogProps> = ({
   open,
@@ -254,6 +539,28 @@ const ERPIntegrationDialog: React.FC<ERPIntegrationDialogProps> = ({
   const authType = form.watch("auth_type");
   const erpType = form.watch("erp_type");
 
+  // Apply ERP presets when type changes (only for new integrations)
+  const applyPreset = (erpTypeValue: string) => {
+    const preset = ERP_PRESETS[erpTypeValue];
+    if (preset && !isEditing) {
+      const erpLabel = ERP_TYPES.find(t => t.value === erpTypeValue)?.label || erpTypeValue;
+      form.setValue("description", preset.description);
+      form.setValue("auth_type", preset.auth_type);
+      form.setValue("base_url", preset.base_url_template);
+      form.setValue("endpoint_mappings", preset.endpoint_mappings);
+      form.setValue("field_mappings", preset.field_mappings);
+      form.setValue("request_headers", preset.request_headers);
+      
+      // Set a suggested name based on ERP type
+      const currentName = form.getValues("name");
+      if (!currentName) {
+        form.setValue("name", `${erpLabel} Integration`);
+      }
+      
+      toast.info(`Applied ${erpLabel} preset configuration. You can customize these settings.`);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
@@ -296,7 +603,13 @@ const ERPIntegrationDialog: React.FC<ERPIntegrationDialogProps> = ({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>ERP Type</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
+                        <Select 
+                          onValueChange={(value) => {
+                            field.onChange(value);
+                            applyPreset(value);
+                          }} 
+                          value={field.value}
+                        >
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select ERP type" />
@@ -310,6 +623,9 @@ const ERPIntegrationDialog: React.FC<ERPIntegrationDialogProps> = ({
                             ))}
                           </SelectContent>
                         </Select>
+                        <FormDescription>
+                          Selecting an ERP type will pre-fill typical configuration settings.
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
