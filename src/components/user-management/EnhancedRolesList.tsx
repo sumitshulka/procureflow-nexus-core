@@ -552,8 +552,8 @@ const EnhancedRolesList = () => {
                         <TableRow key={role.id}>
                           <TableCell className="font-medium">{role.name}</TableCell>
                           <TableCell className="hidden md:table-cell">{role.description || "-"}</TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-2">
+                          <TableCell className="text-right w-[120px]">
+                            <div className="flex items-center justify-end gap-1">
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -566,7 +566,7 @@ const EnhancedRolesList = () => {
                                 variant="ghost"
                                 size="icon"
                                 onClick={() => setRoleToDelete(role)}
-                                className="text-destructive hover:text-destructive"
+                                className="text-destructive hover:text-destructive hover:bg-destructive/10"
                                 title="Delete Role"
                               >
                                 <Trash2 className="h-4 w-4" />
