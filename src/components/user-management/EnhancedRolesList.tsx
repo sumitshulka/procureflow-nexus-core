@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -80,6 +81,7 @@ const EnhancedRolesList = () => {
   const [currentRole, setCurrentRole] = useState<RoleData | null>(null);
   const [currentModule, setCurrentModule] = useState<ModuleData | null>(null);
   const [rolePermissions, setRolePermissions] = useState<Record<string, string[]>>({});
+  const [roleToDelete, setRoleToDelete] = useState<RoleData | null>(null);
 
   // Forms setup
   const roleForm = useForm({
@@ -320,6 +322,43 @@ const EnhancedRolesList = () => {
     },
   });
 
+  // Delete role mutation
+  const deleteRoleMutation = useMutation({
+    mutationFn: async (roleId: string) => {
+      // First delete associated permissions
+      const { error: permError } = await supabase
+        .from("role_permissions")
+        .delete()
+        .eq("role_id", roleId);
+      
+      if (permError) throw permError;
+      
+      // Then delete the role
+      const { error } = await supabase
+        .from("custom_roles")
+        .delete()
+        .eq("id", roleId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["custom_roles"] });
+      queryClient.invalidateQueries({ queryKey: ["role_permissions"] });
+      toast({
+        title: "Role deleted",
+        description: "The role and its permissions have been permanently removed.",
+      });
+      setRoleToDelete(null);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error deleting role",
+        description: error.message || "There was a problem deleting the role.",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Handle role form submission
   const onRoleSubmit = (values: z.infer<typeof roleSchema>) => {
     createRoleMutation.mutate(values);
@@ -519,8 +558,18 @@ const EnhancedRolesList = () => {
                                 variant="ghost"
                                 size="icon"
                                 onClick={() => handleManagePermissions(role)}
+                                title="Manage Permissions"
                               >
                                 <Shield className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => setRoleToDelete(role)}
+                                className="text-destructive hover:text-destructive"
+                                title="Delete Role"
+                              >
+                                <Trash2 className="h-4 w-4" />
                               </Button>
                             </div>
                           </TableCell>
@@ -531,6 +580,38 @@ const EnhancedRolesList = () => {
                 </Table>
               </div>
             )}
+
+            {/* Delete Role Confirmation Dialog */}
+            <AlertDialog open={!!roleToDelete} onOpenChange={(open) => !open && setRoleToDelete(null)}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete Role: {roleToDelete?.name}</AlertDialogTitle>
+                  <AlertDialogDescription className="space-y-2">
+                    <p>
+                      Are you sure you want to delete this role? This action cannot be undone.
+                    </p>
+                    <p className="font-medium text-destructive">
+                      Warning: Deleting this role will also remove all associated permissions. 
+                      Users currently assigned to this role will lose access to the modules 
+                      granted by this role.
+                    </p>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => roleToDelete && deleteRoleMutation.mutate(roleToDelete.id)}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    disabled={deleteRoleMutation.isPending}
+                  >
+                    {deleteRoleMutation.isPending && (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    )}
+                    Delete Role
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
 
             {/* Enhanced Permissions Dialog with better scrolling */}
             <Dialog open={isPermissionsOpen} onOpenChange={setIsPermissionsOpen}>
