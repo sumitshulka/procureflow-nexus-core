@@ -64,18 +64,18 @@ const UserRoleAssignment = () => {
   });
 
   // Fetch users with their auth emails (excluding vendor users)
+  // Fetch users with their auth emails (excluding vendor users)
   const { data: users = [], isLoading: usersLoading } = useQuery({
-    queryKey: ["profiles_for_assignment"],
+    queryKey: ["profiles_for_assignment_non_vendor"],
     queryFn: async () => {
       // Get profiles from public schema, excluding vendor users
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
         .select("id, full_name")
         .eq("status", "active")
-        .or("is_vendor.is.null,is_vendor.eq.false");
+        .neq("is_vendor", true);
       
       if (profilesError) throw profilesError;
-      if (!profiles || profiles.length === 0) return [];
 
       // Get user emails using Edge Function
       const userIds = profiles.map(profile => profile.id);
