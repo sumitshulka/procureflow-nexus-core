@@ -63,15 +63,16 @@ const UserRoleAssignment = () => {
     defaultValues: { user_id: "", custom_role_id: "" },
   });
 
-  // Fetch users with their auth emails
+  // Fetch users with their auth emails (excluding vendor users)
   const { data: users = [], isLoading: usersLoading } = useQuery({
     queryKey: ["profiles_for_assignment"],
     queryFn: async () => {
-      // Get profiles from public schema
+      // Get profiles from public schema, excluding vendor users
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
         .select("id, full_name")
-        .eq("status", "active");
+        .eq("status", "active")
+        .or("is_vendor.is.null,is_vendor.eq.false");
       
       if (profilesError) throw profilesError;
       if (!profiles || profiles.length === 0) return [];
