@@ -4623,6 +4623,10 @@ export type Database = {
         Returns: number
       }
       get_next_po_number: { Args: never; Returns: string }
+      get_next_subhead_display_order: {
+        Args: { parent_head_id: string }
+        Returns: number
+      }
       get_organization_base_currency: { Args: never; Returns: string }
       get_po_approval_level: { Args: { po_amount: number }; Returns: string }
       get_procurement_request_details_secure: {
