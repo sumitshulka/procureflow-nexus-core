@@ -9,6 +9,13 @@ interface ModulePermission {
   permission: string;
 }
 
+const getMenuItemRoutePath = (menuItems: any): string | null => {
+  if (!menuItems) return null;
+  // Supabase can return joined relations as an object or an array depending on the query shape
+  if (Array.isArray(menuItems)) return menuItems[0]?.route_path ?? null;
+  return menuItems.route_path ?? null;
+};
+
 export const useModulePermissions = () => {
   const { user, userData } = useAuth();
 
@@ -50,7 +57,7 @@ export const useModulePermissions = () => {
         return (allModules || []).map((mod) => ({
           moduleId: mod.id,
           moduleName: mod.name,
-          routePath: (mod.menu_items as any)?.route_path || null,
+          routePath: getMenuItemRoutePath((mod as any).menu_items),
           permission: "admin",
         })) as ModulePermission[];
       }
@@ -58,18 +65,7 @@ export const useModulePermissions = () => {
       // Get permissions for user's roles
       const { data: rolePermissions, error: permError } = await supabase
         .from("role_permissions")
-        .select(
-          `
-          permission,
-          module_uuid,
-          system_modules!module_uuid(
-            id,
-            name,
-            menu_item_id,
-            menu_items!menu_item_id(route_path)
-          )
-        `
-        )
+        .select("permission, module_uuid")
         .in("role_id", roleIds);
 
       if (permError) {
@@ -77,12 +73,44 @@ export const useModulePermissions = () => {
         return [];
       }
 
+      const moduleIds = Array.from(
+        new Set(
+          (rolePermissions || [])
+            .map((rp: any) => rp.module_uuid)
+            .filter(Boolean)
+        )
+      ) as string[];
+
+      const { data: modules, error: modulesError } = await supabase
+        .from("system_modules")
+        .select("id, name, menu_item_id, menu_items!menu_item_id(route_path)")
+        .in("id", moduleIds)
+        .eq("is_active", true);
+
+      if (modulesError) {
+        console.error("Error fetching modules:", modulesError);
+        return [];
+      }
+
+      const moduleById = new Map<
+        string,
+        { id: string; name: string; routePath: string | null }
+      >();
+
+      (modules || []).forEach((m: any) => {
+        moduleById.set(m.id, {
+          id: m.id,
+          name: m.name,
+          routePath: getMenuItemRoutePath(m.menu_items),
+        });
+      });
+
       // Deduplicate and get highest permission per module
       const permissionMap = new Map<string, ModulePermission>();
       const permissionPriority = ["view", "create", "edit", "delete", "admin"];
 
       (rolePermissions || []).forEach((rp: any) => {
-        const module = rp.system_modules;
+        const module = moduleById.get(rp.module_uuid);
         if (!module) return;
 
         const existing = permissionMap.get(module.id);
@@ -95,7 +123,7 @@ export const useModulePermissions = () => {
           permissionMap.set(module.id, {
             moduleId: module.id,
             moduleName: module.name,
-            routePath: module.menu_items?.route_path || null,
+            routePath: module.routePath,
             permission: rp.permission,
           });
         }
