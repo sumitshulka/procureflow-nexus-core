@@ -446,6 +446,73 @@ const EnhancedRolesList = () => {
     }
   };
 
+  type RoleRow =
+    | (RoleData & { type: "custom" })
+    | {
+        id: string;
+        name: string;
+        description: string | null;
+        created_at: string;
+        type: "system";
+      };
+
+  const defaultSystemRoles: RoleRow[] = [
+    {
+      id: "system:admin",
+      name: "Admin",
+      description: "Full system access with all permissions",
+      created_at: new Date().toISOString(),
+      type: "system",
+    },
+    {
+      id: "system:requester",
+      name: "Requester",
+      description: "Can create and manage procurement requests",
+      created_at: new Date().toISOString(),
+      type: "system",
+    },
+    {
+      id: "system:procurement_officer",
+      name: "Procurement Officer",
+      description: "Manages procurement processes and RFPs",
+      created_at: new Date().toISOString(),
+      type: "system",
+    },
+    {
+      id: "system:inventory_manager",
+      name: "Inventory Manager",
+      description: "Manages inventory and warehouse operations",
+      created_at: new Date().toISOString(),
+      type: "system",
+    },
+    {
+      id: "system:finance_officer",
+      name: "Finance Officer",
+      description: "Handles financial operations and invoices",
+      created_at: new Date().toISOString(),
+      type: "system",
+    },
+    {
+      id: "system:evaluation_committee",
+      name: "Evaluation Committee",
+      description: "Evaluates vendor proposals and bids",
+      created_at: new Date().toISOString(),
+      type: "system",
+    },
+    {
+      id: "system:department_head",
+      name: "Department Head",
+      description: "Approves department requests and budgets",
+      created_at: new Date().toISOString(),
+      type: "system",
+    },
+  ];
+
+  const allRolesForDisplay: RoleRow[] = [
+    ...defaultSystemRoles,
+    ...roles.map((r) => ({ ...r, type: "custom" as const })),
+  ];
+
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
       <TabsList>
