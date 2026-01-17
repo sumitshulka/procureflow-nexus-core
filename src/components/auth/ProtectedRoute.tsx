@@ -44,8 +44,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   // Module permission helper (database-driven)
   const { hasModuleAccess, isLoading: permissionLoading } = useModulePermissions();
 
-  // Show loading state
-  if (isLoading || (requireVendor && vendorLoading) || ((requiredRole || allowedRoles) && permissionLoading)) {
+  // Show loading state - always wait for permissions to load for authenticated users
+  if (isLoading || (requireVendor && vendorLoading) || (user && permissionLoading)) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -87,19 +87,10 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     );
   }
 
-  // Check role/permission if required (for non-vendor routes)
-  if ((requiredRole || allowedRoles) && !requireVendor) {
-    // First check userData.roles for backward compatibility with hardcoded role names
-    const userRolesLower = userData?.roles?.map(r => r.toLowerCase()) || [];
-    
-    const hasRequiredRole = requiredRole 
-      ? userRolesLower.includes(requiredRole.toLowerCase())
-      : allowedRoles 
-        ? allowedRoles.some(role => userRolesLower.includes(role.toLowerCase()))
-        : true;
-
-    // If user has the role by name OR has module access via permissions, allow access
-    if (!hasRequiredRole && !hasModuleAccess(location.pathname)) {
+  // For non-vendor routes, always check database permissions
+  if (!requireVendor) {
+    // Check if user has module access via database permissions
+    if (!hasModuleAccess(location.pathname)) {
       return (
         <div className="min-h-screen bg-gray-50 flex items-center justify-center">
           <div className="text-center max-w-md mx-auto px-4">
