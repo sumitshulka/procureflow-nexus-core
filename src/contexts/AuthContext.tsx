@@ -443,7 +443,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const hasRole = (role: UserRole): boolean => {
     if (!userData) return false;
-    return userData.roles.includes(role);
+    // Case-insensitive role comparison since DB role names may differ in case
+    const userRolesLower = userData.roles.map(r => r.toLowerCase());
+    return userRolesLower.includes(role.toLowerCase());
   };
 
   const value = {
