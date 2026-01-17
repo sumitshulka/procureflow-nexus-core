@@ -204,87 +204,68 @@ const UsersList = () => {
   const handleAddUser = async (values) => {
     try {
       console.log("Creating user with values:", values);
-      
-      // Check authorization to assign this role first
-      const { data: canAssign, error: authError } = await supabase
-        .rpc('can_assign_role', {
-          target_user_id: null, // null for new users - admin check only
-          role_to_assign: values.role
-        });
 
-      if (authError || !canAssign) {
+      if (!values?.password) {
         toast({
-          title: "Access Denied",
-          description: `You don't have permission to assign the ${values.role} role`,
+          title: "Password required",
+          description: "Please enter a password for the new user.",
           variant: "destructive",
         });
         return;
       }
-      
-      // Create user in auth
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-        email: values.email,
-        password: values.password,
-        options: {
-          data: {
-            full_name: values.fullName,
-            department: values.department,
-          }
-        }
+
+      // Check authorization to assign this role first
+      const { data: canAssign, error: authError } = await supabase.rpc("can_assign_role", {
+        target_user_id: null, // null for new users - admin check only
+        role_to_assign: values.role,
       });
 
-      if (signUpError) {
-        logDatabaseError(signUpError, 'creating new user');
+      if (authError || !canAssign) {
+        const roleName = availableRoles.find((r) => r.id === values.role)?.name;
+        toast({
+          title: "Access Denied",
+          description: `You don't have permission to assign the ${roleName || "selected"} role`,
+          variant: "destructive",
+        });
         return;
       }
 
-      // Assign role if user is created
-      if (signUpData.user) {
-        // Find department ID from department name  
-        const selectedDept = departments.find(dept => dept.name === values.department);
-        const departmentId = selectedDept ? selectedDept.id : null;
-        
-        // Update the department in profiles table
-        const { error: profileError } = await supabase
-          .from("profiles")
-          .update({
-            department_id: departmentId
-          })
-          .eq("id", signUpData.user.id);
-          
-        if (profileError) {
-          logDatabaseError(profileError, 'updating user profile');
-          return;
-        }
-        
-        // Assign user role (role_id is now the UUID from custom_roles)
-        const { error: roleError } = await supabase
-          .from("user_roles")
-          .insert({
-            user_id: signUpData.user.id,
-            role_id: values.role
-          });
+      // Find department ID from department name
+      const selectedDept = departments.find((dept) => dept.name === values.department);
+      const departmentId = selectedDept ? selectedDept.id : null;
 
-        if (roleError) {
-          logDatabaseError(roleError, 'assigning user role');
-          return;
-        }
+      // Create user via Edge Function so we DON'T replace the current admin session
+      const { data, error } = await supabase.functions.invoke("admin-create-user", {
+        body: {
+          email: values.email,
+          password: values.password,
+          fullName: values.fullName,
+          role_id: values.role,
+          department_id: departmentId,
+        },
+      });
 
-        toast({
-          title: "User added successfully",
-          description: `New user ${values.fullName} has been created.`
-        });
-
-        setIsAddDialogOpen(false);
-        addForm.reset();
-        refetch();
+      if (error) {
+        throw error;
       }
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+
+      toast({
+        title: "User added successfully",
+        description: `New user ${values.fullName} has been created.`,
+      });
+
+      setIsAddDialogOpen(false);
+      addForm.reset();
+      refetch();
     } catch (error) {
       console.error("Error adding user:", error);
       toast({
         title: "Failed to add user",
-        description: error.message,
-        variant: "destructive"
+        description: error?.message || "An unexpected error occurred",
+        variant: "destructive",
       });
     }
   };
