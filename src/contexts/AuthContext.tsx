@@ -142,17 +142,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.log("Setting userData to:", userData);
       setUserData(userData);
       
-      // Navigate based on vendor status or role after login
+      // Navigate based on vendor status after login
+      // All authenticated users go to /dashboard - access is controlled by ProtectedRoute
       if (vendorData) {
         console.log("Navigating to vendor dashboard");
         navigate('/vendor-dashboard');
-      } else if (rolesData.length > 0) {
-        const userRoleName = ((rolesData[0].custom_roles as any)?.name || '').toLowerCase();
-        if (userRoleName === 'admin') {
-          navigate('/admin-dashboard');
-        } else {
-          navigate('/dashboard');
-        }
       } else {
         navigate('/dashboard');
       }
