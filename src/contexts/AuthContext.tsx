@@ -320,31 +320,43 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       setIsLoading(true);
       
-      // Log activity before signing out
+      // Log activity before signing out (only if user exists)
       if (user) {
-        await logUserActivity("logout");
-        // Log security event
-        await logSecurityEvent(user.id, 'logout', { 
-          user_agent: navigator.userAgent 
-        });
+        try {
+          await logUserActivity("logout");
+          await logSecurityEvent(user.id, 'logout', { 
+            user_agent: navigator.userAgent 
+          });
+        } catch (logError) {
+          console.warn("Failed to log logout activity:", logError);
+        }
       }
       
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      // Attempt to sign out - but don't fail if session is already gone
+      try {
+        const { error } = await supabase.auth.signOut();
+        if (error) {
+          // Only log, don't throw - session might already be expired
+          console.warn("SignOut returned error (session may already be expired):", error.message);
+        }
+      } catch (signOutError) {
+        console.warn("SignOut failed (session may already be expired):", signOutError);
+      }
       
-      // Clear user data
+      // Always clear user data regardless of signOut result
       setSession(null);
       setUser(null);
       setUserData(null);
       
-      // Always navigate to login page after successful logout
+      // Always navigate to login page after logout
       navigate("/login", { replace: true });
     } catch (error: any) {
-      toast({
-        title: "Logout failed",
-        description: error.message || "An error occurred during logout.",
-        variant: "destructive",
-      });
+      console.error("Logout error:", error);
+      // Still clear state and navigate even on error
+      setSession(null);
+      setUser(null);
+      setUserData(null);
+      navigate("/login", { replace: true });
     } finally {
       setIsLoading(false);
     }
