@@ -177,7 +177,7 @@ function App() {
           <Route
             path="/dashboard"
             element={
-              <ProtectedRoute allowedRoles={[]}>
+              <ProtectedRoute>
                 <Layout><Dashboard /></Layout>
               </ProtectedRoute>
             }

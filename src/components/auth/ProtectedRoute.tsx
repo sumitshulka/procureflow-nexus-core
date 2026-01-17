@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { UserRole } from '@/types';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useModulePermissions } from '@/hooks/useModulePermissions';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -40,77 +41,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     enabled: !!user?.id && requireVendor,
   });
 
-  // Check if user has permission to access the current route based on role_permissions
-  const { data: hasModuleAccess, isLoading: permissionLoading } = useQuery({
-    queryKey: ["module_access", user?.id, location.pathname],
-    queryFn: async () => {
-      if (!user?.id) return false;
-      
-      // First get the user's role IDs
-      const { data: userRoles, error: rolesError } = await supabase
-        .from("user_roles")
-        .select("role_id")
-        .eq("user_id", user.id);
-      
-      if (rolesError || !userRoles?.length) {
-        console.log("No roles found for user");
-        return false;
-      }
-      
-      const roleIds = userRoles.map(r => r.role_id);
-      
-      // Check if any of user's roles is Admin (case-insensitive)
-      const { data: adminRoles } = await supabase
-        .from("custom_roles")
-        .select("id, name")
-        .in("id", roleIds);
-      
-      const isAdmin = adminRoles?.some(role => role.name.toLowerCase() === 'admin');
-      
-      // Admin role has access to everything
-      if (isAdmin) {
-        return true;
-      }
-      
-      // For non-admin users, check if they have permission for the current route
-      const currentPath = location.pathname;
-      
-      // Find system module that matches this route
-      const { data: matchingModules } = await supabase
-        .from("system_modules")
-        .select("id, menu_item_id, menu_items!menu_item_id(route_path)")
-        .eq("is_active", true);
-      
-      // Find module that matches the current path
-      const matchedModule = matchingModules?.find((mod: any) => {
-        const routePath = mod.menu_items?.route_path;
-        if (!routePath) return false;
-        return currentPath === routePath || currentPath.startsWith(routePath + '/');
-      });
-      
-      if (!matchedModule) {
-        // If no module found for this route, check if it's a general route that should be accessible
-        // Allow access to documentation and similar pages
-        if (currentPath.startsWith('/documentation')) {
-          return true;
-        }
-        // For unregistered routes, deny by default if role is required
-        return false;
-      }
-      
-      // Check if any of user's roles has permission for this module
-      const { data: permission } = await supabase
-        .from("role_permissions")
-        .select("permission")
-        .in("role_id", roleIds)
-        .eq("module_uuid", matchedModule.id)
-        .limit(1)
-        .single();
-      
-      return !!permission;
-    },
-    enabled: !!user?.id && !requireVendor && (!!requiredRole || !!allowedRoles),
-  });
+  // Module permission helper (database-driven)
+  const { hasModuleAccess, isLoading: permissionLoading } = useModulePermissions();
 
   // Show loading state
   if (isLoading || (requireVendor && vendorLoading) || ((requiredRole || allowedRoles) && permissionLoading)) {
@@ -167,7 +99,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         : true;
 
     // If user has the role by name OR has module access via permissions, allow access
-    if (!hasRequiredRole && !hasModuleAccess) {
+    if (!hasRequiredRole && !hasModuleAccess(location.pathname)) {
       return (
         <div className="min-h-screen bg-gray-50 flex items-center justify-center">
           <div className="text-center max-w-md mx-auto px-4">
