@@ -10,7 +10,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { UserRole } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import ResetPasswordAction from "./ResetPasswordAction";
 import { 
@@ -65,23 +64,77 @@ const userFormSchema = z.object({
 
 const UsersList = () => {
   const [departments, setDepartments] = useState<Department[]>([]);
-  
-  // Fetch departments
+  const [availableRoles, setAvailableRoles] = useState<string[]>([]);
+
+  // Fetch departments and available roles
   useEffect(() => {
     const fetchDepartments = async () => {
       try {
         const { data, error } = await supabase
-          .from('departments')
-          .select('id, name');
-          
+          .from("departments")
+          .select("id, name");
+
         if (error) throw error;
         setDepartments(data || []);
       } catch (error) {
-        console.error('Error fetching departments:', error);
+        console.error("Error fetching departments:", error);
       }
     };
-    
+
+    const fetchAvailableRoles = async () => {
+      try {
+        // Fetch roles from the user_role enum via a query that gets distinct roles
+        const { data, error } = await supabase
+          .from("user_roles")
+          .select("role");
+
+        if (error) throw error;
+
+        // Get unique roles from the data
+        const uniqueRoles = [...new Set((data || []).map((r) => r.role))];
+
+        // If no roles found in user_roles, use fallback roles from the enum
+        if (uniqueRoles.length === 0) {
+          setAvailableRoles([
+            "admin",
+            "requester",
+            "procurement_officer",
+            "inventory_manager",
+            "finance_officer",
+            "evaluation_committee",
+            "department_head",
+          ]);
+        } else {
+          // Add common roles that might not be assigned yet
+          const allRoles = new Set([
+            ...uniqueRoles,
+            "admin",
+            "requester",
+            "procurement_officer",
+            "inventory_manager",
+            "finance_officer",
+            "evaluation_committee",
+            "department_head",
+          ]);
+          setAvailableRoles([...allRoles].sort());
+        }
+      } catch (error) {
+        console.error("Error fetching available roles:", error);
+        // Fallback to default roles
+        setAvailableRoles([
+          "admin",
+          "requester",
+          "procurement_officer",
+          "inventory_manager",
+          "finance_officer",
+          "evaluation_committee",
+          "department_head",
+        ]);
+      }
+    };
+
     fetchDepartments();
+    fetchAvailableRoles();
   }, []);
 
   // Fetch users with real emails
@@ -160,9 +213,9 @@ const UsersList = () => {
       email: "",
       fullName: "",
       password: "",
-      role: UserRole.REQUESTER,
-      department: ""
-    }
+      role: "requester",
+      department: "",
+    },
   });
 
   // Form for editing users
@@ -269,8 +322,8 @@ const UsersList = () => {
     editForm.reset({
       email: user.email,
       fullName: user.fullName,
-      role: user.roles[0] || UserRole.REQUESTER,
-      department: user.department === "No Department" ? "" : user.department
+      role: user.roles[0] || "requester",
+      department: user.department === "No Department" ? "" : user.department,
     });
     setIsEditDialogOpen(true);
   };
@@ -527,9 +580,13 @@ const UsersList = () => {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {Object.values(UserRole).map(role => (
-                          <SelectItem key={role} value={role}>{role}</SelectItem>
-                        ))}
+                        {availableRoles
+                          .filter((role) => role !== "vendor")
+                          .map((role) => (
+                            <SelectItem key={role} value={role}>
+                              {role.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}
+                            </SelectItem>
+                          ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -616,9 +673,13 @@ const UsersList = () => {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {Object.values(UserRole).map(role => (
-                          <SelectItem key={role} value={role}>{role}</SelectItem>
-                        ))}
+                        {availableRoles
+                          .filter((role) => role !== "vendor")
+                          .map((role) => (
+                            <SelectItem key={role} value={role}>
+                              {role.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}
+                            </SelectItem>
+                          ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />
