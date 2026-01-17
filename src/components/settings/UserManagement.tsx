@@ -157,35 +157,18 @@ const UserManagement = () => {
   // Create user mutation
   const createUserMutation = useMutation({
     mutationFn: async (values: z.infer<typeof userSchema>) => {
-      // In a real app, creating users would be done through an edge function
-      // Since we cannot modify the auth schema directly from client code
-      // Here's the code that would typically be in an edge function:
-      
-      const { data, error: signUpError } = await supabase.auth.signUp({
-        email: values.email,
-        password: values.password,
-        options: {
-          data: {
-            full_name: values.fullName,
-          }
-        }
+      const { data, error } = await supabase.functions.invoke("admin-create-user", {
+        body: {
+          email: values.email,
+          password: values.password,
+          fullName: values.fullName,
+          role_id: values.role,
+        },
       });
-      
-      if (signUpError) throw signUpError;
-      
-      // Wait for the trigger to create the profile
-      // Then assign the selected role (now using role_id)
-      if (data.user) {
-        const { error: roleError } = await supabase
-          .from("user_roles")
-          .insert({
-            user_id: data.user.id,
-            role_id: values.role
-          });
-          
-        if (roleError) throw roleError;
-      }
-      
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
       return data;
     },
     onSuccess: () => {
