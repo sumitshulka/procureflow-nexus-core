@@ -185,7 +185,7 @@ const UsersList = () => {
       email: "",
       fullName: "",
       password: "",
-      role: "requester",
+      role: "", // Will be set when roles are loaded
       department: "",
     },
   });
