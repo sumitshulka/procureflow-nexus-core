@@ -7,20 +7,66 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Loader2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+
+interface CombinedRole {
+  id: string;
+  name: string;
+  description: string | null;
+  created_at: string;
+  type: 'system' | 'custom';
+}
 
 const RoleManagement = () => {
   const [activeTab, setActiveTab] = useState("create");
 
-  // Fetch roles
-  const { data: roles = [], isLoading } = useQuery({
-    queryKey: ["custom_roles"],
+  // Fetch both system roles and custom roles
+  const { data: allRoles = [], isLoading } = useQuery({
+    queryKey: ["all_roles"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const combinedRoles: CombinedRole[] = [];
+
+      // Fetch system roles from user_roles table (distinct roles)
+      const { data: systemRolesData, error: systemError } = await supabase
+        .from("user_roles")
+        .select("role");
+
+      if (systemError) {
+        console.error("Error fetching system roles:", systemError);
+      } else if (systemRolesData) {
+        // Get unique roles
+        const uniqueSystemRoles = [...new Set(systemRolesData.map(r => r.role))];
+        uniqueSystemRoles.forEach((role, index) => {
+          combinedRoles.push({
+            id: `system-${role}`,
+            name: role.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+            description: `System role: ${role}`,
+            created_at: new Date().toISOString(),
+            type: 'system'
+          });
+        });
+      }
+
+      // Fetch custom roles
+      const { data: customRolesData, error: customError } = await supabase
         .from("custom_roles")
         .select("*");
 
-      if (error) throw error;
-      return data || [];
+      if (customError) {
+        console.error("Error fetching custom roles:", customError);
+      } else if (customRolesData) {
+        customRolesData.forEach(role => {
+          combinedRoles.push({
+            id: role.id,
+            name: role.name || "Unnamed Role",
+            description: role.description,
+            created_at: role.created_at,
+            type: 'custom'
+          });
+        });
+      }
+
+      return combinedRoles;
     },
   });
 
@@ -54,23 +100,33 @@ const RoleManagement = () => {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Role Name</TableHead>
+                      <TableHead>Type</TableHead>
                       <TableHead>Description</TableHead>
                       <TableHead>Created</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {roles.length === 0 ? (
+                    {allRoles.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={3} className="text-center py-6 text-muted-foreground">
+                        <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">
                           No roles found. Create your first role using the wizard.
                         </TableCell>
                       </TableRow>
                     ) : (
-                      roles.map((role) => (
+                      allRoles.map((role) => (
                         <TableRow key={role.id}>
-                          <TableCell className="font-medium">{role.name || "Unnamed Role"}</TableCell>
+                          <TableCell className="font-medium">{role.name}</TableCell>
+                          <TableCell>
+                            <Badge variant={role.type === 'system' ? 'secondary' : 'default'}>
+                              {role.type === 'system' ? 'System' : 'Custom'}
+                            </Badge>
+                          </TableCell>
                           <TableCell>{role.description || "-"}</TableCell>
-                          <TableCell>{new Date(role.created_at).toLocaleDateString()}</TableCell>
+                          <TableCell>
+                            {role.type === 'custom' 
+                              ? new Date(role.created_at).toLocaleDateString() 
+                              : '-'}
+                          </TableCell>
                         </TableRow>
                       ))
                     )}
