@@ -20,32 +20,33 @@ interface CombinedRole {
 const RoleManagement = () => {
   const [activeTab, setActiveTab] = useState("create");
 
+  // Default system roles that are always available
+  const defaultSystemRoles = [
+    { key: "admin", description: "Full system access with all permissions" },
+    { key: "requester", description: "Can create and manage procurement requests" },
+    { key: "procurement_officer", description: "Manages procurement processes and RFPs" },
+    { key: "inventory_manager", description: "Manages inventory and warehouse operations" },
+    { key: "finance_officer", description: "Handles financial operations and invoices" },
+    { key: "evaluation_committee", description: "Evaluates vendor proposals and bids" },
+    { key: "department_head", description: "Approves department requests and budgets" },
+  ];
+
   // Fetch both system roles and custom roles
   const { data: allRoles = [], isLoading } = useQuery({
     queryKey: ["all_roles"],
     queryFn: async () => {
       const combinedRoles: CombinedRole[] = [];
 
-      // Fetch system roles from user_roles table (distinct roles)
-      const { data: systemRolesData, error: systemError } = await supabase
-        .from("user_roles")
-        .select("role");
-
-      if (systemError) {
-        console.error("Error fetching system roles:", systemError);
-      } else if (systemRolesData) {
-        // Get unique roles
-        const uniqueSystemRoles = [...new Set(systemRolesData.map(r => r.role))];
-        uniqueSystemRoles.forEach((role, index) => {
-          combinedRoles.push({
-            id: `system-${role}`,
-            name: role.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-            description: `System role: ${role}`,
-            created_at: new Date().toISOString(),
-            type: 'system'
-          });
+      // Add all default system roles
+      defaultSystemRoles.forEach((role) => {
+        combinedRoles.push({
+          id: `system-${role.key}`,
+          name: role.key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+          description: role.description,
+          created_at: new Date().toISOString(),
+          type: 'system'
         });
-      }
+      });
 
       // Fetch custom roles
       const { data: customRolesData, error: customError } = await supabase
