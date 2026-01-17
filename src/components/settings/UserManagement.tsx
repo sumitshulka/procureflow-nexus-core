@@ -57,58 +57,25 @@ const UserManagement = () => {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("users");
 
-  // Fetch available roles from database (both system roles and custom roles)
+  // Fetch available roles from database (all roles are now in custom_roles)
   const { data: availableRoles = [] } = useQuery({
     queryKey: ["all_available_roles"],
     queryFn: async () => {
-      // Fetch system roles from user_roles table
-      const { data: systemRolesData, error: systemError } = await supabase
-        .from("user_roles")
-        .select("role");
-
-      if (systemError) console.error("Error fetching system roles:", systemError);
-
-      // Get unique system roles
-      const systemRoles = [
-        ...new Set((systemRolesData || []).map((r) => r.role)),
-      ].filter((r) => r !== "vendor");
-
-      // Fetch custom roles from custom_roles table
-      const { data: customRolesData, error: customError } = await supabase
+      // All roles are now managed in custom_roles table
+      const { data: rolesData, error } = await supabase
         .from("custom_roles")
         .select("id, name")
         .eq("is_active", true);
 
-      if (customError) console.error("Error fetching custom roles:", customError);
+      if (error) {
+        console.error("Error fetching roles:", error);
+        return [];
+      }
 
-      // Combine with default system roles to ensure all options are available
-      const defaultSystemRoles = [
-        "admin",
-        "requester",
-        "procurement_officer",
-        "inventory_manager",
-        "finance_officer",
-        "evaluation_committee",
-        "department_head",
-      ];
-
-      const allSystemRoles = [...new Set([...systemRoles, ...defaultSystemRoles])];
-
-      // Create combined list with type indicator
-      const combinedRoles = [
-        ...allSystemRoles.map((role) => ({
-          value: role,
-          label: role.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()),
-          type: "system" as const,
-        })),
-        ...(customRolesData || []).map((role) => ({
-          value: `custom:${role.id}`,
-          label: `${role.name} (Custom)`,
-          type: "custom" as const,
-        })),
-      ];
-
-      return combinedRoles.sort((a, b) => a.label.localeCompare(b.label));
+      return (rolesData || []).map((role) => ({
+        value: role.id,
+        label: role.name,
+      })).sort((a, b) => a.label.localeCompare(b.label));
     },
   });
 
