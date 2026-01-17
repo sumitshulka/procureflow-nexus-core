@@ -35,6 +35,7 @@ import { z } from "zod";
 import { Edit, Trash2, UserPlus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { logDatabaseError } from "@/utils/supabaseHelpers";
+import { useModulePermissions } from "@/hooks/useModulePermissions";
 
 interface Department {
   id: string;
@@ -65,6 +66,13 @@ const userFormSchema = z.object({
 const UsersList = () => {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [availableRoles, setAvailableRoles] = useState<{ id: string; name: string }[]>([]);
+  const { getModulePermission } = useModulePermissions();
+  
+  // Get permission level for user management
+  const userPermission = getModulePermission('/users');
+  const canCreate = userPermission === 'create' || userPermission === 'edit' || userPermission === 'delete' || userPermission === 'admin';
+  const canEdit = userPermission === 'edit' || userPermission === 'delete' || userPermission === 'admin';
+  const canDelete = userPermission === 'delete' || userPermission === 'admin';
 
   // Fetch departments and available roles
   useEffect(() => {
@@ -398,9 +406,11 @@ const UsersList = () => {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>System Users</CardTitle>
-        <Button onClick={() => setIsAddDialogOpen(true)}>
-          <UserPlus className="w-4 h-4 mr-2" /> Add User
-        </Button>
+        {canCreate && (
+          <Button onClick={() => setIsAddDialogOpen(true)}>
+            <UserPlus className="w-4 h-4 mr-2" /> Add User
+          </Button>
+        )}
       </CardHeader>
       <CardContent>
         <Table>
@@ -433,10 +443,14 @@ const UsersList = () => {
                     </div>
                   </TableCell>
                   <TableCell className="text-right space-x-2">
-                    <Button variant="ghost" size="icon" onClick={() => handleEditUser(user)}>
-                      <Edit className="w-4 h-4" />
-                    </Button>
-                    <ResetPasswordAction userId={user.id} userEmail={user.email} />
+                    {canEdit && (
+                      <Button variant="ghost" size="icon" onClick={() => handleEditUser(user)}>
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                    )}
+                    {canEdit && (
+                      <ResetPasswordAction userId={user.id} userEmail={user.email} />
+                    )}
                   </TableCell>
                 </TableRow>
               ))
