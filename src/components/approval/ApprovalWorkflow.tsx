@@ -73,12 +73,12 @@ export const handleAdminRequestApproval = async (
     // Determine if requestor has admin role
     const { data: userRoles, error: rolesError } = await supabase
       .from('user_roles')
-      .select('role')
+      .select('role_id, custom_roles(name)')
       .eq('user_id', requesterId);
       
     if (rolesError) throw rolesError;
     
-    const isAdmin = userRoles?.some(r => r.role === 'admin');
+    const isAdmin = userRoles?.some(r => ((r.custom_roles as any)?.name || '').toLowerCase() === 'admin');
     
     if (isAdmin) {
       // If admin and has explicit approver, create pending approval
@@ -166,12 +166,12 @@ export const createApprovalRequest = async (
     // Determine if user is admin for auto-approval
     const { data: userRoles, error: rolesError } = await supabase
       .from('user_roles')
-      .select('role')
+      .select('role_id, custom_roles(name)')
       .eq('user_id', requesterId);
       
     if (rolesError) throw rolesError;
     
-    const isAdmin = userRoles?.some(r => r.role === 'admin');
+    const isAdmin = userRoles?.some(r => ((r.custom_roles as any)?.name || '').toLowerCase() === 'admin');
     
     // If admin, auto-approve the request
     if (isAdmin) {
