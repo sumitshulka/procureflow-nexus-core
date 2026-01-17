@@ -98,15 +98,16 @@ const RoleWizard = () => {
       
       // Prepare permissions to save
       const permissionsToSave: { role_id: string; module_id: string; module_uuid: string; permission: string }[] = [];
-      
+
       Object.entries(selectedModules).forEach(([moduleId, isSelected]) => {
         if (isSelected && modulePermissions[moduleId]) {
-          modulePermissions[moduleId].forEach(permission => {
+          const uniquePermissions = Array.from(new Set(modulePermissions[moduleId]));
+          uniquePermissions.forEach((permission) => {
             permissionsToSave.push({
               role_id: roleId,
-              module_id: "legacy", // Keep for backward compatibility
+              module_id: moduleId,
               module_uuid: moduleId,
-              permission: permission,
+              permission,
             });
           });
         }

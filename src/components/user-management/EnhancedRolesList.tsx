@@ -287,24 +287,30 @@ const EnhancedRolesList = () => {
       
       if (deleteError) throw deleteError;
       
+      const uniquePermissions = Array.from(new Set(permissions));
+
       // If no permissions to add, just return
-      if (permissions.length === 0) return { roleId, moduleId, added: 0 };
-      
-      // Then insert the new permissions
-      const permissionObjects = permissions.map(permission => ({
+      if (uniquePermissions.length === 0) return { roleId, moduleId, added: 0 };
+
+      // Insert the new permissions
+      // NOTE: DB unique constraint is on (role_id, module_id, permission), so module_id must be unique per module.
+      const permissionObjects = uniquePermissions.map((permission) => ({
         role_id: roleId,
-        module_id: "legacy", // Keep for backward compatibility
+        module_id: moduleId,
         module_uuid: moduleId,
         permission,
       }));
-      
+
       const { error: insertError } = await supabase
         .from("role_permissions")
-        .insert(permissionObjects);
-      
+        .upsert(permissionObjects, {
+          onConflict: "role_id,module_id,permission",
+          ignoreDuplicates: true,
+        });
+
       if (insertError) throw insertError;
-      
-      return { roleId, moduleId, added: permissions.length };
+
+      return { roleId, moduleId, added: uniquePermissions.length };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["role_permissions"] });
