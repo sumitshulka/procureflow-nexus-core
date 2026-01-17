@@ -257,7 +257,9 @@ export const logApprovalAction = async (
 // Component that provides approval workflow functions through context
 export const useApprovalWorkflow = () => {
   const { userData } = useAuth();
-  const isAdmin = userData?.roles?.includes(UserRole.ADMIN);
+  // Case-insensitive role check
+  const userRolesLower = userData?.roles?.map(r => r.toLowerCase()) || [];
+  const isAdmin = userRolesLower.includes(UserRole.ADMIN.toLowerCase());
   
   return {
     handleAdminRequestApproval,

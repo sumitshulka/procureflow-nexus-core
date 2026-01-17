@@ -15,10 +15,13 @@ const UserManagement = () => {
   const { userData } = useAuth();
   const defaultTab = location.hash ? location.hash.replace('#', '') : 'users';
 
-  // Check if user has admin permission
+  // Check if user has admin permission (case-insensitive)
   useEffect(() => {
-    if (userData && !userData.roles?.includes(UserRole.ADMIN)) {
-      navigate('/dashboard', { replace: true });
+    if (userData) {
+      const userRolesLower = userData.roles?.map(r => r.toLowerCase()) || [];
+      if (!userRolesLower.includes(UserRole.ADMIN.toLowerCase())) {
+        navigate('/dashboard', { replace: true });
+      }
     }
   }, [userData, navigate]);
 
