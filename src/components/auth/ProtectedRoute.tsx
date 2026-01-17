@@ -60,40 +60,50 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       const roleIds = userRoles.map(r => r.role_id);
       
       // Check if any of user's roles is Admin (case-insensitive)
-      const { data: adminRole } = await supabase
+      const { data: adminRoles } = await supabase
         .from("custom_roles")
-        .select("id")
-        .ilike("name", "admin")
-        .in("id", roleIds)
-        .single();
+        .select("id, name")
+        .in("id", roleIds);
+      
+      const isAdmin = adminRoles?.some(role => role.name.toLowerCase() === 'admin');
       
       // Admin role has access to everything
-      if (adminRole) {
+      if (isAdmin) {
         return true;
       }
       
       // For non-admin users, check if they have permission for the current route
-      // Get menu items that match the current path
       const currentPath = location.pathname;
       
-      const { data: menuItem } = await supabase
-        .from("menu_items")
-        .select("id")
-        .or(`route_path.eq.${currentPath},route_path.eq.${currentPath.replace('/dashboard', '/')}`)
-        .single();
+      // Find system module that matches this route
+      const { data: matchingModules } = await supabase
+        .from("system_modules")
+        .select("id, menu_item_id, menu_items!menu_item_id(route_path)")
+        .eq("is_active", true);
       
-      if (!menuItem) {
-        // If no menu item found for this route, check if it's a sub-route
-        // For now, allow access if no explicit restriction
-        return true;
+      // Find module that matches the current path
+      const matchedModule = matchingModules?.find((mod: any) => {
+        const routePath = mod.menu_items?.route_path;
+        if (!routePath) return false;
+        return currentPath === routePath || currentPath.startsWith(routePath + '/');
+      });
+      
+      if (!matchedModule) {
+        // If no module found for this route, check if it's a general route that should be accessible
+        // Allow access to documentation and similar pages
+        if (currentPath.startsWith('/documentation')) {
+          return true;
+        }
+        // For unregistered routes, deny by default if role is required
+        return false;
       }
       
-      // Check if any of user's roles has permission for this menu item
+      // Check if any of user's roles has permission for this module
       const { data: permission } = await supabase
         .from("role_permissions")
         .select("permission")
         .in("role_id", roleIds)
-        .eq("module_uuid", menuItem.id)
+        .eq("module_uuid", matchedModule.id)
         .limit(1)
         .single();
       
@@ -103,7 +113,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   });
 
   // Show loading state
-  if (isLoading || (requireVendor && vendorLoading) || (!!requiredRole && permissionLoading)) {
+  if (isLoading || (requireVendor && vendorLoading) || ((requiredRole || allowedRoles) && permissionLoading)) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -147,7 +157,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   // Check role/permission if required (for non-vendor routes)
   if ((requiredRole || allowedRoles) && !requireVendor) {
-    // First check userData.roles for backward compatibility
+    // First check userData.roles for backward compatibility with hardcoded role names
     const userRolesLower = userData?.roles?.map(r => r.toLowerCase()) || [];
     
     const hasRequiredRole = requiredRole 
@@ -166,10 +176,10 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
               You don't have the required permissions to access this page.
             </p>
             <button
-              onClick={() => navigate('/login')}
+              onClick={() => navigate('/dashboard')}
               className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
             >
-              Back to Login
+              Go to Dashboard
             </button>
           </div>
         </div>
