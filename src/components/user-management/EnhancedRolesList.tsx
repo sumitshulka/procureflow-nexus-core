@@ -525,9 +525,9 @@ const EnhancedRolesList = () => {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
-              <CardTitle>System Roles</CardTitle>
+              <CardTitle>Roles</CardTitle>
               <CardDescription>
-                Manage roles and their permissions across modules.
+                Manage system roles and custom roles and their permissions across modules.
               </CardDescription>
             </div>
             <div className="flex gap-2">
@@ -614,37 +614,48 @@ const EnhancedRolesList = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {roles.length === 0 ? (
+                    {allRolesForDisplay.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={3} className="text-center py-6 text-muted-foreground">
-                          No roles found. Create your first role to get started.
+                          No roles found.
                         </TableCell>
                       </TableRow>
                     ) : (
-                      roles.map((role) => (
+                      allRolesForDisplay.map((role) => (
                         <TableRow key={role.id}>
-                          <TableCell className="font-medium">{role.name}</TableCell>
+                          <TableCell className="font-medium">
+                            <div className="flex items-center gap-2">
+                              <span>{role.name}</span>
+                              <Badge variant={role.type === "system" ? "secondary" : "outline"}>
+                                {role.type === "system" ? "System" : "Custom"}
+                              </Badge>
+                            </div>
+                          </TableCell>
                           <TableCell className="hidden md:table-cell">{role.description || "-"}</TableCell>
                           <TableCell className="text-right w-[120px]">
-                            <div className="flex items-center justify-end gap-1">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleManagePermissions(role)}
-                                title="Manage Permissions"
-                              >
-                                <Shield className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => setRoleToDelete(role)}
-                                className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                                title="Delete Role"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
+                            {role.type === "custom" ? (
+                              <div className="flex items-center justify-end gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleManagePermissions(role)}
+                                  title="Manage Permissions"
+                                >
+                                  <Shield className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => setRoleToDelete(role)}
+                                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                  title="Delete Role"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
                           </TableCell>
                         </TableRow>
                       ))
