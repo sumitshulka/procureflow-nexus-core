@@ -173,11 +173,11 @@ function App() {
           <Route path="/vendor-registration-success" element={<VendorRegistrationSuccess />} />
           <Route path="/vendor-registration-duplicate" element={<VendorRegistrationDuplicate />} />
 
-          {/* Protected Admin Routes with Layout */}
+          {/* Protected Routes with Layout (permissions enforced in ProtectedRoute) */}
           <Route
             path="/dashboard"
             element={
-              <ProtectedRoute requiredRole={UserRole.ADMIN}>
+              <ProtectedRoute allowedRoles={[]}>
                 <Layout><Dashboard /></Layout>
               </ProtectedRoute>
             }
