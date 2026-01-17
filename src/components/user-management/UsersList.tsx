@@ -83,41 +83,46 @@ const UsersList = () => {
 
     const fetchAvailableRoles = async () => {
       try {
-        // Fetch roles from the user_role enum via a query that gets distinct roles
-        const { data, error } = await supabase
+        // Fetch system roles from user_roles table
+        const { data: systemRolesData, error: systemError } = await supabase
           .from("user_roles")
           .select("role");
 
-        if (error) throw error;
+        if (systemError) throw systemError;
 
-        // Get unique roles from the data
-        const uniqueRoles = [...new Set((data || []).map((r) => r.role))];
+        // Get unique system roles
+        const systemRoles = [
+          ...new Set((systemRolesData || []).map((r) => r.role)),
+        ].filter((r) => r !== "vendor");
 
-        // If no roles found in user_roles, use fallback roles from the enum
-        if (uniqueRoles.length === 0) {
-          setAvailableRoles([
-            "admin",
-            "requester",
-            "procurement_officer",
-            "inventory_manager",
-            "finance_officer",
-            "evaluation_committee",
-            "department_head",
-          ]);
-        } else {
-          // Add common roles that might not be assigned yet
-          const allRoles = new Set([
-            ...uniqueRoles,
-            "admin",
-            "requester",
-            "procurement_officer",
-            "inventory_manager",
-            "finance_officer",
-            "evaluation_committee",
-            "department_head",
-          ]);
-          setAvailableRoles([...allRoles].sort());
-        }
+        // Fetch custom roles from custom_roles table
+        const { data: customRolesData, error: customError } = await supabase
+          .from("custom_roles")
+          .select("id, name")
+          .eq("is_active", true);
+
+        if (customError) throw customError;
+
+        // Combine with default system roles to ensure all options are available
+        const defaultSystemRoles = [
+          "admin",
+          "requester",
+          "procurement_officer",
+          "inventory_manager",
+          "finance_officer",
+          "evaluation_committee",
+          "department_head",
+        ];
+
+        const allSystemRoles = [...new Set([...systemRoles, ...defaultSystemRoles])];
+
+        // Create combined list
+        const combinedRoles = [
+          ...allSystemRoles,
+          ...(customRolesData || []).map((role) => `custom:${role.id}:${role.name}`),
+        ];
+
+        setAvailableRoles(combinedRoles.sort());
       } catch (error) {
         console.error("Error fetching available roles:", error);
         // Fallback to default roles
@@ -581,12 +586,25 @@ const UsersList = () => {
                       </FormControl>
                       <SelectContent>
                         {availableRoles
-                          .filter((role) => role !== "vendor")
-                          .map((role) => (
-                            <SelectItem key={role} value={role}>
-                              {role.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}
-                            </SelectItem>
-                          ))}
+                          .filter((role) => !role.startsWith("vendor"))
+                          .map((role) => {
+                            // Check if it's a custom role (format: "custom:id:name")
+                            if (role.startsWith("custom:")) {
+                              const parts = role.split(":");
+                              const name = parts.slice(2).join(":");
+                              return (
+                                <SelectItem key={role} value={role}>
+                                  {name} (Custom)
+                                </SelectItem>
+                              );
+                            }
+                            // System role
+                            return (
+                              <SelectItem key={role} value={role}>
+                                {role.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}
+                              </SelectItem>
+                            );
+                          })}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -674,12 +692,25 @@ const UsersList = () => {
                       </FormControl>
                       <SelectContent>
                         {availableRoles
-                          .filter((role) => role !== "vendor")
-                          .map((role) => (
-                            <SelectItem key={role} value={role}>
-                              {role.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}
-                            </SelectItem>
-                          ))}
+                          .filter((role) => !role.startsWith("vendor"))
+                          .map((role) => {
+                            // Check if it's a custom role (format: "custom:id:name")
+                            if (role.startsWith("custom:")) {
+                              const parts = role.split(":");
+                              const name = parts.slice(2).join(":");
+                              return (
+                                <SelectItem key={role} value={role}>
+                                  {name} (Custom)
+                                </SelectItem>
+                              );
+                            }
+                            // System role
+                            return (
+                              <SelectItem key={role} value={role}>
+                                {role.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}
+                              </SelectItem>
+                            );
+                          })}
                       </SelectContent>
                     </Select>
                     <FormMessage />
