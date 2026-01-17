@@ -54,6 +54,7 @@ const AppSidebar = () => {
       title: "Dashboard",
       icon: LayoutDashboard,
       href: "/dashboard",
+      moduleRoute: "/dashboard",
     },
     {
       title: "Product Catalog",
@@ -65,6 +66,7 @@ const AppSidebar = () => {
       title: "Inventory Management",
       icon: Package,
       href: "/inventory",
+      moduleRoute: "/inventory",
       subItems: [
         { title: "Inventory Items", href: "/inventory/items" },
         { title: "Inventory Transactions", href: "/inventory/transactions" },
@@ -76,11 +78,13 @@ const AppSidebar = () => {
       title: "Procurement Requests",
       icon: ListChecks,
       href: "/requests",
+      moduleRoute: "/requests",
     },
     {
       title: "RFP Management",
       icon: FileText,
       href: "/rfp",
+      moduleRoute: "/rfp",
       subItems: [
         { title: "Create RFP", href: "/rfp/create" },
         { title: "Active RFPs", href: "/rfp/active" },
@@ -92,21 +96,25 @@ const AppSidebar = () => {
       title: "Purchase Orders",
       icon: ShoppingCart,
       href: "/purchase-orders",
+      moduleRoute: "/purchase-orders",
     },
     {
       title: "Invoice Management",
       icon: Receipt,
       href: "/invoices",
+      moduleRoute: "/invoices",
     },
     {
       title: "Approvals",
       icon: ClipboardList,
       href: "/approvals",
+      moduleRoute: "/approvals",
     },
     {
       title: "Budget Management",
       icon: Calculator,
       href: "/budget",
+      moduleRoute: "/budget",
       subItems: [
         { title: "Budget Overview", href: "/budget/overview" },
         { title: "Budget Allocation", href: "/budget/allocation" },
@@ -117,6 +125,7 @@ const AppSidebar = () => {
       title: "Compliance & Audit",
       icon: Shield,
       href: "/compliance",
+      moduleRoute: "/compliance",
       subItems: [
         { title: "Audit Trail", href: "/compliance/audit-trail" },
         { title: "Compliance Reports", href: "/compliance/reports" },
@@ -127,6 +136,7 @@ const AppSidebar = () => {
       title: "Risk Management",
       icon: AlertTriangle,
       href: "/risk",
+      moduleRoute: "/risk",
       subItems: [
         { title: "Risk Assessment", href: "/risk/assessment" },
         { title: "Risk Monitoring", href: "/risk/monitoring" },
@@ -143,22 +153,26 @@ const AppSidebar = () => {
       title: "Vendor Management",
       icon: Building2,
       href: "/vendors",
+      moduleRoute: "/vendors",
     },
     {
       title: "Vendor Portal",
       icon: Store,
       href: "/vendor-portal",
+      moduleRoute: "/vendor-portal",
       vendorOnly: true,
     },
     {
       title: "Settings",
       icon: Settings,
       href: "/settings",
+      moduleRoute: "/settings",
     },
     {
       title: "User Management",
       icon: Users,
       href: "/users",
+      moduleRoute: "/users",
     },
   ];
 
