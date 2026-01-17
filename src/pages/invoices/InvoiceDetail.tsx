@@ -74,10 +74,10 @@ const InvoiceDetail = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("user_roles")
-        .select("role")
+        .select("role_id, custom_roles(name)")
         .eq("user_id", user?.id);
       if (error) throw error;
-      return data.map(r => r.role);
+      return data.map(r => ((r.custom_roles as any)?.name || '').toLowerCase());
     },
   });
 

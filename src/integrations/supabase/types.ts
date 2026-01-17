@@ -4072,24 +4072,32 @@ export type Database = {
           assigned_at: string
           assigned_by: string | null
           id: string
-          role: Database["public"]["Enums"]["user_role"]
+          role_id: string
           user_id: string
         }
         Insert: {
           assigned_at?: string
           assigned_by?: string | null
           id?: string
-          role: Database["public"]["Enums"]["user_role"]
+          role_id: string
           user_id: string
         }
         Update: {
           assigned_at?: string
           assigned_by?: string | null
           id?: string
-          role?: Database["public"]["Enums"]["user_role"]
+          role_id?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "custom_roles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       vendor_communications: {
         Row: {
@@ -4503,10 +4511,7 @@ export type Database = {
         Returns: boolean
       }
       can_assign_role: {
-        Args: {
-          role_to_assign: Database["public"]["Enums"]["user_role"]
-          target_user_id: string
-        }
+        Args: { role_to_assign: string; target_user_id: string }
         Returns: boolean
       }
       can_delete_procurement_request: {
@@ -4633,6 +4638,10 @@ export type Database = {
           required_role: Database["public"]["Enums"]["user_role"]
           user_id: string
         }
+        Returns: boolean
+      }
+      has_role_by_name: {
+        Args: { _role_name: string; _user_id: string }
         Returns: boolean
       }
       initiate_invoice_approval: {

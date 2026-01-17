@@ -49,11 +49,11 @@ const AssignDepartmentHeadDialog = ({
   const { data: departmentHeads = [], isLoading: isLoadingHeads } = useQuery({
     queryKey: ["department-heads"],
     queryFn: async () => {
-      // First get user_ids with department_head role
+      // First get user_ids with department_head role using role name
       const { data: roleData, error: roleError } = await supabase
         .from("user_roles")
-        .select("user_id")
-        .eq("role", "department_head");
+        .select("user_id, custom_roles!inner(name)")
+        .ilike("custom_roles.name", "department head");
 
       if (roleError) throw roleError;
       if (!roleData || roleData.length === 0) return [];

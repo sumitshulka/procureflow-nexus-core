@@ -260,19 +260,28 @@ const VendorRegistrationPage = () => {
       });
 
       if (!roleSignInError && signInForRole.user) {
-        const { error: roleError } = await supabase
-          .from('user_roles')
-          .insert({
-            user_id: userId,
-            role: 'vendor',
-          });
+        // Get the Vendor role ID from custom_roles
+        const { data: vendorRole, error: vendorRoleError } = await supabase
+          .from('custom_roles')
+          .select('id')
+          .ilike('name', 'vendor')
+          .single();
+        
+        if (!vendorRoleError && vendorRole) {
+          const { error: roleError } = await supabase
+            .from('user_roles')
+            .insert({
+              user_id: userId,
+              role_id: vendorRole.id,
+            });
+
+          if (roleError && !roleError.message.includes('duplicate key')) {
+            throw roleError;
+          }
+        }
 
         // Sign out immediately
         await supabase.auth.signOut();
-
-        if (roleError && !roleError.message.includes('duplicate key')) {
-          throw roleError;
-        }
       }
 
       toast({

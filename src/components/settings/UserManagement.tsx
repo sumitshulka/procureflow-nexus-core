@@ -102,10 +102,10 @@ const UserManagement = () => {
       if (profilesError) throw profilesError;
       if (!profiles || profiles.length === 0) return [];
       
-      // Get user roles
+      // Get user roles with role names
       const { data: userRoles, error: rolesError } = await supabase
         .from("user_roles")
-        .select("user_id, role");
+        .select("user_id, role_id, custom_roles(id, name)");
         
       if (rolesError) throw rolesError;
 
@@ -136,7 +136,8 @@ const UserManagement = () => {
         if (!rolesByUser[ur.user_id]) {
           rolesByUser[ur.user_id] = [];
         }
-        rolesByUser[ur.user_id].push(ur.role);
+        const roleName = (ur.custom_roles as any)?.name || 'Unknown';
+        rolesByUser[ur.user_id].push(roleName);
       });
       
       // Build combined user data
@@ -173,13 +174,13 @@ const UserManagement = () => {
       if (signUpError) throw signUpError;
       
       // Wait for the trigger to create the profile
-      // Then assign the selected role
+      // Then assign the selected role (now using role_id)
       if (data.user) {
         const { error: roleError } = await supabase
           .from("user_roles")
           .insert({
             user_id: data.user.id,
-            role: values.role as any // Cast to any to avoid type issues
+            role_id: values.role
           });
           
         if (roleError) throw roleError;
@@ -217,7 +218,7 @@ const UserManagement = () => {
         .from("user_roles")
         .insert({ 
           user_id: userId, 
-          role: role as any // Cast to any to avoid type issues
+          role_id: role
         });
         
       if (error) throw error;

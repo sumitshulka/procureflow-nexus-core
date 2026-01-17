@@ -120,10 +120,10 @@ const UsersList = () => {
       if (error) throw error;
       if (!profiles || profiles.length === 0) return [];
 
-      // Get user roles
+      // Get user roles with role names from custom_roles
       const { data: userRoles, error: rolesError } = await supabase
         .from("user_roles")
-        .select("user_id, role");
+        .select("user_id, role_id, custom_roles(id, name)");
 
       if (rolesError) throw rolesError;
 
@@ -149,11 +149,12 @@ const UsersList = () => {
       }
 
       // Group roles by user
-      const rolesByUser = userRoles.reduce((acc, { user_id, role }) => {
-        if (!acc[user_id]) acc[user_id] = [];
-        acc[user_id].push(role);
+      const rolesByUser = userRoles.reduce((acc, ur) => {
+        if (!acc[ur.user_id]) acc[ur.user_id] = [];
+        const roleName = (ur.custom_roles as any)?.name || 'Unknown';
+        acc[ur.user_id].push(roleName);
         return acc;
-      }, {});
+      }, {} as Record<string, string[]>);
 
       // Join profiles with roles and emails
       return profiles.map(profile => {
@@ -256,12 +257,12 @@ const UsersList = () => {
           return;
         }
         
-        // Assign user role
+        // Assign user role (role_id is now the UUID from custom_roles)
         const { error: roleError } = await supabase
           .from("user_roles")
           .insert({
             user_id: signUpData.user.id,
-            role: values.role
+            role_id: values.role
           });
 
         if (roleError) {
@@ -352,12 +353,12 @@ const UsersList = () => {
           throw deleteRoleError;
         }
 
-        // Add new role
+        // Add new role (role_id is now the UUID from custom_roles)
         const { error: addRoleError } = await supabase
           .from("user_roles")
           .insert({
             user_id: currentUser.id,
-            role: values.role
+            role_id: values.role
           });
 
         if (addRoleError) {

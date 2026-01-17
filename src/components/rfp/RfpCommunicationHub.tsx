@@ -75,12 +75,12 @@ export const RfpCommunicationHub: React.FC<RfpCommunicationHubProps> = ({
         // Check user roles for organization users
         const { data: roleData } = await supabase
           .from('user_roles')
-          .select('role')
+          .select('role_id, custom_roles(name)')
           .eq('user_id', user.id);
 
-        const roles = roleData?.map(r => r.role) || [];
+        const roles = roleData?.map(r => ((r.custom_roles as any)?.name || '').toLowerCase()) || [];
         
-        if (roles.includes('admin') || roles.includes('procurement_officer')) {
+        if (roles.includes('admin') || roles.includes('procurement officer')) {
           setCanManage(true);
           setUserRole('organization');
         } else {

@@ -112,10 +112,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       if (profileError) throw profileError;
 
-      // Fetch user roles
+      // Fetch user roles with role names from custom_roles
       const { data: rolesData, error: rolesError } = await supabase
         .from("user_roles")
-        .select("role")
+        .select("role_id, custom_roles(id, name)")
         .eq("user_id", userId);
 
       if (rolesError) throw rolesError;
@@ -136,7 +136,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         fullName: profileData?.full_name,
         avatarUrl: profileData?.avatar_url,
         department: profileData?.department,
-        roles: rolesData.map(r => r.role as UserRole),
+        roles: rolesData.map(r => ((r.custom_roles as any)?.name || '') as UserRole),
       };
       
       console.log("Setting userData to:", userData);
@@ -147,8 +147,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         console.log("Navigating to vendor dashboard");
         navigate('/vendor-dashboard');
       } else if (rolesData.length > 0) {
-        const userRole = rolesData[0].role;
-        if (userRole === 'admin') {
+        const userRoleName = ((rolesData[0].custom_roles as any)?.name || '').toLowerCase();
+        if (userRoleName === 'admin') {
           navigate('/admin-dashboard');
         } else {
           navigate('/dashboard');
@@ -275,12 +275,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
         // If automatic setup is completed and user is already created
         if (shouldMakeAdmin) {
+          // Get the Admin role ID from custom_roles
+          const { data: adminRole, error: adminRoleError } = await supabase
+            .from('custom_roles')
+            .select('id')
+            .ilike('name', 'admin')
+            .single();
+            
+          if (adminRoleError || !adminRole) {
+            throw new Error('Admin role not found');
+          }
+          
           // Assign admin role manually
           const { error: roleError } = await supabase
             .from('user_roles')
             .insert({
               user_id: data.user.id,
-              role: 'admin'
+              role_id: adminRole.id
             });
             
           if (roleError) throw roleError;

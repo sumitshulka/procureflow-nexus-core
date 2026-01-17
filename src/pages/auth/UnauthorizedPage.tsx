@@ -22,7 +22,7 @@ const UnauthorizedPage = () => {
       
       const { data, error } = await supabase
         .from("user_roles")
-        .select("role")
+        .select("role_id, custom_roles(name)")
         .eq("user_id", user.id);
         
       if (error) throw error;
@@ -40,7 +40,7 @@ const UnauthorizedPage = () => {
               ? userData.roles.join(", ") 
               : "None"}</p>
             <p><strong>User Roles (direct from DB):</strong> {data?.length > 0 
-              ? data.map(r => r.role).join(", ") 
+              ? data.map(r => (r.custom_roles as any)?.name || 'Unknown').join(", ") 
               : "None"}</p>
           </div>
         ),
