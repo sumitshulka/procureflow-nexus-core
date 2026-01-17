@@ -84,10 +84,13 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   // Check role if required (for non-vendor routes)
   if ((requiredRole || allowedRoles) && !requireVendor && userData?.roles) {
+    // Normalize roles to lowercase for case-insensitive comparison
+    const userRolesLower = userData.roles.map(r => r.toLowerCase());
+    
     const hasRequiredRole = requiredRole 
-      ? userData.roles.includes(requiredRole)
+      ? userRolesLower.includes(requiredRole.toLowerCase())
       : allowedRoles 
-        ? allowedRoles.some(role => userData.roles.includes(role))
+        ? allowedRoles.some(role => userRolesLower.includes(role.toLowerCase()))
         : true;
 
     if (!hasRequiredRole) {
