@@ -186,13 +186,14 @@ const AppSidebar = () => {
 
   // Check if user can see a menu item based on module permissions
   const canAccessMenuItem = (item: typeof menuItems[0]): boolean => {
-    // Admin can access everything
-    if (isAdmin) return true;
-
-    // Vendor-only items - check if user has vendor role
+    // Vendor-only items - ONLY show to vendors, never to admins
+    // Vendor Portal is a separate system for vendors, not an admin feature
     if ((item as any).vendorOnly) {
       return userData?.roles?.some(r => r.toLowerCase() === 'vendor') || false;
     }
+
+    // Admin can access all other items
+    if (isAdmin) return true;
 
     // Check module access using the route path
     const routeToCheck = (item as any).moduleRoute || item.href;
