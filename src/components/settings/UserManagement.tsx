@@ -3,7 +3,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { UserRole } from "@/types";
 
 // Import UI components individually
 import { Card } from "@/components/ui/card";
@@ -57,7 +56,62 @@ const UserManagement = () => {
   const { user } = useAuth();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("users");
-  
+
+  // Fetch available roles from database (both system roles and custom roles)
+  const { data: availableRoles = [] } = useQuery({
+    queryKey: ["all_available_roles"],
+    queryFn: async () => {
+      // Fetch system roles from user_roles table
+      const { data: systemRolesData, error: systemError } = await supabase
+        .from("user_roles")
+        .select("role");
+
+      if (systemError) console.error("Error fetching system roles:", systemError);
+
+      // Get unique system roles
+      const systemRoles = [
+        ...new Set((systemRolesData || []).map((r) => r.role)),
+      ].filter((r) => r !== "vendor");
+
+      // Fetch custom roles from custom_roles table
+      const { data: customRolesData, error: customError } = await supabase
+        .from("custom_roles")
+        .select("id, name")
+        .eq("is_active", true);
+
+      if (customError) console.error("Error fetching custom roles:", customError);
+
+      // Combine with default system roles to ensure all options are available
+      const defaultSystemRoles = [
+        "admin",
+        "requester",
+        "procurement_officer",
+        "inventory_manager",
+        "finance_officer",
+        "evaluation_committee",
+        "department_head",
+      ];
+
+      const allSystemRoles = [...new Set([...systemRoles, ...defaultSystemRoles])];
+
+      // Create combined list with type indicator
+      const combinedRoles = [
+        ...allSystemRoles.map((role) => ({
+          value: role,
+          label: role.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()),
+          type: "system" as const,
+        })),
+        ...(customRolesData || []).map((role) => ({
+          value: `custom:${role.id}`,
+          label: `${role.name} (Custom)`,
+          type: "custom" as const,
+        })),
+      ];
+
+      return combinedRoles.sort((a, b) => a.label.localeCompare(b.label));
+    },
+  });
+
   // Form setup for creating new users
   const form = useForm({
     resolver: zodResolver(userSchema),
@@ -65,7 +119,7 @@ const UserManagement = () => {
       email: "",
       fullName: "",
       password: "",
-      role: UserRole.REQUESTER,
+      role: "requester",
     },
   });
   
@@ -307,9 +361,9 @@ const UserManagement = () => {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                {Object.values(UserRole).map((role) => (
-                                  <SelectItem key={role} value={role}>
-                                    {role.replace('_', ' ').charAt(0).toUpperCase() + role.replace('_', ' ').slice(1).toLowerCase()}
+                                {availableRoles.map((role) => (
+                                  <SelectItem key={role.value} value={role.value}>
+                                    {role.label}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
@@ -395,13 +449,25 @@ const UserManagement = () => {
                                     <DropdownMenuItem>
                                       <Pencil className="w-4 h-4 mr-2" /> Edit User
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem 
+                                    <DropdownMenuItem
                                       onSelect={() => {
-                                        const role = prompt("Enter role to add:", "requester");
-                                        if (role && Object.values(UserRole).includes(role as UserRole)) {
-                                          addRoleMutation.mutate({ 
-                                            userId: userData.id, 
-                                            role 
+                                        const role = prompt(
+                                          "Enter role to add (e.g., requester, admin):",
+                                          "requester"
+                                        );
+                                        if (
+                                          role &&
+                                          availableRoles.some((r) => r.value === role)
+                                        ) {
+                                          addRoleMutation.mutate({
+                                            userId: userData.id,
+                                            role,
+                                          });
+                                        } else if (role) {
+                                          // Still try to add it if it's a valid system role
+                                          addRoleMutation.mutate({
+                                            userId: userData.id,
+                                            role,
                                           });
                                         }
                                       }}
@@ -435,15 +501,24 @@ const UserManagement = () => {
 
 // Role Management component
 const RoleManagement = () => {
-  // The role permissions management component
-  const roles = Object.values(UserRole);
+  // Define static roles for backwards compatibility
+  const roles = [
+    "admin",
+    "requester",
+    "procurement_officer",
+    "inventory_manager",
+    "finance_officer",
+    "evaluation_committee",
+    "department_head",
+  ];
+
   const modules = [
     { id: "dashboard", name: "Dashboard" },
     { id: "catalog", name: "Product Catalog" },
     { id: "requests", name: "Procurement Requests" },
     { id: "settings", name: "Settings" },
   ];
-  
+
   const permissions = [
     { id: "view", name: "View" },
     { id: "create", name: "Create" },
@@ -451,48 +526,54 @@ const RoleManagement = () => {
     { id: "delete", name: "Delete" },
     { id: "full_control", name: "Full Control" },
   ];
-  
+
   // Default mapping for role permissions (in a real app this would come from the database)
-  const [rolePermissions, setRolePermissions] = useState<Record<string, Record<string, string[]>>>({
-    [UserRole.ADMIN]: {
+  const [rolePermissions, setRolePermissions] = useState<
+    Record<string, Record<string, string[]>>
+  >({
+    admin: {
       dashboard: ["full_control"],
       catalog: ["full_control"],
       requests: ["full_control"],
       settings: ["full_control"],
     },
-    [UserRole.REQUESTER]: {
+    requester: {
       dashboard: ["view"],
       catalog: ["view"],
       requests: ["view", "create"],
       settings: [],
     },
-    [UserRole.PROCUREMENT_OFFICER]: {
+    procurement_officer: {
       dashboard: ["view"],
       catalog: ["view", "create", "modify"],
       requests: ["view", "create", "modify"],
       settings: [],
     },
-    [UserRole.INVENTORY_MANAGER]: {
+    inventory_manager: {
       dashboard: ["view"],
       catalog: ["view", "create", "modify", "delete"],
       requests: ["view"],
       settings: [],
-    }
+    },
   });
-  
+
   // Toggle permission for role and module
-  const togglePermission = (role: string, module: string, permission: string) => {
-    setRolePermissions(prev => {
+  const togglePermission = (
+    role: string,
+    module: string,
+    permission: string
+  ) => {
+    setRolePermissions((prev) => {
       const newPermissions = { ...prev };
-      
+
       if (!newPermissions[role]) {
         newPermissions[role] = {};
       }
-      
+
       if (!newPermissions[role][module]) {
         newPermissions[role][module] = [];
       }
-      
+
       // If permission is "full_control", remove all other permissions
       if (permission === "full_control") {
         if (newPermissions[role][module].includes("full_control")) {
@@ -505,20 +586,27 @@ const RoleManagement = () => {
       } else {
         // For other permissions, toggle and remove full control if present
         const currentPermissions = newPermissions[role][module];
-        
+
         // Remove full control if it exists
-        const permissionsWithoutFullControl = currentPermissions.filter(p => p !== "full_control");
-        
+        const permissionsWithoutFullControl = currentPermissions.filter(
+          (p) => p !== "full_control"
+        );
+
         // Check if permission is already in the list
         if (permissionsWithoutFullControl.includes(permission)) {
           // Remove the permission
-          newPermissions[role][module] = permissionsWithoutFullControl.filter(p => p !== permission);
+          newPermissions[role][module] = permissionsWithoutFullControl.filter(
+            (p) => p !== permission
+          );
         } else {
           // Add the permission
-          newPermissions[role][module] = [...permissionsWithoutFullControl, permission];
+          newPermissions[role][module] = [
+            ...permissionsWithoutFullControl,
+            permission,
+          ];
         }
       }
-      
+
       return newPermissions;
     });
   };
@@ -537,33 +625,40 @@ const RoleManagement = () => {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[200px]">Module / Role</TableHead>
-                {roles.map(role => (
-                  <TableHead key={role}>{role.replace('_', ' ')}</TableHead>
+                {roles.map((role) => (
+                  <TableHead key={role}>
+                    {role.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}
+                  </TableHead>
                 ))}
               </TableRow>
             </TableHeader>
             <TableBody>
-              {modules.map(module => (
+              {modules.map((module) => (
                 <React.Fragment key={module.id}>
                   <TableRow className="bg-muted/50">
-                    <TableCell colSpan={roles.length + 1} className="font-medium">
+                    <TableCell
+                      colSpan={roles.length + 1}
+                      className="font-medium"
+                    >
                       {module.name}
                     </TableCell>
                   </TableRow>
-                  {permissions.map(permission => (
+                  {permissions.map((permission) => (
                     <TableRow key={`${module.id}-${permission.id}`}>
-                      <TableCell className="pl-6">
-                        {permission.name}
-                      </TableCell>
-                      {roles.map(role => (
+                      <TableCell className="pl-6">{permission.name}</TableCell>
+                      {roles.map((role) => (
                         <TableCell key={`${role}-${permission.id}`}>
                           <Button
                             variant="ghost"
                             size="sm"
                             className="w-8 h-8 p-0"
-                            onClick={() => togglePermission(role, module.id, permission.id)}
+                            onClick={() =>
+                              togglePermission(role, module.id, permission.id)
+                            }
                           >
-                            {rolePermissions[role]?.[module.id]?.includes(permission.id) ? (
+                            {rolePermissions[role]?.[module.id]?.includes(
+                              permission.id
+                            ) ? (
                               <CheckCircle className="h-5 w-5 text-green-500" />
                             ) : (
                               <XCircle className="h-5 w-5 text-muted-foreground/40" />
@@ -578,11 +673,9 @@ const RoleManagement = () => {
             </TableBody>
           </Table>
         </div>
-        
+
         <div className="mt-4 flex justify-end">
-          <Button>
-            Save Permissions
-          </Button>
+          <Button>Save Permissions</Button>
         </div>
       </CardContent>
     </Card>
