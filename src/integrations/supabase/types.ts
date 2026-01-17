@@ -288,7 +288,9 @@ export type Database = {
           display_order: number | null
           id: string
           is_active: boolean | null
+          is_subhead: boolean | null
           name: string
+          parent_id: string | null
           type: string
           updated_at: string | null
         }
@@ -301,7 +303,9 @@ export type Database = {
           display_order?: number | null
           id?: string
           is_active?: boolean | null
+          is_subhead?: boolean | null
           name: string
+          parent_id?: string | null
           type?: string
           updated_at?: string | null
         }
@@ -314,11 +318,21 @@ export type Database = {
           display_order?: number | null
           id?: string
           is_active?: boolean | null
+          is_subhead?: boolean | null
           name?: string
+          parent_id?: string | null
           type?: string
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "budget_heads_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "budget_heads"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       budget_line_items: {
         Row: {
@@ -4599,6 +4613,14 @@ export type Database = {
           effective_date: string
           price: number
         }[]
+      }
+      get_next_budget_head_code: {
+        Args: { head_type: string }
+        Returns: string
+      }
+      get_next_budget_head_display_order: {
+        Args: { head_type: string }
+        Returns: number
       }
       get_next_po_number: { Args: never; Returns: string }
       get_organization_base_currency: { Args: never; Returns: string }
