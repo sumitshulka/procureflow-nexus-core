@@ -16,6 +16,27 @@ const getMenuItemRoutePath = (menuItems: any): string | null => {
   return menuItems.route_path ?? null;
 };
 
+// Mapping from UI routes to database module routes
+// This allows the sidebar to use different paths than what's stored in the database
+const uiToDbRouteMap: Record<string, string> = {
+  '/products': '/catalog',
+  '/reports': '/analytics',
+};
+
+const normalizeRoute = (route: string): string => {
+  // Check for exact match first
+  if (uiToDbRouteMap[route]) {
+    return uiToDbRouteMap[route];
+  }
+  // Check for prefix match (e.g., /products/123 -> /catalog)
+  for (const [uiRoute, dbRoute] of Object.entries(uiToDbRouteMap)) {
+    if (route.startsWith(uiRoute + '/')) {
+      return dbRoute;
+    }
+  }
+  return route;
+};
+
 export const useModulePermissions = () => {
   const { user, userData } = useAuth();
 
@@ -141,21 +162,31 @@ export const useModulePermissions = () => {
       return true;
     }
 
+    // Normalize route to match database route
+    const normalizedRoute = normalizeRoute(routePath);
+
     // Check if route matches any permitted module
     return permissions.some((p) => {
       if (!p.routePath) return false;
       // Match exact path or parent path
       return (
-        routePath === p.routePath || routePath.startsWith(p.routePath + "/")
+        normalizedRoute === p.routePath || 
+        normalizedRoute.startsWith(p.routePath + "/") ||
+        routePath === p.routePath ||
+        routePath.startsWith(p.routePath + "/")
       );
     });
   };
 
   const getModulePermission = (routePath: string): string | null => {
+    const normalizedRoute = normalizeRoute(routePath);
     const perm = permissions.find((p) => {
       if (!p.routePath) return false;
       return (
-        routePath === p.routePath || routePath.startsWith(p.routePath + "/")
+        normalizedRoute === p.routePath || 
+        normalizedRoute.startsWith(p.routePath + "/") ||
+        routePath === p.routePath ||
+        routePath.startsWith(p.routePath + "/")
       );
     });
     return perm?.permission || null;
