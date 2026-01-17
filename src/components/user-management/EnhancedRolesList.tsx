@@ -446,72 +446,8 @@ const EnhancedRolesList = () => {
     }
   };
 
-  type RoleRow =
-    | (RoleData & { type: "custom" })
-    | {
-        id: string;
-        name: string;
-        description: string | null;
-        created_at: string;
-        type: "system";
-      };
-
-  const defaultSystemRoles: RoleRow[] = [
-    {
-      id: "system:admin",
-      name: "Admin",
-      description: "Full system access with all permissions",
-      created_at: new Date().toISOString(),
-      type: "system",
-    },
-    {
-      id: "system:requester",
-      name: "Requester",
-      description: "Can create and manage procurement requests",
-      created_at: new Date().toISOString(),
-      type: "system",
-    },
-    {
-      id: "system:procurement_officer",
-      name: "Procurement Officer",
-      description: "Manages procurement processes and RFPs",
-      created_at: new Date().toISOString(),
-      type: "system",
-    },
-    {
-      id: "system:inventory_manager",
-      name: "Inventory Manager",
-      description: "Manages inventory and warehouse operations",
-      created_at: new Date().toISOString(),
-      type: "system",
-    },
-    {
-      id: "system:finance_officer",
-      name: "Finance Officer",
-      description: "Handles financial operations and invoices",
-      created_at: new Date().toISOString(),
-      type: "system",
-    },
-    {
-      id: "system:evaluation_committee",
-      name: "Evaluation Committee",
-      description: "Evaluates vendor proposals and bids",
-      created_at: new Date().toISOString(),
-      type: "system",
-    },
-    {
-      id: "system:department_head",
-      name: "Department Head",
-      description: "Approves department requests and budgets",
-      created_at: new Date().toISOString(),
-      type: "system",
-    },
-  ];
-
-  const allRolesForDisplay: RoleRow[] = [
-    ...defaultSystemRoles,
-    ...roles.map((r) => ({ ...r, type: "custom" as const })),
-  ];
+  // All roles now come from custom_roles table (including former "system" roles)
+  // No more hardcoded roles - full control via database
 
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -614,48 +550,37 @@ const EnhancedRolesList = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {allRolesForDisplay.length === 0 ? (
+                    {roles.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={3} className="text-center py-6 text-muted-foreground">
-                          No roles found.
+                          No roles found. Create your first role to get started.
                         </TableCell>
                       </TableRow>
                     ) : (
-                      allRolesForDisplay.map((role) => (
+                      roles.map((role) => (
                         <TableRow key={role.id}>
-                          <TableCell className="font-medium">
-                            <div className="flex items-center gap-2">
-                              <span>{role.name}</span>
-                              <Badge variant={role.type === "system" ? "secondary" : "outline"}>
-                                {role.type === "system" ? "System" : "Custom"}
-                              </Badge>
-                            </div>
-                          </TableCell>
+                          <TableCell className="font-medium">{role.name}</TableCell>
                           <TableCell className="hidden md:table-cell">{role.description || "-"}</TableCell>
                           <TableCell className="text-right w-[120px]">
-                            {role.type === "custom" ? (
-                              <div className="flex items-center justify-end gap-1">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleManagePermissions(role)}
-                                  title="Manage Permissions"
-                                >
-                                  <Shield className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => setRoleToDelete(role)}
-                                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                                  title="Delete Role"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            ) : (
-                              <span className="text-muted-foreground">—</span>
-                            )}
+                            <div className="flex items-center justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleManagePermissions(role)}
+                                title="Manage Permissions"
+                              >
+                                <Shield className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => setRoleToDelete(role)}
+                                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                title="Delete Role"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))
