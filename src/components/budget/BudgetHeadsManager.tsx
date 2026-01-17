@@ -117,14 +117,30 @@ const BudgetHeadsManager = () => {
 
   const updateMutation = useMutation({
     mutationFn: async (values: HeadForm) => {
+      // Ensure we have a valid session before updating
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+
       const { data, error } = await supabase
         .from('budget_heads')
-        .update(values)
+        .update({
+          name: values.name,
+          code: values.code,
+          description: values.description,
+          type: values.type,
+          is_active: values.is_active,
+          display_order: values.display_order,
+          allow_department_subitems: values.allow_department_subitems,
+          updated_at: new Date().toISOString()
+        })
         .eq('id', editingHead.id)
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Update budget head error:', error);
+        throw error;
+      }
       return data;
     },
     onSuccess: () => {
