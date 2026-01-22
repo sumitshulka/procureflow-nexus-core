@@ -30,9 +30,20 @@ const BudgetOverview = () => {
       // Get user profile to find their department
       const { data: profile } = await supabase
         .from('profiles')
-        .select('department_id, department')
+        .select('department_id')
         .eq('id', user.id)
         .single();
+      
+      // Fetch department name separately (no FK relationship)
+      let departmentName = null;
+      if (profile?.department_id) {
+        const { data: dept } = await supabase
+          .from('departments')
+          .select('name')
+          .eq('id', profile.department_id)
+          .maybeSingle();
+        departmentName = dept?.name || null;
+      }
       
       // Get user roles
       const { data: roles } = await supabase
@@ -45,7 +56,7 @@ const BudgetOverview = () => {
       return {
         isAdmin: isAdmin || false,
         departmentId: profile?.department_id || null,
-        departmentName: profile?.department || null
+        departmentName
       };
     }
   });
