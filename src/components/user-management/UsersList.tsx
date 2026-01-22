@@ -488,6 +488,11 @@ const UsersList = () => {
           });
       }
 
+      // Invalidate all related queries immediately for fresh data
+      await queryClient.invalidateQueries({ queryKey: ['users'] });
+      await queryClient.invalidateQueries({ queryKey: ['user-department-history'] });
+      await queryClient.invalidateQueries({ queryKey: ['active_user_departments'] });
+
       toast({
         title: "User updated successfully",
         description: `${values.fullName}'s information has been updated.`

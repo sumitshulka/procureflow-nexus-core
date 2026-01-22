@@ -4787,6 +4787,11 @@ export type Database = {
         Returns: Json
       }
       initiate_po_approval: { Args: { p_po_id: string }; Returns: Json }
+      is_admin: { Args: never; Returns: boolean }
+      is_department_head_of: {
+        Args: { p_department_id: string }
+        Returns: boolean
+      }
       is_request_completed: { Args: { request_id: string }; Returns: boolean }
       log_rfp_activity: {
         Args: {
