@@ -1,26 +1,34 @@
-import React from "react";
+import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, ClipboardEdit, CheckCircle2, Clock, DollarSign, TrendingUp } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Loader2, ClipboardEdit, CheckCircle2, Clock, DollarSign, TrendingUp, Building2 } from "lucide-react";
 import { format } from "date-fns";
 import DataTable from "@/components/common/DataTable";
-import { useState } from "react";
 import BudgetEntryGrid from "./BudgetEntryGrid";
 
-interface ManagerBudgetDashboardProps {
-  departmentId: string;
-  departmentName?: string;
+interface DepartmentInfo {
+  id: string;
+  name: string;
 }
 
-const ManagerBudgetDashboard = ({ departmentId, departmentName }: ManagerBudgetDashboardProps) => {
-  const [selectedCycle, setSelectedCycle] = useState<any>(null);
+interface ManagerBudgetDashboardProps {
+  departments: DepartmentInfo[];
+  hasMultipleDepartments?: boolean;
+}
 
-  // Fetch open budget cycles for the manager's department
+const ManagerBudgetDashboard = ({ departments, hasMultipleDepartments = false }: ManagerBudgetDashboardProps) => {
+  const [selectedCycle, setSelectedCycle] = useState<any>(null);
+  const [selectedDepartmentId, setSelectedDepartmentId] = useState<string>(departments[0]?.id || '');
+  
+  const selectedDepartment = departments.find(d => d.id === selectedDepartmentId);
+
+  // Fetch open budget cycles for the manager's departments
   const { data: openCycles, isLoading: cyclesLoading } = useQuery({
-    queryKey: ['manager-open-cycles', departmentId],
+    queryKey: ['manager-open-cycles', departments.map(d => d.id)],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('budget_cycles')
@@ -30,18 +38,18 @@ const ManagerBudgetDashboard = ({ departmentId, departmentName }: ManagerBudgetD
 
       if (error) throw error;
 
-      // Filter cycles that allow this department
+      // Filter cycles that allow any of the user's departments
       return (data || []).filter((cycle: any) => {
         if (!cycle.allowed_department_ids) return true; // null means all departments
-        return cycle.allowed_department_ids.includes(departmentId);
+        return departments.some(dept => cycle.allowed_department_ids.includes(dept.id));
       });
     },
-    enabled: !!departmentId
+    enabled: departments.length > 0
   });
 
-  // Fetch approved budget submissions for the department
+  // Fetch approved budget submissions for selected department
   const { data: approvedSubmissions, isLoading: submissionsLoading } = useQuery({
-    queryKey: ['manager-approved-submissions', departmentId],
+    queryKey: ['manager-approved-submissions', selectedDepartmentId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('budget_allocations')
@@ -50,7 +58,7 @@ const ManagerBudgetDashboard = ({ departmentId, departmentName }: ManagerBudgetD
           cycle:budget_cycles(name, fiscal_year, period_type),
           head:budget_heads(name, code, type)
         `)
-        .eq('department_id', departmentId)
+        .eq('department_id', selectedDepartmentId)
         .eq('status', 'approved')
         .order('created_at', { ascending: false })
         .limit(50);
@@ -58,12 +66,12 @@ const ManagerBudgetDashboard = ({ departmentId, departmentName }: ManagerBudgetD
       if (error) throw error;
       return data || [];
     },
-    enabled: !!departmentId
+    enabled: !!selectedDepartmentId
   });
 
-  // Fetch in-progress/pending submissions for status display
+  // Fetch in-progress/pending submissions for selected department
   const { data: pendingSubmissions } = useQuery({
-    queryKey: ['manager-pending-submissions', departmentId],
+    queryKey: ['manager-pending-submissions', selectedDepartmentId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('budget_allocations')
@@ -71,23 +79,51 @@ const ManagerBudgetDashboard = ({ departmentId, departmentName }: ManagerBudgetD
           *,
           cycle:budget_cycles(name, fiscal_year)
         `)
-        .eq('department_id', departmentId)
+        .eq('department_id', selectedDepartmentId)
         .in('status', ['submitted', 'under_review', 'draft'])
         .order('created_at', { ascending: false });
 
       if (error) throw error;
       return data || [];
     },
-    enabled: !!departmentId
+    enabled: !!selectedDepartmentId
   });
 
-  // Calculate summary stats
-  const totalApprovedBudget = approvedSubmissions?.reduce(
-    (sum, item) => sum + (item.approved_amount || 0), 0
-  ) || 0;
+  // Aggregate stats across all departments for summary cards
+  const { data: allDeptStats } = useQuery({
+    queryKey: ['manager-all-dept-stats', departments.map(d => d.id)],
+    queryFn: async () => {
+      const deptIds = departments.map(d => d.id);
+      
+      const { data, error } = await supabase
+        .from('budget_allocations')
+        .select('approved_amount, status, department_id')
+        .in('department_id', deptIds);
 
-  const pendingCount = pendingSubmissions?.filter(s => s.status === 'submitted' || s.status === 'under_review').length || 0;
-  const draftCount = pendingSubmissions?.filter(s => s.status === 'draft').length || 0;
+      if (error) throw error;
+
+      let totalApproved = 0;
+      let pendingCount = 0;
+      let draftCount = 0;
+
+      (data || []).forEach(item => {
+        if (item.status === 'approved') {
+          totalApproved += item.approved_amount || 0;
+        } else if (item.status === 'submitted' || item.status === 'under_review') {
+          pendingCount++;
+        } else if (item.status === 'draft') {
+          draftCount++;
+        }
+      });
+
+      return { totalApproved, pendingCount, draftCount };
+    },
+    enabled: departments.length > 0
+  });
+
+  const totalApprovedBudget = allDeptStats?.totalApproved || 0;
+  const pendingCount = allDeptStats?.pendingCount || 0;
+  const draftCount = allDeptStats?.draftCount || 0;
 
   const getPeriodLabel = (periodNumber: number, periodType: string) => {
     if (periodType === 'monthly') {
@@ -142,7 +178,7 @@ const ManagerBudgetDashboard = ({ departmentId, departmentName }: ManagerBudgetD
     return (
       <BudgetEntryGrid
         cycle={selectedCycle}
-        departmentId={departmentId}
+        departmentId={selectedCycle.selectedDepartmentId || selectedDepartmentId}
         onBack={() => setSelectedCycle(null)}
       />
     );
@@ -150,7 +186,36 @@ const ManagerBudgetDashboard = ({ departmentId, departmentName }: ManagerBudgetD
 
   return (
     <div className="space-y-6">
-      {/* Summary Cards */}
+      {/* Department Selector for Multi-Department Managers */}
+      {hasMultipleDepartments && (
+        <Card className="border-primary/20 bg-primary/5">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Building2 className="h-4 w-4" />
+              Select Department
+            </CardTitle>
+            <CardDescription>
+              You manage {departments.length} departments. Select one to view details.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              {departments.map((dept) => (
+                <Button
+                  key={dept.id}
+                  variant={selectedDepartmentId === dept.id ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setSelectedDepartmentId(dept.id)}
+                >
+                  {dept.name}
+                </Button>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Summary Cards - Aggregated across all departments */}
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -159,7 +224,9 @@ const ManagerBudgetDashboard = ({ departmentId, departmentName }: ManagerBudgetD
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">${totalApprovedBudget.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">Current fiscal year</p>
+            <p className="text-xs text-muted-foreground">
+              {hasMultipleDepartments ? `Across ${departments.length} departments` : 'Current fiscal year'}
+            </p>
           </CardContent>
         </Card>
 
@@ -170,7 +237,9 @@ const ManagerBudgetDashboard = ({ departmentId, departmentName }: ManagerBudgetD
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{approvedSubmissions?.length || 0}</div>
-            <p className="text-xs text-muted-foreground">Budget line items</p>
+            <p className="text-xs text-muted-foreground">
+              {selectedDepartment?.name || 'Selected department'}
+            </p>
           </CardContent>
         </Card>
 
@@ -206,7 +275,8 @@ const ManagerBudgetDashboard = ({ departmentId, departmentName }: ManagerBudgetD
               Open Budget Cycles - Action Required
             </CardTitle>
             <CardDescription>
-              The following budget cycles are open for submission. Click to start entering your department's budget.
+              The following budget cycles are open for submission. 
+              {hasMultipleDepartments && " You can enter budget for each of your departments."}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -214,24 +284,43 @@ const ManagerBudgetDashboard = ({ departmentId, departmentName }: ManagerBudgetD
               {openCycles.map((cycle: any) => (
                 <div
                   key={cycle.id}
-                  className="flex items-center justify-between p-4 rounded-lg border bg-card hover:shadow-sm transition-shadow"
+                  className="p-4 rounded-lg border bg-card"
                 >
-                  <div>
-                    <h4 className="font-semibold">{cycle.name}</h4>
-                    <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
-                      <span>FY {cycle.fiscal_year}</span>
-                      <span>•</span>
-                      <span className="capitalize">{cycle.period_type}</span>
-                      <span>•</span>
-                      <span>
-                        {format(new Date(cycle.start_date), 'MMM dd, yyyy')} - {format(new Date(cycle.end_date), 'MMM dd, yyyy')}
-                      </span>
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <h4 className="font-semibold">{cycle.name}</h4>
+                      <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
+                        <span>FY {cycle.fiscal_year}</span>
+                        <span>•</span>
+                        <span className="capitalize">{cycle.period_type}</span>
+                        <span>•</span>
+                        <span>
+                          {format(new Date(cycle.start_date), 'MMM dd, yyyy')} - {format(new Date(cycle.end_date), 'MMM dd, yyyy')}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                  <Button onClick={() => setSelectedCycle(cycle)}>
-                    <ClipboardEdit className="h-4 w-4 mr-2" />
-                    Enter Budget
-                  </Button>
+                  
+                  {/* Department-specific entry buttons */}
+                  <div className="flex flex-wrap gap-2">
+                    {departments.map((dept) => {
+                      // Check if this department is allowed in the cycle
+                      const isAllowed = !cycle.allowed_department_ids || cycle.allowed_department_ids.includes(dept.id);
+                      if (!isAllowed) return null;
+                      
+                      return (
+                        <Button 
+                          key={dept.id}
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setSelectedCycle({ ...cycle, selectedDepartmentId: dept.id })}
+                        >
+                          <ClipboardEdit className="h-4 w-4 mr-2" />
+                          Enter Budget for {dept.name}
+                        </Button>
+                      );
+                    })}
+                  </div>
                 </div>
               ))}
             </div>
@@ -246,19 +335,27 @@ const ManagerBudgetDashboard = ({ departmentId, departmentName }: ManagerBudgetD
             <Clock className="h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">No Open Budget Cycles</h3>
             <p className="text-muted-foreground text-center max-w-md">
-              There are no budget cycles currently open for your department. 
+              There are no budget cycles currently open for your department(s). 
               You will be notified when a new cycle opens.
             </p>
           </CardContent>
         </Card>
       )}
 
-      {/* Approved Submissions Summary */}
+      {/* Approved Submissions Summary for Selected Department */}
       <Card>
         <CardHeader>
-          <CardTitle>Approved Budget Summary</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            Approved Budget Summary
+            {selectedDepartment && (
+              <Badge variant="outline">{selectedDepartment.name}</Badge>
+            )}
+          </CardTitle>
           <CardDescription>
-            Your department's approved budget allocations
+            {hasMultipleDepartments 
+              ? `Budget allocations for ${selectedDepartment?.name || 'selected department'}`
+              : "Your department's approved budget allocations"
+            }
           </CardDescription>
         </CardHeader>
         <CardContent>

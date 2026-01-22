@@ -13,64 +13,35 @@ import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency } from "@/utils/currencyUtils";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { useAuth } from "@/contexts/AuthContext";
+import { useBudgetUserContext } from "@/hooks/useBudgetUserContext";
 
 const CHART_COLORS = ["hsl(var(--chart-1))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))"];
 
 const BudgetOverview = () => {
   const currentYear = new Date().getFullYear();
   const [selectedFiscalYear, setSelectedFiscalYear] = useState<string>(currentYear.toString());
+  const [selectedDeptId, setSelectedDeptId] = useState<string>("");
 
-  const { user, isLoading: authLoading } = useAuth();
+  const { 
+    isAdmin, 
+    departments: userDepartments, 
+    primaryDepartmentId,
+    primaryDepartmentName,
+    hasMultipleDepartments,
+    isLoading: userContextLoading 
+  } = useBudgetUserContext();
 
-  // Check if user is admin and get their department
-  const { data: userContext, isLoading: userContextLoading } = useQuery({
-    queryKey: ['user-context-budget-overview', user?.id],
-    queryFn: async () => {
-      if (!user) return { isAdmin: false, departmentId: null, departmentName: null };
-      
-      // Get user profile to find their department
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('department_id')
-        .eq('id', user.id)
-        .maybeSingle();
-      
-      if (profileError) {
-        console.error('Error fetching profile:', profileError);
-      }
-      
-      // Fetch department name separately (no FK relationship)
-      let departmentName = null;
-      if (profile?.department_id) {
-        const { data: dept } = await supabase
-          .from('departments')
-          .select('name')
-          .eq('id', profile.department_id)
-          .maybeSingle();
-        departmentName = dept?.name || null;
-      }
-      
-      // Get user roles
-      const { data: roles } = await supabase
-        .from('user_roles')
-        .select('role_id, custom_roles(name)')
-        .eq('user_id', user.id);
-      
-      const isAdmin = roles?.some(r => ((r.custom_roles as any)?.name || '').toLowerCase() === 'admin');
-      
-      return {
-        isAdmin: isAdmin || false,
-        departmentId: profile?.department_id || null,
-        departmentName
-      };
-    },
-    enabled: !!user && !authLoading,
-  });
+  // Set initial selected department
+  React.useEffect(() => {
+    if (!selectedDeptId && primaryDepartmentId) {
+      setSelectedDeptId(primaryDepartmentId);
+    }
+  }, [primaryDepartmentId, selectedDeptId]);
 
-  const isAdmin = userContext?.isAdmin ?? false;
-  const userDepartmentId = userContext?.departmentId;
-  const userDepartmentName = userContext?.departmentName;
+  // For filtering, use selected department for non-admins, or all for admins
+  const effectiveDeptIds = isAdmin ? null : userDepartments.map(d => d.id);
+  const userDepartmentId = isAdmin ? null : (selectedDeptId || primaryDepartmentId);
+  const userDepartmentName = isAdmin ? null : (userDepartments.find(d => d.id === selectedDeptId)?.name || primaryDepartmentName);
 
   // Fetch budget cycles
   const { data: budgetCycles, isLoading: cyclesLoading } = useQuery({
@@ -85,7 +56,7 @@ const BudgetOverview = () => {
     },
   });
 
-  const userContextReady = !!userContext && !userContextLoading;
+  const userContextReady = !userContextLoading && (isAdmin || userDepartments.length > 0);
 
   const canLoadDepartmentScopedData = isAdmin || !!userDepartmentId;
 
@@ -249,7 +220,7 @@ const BudgetOverview = () => {
       .sort((a, b) => b.value - a.value);
   }, [allocations]);
 
-  const isLoading = cyclesLoading || allocationsLoading || userContextLoading || authLoading;
+  const isLoading = cyclesLoading || allocationsLoading || userContextLoading;
 
   const getCycleStatusBadge = (status: string | undefined) => {
     switch (status) {
