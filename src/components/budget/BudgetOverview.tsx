@@ -28,11 +28,15 @@ const BudgetOverview = () => {
       if (!user) return { isAdmin: false, departmentId: null, departmentName: null };
       
       // Get user profile to find their department
-      const { data: profile } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('department_id')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
+      
+      if (profileError) {
+        console.error('Error fetching profile:', profileError);
+      }
       
       // Fetch department name separately (no FK relationship)
       let departmentName = null;
