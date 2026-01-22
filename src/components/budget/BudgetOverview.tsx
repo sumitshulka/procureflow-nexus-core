@@ -7,17 +7,52 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
-import { TrendingUp, TrendingDown, DollarSign, AlertTriangle, Download, Calendar, CheckCircle2, Clock, FileText } from "lucide-react";
+import { TrendingUp, TrendingDown, DollarSign, AlertTriangle, Download, Calendar, CheckCircle2, Clock, FileText, Building2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency } from "@/utils/currencyUtils";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const CHART_COLORS = ["hsl(var(--chart-1))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))"];
 
 const BudgetOverview = () => {
   const currentYear = new Date().getFullYear();
   const [selectedFiscalYear, setSelectedFiscalYear] = useState<string>(currentYear.toString());
+
+  // Check if user is admin and get their department
+  const { data: userContext, isLoading: userContextLoading } = useQuery({
+    queryKey: ['user-context-budget-overview'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return { isAdmin: false, departmentId: null, departmentName: null };
+      
+      // Get user profile to find their department
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('department_id, department')
+        .eq('id', user.id)
+        .single();
+      
+      // Get user roles
+      const { data: roles } = await supabase
+        .from('user_roles')
+        .select('role_id, custom_roles(name)')
+        .eq('user_id', user.id);
+      
+      const isAdmin = roles?.some(r => ((r.custom_roles as any)?.name || '').toLowerCase() === 'admin');
+      
+      return {
+        isAdmin: isAdmin || false,
+        departmentId: profile?.department_id || null,
+        departmentName: profile?.department || null
+      };
+    }
+  });
+
+  const isAdmin = userContext?.isAdmin ?? false;
+  const userDepartmentId = userContext?.departmentId;
+  const userDepartmentName = userContext?.departmentName;
 
   // Fetch budget cycles
   const { data: budgetCycles, isLoading: cyclesLoading } = useQuery({
@@ -32,11 +67,11 @@ const BudgetOverview = () => {
     },
   });
 
-  // Fetch budget allocations with related data
+  // Fetch budget allocations with related data - filter by department for non-admin users
   const { data: allocations, isLoading: allocationsLoading } = useQuery({
-    queryKey: ["budget-allocations-overview", selectedFiscalYear],
+    queryKey: ["budget-allocations-overview", selectedFiscalYear, userDepartmentId, isAdmin],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("budget_allocations")
         .select(`
           *,
@@ -45,24 +80,38 @@ const BudgetOverview = () => {
           budget_heads(id, name, type)
         `)
         .eq("budget_cycles.fiscal_year", parseInt(selectedFiscalYear));
+      
+      // Filter by department for non-admin users
+      if (!isAdmin && userDepartmentId) {
+        query = query.eq("department_id", userDepartmentId);
+      }
+      
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
-    enabled: !!selectedFiscalYear,
+    enabled: !!selectedFiscalYear && !userContextLoading,
   });
 
-  // Fetch departments
+  // Fetch departments - for non-admin, only show their department
   const { data: departments } = useQuery({
-    queryKey: ["departments-overview"],
+    queryKey: ["departments-overview", userDepartmentId, isAdmin],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("departments")
         .select("*")
-        .eq("is_active", true)
-        .order("name");
+        .eq("is_active", true);
+      
+      // Filter by user's department for non-admin users
+      if (!isAdmin && userDepartmentId) {
+        query = query.eq("id", userDepartmentId);
+      }
+      
+      const { data, error } = await query.order("name");
       if (error) throw error;
       return data;
     },
+    enabled: !userContextLoading,
   });
 
   // Get available fiscal years from cycles or generate range
@@ -178,7 +227,7 @@ const BudgetOverview = () => {
       .sort((a, b) => b.value - a.value);
   }, [allocations]);
 
-  const isLoading = cyclesLoading || allocationsLoading;
+  const isLoading = cyclesLoading || allocationsLoading || userContextLoading;
 
   const getCycleStatusBadge = (status: string | undefined) => {
     switch (status) {
@@ -235,6 +284,28 @@ const BudgetOverview = () => {
 
   return (
     <div className="space-y-6">
+      {/* Department Context Banner for non-admin users */}
+      {!isAdmin && userDepartmentName && (
+        <Alert>
+          <Building2 className="h-4 w-4" />
+          <AlertTitle>Department View</AlertTitle>
+          <AlertDescription>
+            You are viewing budget data for <strong>{userDepartmentName}</strong>. Contact an administrator to view organization-wide budget data.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* No Department Warning for non-admin users without department */}
+      {!isAdmin && !userDepartmentId && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>No Department Assigned</AlertTitle>
+          <AlertDescription>
+            You don't have a department assigned to your profile. Please contact an administrator to assign you to a department.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Controls */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center space-x-4">
@@ -299,7 +370,7 @@ const BudgetOverview = () => {
           <CardContent>
             <div className="text-2xl font-bold">{formatCurrency(budgetSummary.totalBudget)}</div>
             <p className="text-xs text-muted-foreground">
-              Across all departments for FY {selectedFiscalYear}
+              {isAdmin ? "Across all departments" : `For ${userDepartmentName || "your department"}`} for FY {selectedFiscalYear}
             </p>
           </CardContent>
         </Card>
@@ -330,36 +401,52 @@ const BudgetOverview = () => {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Departments</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {departmentBudgets.filter(d => d.status !== 'no_budget').length} / {departments?.length || 0}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Have submitted budgets
-            </p>
-          </CardContent>
-        </Card>
+        {isAdmin ? (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Departments</CardTitle>
+              <FileText className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {departmentBudgets.filter(d => d.status !== 'no_budget').length} / {departments?.length || 0}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Have submitted budgets
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Budget Heads</CardTitle>
+              <FileText className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{budgetHeadSpending.length}</div>
+              <p className="text-xs text-muted-foreground">
+                Categories with allocations
+              </p>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
-      <Tabs defaultValue="departments" className="w-full">
+      <Tabs defaultValue={isAdmin ? "departments" : "heads"} className="w-full">
         <TabsList>
-          <TabsTrigger value="departments">Department View</TabsTrigger>
+          {isAdmin && <TabsTrigger value="departments">Department View</TabsTrigger>}
           <TabsTrigger value="heads">Budget Heads</TabsTrigger>
           <TabsTrigger value="details">Allocation Details</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="departments" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Department Budget Status</CardTitle>
-              <CardDescription>Budget allocation status by department for the selected fiscal year</CardDescription>
-            </CardHeader>
-            <CardContent>
+        {isAdmin && (
+          <TabsContent value="departments" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Department Budget Status</CardTitle>
+                <CardDescription>Budget allocation status by department for the selected fiscal year</CardDescription>
+              </CardHeader>
+              <CardContent>
               {departmentBudgets.length === 0 ? (
                 <p className="text-center text-muted-foreground py-8">No departments found</p>
               ) : (
@@ -392,9 +479,9 @@ const BudgetOverview = () => {
                 </div>
               )}
             </CardContent>
-          </Card>
-        </TabsContent>
-
+            </Card>
+          </TabsContent>
+        )}
         <TabsContent value="heads" className="space-y-6">
           <Card>
             <CardHeader>
