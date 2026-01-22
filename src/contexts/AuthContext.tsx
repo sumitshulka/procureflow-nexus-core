@@ -181,8 +181,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       console.log("Login successful, session:", data.session);
 
-      // Log successful login
+      // Check if user is allowed to login (not deleted/deactivated)
       if (data.user) {
+        // Use direct query with type assertion since the columns are new
+        const { data: loginCheck, error: loginCheckError } = await supabase
+          .from('profiles')
+          .select('status')
+          .eq('id', data.user.id)
+          .single();
+
+        if (loginCheckError) {
+          console.error('[AuthContext] Profile check error:', loginCheckError);
+        }
+
+        // Check status (is_deleted users won't appear in list, but check status for inactive)
+        if (loginCheck?.status === 'inactive') {
+          await supabase.auth.signOut();
+          throw new Error('Your account has been deactivated. Please contact your administrator.');
+        }
+
+        // Log successful login
         await logSecurityEvent(data.user.id, 'login_success', { 
           email,
           user_agent: navigator.userAgent 
