@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency } from "@/utils/currencyUtils";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useAuth } from "@/contexts/AuthContext";
 
 const CHART_COLORS = ["hsl(var(--chart-1))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))"];
 
@@ -20,11 +21,12 @@ const BudgetOverview = () => {
   const currentYear = new Date().getFullYear();
   const [selectedFiscalYear, setSelectedFiscalYear] = useState<string>(currentYear.toString());
 
+  const { user, isLoading: authLoading } = useAuth();
+
   // Check if user is admin and get their department
   const { data: userContext, isLoading: userContextLoading } = useQuery({
-    queryKey: ['user-context-budget-overview'],
+    queryKey: ['user-context-budget-overview', user?.id],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
       if (!user) return { isAdmin: false, departmentId: null, departmentName: null };
       
       // Get user profile to find their department
@@ -62,7 +64,8 @@ const BudgetOverview = () => {
         departmentId: profile?.department_id || null,
         departmentName
       };
-    }
+    },
+    enabled: !!user && !authLoading,
   });
 
   const isAdmin = userContext?.isAdmin ?? false;
@@ -81,6 +84,10 @@ const BudgetOverview = () => {
       return data;
     },
   });
+
+  const userContextReady = !!userContext && !userContextLoading;
+
+  const canLoadDepartmentScopedData = isAdmin || !!userDepartmentId;
 
   // Fetch budget allocations with related data - filter by department for non-admin users
   const { data: allocations, isLoading: allocationsLoading } = useQuery({
@@ -105,7 +112,7 @@ const BudgetOverview = () => {
       if (error) throw error;
       return data;
     },
-    enabled: !!selectedFiscalYear && !userContextLoading,
+    enabled: !!selectedFiscalYear && userContextReady && canLoadDepartmentScopedData,
   });
 
   // Fetch departments - for non-admin, only show their department
@@ -126,7 +133,7 @@ const BudgetOverview = () => {
       if (error) throw error;
       return data;
     },
-    enabled: !userContextLoading,
+    enabled: userContextReady && canLoadDepartmentScopedData,
   });
 
   // Get available fiscal years from cycles or generate range
@@ -242,7 +249,7 @@ const BudgetOverview = () => {
       .sort((a, b) => b.value - a.value);
   }, [allocations]);
 
-  const isLoading = cyclesLoading || allocationsLoading || userContextLoading;
+  const isLoading = cyclesLoading || allocationsLoading || userContextLoading || authLoading;
 
   const getCycleStatusBadge = (status: string | undefined) => {
     switch (status) {
@@ -300,7 +307,7 @@ const BudgetOverview = () => {
   return (
     <div className="space-y-6">
       {/* Department Context Banner for non-admin users */}
-      {!isAdmin && userDepartmentName && (
+      {!isAdmin && userContextReady && userDepartmentName && (
         <Alert>
           <Building2 className="h-4 w-4" />
           <AlertTitle>Department View</AlertTitle>
@@ -311,7 +318,7 @@ const BudgetOverview = () => {
       )}
 
       {/* No Department Warning for non-admin users without department */}
-      {!isAdmin && !userDepartmentId && (
+      {!isAdmin && userContextReady && !userDepartmentId && (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>No Department Assigned</AlertTitle>
