@@ -1,68 +1,28 @@
 import React, { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import BudgetCyclesManager from "./BudgetCyclesManager";
 import BudgetHeadsManager from "./BudgetHeadsManager";
 import BudgetSubmissions from "./BudgetSubmissions";
 import BudgetReview from "./BudgetReview";
 import ManagerBudgetDashboard from "./ManagerBudgetDashboard";
+import { useBudgetUserContext } from "@/hooks/useBudgetUserContext";
 
 const BudgetAllocation = () => {
-  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("cycles");
+  
+  const { 
+    isAdmin, 
+    departments, 
+    primaryDepartmentId, 
+    primaryDepartmentName,
+    hasMultipleDepartments,
+    isLoading 
+  } = useBudgetUserContext();
 
-  // Fetch user context - roles and department
-  const { data: userContext, isLoading: contextLoading } = useQuery({
-    queryKey: ['budget-user-context'],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return null;
-
-      // Get user roles
-      const { data: roles, error: rolesError } = await supabase
-        .from('user_roles')
-        .select('role_id, custom_roles(name)')
-        .eq('user_id', user.id);
-
-      if (rolesError) throw rolesError;
-
-      // Get user's department from profile
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('department_id')
-        .eq('id', user.id)
-        .maybeSingle();
-
-      if (profileError) throw profileError;
-
-      // Fetch department name separately (no FK relationship)
-      let departmentName = null;
-      if (profile?.department_id) {
-        const { data: dept } = await supabase
-          .from('departments')
-          .select('name')
-          .eq('id', profile.department_id)
-          .maybeSingle();
-        departmentName = dept?.name;
-      }
-
-      const isAdmin = roles?.some(r => ((r.custom_roles as any)?.name || '').toLowerCase() === 'admin');
-      
-      return {
-        userId: user.id,
-        isAdmin,
-        departmentId: profile?.department_id,
-        departmentName
-      };
-    }
-  });
-
-  if (contextLoading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -70,13 +30,9 @@ const BudgetAllocation = () => {
     );
   }
 
-  const isAdmin = userContext?.isAdmin;
-  const departmentId = userContext?.departmentId;
-  const departmentName = userContext?.departmentName;
-
   // Non-admin users see the Manager Budget Dashboard
   if (!isAdmin) {
-    if (!departmentId) {
+    if (departments.length === 0) {
       return (
         <div className="space-y-6">
           <Alert variant="destructive">
@@ -91,16 +47,16 @@ const BudgetAllocation = () => {
 
     return (
       <div className="space-y-6">
-        {departmentName && (
+        {!hasMultipleDepartments && primaryDepartmentName && (
           <div className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-3">
             <p className="text-sm text-primary font-medium">
-              Viewing budget for: <span className="font-semibold">{departmentName}</span>
+              Viewing budget for: <span className="font-semibold">{primaryDepartmentName}</span>
             </p>
           </div>
         )}
         <ManagerBudgetDashboard 
-          departmentId={departmentId} 
-          departmentName={departmentName}
+          departments={departments}
+          hasMultipleDepartments={hasMultipleDepartments}
         />
       </div>
     );
