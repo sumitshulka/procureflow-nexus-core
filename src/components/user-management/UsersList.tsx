@@ -132,7 +132,7 @@ const UsersList = () => {
   }, []);
 
   // Fetch users with their department assignments
-  const { data: users, isLoading, refetch } = useQuery({
+  const { data: users, isLoading, isError, error: usersError, refetch } = useQuery({
     queryKey: ["users", departments],
     queryFn: async () => {
       const { data: profiles, error } = await supabase
@@ -156,9 +156,9 @@ const UsersList = () => {
         .select("user_id, department_id, departments(name), assigned_at")
         .eq("is_active", true);
 
-      if (deptError) {
-        console.error("Error fetching department assignments:", deptError);
-      }
+      // IMPORTANT: don't silently fall back to legacy department_id if multi-dept fetch fails,
+      // otherwise the UI shows stale/wrong departments.
+      if (deptError) throw deptError;
 
       // Get user emails using Edge Function
       const userIds = profiles.map(profile => profile.id);
@@ -309,11 +309,12 @@ const UsersList = () => {
   };
 
   const handleDepartmentToggle = (deptId: string, isAdd: boolean) => {
-    if (isAdd) {
-      setSelectedDepartments(prev => [...prev, deptId]);
-    } else {
-      setSelectedDepartments(prev => prev.filter(id => id !== deptId));
-    }
+    setSelectedDepartments((prev) => {
+      const next = new Set(prev);
+      if (isAdd) next.add(deptId);
+      else next.delete(deptId);
+      return Array.from(next);
+    });
   };
 
   const handleAddUser = async (values: any) => {
@@ -363,13 +364,14 @@ const UsersList = () => {
 
       // Create department assignments for all selected departments
       if (newUserId && selectedDepartments.length > 0) {
-        for (const deptId of selectedDepartments) {
-          await supabase.rpc('assign_user_to_department', {
+        for (const deptId of [...new Set(selectedDepartments)]) {
+          const { error: assignError } = await supabase.rpc('assign_user_to_department', {
             p_user_id: newUserId,
             p_department_id: deptId,
             p_assigned_by: user?.id,
             p_notes: 'Initial assignment during user creation'
           });
+          if (assignError) throw assignError;
         }
       }
 
@@ -381,6 +383,7 @@ const UsersList = () => {
       setIsAddDialogOpen(false);
       addForm.reset();
       setSelectedDepartments([]);
+      await queryClient.invalidateQueries({ queryKey: ["users"] });
       refetch();
     } catch (error: any) {
       console.error("Error adding user:", error);
@@ -414,8 +417,9 @@ const UsersList = () => {
     if (!currentUser) return;
     
     try {
+      const uniqueSelectedDepartments = [...new Set(selectedDepartments)];
       // Update profile with primary department
-      const primaryDeptId = selectedDepartments.length > 0 ? selectedDepartments[0] : null;
+      const primaryDeptId = uniqueSelectedDepartments.length > 0 ? uniqueSelectedDepartments[0] : null;
       
       const { error: profileError } = await supabase
         .from("profiles")
@@ -431,28 +435,30 @@ const UsersList = () => {
       const currentDeptIds = currentUser.departmentAssignments?.map((d: DepartmentAssignment) => d.department_id) || [];
       
       // Departments to add
-      const deptsToAdd = selectedDepartments.filter(id => !currentDeptIds.includes(id));
+      const deptsToAdd = uniqueSelectedDepartments.filter(id => !currentDeptIds.includes(id));
       // Departments to remove
-      const deptsToRemove = currentDeptIds.filter((id: string) => !selectedDepartments.includes(id));
+      const deptsToRemove = currentDeptIds.filter((id: string) => !uniqueSelectedDepartments.includes(id));
 
       // Add new department assignments
       for (const deptId of deptsToAdd) {
-        await supabase.rpc('assign_user_to_department', {
+        const { error: assignError } = await supabase.rpc('assign_user_to_department', {
           p_user_id: currentUser.id,
           p_department_id: deptId,
           p_assigned_by: user?.id,
           p_notes: 'Assigned during user profile edit'
         });
+        if (assignError) throw assignError;
       }
 
       // Remove department assignments
       for (const deptId of deptsToRemove) {
-        await supabase.rpc('remove_user_from_department', {
+        const { error: removeError } = await supabase.rpc('remove_user_from_department', {
           p_user_id: currentUser.id,
           p_department_id: deptId,
           p_removed_by: user?.id,
           p_notes: 'Removed during user profile edit'
         });
+        if (removeError) throw removeError;
       }
 
       // Handle role update
@@ -500,6 +506,10 @@ const UsersList = () => {
 
       setIsEditDialogOpen(false);
       setSelectedDepartments([]);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["users"] }),
+        queryClient.invalidateQueries({ queryKey: ["user-department-history"] }),
+      ]);
       refetch();
     } catch (error: any) {
       console.error("Error updating user:", error);
@@ -543,6 +553,14 @@ const UsersList = () => {
 
   if (isLoading) {
     return <div className="flex justify-center p-8">Loading users...</div>;
+  }
+
+  if (isError) {
+    return (
+      <div className="p-8 text-sm text-destructive">
+        Failed to load users: {(usersError as any)?.message || "Unknown error"}
+      </div>
+    );
   }
 
   const watchedAddRole = addForm.watch("role");
