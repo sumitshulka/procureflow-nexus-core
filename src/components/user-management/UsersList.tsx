@@ -149,14 +149,12 @@ const UsersList = () => {
       // Note: Using 'as any' for new columns not yet in generated types
       const { data: profiles, error } = await supabase
         .from("profiles")
-        .select("id, full_name, created_at, department_id, status")
-        .eq("is_vendor", false) as any;
+        .select("id, full_name, created_at, department_id, status, is_deleted")
+        .eq("is_vendor", false)
+        .eq("is_deleted", false) as any;
 
       if (error) throw error;
       if (!profiles || profiles.length === 0) return [];
-      
-      // Filter out deleted users (new column may not be in types yet)
-      const activeProfiles = (profiles as any[]).filter((p: any) => !p.is_deleted);
 
       // Get user roles with role names from custom_roles
       const { data: userRoles, error: rolesError } = await supabase
@@ -176,7 +174,7 @@ const UsersList = () => {
       if (deptError) throw deptError;
 
       // Get user emails using Edge Function
-      const userIds = activeProfiles.map((profile: any) => profile.id);
+      const userIds = profiles.map((profile: any) => profile.id);
       
       const { data: emailsResponse, error: emailsError } = await supabase.functions.invoke('get-user-emails', {
         body: { userIds }
@@ -217,7 +215,7 @@ const UsersList = () => {
       }, {} as Record<string, DepartmentAssignment[]>);
 
       // Join profiles with roles, departments, and emails
-      return activeProfiles.map((profile: any) => {
+      return profiles.map((profile: any) => {
         const userDepts = deptsByUser[profile.id] || [];
         // Fallback to legacy department_id if no assignments exist
         let displayDepartments = userDepts.map((d: DepartmentAssignment) => d.department_name);
