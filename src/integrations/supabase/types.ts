@@ -4008,6 +4008,56 @@ export type Database = {
         }
         Relationships: []
       }
+      user_department_assignments: {
+        Row: {
+          assigned_at: string
+          assigned_by: string | null
+          created_at: string
+          department_id: string
+          id: string
+          is_active: boolean
+          notes: string | null
+          removed_at: string | null
+          removed_by: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by?: string | null
+          created_at?: string
+          department_id: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          removed_at?: string | null
+          removed_by?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string | null
+          created_at?: string
+          department_id?: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          removed_at?: string | null
+          removed_by?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_department_assignments_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_module_permissions: {
         Row: {
           granted_at: string | null
@@ -4504,9 +4554,63 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      active_user_departments: {
+        Row: {
+          assigned_at: string | null
+          assigned_by: string | null
+          assigned_by_name: string | null
+          department_id: string | null
+          department_name: string | null
+          id: string | null
+          user_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_department_assignments_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_department_history: {
+        Row: {
+          assigned_at: string | null
+          assigned_by: string | null
+          assigned_by_name: string | null
+          department_id: string | null
+          department_name: string | null
+          id: string | null
+          is_active: boolean | null
+          notes: string | null
+          removed_at: string | null
+          removed_by: string | null
+          removed_by_name: string | null
+          user_id: string | null
+          user_name: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_department_assignments_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
+      assign_user_to_department: {
+        Args: {
+          p_assigned_by: string
+          p_department_id: string
+          p_notes?: string
+          p_user_id: string
+        }
+        Returns: string
+      }
       begin_transaction: { Args: never; Returns: Json }
       calculate_technical_score: {
         Args: { p_response_id: string }
@@ -4659,6 +4763,14 @@ export type Database = {
         Returns: string
       }
       get_security_status: { Args: never; Returns: Json }
+      get_user_departments: {
+        Args: { p_user_id: string }
+        Returns: {
+          assigned_at: string
+          department_id: string
+          department_name: string
+        }[]
+      }
       has_role: {
         Args: {
           required_role: Database["public"]["Enums"]["user_role"]
@@ -4701,6 +4813,15 @@ export type Database = {
       record_delivery_and_update_inventory: {
         Args: { p_delivery_details: Json; transaction_id: string }
         Returns: Json
+      }
+      remove_user_from_department: {
+        Args: {
+          p_department_id: string
+          p_notes?: string
+          p_removed_by: string
+          p_user_id: string
+        }
+        Returns: boolean
       }
       rollback_transaction: { Args: never; Returns: Json }
       soft_delete_rfp_template: {
