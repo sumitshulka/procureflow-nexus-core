@@ -2367,11 +2367,16 @@ export type Database = {
         Row: {
           avatar_url: string | null
           created_at: string
+          deactivated_at: string | null
+          deactivated_by: string | null
+          deleted_at: string | null
+          deleted_by: string | null
           department: string | null
           department_id: string | null
           employee_id: string | null
           full_name: string | null
           id: string
+          is_deleted: boolean
           is_vendor: boolean
           mobile: string | null
           status: string | null
@@ -2380,11 +2385,16 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           created_at?: string
+          deactivated_at?: string | null
+          deactivated_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           department?: string | null
           department_id?: string | null
           employee_id?: string | null
           full_name?: string | null
           id: string
+          is_deleted?: boolean
           is_vendor?: boolean
           mobile?: string | null
           status?: string | null
@@ -2393,11 +2403,16 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           created_at?: string
+          deactivated_at?: string | null
+          deactivated_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           department?: string | null
           department_id?: string | null
           employee_id?: string | null
           full_name?: string | null
           id?: string
+          is_deleted?: boolean
           is_vendor?: boolean
           mobile?: string | null
           status?: string | null
@@ -4635,6 +4650,13 @@ export type Database = {
       can_delete_procurement_request: {
         Args: { p_request_id: string }
         Returns: Json
+      }
+      can_user_login: {
+        Args: { p_user_id: string }
+        Returns: {
+          can_login: boolean
+          reason: string
+        }[]
       }
       can_view_commercial_responses: {
         Args: { p_rfp_id: string }

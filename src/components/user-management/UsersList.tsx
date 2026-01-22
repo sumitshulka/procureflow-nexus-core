@@ -36,7 +36,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Edit, Trash2, UserPlus, Building2, History, Clock } from "lucide-react";
+import { Edit, Trash2, UserPlus, Building2, History, Clock, UserX, UserCheck, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useModulePermissions } from "@/hooks/useModulePermissions";
 import { useAuth } from "@/contexts/AuthContext";
@@ -80,6 +80,9 @@ const UsersList = () => {
   const [selectedDepartments, setSelectedDepartments] = useState<string[]>([]);
   const [isHistoryDialogOpen, setIsHistoryDialogOpen] = useState(false);
   const [historyUserId, setHistoryUserId] = useState<string | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeactivateDialogOpen, setIsDeactivateDialogOpen] = useState(false);
+  const [userToAction, setUserToAction] = useState<{ id: string; name: string; status?: string } | null>(null);
   const { getModulePermission } = useModulePermissions();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -135,13 +138,18 @@ const UsersList = () => {
   const { data: users, isLoading, isError, error: usersError, refetch } = useQuery({
     queryKey: ["users", departments],
     queryFn: async () => {
+      // Fetch profiles - exclude deleted users from the list
+      // Note: Using 'as any' for new columns not yet in generated types
       const { data: profiles, error } = await supabase
         .from("profiles")
-        .select("id, full_name, created_at, department_id")
-        .eq("is_vendor", false);
+        .select("id, full_name, created_at, department_id, status")
+        .eq("is_vendor", false) as any;
 
       if (error) throw error;
       if (!profiles || profiles.length === 0) return [];
+      
+      // Filter out deleted users (new column may not be in types yet)
+      const activeProfiles = (profiles as any[]).filter((p: any) => !p.is_deleted);
 
       // Get user roles with role names from custom_roles
       const { data: userRoles, error: rolesError } = await supabase
@@ -161,7 +169,7 @@ const UsersList = () => {
       if (deptError) throw deptError;
 
       // Get user emails using Edge Function
-      const userIds = profiles.map(profile => profile.id);
+      const userIds = activeProfiles.map((profile: any) => profile.id);
       
       const { data: emailsResponse, error: emailsError } = await supabase.functions.invoke('get-user-emails', {
         body: { userIds }
@@ -202,10 +210,10 @@ const UsersList = () => {
       }, {} as Record<string, DepartmentAssignment[]>);
 
       // Join profiles with roles, departments, and emails
-      return profiles.map(profile => {
+      return activeProfiles.map((profile: any) => {
         const userDepts = deptsByUser[profile.id] || [];
         // Fallback to legacy department_id if no assignments exist
-        let displayDepartments = userDepts.map(d => d.department_name);
+        let displayDepartments = userDepts.map((d: DepartmentAssignment) => d.department_name);
         if (displayDepartments.length === 0 && profile.department_id) {
           const legacyDept = departments.find(d => d.id === profile.department_id);
           if (legacyDept) displayDepartments = [legacyDept.name];
@@ -219,7 +227,8 @@ const UsersList = () => {
           roles: rolesByUser[profile.id] || [],
           createdAt: new Date(profile.created_at).toLocaleDateString(),
           email: emailsMap.get(profile.id) || "No email found",
-          legacyDepartmentId: profile.department_id
+          legacyDepartmentId: profile.department_id,
+          status: profile.status || 'active'
         };
       });
     },
@@ -526,20 +535,32 @@ const UsersList = () => {
     setIsHistoryDialogOpen(true);
   };
 
-  const handleDeleteUser = async (userId: string) => {
+  // Soft delete user - marks as deleted, user disappears from UI but data preserved
+  const handleSoftDeleteUser = async () => {
+    if (!userToAction) return;
+    
     try {
-      const { data, error } = await supabase.functions.invoke('admin-delete-user', {
-        body: { userId }
-      });
+      // Soft delete: mark as deleted in profiles
+      const { error } = await supabase
+        .from("profiles")
+        .update({ 
+          is_deleted: true,
+          deleted_at: new Date().toISOString(),
+          deleted_by: user?.id,
+          status: 'inactive'
+        } as any)
+        .eq("id", userToAction.id);
       
       if (error) throw error;
-      if (data?.error) throw new Error(data.error);
 
       toast({
         title: "User deleted",
-        description: "The user has been removed from the system."
+        description: `${userToAction.name} has been permanently removed from the system view.`
       });
       
+      setIsDeleteDialogOpen(false);
+      setUserToAction(null);
+      await queryClient.invalidateQueries({ queryKey: ["users"] });
       refetch();
     } catch (error: any) {
       console.error("Error deleting user:", error);
@@ -549,6 +570,65 @@ const UsersList = () => {
         variant: "destructive"
       });
     }
+  };
+
+  // Deactivate/Activate user - toggles status
+  const handleToggleUserStatus = async () => {
+    if (!userToAction) return;
+    
+    try {
+      const isCurrentlyActive = userToAction.status === 'active';
+      const newStatus = isCurrentlyActive ? 'inactive' : 'active';
+      
+      const updateData: any = { 
+        status: newStatus 
+      };
+      
+      if (isCurrentlyActive) {
+        updateData.deactivated_at = new Date().toISOString();
+        updateData.deactivated_by = user?.id;
+      } else {
+        // Reactivating - clear deactivation fields
+        updateData.deactivated_at = null;
+        updateData.deactivated_by = null;
+      }
+
+      const { error } = await supabase
+        .from("profiles")
+        .update(updateData)
+        .eq("id", userToAction.id);
+      
+      if (error) throw error;
+
+      toast({
+        title: isCurrentlyActive ? "User deactivated" : "User activated",
+        description: isCurrentlyActive 
+          ? `${userToAction.name} can no longer log in to the system.`
+          : `${userToAction.name} can now log in to the system again.`
+      });
+      
+      setIsDeactivateDialogOpen(false);
+      setUserToAction(null);
+      await queryClient.invalidateQueries({ queryKey: ["users"] });
+      refetch();
+    } catch (error: any) {
+      console.error("Error toggling user status:", error);
+      toast({
+        title: "Failed to update user status",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
+  const openDeactivateDialog = (userItem: any) => {
+    setUserToAction({ id: userItem.id, name: userItem.fullName, status: userItem.status });
+    setIsDeactivateDialogOpen(true);
+  };
+
+  const openDeleteDialog = (userItem: any) => {
+    setUserToAction({ id: userItem.id, name: userItem.fullName, status: userItem.status });
+    setIsDeleteDialogOpen(true);
   };
 
   if (isLoading) {
@@ -584,6 +664,7 @@ const UsersList = () => {
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
+              <TableHead>Status</TableHead>
               <TableHead>Departments</TableHead>
               <TableHead>Roles</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -592,13 +673,21 @@ const UsersList = () => {
           <TableBody>
             {users && users.length > 0 ? (
               users.map((userItem) => (
-                <TableRow key={userItem.id}>
+                <TableRow key={userItem.id} className={userItem.status === 'inactive' ? 'opacity-60' : ''}>
                   <TableCell>{userItem.fullName}</TableCell>
                   <TableCell>{userItem.email}</TableCell>
                   <TableCell>
+                    <Badge 
+                      variant={userItem.status === 'active' ? 'default' : 'destructive'}
+                      className="text-xs"
+                    >
+                      {userItem.status === 'active' ? 'Active' : 'Inactive'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
                     <div className="flex flex-wrap gap-1">
                       {userItem.departments.length > 0 ? (
-                        userItem.departments.map((dept, idx) => (
+                        userItem.departments.map((dept: string, idx: number) => (
                           <Badge key={idx} variant="outline" className="text-xs">
                             <Building2 className="w-3 h-3 mr-1" />
                             {dept}
@@ -611,7 +700,7 @@ const UsersList = () => {
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
-                      {userItem.roles.map((role, idx) => (
+                      {userItem.roles.map((role: any, idx: number) => (
                         <Badge key={idx} variant="secondary" className="text-xs">
                           {role.name}
                         </Badge>
@@ -628,6 +717,30 @@ const UsersList = () => {
                           <History className="w-4 h-4" />
                         </Button>
                         <ResetPasswordAction userId={userItem.id} userEmail={userItem.email} />
+                        {/* Deactivate/Activate button */}
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => openDeactivateDialog(userItem)} 
+                          title={userItem.status === 'active' ? 'Deactivate User' : 'Activate User'}
+                        >
+                          {userItem.status === 'active' ? (
+                            <UserX className="w-4 h-4 text-orange-500" />
+                          ) : (
+                            <UserCheck className="w-4 h-4 text-green-500" />
+                          )}
+                        </Button>
+                        {/* Delete button (soft delete) */}
+                        {canDelete && userItem.id !== user?.id && (
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={() => openDeleteDialog(userItem)} 
+                            title="Delete User"
+                          >
+                            <Trash2 className="w-4 h-4 text-destructive" />
+                          </Button>
+                        )}
                       </>
                     )}
                   </TableCell>
@@ -635,7 +748,7 @@ const UsersList = () => {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8">
+                <TableCell colSpan={6} className="text-center py-8">
                   No users found
                 </TableCell>
               </TableRow>
@@ -968,6 +1081,82 @@ const UsersList = () => {
               </div>
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Deactivate/Activate User Confirmation Dialog */}
+      <Dialog open={isDeactivateDialogOpen} onOpenChange={setIsDeactivateDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {userToAction?.status === 'active' ? (
+                <>
+                  <UserX className="w-5 h-5 text-orange-500" />
+                  Deactivate User
+                </>
+              ) : (
+                <>
+                  <UserCheck className="w-5 h-5 text-green-500" />
+                  Activate User
+                </>
+              )}
+            </DialogTitle>
+            <DialogDescription>
+              {userToAction?.status === 'active' 
+                ? `Are you sure you want to deactivate ${userToAction?.name}? They will not be able to log in or perform any actions until reactivated.`
+                : `Are you sure you want to reactivate ${userToAction?.name}? They will be able to log in and use the system with all their previous settings intact.`
+              }
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setIsDeactivateDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              variant={userToAction?.status === 'active' ? 'destructive' : 'default'}
+              onClick={handleToggleUserStatus}
+            >
+              {userToAction?.status === 'active' ? 'Deactivate User' : 'Activate User'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete User Warning Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="w-5 h-5" />
+              Permanently Delete User
+            </DialogTitle>
+            <DialogDescription className="space-y-3">
+              <p>
+                Are you sure you want to delete <strong>{userToAction?.name}</strong>?
+              </p>
+              <div className="bg-destructive/10 border border-destructive/20 rounded-md p-3 text-sm">
+                <p className="font-semibold text-destructive mb-2">⚠️ Warning: This action cannot be reversed!</p>
+                <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                  <li>The user will be permanently removed from all system views</li>
+                  <li>They will no longer be able to log in</li>
+                  <li>All audit logs and history referencing this user will be preserved</li>
+                  <li>This action <strong>cannot be undone</strong> - even by administrators</li>
+                </ul>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                If you only want to temporarily disable access, use <strong>Deactivate</strong> instead.
+              </p>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleSoftDeleteUser}>
+              <Trash2 className="w-4 h-4 mr-2" />
+              Delete Permanently
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </Card>
