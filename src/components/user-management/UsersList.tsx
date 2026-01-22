@@ -721,7 +721,11 @@ const UsersList = () => {
                         <Button 
                           variant="ghost" 
                           size="icon" 
-                          onClick={() => openDeactivateDialog(userItem)} 
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            openDeactivateDialog(userItem);
+                          }} 
                           title={userItem.status === 'active' ? 'Deactivate User' : 'Activate User'}
                         >
                           {userItem.status === 'active' ? (
@@ -735,7 +739,11 @@ const UsersList = () => {
                           <Button 
                             variant="ghost" 
                             size="icon" 
-                            onClick={() => openDeleteDialog(userItem)} 
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              openDeleteDialog(userItem);
+                            }} 
                             title="Delete User"
                           >
                             <Trash2 className="w-4 h-4 text-destructive" />
