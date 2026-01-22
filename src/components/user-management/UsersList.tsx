@@ -36,7 +36,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Edit, Trash2, UserPlus, Building2, History, Clock, UserX, UserCheck, AlertTriangle } from "lucide-react";
+import { Edit, Trash2, UserPlus, Building2, History, Clock, UserX, UserCheck, AlertTriangle, MoreVertical, KeyRound } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { useModulePermissions } from "@/hooks/useModulePermissions";
 import { useAuth } from "@/contexts/AuthContext";
@@ -707,49 +714,49 @@ const UsersList = () => {
                       ))}
                     </div>
                   </TableCell>
-                  <TableCell className="text-right space-x-1">
+                  <TableCell className="text-right">
                     {canEdit && (
-                      <>
-                        <Button variant="ghost" size="icon" onClick={() => handleEditUser(userItem)} title="Edit User">
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleViewHistory(userItem.id)} title="View Department History">
-                          <History className="w-4 h-4" />
-                        </Button>
-                        <ResetPasswordAction userId={userItem.id} userEmail={userItem.email} />
-                        {/* Deactivate/Activate button */}
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            openDeactivateDialog(userItem);
-                          }} 
-                          title={userItem.status === 'active' ? 'Deactivate User' : 'Activate User'}
-                        >
-                          {userItem.status === 'active' ? (
-                            <UserX className="w-4 h-4 text-orange-500" />
-                          ) : (
-                            <UserCheck className="w-4 h-4 text-green-500" />
-                          )}
-                        </Button>
-                        {/* Delete button (soft delete) */}
-                        {canDelete && userItem.id !== user?.id && (
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              openDeleteDialog(userItem);
-                            }} 
-                            title="Delete User"
-                          >
-                            <Trash2 className="w-4 h-4 text-destructive" />
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreVertical className="w-4 h-4" />
                           </Button>
-                        )}
-                      </>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleEditUser(userItem)}>
+                            <Edit className="w-4 h-4 mr-2" />
+                            Edit User
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleViewHistory(userItem.id)}>
+                            <History className="w-4 h-4 mr-2" />
+                            Department History
+                          </DropdownMenuItem>
+                          <ResetPasswordAction userId={userItem.id} userEmail={userItem.email} asMenuItem />
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => openDeactivateDialog(userItem)}>
+                            {userItem.status === 'active' ? (
+                              <>
+                                <UserX className="w-4 h-4 mr-2 text-warning" />
+                                Deactivate User
+                              </>
+                            ) : (
+                              <>
+                                <UserCheck className="w-4 h-4 mr-2 text-success" />
+                                Activate User
+                              </>
+                            )}
+                          </DropdownMenuItem>
+                          {canDelete && userItem.id !== user?.id && (
+                            <DropdownMenuItem 
+                              onClick={() => openDeleteDialog(userItem)}
+                              className="text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Delete User
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     )}
                   </TableCell>
                 </TableRow>
