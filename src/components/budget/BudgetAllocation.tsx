@@ -34,11 +34,22 @@ const BudgetAllocation = () => {
       // Get user's department from profile
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('department_id, departments(name)')
+        .select('department_id')
         .eq('id', user.id)
         .maybeSingle();
 
       if (profileError) throw profileError;
+
+      // Fetch department name separately (no FK relationship)
+      let departmentName = null;
+      if (profile?.department_id) {
+        const { data: dept } = await supabase
+          .from('departments')
+          .select('name')
+          .eq('id', profile.department_id)
+          .maybeSingle();
+        departmentName = dept?.name;
+      }
 
       const isAdmin = roles?.some(r => ((r.custom_roles as any)?.name || '').toLowerCase() === 'admin');
       
@@ -46,7 +57,7 @@ const BudgetAllocation = () => {
         userId: user.id,
         isAdmin,
         departmentId: profile?.department_id,
-        departmentName: (profile?.departments as any)?.name
+        departmentName
       };
     }
   });
