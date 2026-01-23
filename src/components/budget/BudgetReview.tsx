@@ -579,24 +579,14 @@ const BudgetReview = () => {
         </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <Card>
-          <CardContent className="pt-4">
-            <div className="text-2xl font-bold">{overallSummary.totalDepartments}</div>
-            <p className="text-xs text-muted-foreground">Departments Pending</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4">
-            <div className="text-2xl font-bold">{overallSummary.totalAllocations}</div>
-            <p className="text-xs text-muted-foreground">Total Line Items</p>
-          </CardContent>
-        </Card>
+      {/* Summary Cards - 3 key metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardContent className="pt-4">
             <div className="text-2xl font-bold text-emerald-600">{formatAmount(overallSummary.totalIncome)}</div>
-            <p className="text-xs text-muted-foreground">Total Income</p>
+            <p className="text-xs text-muted-foreground">
+              Total Income {selectedDepartment === 'all' ? `(${overallSummary.totalDepartments} Departments)` : ''}
+            </p>
           </CardContent>
         </Card>
         <Card>
