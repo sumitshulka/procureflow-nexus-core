@@ -15,8 +15,9 @@ import { getCurrencySymbol } from "@/utils/currencyUtils";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useBudgetUserContext } from "@/hooks/useBudgetUserContext";
 
-const INCOME_COLORS = ["#10b981", "#34d399", "#6ee7b7", "#a7f3d0", "#d1fae5"];
-const EXPENSE_COLORS = ["#f43f5e", "#fb7185", "#fda4af", "#fecdd3", "#ffe4e6"];
+// Colorblind-accessible palettes using Wong's palette with distinct hues and luminance
+const INCOME_COLORS = ["#009E73", "#56B4E9", "#0072B2", "#F0E442", "#CC79A7"];
+const EXPENSE_COLORS = ["#D55E00", "#E69F00", "#882255", "#332288", "#AA4499"];
 const BudgetOverview = () => {
   const currentYear = new Date().getFullYear();
   const [selectedFiscalYear, setSelectedFiscalYear] = useState<string>(currentYear.toString());
