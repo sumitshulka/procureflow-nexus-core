@@ -5,7 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, ArrowLeft, Save, Send, Plus, ChevronDown, ChevronRight } from "lucide-react";
+import { Loader2, ArrowLeft, Save, Send, Plus, ChevronDown, ChevronRight, CopyCheck } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import {
   Table,
@@ -156,6 +157,30 @@ const BudgetEntryGrid = ({ cycle, departmentId, onBack }: BudgetEntryGridProps) 
       ...prev,
       [getEntryKey(headId, periodNumber)]: numValue
     }));
+  };
+
+  // Copy value to all subsequent empty periods in the same row
+  const handleCopyForward = (headId: string, fromPeriod: number) => {
+    const currentValue = entries[getEntryKey(headId, fromPeriod)] || 0;
+    if (currentValue === 0) return; // Nothing to copy if current value is 0
+
+    setEntries(prev => {
+      const newEntries = { ...prev };
+      // Copy to all periods after the current one, only if empty
+      for (let p = fromPeriod + 1; p <= periodCount; p++) {
+        const key = getEntryKey(headId, p);
+        // Only fill if the field is empty (0 or undefined)
+        if (!newEntries[key] || newEntries[key] === 0) {
+          newEntries[key] = currentValue;
+        }
+      }
+      return newEntries;
+    });
+
+    toast({
+      title: "Values copied",
+      description: `Copied ${currencySymbol}${currentValue.toLocaleString()} to empty fields in following periods.`
+    });
   };
 
   const getHeadTotal = (headId: string) => {
@@ -384,15 +409,38 @@ const BudgetEntryGrid = ({ cycle, departmentId, onBack }: BudgetEntryGridProps) 
                   ) + (entries[getEntryKey(head.id, periodNumber)] || 0)).toLocaleString()}
                 </div>
               ) : (
-                <Input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={entries[getEntryKey(head.id, periodNumber)] || ''}
-                  onChange={(e) => handleValueChange(head.id, periodNumber, e.target.value)}
-                  className="h-8 text-right"
-                  placeholder="0"
-                />
+                <div className="flex items-center gap-1">
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={entries[getEntryKey(head.id, periodNumber)] || ''}
+                    onChange={(e) => handleValueChange(head.id, periodNumber, e.target.value)}
+                    className="h-8 text-right flex-1"
+                    placeholder="0"
+                  />
+                  {periodNumber < periodCount && (
+                    <TooltipProvider delayDuration={300}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 shrink-0 text-muted-foreground hover:text-primary"
+                            onClick={() => handleCopyForward(head.id, periodNumber)}
+                            disabled={!entries[getEntryKey(head.id, periodNumber)]}
+                          >
+                            <CopyCheck className="h-3.5 w-3.5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="bg-popover text-popover-foreground border z-50">
+                          <p>Copy to empty fields ahead</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                </div>
               )}
             </TableCell>
           ))}
