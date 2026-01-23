@@ -54,7 +54,7 @@ const BudgetReview = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedDepartment, setSelectedDepartment] = useState<string>("all");
-  const [selectedCycle, setSelectedCycle] = useState<string>("all");
+  const [selectedCycle, setSelectedCycle] = useState<string>("");  // Empty until loaded
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['income', 'expenditure']));
   const [expandedHeads, setExpandedHeads] = useState<Set<string>>(new Set());
   const [reviewDialog, setReviewDialog] = useState<ReviewDialogState>({
@@ -97,18 +97,26 @@ const BudgetReview = () => {
     }
   });
 
-  // Fetch budget cycles with pending submissions
+  // Fetch budget cycles - prioritize open cycles
   const { data: budgetCycles } = useQuery({
     queryKey: ['budget-cycles-for-review'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('budget_cycles')
-        .select('id, name, fiscal_year, period_type')
+        .select('id, name, fiscal_year, period_type, status')
         .order('fiscal_year', { ascending: false });
       if (error) throw error;
       return data;
     }
   });
+
+  // Set default cycle to latest open budget when cycles are loaded
+  React.useEffect(() => {
+    if (budgetCycles && budgetCycles.length > 0 && !selectedCycle) {
+      const openCycle = budgetCycles.find(c => c.status === 'open');
+      setSelectedCycle(openCycle?.id || budgetCycles[0].id);
+    }
+  }, [budgetCycles, selectedCycle]);
 
   // Fetch ALL budget heads (to show complete structure)
   const { data: allBudgetHeads } = useQuery({
@@ -124,10 +132,12 @@ const BudgetReview = () => {
     }
   });
 
-  // Fetch pending submissions
+  // Fetch pending submissions - requires a cycle to be selected
   const { data: pendingSubmissions, isLoading } = useQuery({
     queryKey: ['pending-budget-submissions', selectedDepartment, selectedCycle],
     queryFn: async () => {
+      if (!selectedCycle) return [];
+      
       let query = supabase
         .from('budget_allocations')
         .select(`
@@ -136,6 +146,7 @@ const BudgetReview = () => {
           head:budget_heads(id, name, code, type, parent_id, display_order),
           department:departments(name)
         `)
+        .eq('cycle_id', selectedCycle)
         .in('status', ['submitted', 'under_review'])
         .order('submitted_at', { ascending: true })
         .limit(1000);
@@ -143,14 +154,50 @@ const BudgetReview = () => {
       if (selectedDepartment !== 'all') {
         query = query.eq('department_id', selectedDepartment);
       }
-      if (selectedCycle !== 'all') {
-        query = query.eq('cycle_id', selectedCycle);
-      }
 
       const { data, error } = await query;
       if (error) throw error;
       return data as BudgetAllocation[];
-    }
+    },
+    enabled: !!selectedCycle
+  });
+
+  // Fetch approved allocations for the selected cycle to calculate approval progress
+  const { data: approvedAllocations } = useQuery({
+    queryKey: ['approved-budget-allocations', selectedCycle],
+    queryFn: async () => {
+      if (!selectedCycle) return [];
+      
+      const { data, error } = await supabase
+        .from('budget_allocations')
+        .select('department_id')
+        .eq('cycle_id', selectedCycle)
+        .eq('status', 'approved');
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!selectedCycle
+  });
+
+  // Fetch all submitted departments for the cycle (to know total count)
+  const { data: allSubmittedDepts } = useQuery({
+    queryKey: ['all-submitted-departments', selectedCycle],
+    queryFn: async () => {
+      if (!selectedCycle) return [];
+      
+      const { data, error } = await supabase
+        .from('budget_allocations')
+        .select('department_id')
+        .eq('cycle_id', selectedCycle)
+        .in('status', ['submitted', 'under_review', 'approved', 'rejected', 'revision_requested']);
+      
+      if (error) throw error;
+      // Get unique department IDs
+      const uniqueDepts = [...new Set(data.map(d => d.department_id))];
+      return uniqueDepts;
+    },
+    enabled: !!selectedCycle
   });
 
   // Derive active cycle info
@@ -254,17 +301,26 @@ const BudgetReview = () => {
     };
   }, [allBudgetHeads]);
 
-  // Calculate overall summary
+  // Calculate overall summary including approval progress
   const overallSummary = useMemo(() => {
     const deptValues = Object.values(groupedData);
+    
+    // Calculate approved departments
+    const approvedDeptIds = approvedAllocations 
+      ? [...new Set(approvedAllocations.map(a => a.department_id))]
+      : [];
+    const totalSubmittedDepts = allSubmittedDepts?.length || 0;
+    
     return {
       totalDepartments: deptValues.length,
       totalAllocations: pendingSubmissions?.length || 0,
       totalIncome: deptValues.reduce((sum, d) => sum + d.totals.incomeTotal, 0),
       totalExpense: deptValues.reduce((sum, d) => sum + d.totals.expenseTotal, 0),
-      netBudget: deptValues.reduce((sum, d) => sum + (d.totals.incomeTotal - d.totals.expenseTotal), 0)
+      netBudget: deptValues.reduce((sum, d) => sum + (d.totals.incomeTotal - d.totals.expenseTotal), 0),
+      approvedDepartments: approvedDeptIds.length,
+      totalSubmittedDepartments: totalSubmittedDepts
     };
-  }, [groupedData, pendingSubmissions]);
+  }, [groupedData, pendingSubmissions, approvedAllocations, allSubmittedDepts]);
 
   const reviewMutation = useMutation({
     mutationFn: async ({ allocationIds, status, notes }: { 
@@ -555,13 +611,14 @@ const BudgetReview = () => {
         <div className="flex items-center gap-2 flex-wrap">
           <Filter className="h-4 w-4 text-muted-foreground" />
           <Select value={selectedCycle} onValueChange={setSelectedCycle}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Select cycle" />
+            <SelectTrigger className="w-[220px]">
+              <SelectValue placeholder="Select budget cycle" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Cycles</SelectItem>
               {budgetCycles?.map(cycle => (
-                <SelectItem key={cycle.id} value={cycle.id}>{cycle.name} ({cycle.fiscal_year})</SelectItem>
+                <SelectItem key={cycle.id} value={cycle.id}>
+                  {cycle.name} ({cycle.fiscal_year}) {cycle.status === 'open' && <Badge variant="outline" className="ml-1 text-xs">Open</Badge>}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -579,20 +636,28 @@ const BudgetReview = () => {
         </div>
       </div>
 
-      {/* Summary Cards - 3 key metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* Summary Cards - 4 key metrics */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="pt-4">
+            <div className="text-2xl font-bold text-primary">
+              {overallSummary.approvedDepartments}/{overallSummary.totalSubmittedDepartments}
+            </div>
+            <p className="text-xs text-muted-foreground">Approved Dept Budgets</p>
+          </CardContent>
+        </Card>
         <Card>
           <CardContent className="pt-4">
             <div className="text-2xl font-bold text-emerald-600">{formatAmount(overallSummary.totalIncome)}</div>
             <p className="text-xs text-muted-foreground">
-              Total Income {selectedDepartment === 'all' ? `(${overallSummary.totalDepartments} Departments)` : ''}
+              Pending Income {selectedDepartment === 'all' && overallSummary.totalDepartments > 0 ? `(${overallSummary.totalDepartments} Depts)` : ''}
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-4">
             <div className="text-2xl font-bold text-rose-600">{formatAmount(overallSummary.totalExpense)}</div>
-            <p className="text-xs text-muted-foreground">Total Expenses</p>
+            <p className="text-xs text-muted-foreground">Pending Expenses</p>
           </CardContent>
         </Card>
         <Card>
@@ -600,7 +665,7 @@ const BudgetReview = () => {
             <div className={`text-2xl font-bold ${overallSummary.netBudget >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
               {formatAmount(overallSummary.netBudget)}
             </div>
-            <p className="text-xs text-muted-foreground">Net Budget</p>
+            <p className="text-xs text-muted-foreground">Pending Net Budget</p>
           </CardContent>
         </Card>
       </div>
