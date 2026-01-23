@@ -4870,6 +4870,7 @@ export type Database = {
         | "draft"
         | "submitted"
         | "under_review"
+        | "revision_requested"
         | "approved"
         | "rejected"
       budget_cycle_status: "draft" | "open" | "closed" | "archived"
@@ -5047,6 +5048,7 @@ export const Constants = {
         "draft",
         "submitted",
         "under_review",
+        "revision_requested",
         "approved",
         "rejected",
       ],
