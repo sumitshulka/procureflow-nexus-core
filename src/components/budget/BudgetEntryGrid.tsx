@@ -75,6 +75,8 @@ const BudgetEntryGrid = ({ cycle, departmentId, onBack }: BudgetEntryGridProps) 
       const { data, error } = await supabase
         .from('organization_settings')
         .select('base_currency')
+        .order('created_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
       if (error) throw error;
       return data;

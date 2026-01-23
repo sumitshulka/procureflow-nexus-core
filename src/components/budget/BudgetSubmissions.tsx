@@ -22,7 +22,9 @@ const BudgetSubmissions = ({ isAdmin }: BudgetSubmissionsProps) => {
       const { data, error } = await supabase
         .from('organization_settings')
         .select('base_currency')
-        .single();
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
       if (error) throw error;
       return data;
     }
