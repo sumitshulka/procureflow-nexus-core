@@ -46,6 +46,7 @@ interface BudgetHead {
   type: string;
   parent_id: string | null;
   display_order: number;
+  is_active?: boolean;
 }
 
 const BudgetReview = () => {
@@ -104,6 +105,20 @@ const BudgetReview = () => {
         .order('fiscal_year', { ascending: false });
       if (error) throw error;
       return data;
+    }
+  });
+
+  // Fetch ALL budget heads (to show complete structure)
+  const { data: allBudgetHeads } = useQuery({
+    queryKey: ['all-budget-heads-review'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('budget_heads')
+        .select('id, name, code, type, parent_id, display_order, is_active')
+        .eq('is_active', true)
+        .order('display_order', { ascending: true });
+      if (error) throw error;
+      return data as BudgetHead[];
     }
   });
 
@@ -213,18 +228,15 @@ const BudgetReview = () => {
       }
     });
 
-    // Sort heads by display_order
-    Object.values(grouped).forEach(dept => {
-      dept.heads.sort((a, b) => a.display_order - b.display_order);
-    });
-
     return grouped;
   }, [pendingSubmissions]);
 
-  // Organize heads hierarchically
-  const getOrganizedHeads = (heads: BudgetHead[]) => {
-    const incomeHeads = heads.filter(h => h.type === 'income');
-    const expenditureHeads = heads.filter(h => h.type === 'expenditure');
+  // Organize ALL budget heads hierarchically (from master data)
+  const organizedAllHeads = useMemo(() => {
+    if (!allBudgetHeads) return { income: [], expenditure: [] };
+
+    const incomeHeads = allBudgetHeads.filter(h => h.type === 'income');
+    const expenditureHeads = allBudgetHeads.filter(h => h.type === 'expenditure');
 
     const organize = (headsList: BudgetHead[]) => {
       const mainHeads = headsList.filter(h => !h.parent_id);
@@ -238,7 +250,7 @@ const BudgetReview = () => {
       income: organize(incomeHeads),
       expenditure: organize(expenditureHeads)
     };
-  };
+  }, [allBudgetHeads]);
 
   // Calculate overall summary
   const overallSummary = useMemo(() => {
@@ -398,7 +410,7 @@ const BudgetReview = () => {
     const rowTotal = getHeadRowTotal(headAllocations);
     const hasData = Object.keys(headAllocations).length > 0;
 
-    if (!hasData && !hasSubheads) return null;
+    // Always show the row (even if no data), but actions only appear when there's data
 
     return (
       <React.Fragment key={head.id}>
@@ -420,34 +432,29 @@ const BudgetReview = () => {
             </div>
           </TableCell>
 
-          {/* Period columns */}
+          {/* Period columns - show 0 if no allocation */}
           {Array.from({ length: periodCount }, (_, i) => i + 1).map(periodNumber => {
             const allocation = headAllocations[periodNumber];
+            const amount = allocation?.allocated_amount || 0;
             return (
               <TableCell key={periodNumber} className="text-right min-w-[100px] p-2">
-                {allocation ? (
-                  <span className={head.type === 'income' ? 'text-emerald-600' : 'text-foreground'}>
-                    {formatAmount(allocation.allocated_amount)}
-                  </span>
-                ) : (
-                  <span className="text-muted-foreground">-</span>
-                )}
+                <span className={amount > 0 && head.type === 'income' ? 'text-emerald-600' : amount > 0 ? 'text-foreground' : 'text-muted-foreground'}>
+                  {formatAmount(amount)}
+                </span>
               </TableCell>
             );
           })}
 
           {/* Row Total */}
           <TableCell className="text-right font-semibold min-w-[120px] bg-muted/20">
-            {hasData ? (
-              <span className={head.type === 'income' ? 'text-emerald-600' : 'text-foreground'}>
-                {formatAmount(rowTotal)}
-              </span>
-            ) : '-'}
+            <span className={rowTotal > 0 && head.type === 'income' ? 'text-emerald-600' : rowTotal > 0 ? 'text-foreground' : 'text-muted-foreground'}>
+              {formatAmount(rowTotal)}
+            </span>
           </TableCell>
 
-          {/* Actions */}
+          {/* Actions - only show if there's submitted data to review */}
           <TableCell className="sticky right-0 z-10 bg-card border-l min-w-[120px]">
-            {hasData && (
+            {hasData ? (
               <div className="flex justify-center gap-1">
                 <Button size="sm" variant="ghost" onClick={() => handleBulkAction(departmentId, head.id, 'approve')} title="Approve All Periods">
                   <Check className="h-4 w-4 text-emerald-600" />
@@ -459,6 +466,8 @@ const BudgetReview = () => {
                   <X className="h-4 w-4 text-rose-600" />
                 </Button>
               </div>
+            ) : (
+              <span className="text-xs text-muted-foreground italic">No entry</span>
             )}
           </TableCell>
         </TableRow>
@@ -574,9 +583,8 @@ const BudgetReview = () => {
         </Card>
       )}
 
-      {/* Department-wise Grid View */}
+      {/* Department-wise Grid View - uses ALL budget heads from master data */}
       {Object.entries(groupedData).map(([deptId, deptData]) => {
-        const organizedHeads = getOrganizedHeads(deptData.heads);
         const netTotal = deptData.totals.incomeTotal - deptData.totals.expenseTotal;
 
         return (
@@ -597,9 +605,9 @@ const BudgetReview = () => {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Income Section */}
-              {organizedHeads.income.length > 0 && (
-                <Collapsible open={expandedSections.has('income')} onOpenChange={() => toggleSection('income')}>
+            {/* Income Section - show ALL income heads */}
+            {organizedAllHeads.income.length > 0 && (
+              <Collapsible open={expandedSections.has('income')} onOpenChange={() => toggleSection('income')}>
                   <CollapsibleTrigger className="flex items-center gap-2 w-full text-left p-2 bg-emerald-50 dark:bg-emerald-950/20 rounded-md hover:bg-emerald-100 dark:hover:bg-emerald-950/30">
                     {expandedSections.has('income') ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                     <span className="font-medium text-emerald-700 dark:text-emerald-400">Income</span>
@@ -619,7 +627,7 @@ const BudgetReview = () => {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {organizedHeads.income.map(head => 
+                          {organizedAllHeads.income.map(head => 
                             renderBudgetHeadRow(head, deptData.allocations, deptId)
                           )}
                           {renderCategorySummaryRow(
@@ -635,9 +643,9 @@ const BudgetReview = () => {
                 </Collapsible>
               )}
 
-              {/* Expenditure Section */}
-              {organizedHeads.expenditure.length > 0 && (
-                <Collapsible open={expandedSections.has('expenditure')} onOpenChange={() => toggleSection('expenditure')}>
+            {/* Expenditure Section - show ALL expenditure heads */}
+            {organizedAllHeads.expenditure.length > 0 && (
+              <Collapsible open={expandedSections.has('expenditure')} onOpenChange={() => toggleSection('expenditure')}>
                   <CollapsibleTrigger className="flex items-center gap-2 w-full text-left p-2 bg-rose-50 dark:bg-rose-950/20 rounded-md hover:bg-rose-100 dark:hover:bg-rose-950/30">
                     {expandedSections.has('expenditure') ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                     <span className="font-medium text-rose-700 dark:text-rose-400">Expenditure</span>
@@ -657,7 +665,7 @@ const BudgetReview = () => {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {organizedHeads.expenditure.map(head => 
+                          {organizedAllHeads.expenditure.map(head => 
                             renderBudgetHeadRow(head, deptData.allocations, deptId)
                           )}
                           {renderCategorySummaryRow(
