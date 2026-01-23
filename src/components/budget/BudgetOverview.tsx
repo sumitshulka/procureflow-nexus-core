@@ -586,25 +586,43 @@ const BudgetOverview = () => {
                     <p>No income data available</p>
                   </div>
                 ) : (
-                  <ResponsiveContainer width="100%" height={280}>
-                    <PieChart>
-                      <Pie
-                        data={incomeHeadSpending}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                        outerRadius={80}
-                        dataKey="value"
-                      >
-                        {incomeHeadSpending.map((entry, index) => (
-                          <Cell key={`income-cell-${index}`} fill={INCOME_COLORS[index % INCOME_COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip formatter={(value: number) => formatAmount(value)} />
-                      <Legend />
-                    </PieChart>
-                  </ResponsiveContainer>
+                  <div className="space-y-4">
+                    <ResponsiveContainer width="100%" height={220}>
+                      <PieChart>
+                        <Pie
+                          data={incomeHeadSpending}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={50}
+                          outerRadius={80}
+                          paddingAngle={2}
+                          dataKey="value"
+                        >
+                          {incomeHeadSpending.map((entry, index) => (
+                            <Cell key={`income-cell-${index}`} fill={INCOME_COLORS[index % INCOME_COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip 
+                          formatter={(value: number) => formatAmount(value)}
+                          contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))' }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="space-y-2 max-h-32 overflow-y-auto">
+                      {incomeHeadSpending.map((entry, index) => (
+                        <div key={`income-legend-${index}`} className="flex items-center justify-between text-sm">
+                          <div className="flex items-center gap-2">
+                            <div 
+                              className="w-3 h-3 rounded-full flex-shrink-0" 
+                              style={{ backgroundColor: INCOME_COLORS[index % INCOME_COLORS.length] }} 
+                            />
+                            <span className="truncate max-w-[140px]" title={entry.name}>{entry.name}</span>
+                          </div>
+                          <span className="font-medium text-emerald-600">{formatAmount(entry.value)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 )}
                 {incomeHeadSpending.length > 0 && (
                   <div className="mt-4 pt-4 border-t">
@@ -633,25 +651,43 @@ const BudgetOverview = () => {
                     <p>No expense data available</p>
                   </div>
                 ) : (
-                  <ResponsiveContainer width="100%" height={280}>
-                    <PieChart>
-                      <Pie
-                        data={expenseHeadSpending}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                        outerRadius={80}
-                        dataKey="value"
-                      >
-                        {expenseHeadSpending.map((entry, index) => (
-                          <Cell key={`expense-cell-${index}`} fill={EXPENSE_COLORS[index % EXPENSE_COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip formatter={(value: number) => formatAmount(value)} />
-                      <Legend />
-                    </PieChart>
-                  </ResponsiveContainer>
+                  <div className="space-y-4">
+                    <ResponsiveContainer width="100%" height={220}>
+                      <PieChart>
+                        <Pie
+                          data={expenseHeadSpending}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={50}
+                          outerRadius={80}
+                          paddingAngle={2}
+                          dataKey="value"
+                        >
+                          {expenseHeadSpending.map((entry, index) => (
+                            <Cell key={`expense-cell-${index}`} fill={EXPENSE_COLORS[index % EXPENSE_COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip 
+                          formatter={(value: number) => formatAmount(value)}
+                          contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))' }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="space-y-2 max-h-32 overflow-y-auto">
+                      {expenseHeadSpending.map((entry, index) => (
+                        <div key={`expense-legend-${index}`} className="flex items-center justify-between text-sm">
+                          <div className="flex items-center gap-2">
+                            <div 
+                              className="w-3 h-3 rounded-full flex-shrink-0" 
+                              style={{ backgroundColor: EXPENSE_COLORS[index % EXPENSE_COLORS.length] }} 
+                            />
+                            <span className="truncate max-w-[140px]" title={entry.name}>{entry.name}</span>
+                          </div>
+                          <span className="font-medium text-rose-600">{formatAmount(entry.value)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 )}
                 {expenseHeadSpending.length > 0 && (
                   <div className="mt-4 pt-4 border-t">
