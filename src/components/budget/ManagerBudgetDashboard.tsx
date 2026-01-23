@@ -87,7 +87,7 @@ const ManagerBudgetDashboard = ({ departments, hasMultipleDepartments = false }:
     enabled: !!selectedDepartmentId
   });
 
-  // Fetch in-progress/pending submissions for selected department
+  // Fetch in-progress/pending/draft submissions for selected department
   const { data: pendingSubmissions } = useQuery({
     queryKey: ['manager-pending-submissions', selectedDepartmentId],
     queryFn: async () => {
@@ -95,11 +95,12 @@ const ManagerBudgetDashboard = ({ departments, hasMultipleDepartments = false }:
         .from('budget_allocations')
         .select(`
           *,
-          cycle:budget_cycles(name, fiscal_year)
+          cycle:budget_cycles(name, fiscal_year, period_type),
+          head:budget_heads(name, code, type)
         `)
         .eq('department_id', selectedDepartmentId)
         .in('status', ['submitted', 'under_review', 'draft'])
-        .order('created_at', { ascending: false });
+        .order('updated_at', { ascending: false });
 
       if (error) throw error;
       return data || [];
@@ -360,10 +361,86 @@ const ManagerBudgetDashboard = ({ departments, hasMultipleDepartments = false }:
         </Card>
       )}
 
+      {/* Draft & Pending Submissions for Selected Department */}
+      {pendingSubmissions && pendingSubmissions.length > 0 && (
+        <Card className="border-yellow-500/30 bg-yellow-50/30 dark:bg-yellow-950/10">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5 text-yellow-600" />
+              Draft & Pending Submissions
+              {selectedDepartment && (
+                <Badge variant="outline">{selectedDepartment.name}</Badge>
+              )}
+            </CardTitle>
+            <CardDescription>
+              Budget entries that are saved as drafts or awaiting approval
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <DataTable
+              columns={[
+                {
+                  id: 'cycle',
+                  header: 'Budget Cycle',
+                  cell: (row: any) => `${row.cycle?.name} (FY ${row.cycle?.fiscal_year})`
+                },
+                {
+                  id: 'head',
+                  header: 'Budget Head',
+                  cell: (row: any) => (
+                    <div>
+                      <div className="font-medium">{row.head?.name || '-'}</div>
+                      <div className="text-xs text-muted-foreground">{row.head?.code || ''}</div>
+                    </div>
+                  )
+                },
+                {
+                  id: 'period',
+                  header: 'Period',
+                  cell: (row: any) => getPeriodLabel(row.period_number, row.cycle?.period_type || 'quarterly')
+                },
+                {
+                  id: 'allocated_amount',
+                  header: 'Amount',
+                  cell: (row: any) => (
+                    <span className="font-semibold">
+                      {currencySymbol}{row.allocated_amount?.toLocaleString() || '0'}
+                    </span>
+                  )
+                },
+                {
+                  id: 'status',
+                  header: 'Status',
+                  cell: (row: any) => {
+                    const status = row.status || 'draft';
+                    if (status === 'draft') {
+                      return <Badge variant="outline" className="bg-muted">Draft</Badge>;
+                    } else if (status === 'submitted') {
+                      return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">Pending Approval</Badge>;
+                    } else if (status === 'under_review') {
+                      return <Badge variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">Under Review</Badge>;
+                    }
+                    return <Badge variant="outline">{status}</Badge>;
+                  }
+                },
+                {
+                  id: 'updated',
+                  header: 'Last Updated',
+                  cell: (row: any) => row.updated_at ? format(new Date(row.updated_at), 'MMM dd, yyyy') : '-'
+                }
+              ]}
+              data={pendingSubmissions}
+              emptyMessage="No draft or pending submissions"
+            />
+          </CardContent>
+        </Card>
+      )}
+
       {/* Approved Submissions Summary for Selected Department */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
+            <CheckCircle2 className="h-5 w-5 text-primary" />
             Approved Budget Summary
             {selectedDepartment && (
               <Badge variant="outline">{selectedDepartment.name}</Badge>
