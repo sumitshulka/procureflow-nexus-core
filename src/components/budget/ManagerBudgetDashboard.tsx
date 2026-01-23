@@ -5,10 +5,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, ClipboardEdit, CheckCircle2, Clock, DollarSign, TrendingUp, Building2 } from "lucide-react";
+import { Loader2, ClipboardEdit, CheckCircle2, Clock, TrendingUp, Building2 } from "lucide-react";
 import { format } from "date-fns";
 import DataTable from "@/components/common/DataTable";
 import BudgetEntryGrid from "./BudgetEntryGrid";
+import { getCurrencySymbol } from "@/utils/currencyUtils";
 
 interface DepartmentInfo {
   id: string;
@@ -25,6 +26,21 @@ const ManagerBudgetDashboard = ({ departments, hasMultipleDepartments = false }:
   const [selectedDepartmentId, setSelectedDepartmentId] = useState<string>(departments[0]?.id || '');
   
   const selectedDepartment = departments.find(d => d.id === selectedDepartmentId);
+
+  // Fetch organization settings for currency
+  const { data: orgSettings } = useQuery({
+    queryKey: ['organization-settings-budget'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('organization_settings')
+        .select('base_currency')
+        .single();
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  const currencySymbol = getCurrencySymbol(orgSettings?.base_currency || 'USD');
 
   // Fetch open budget cycles for the manager's departments
   const { data: openCycles, isLoading: cyclesLoading } = useQuery({
@@ -159,7 +175,7 @@ const ManagerBudgetDashboard = ({ departments, hasMultipleDepartments = false }:
       header: 'Approved Amount',
       cell: (row: any) => (
         <span className="font-semibold text-primary">
-          ${row.approved_amount?.toLocaleString() || '0'}
+          {currencySymbol}{row.approved_amount?.toLocaleString() || '0'}
         </span>
       )
     }
@@ -220,10 +236,10 @@ const ManagerBudgetDashboard = ({ departments, hasMultipleDepartments = false }:
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Approved Budget</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium text-muted-foreground">{currencySymbol}</span>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${totalApprovedBudget.toLocaleString()}</div>
+            <div className="text-2xl font-bold">{currencySymbol}{totalApprovedBudget.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">
               {hasMultipleDepartments ? `Across ${departments.length} departments` : 'Current fiscal year'}
             </p>

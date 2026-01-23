@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { getCurrencySymbol } from "@/utils/currencyUtils";
 
 interface BudgetEntryGridProps {
   cycle: any;
@@ -66,6 +67,21 @@ const BudgetEntryGrid = ({ cycle, departmentId, onBack }: BudgetEntryGridProps) 
     }
     return ['Q1', 'Q2', 'Q3', 'Q4'];
   }, [cycle.period_type]);
+
+  // Fetch organization settings for currency
+  const { data: orgSettings } = useQuery({
+    queryKey: ['organization-settings-budget'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('organization_settings')
+        .select('base_currency')
+        .single();
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  const currencySymbol = getCurrencySymbol(orgSettings?.base_currency || 'USD');
 
   // Fetch budget heads
   const { data: budgetHeads, isLoading: headsLoading } = useQuery({
@@ -361,7 +377,7 @@ const BudgetEntryGrid = ({ cycle, departmentId, onBack }: BudgetEntryGridProps) 
               {isParentHead ? (
                 // Parent heads show calculated sum from subheads
                 <div className="text-right font-medium text-muted-foreground px-2">
-                  ${(head.subheads.reduce((sum: number, sub: BudgetHead) => 
+                  {currencySymbol}{(head.subheads.reduce((sum: number, sub: BudgetHead) => 
                     sum + (entries[getEntryKey(sub.id, periodNumber)] || 0), 0
                   ) + (entries[getEntryKey(head.id, periodNumber)] || 0)).toLocaleString()}
                 </div>
@@ -381,7 +397,7 @@ const BudgetEntryGrid = ({ cycle, departmentId, onBack }: BudgetEntryGridProps) 
 
           {/* Row total */}
           <TableCell className="text-right font-semibold bg-muted/20 sticky right-0 min-w-[120px]">
-            ${(isParentHead ? getParentTotal(head) : getHeadTotal(head.id)).toLocaleString()}
+            {currencySymbol}{(isParentHead ? getParentTotal(head) : getHeadTotal(head.id)).toLocaleString()}
           </TableCell>
         </TableRow>
 
@@ -430,11 +446,11 @@ const BudgetEntryGrid = ({ cycle, departmentId, onBack }: BudgetEntryGridProps) 
                   </TableCell>
                   {Array.from({ length: periodCount }, (_, i) => i + 1).map(periodNumber => (
                     <TableCell key={periodNumber} className="text-right">
-                      ${getPeriodTotal(periodNumber, type).toLocaleString()}
+                      {currencySymbol}{getPeriodTotal(periodNumber, type).toLocaleString()}
                     </TableCell>
                   ))}
                   <TableCell className="text-right sticky right-0 bg-primary/10">
-                    ${getGrandTotal(type).toLocaleString()}
+                    {currencySymbol}{getGrandTotal(type).toLocaleString()}
                   </TableCell>
                 </TableRow>
 
