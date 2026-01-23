@@ -6,6 +6,7 @@ import { Loader2, Plus } from "lucide-react";
 import DataTable from "@/components/common/DataTable";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
+import { getCurrencySymbol } from "@/utils/currencyUtils";
 
 interface BudgetSubmissionsProps {
   isAdmin?: boolean;
@@ -13,6 +14,21 @@ interface BudgetSubmissionsProps {
 
 const BudgetSubmissions = ({ isAdmin }: BudgetSubmissionsProps) => {
   const navigate = useNavigate();
+
+  // Fetch organization settings for currency
+  const { data: orgSettings } = useQuery({
+    queryKey: ['organization-settings-budget'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('organization_settings')
+        .select('base_currency')
+        .single();
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  const currencySymbol = getCurrencySymbol(orgSettings?.base_currency || 'USD');
 
   const { data: submissions, isLoading } = useQuery({
     queryKey: ['budget-submissions', isAdmin],
@@ -105,12 +121,12 @@ const BudgetSubmissions = ({ isAdmin }: BudgetSubmissionsProps) => {
     { 
       id: 'allocated_amount', 
       header: 'Requested Amount',
-      cell: (row: any) => `$${row.allocated_amount?.toLocaleString() || '0'}`
+      cell: (row: any) => `${currencySymbol}${row.allocated_amount?.toLocaleString() || '0'}`
     },
     { 
       id: 'approved_amount', 
       header: 'Approved Amount',
-      cell: (row: any) => row.approved_amount ? `$${row.approved_amount.toLocaleString()}` : '-'
+      cell: (row: any) => row.approved_amount ? `${currencySymbol}${row.approved_amount.toLocaleString()}` : '-'
     },
     { 
       id: 'status', 

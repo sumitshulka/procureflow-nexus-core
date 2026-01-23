@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
+import { getCurrencySymbol } from "@/utils/currencyUtils";
 
 const BudgetReview = () => {
   const { toast } = useToast();
@@ -21,6 +22,21 @@ const BudgetReview = () => {
   });
   const [approvedAmount, setApprovedAmount] = useState("");
   const [reviewNotes, setReviewNotes] = useState("");
+
+  // Fetch organization settings for currency
+  const { data: orgSettings } = useQuery({
+    queryKey: ['organization-settings-budget'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('organization_settings')
+        .select('base_currency')
+        .single();
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  const currencySymbol = getCurrencySymbol(orgSettings?.base_currency || 'USD');
 
   const { data: pendingSubmissions, isLoading } = useQuery({
     queryKey: ['pending-budget-submissions'],
@@ -141,7 +157,7 @@ const BudgetReview = () => {
     { 
       id: 'allocated_amount', 
       header: 'Requested Amount',
-      cell: (row: any) => `$${row.allocated_amount?.toLocaleString() || '0'}`
+      cell: (row: any) => `${currencySymbol}${row.allocated_amount?.toLocaleString() || '0'}`
     },
     { 
       id: 'line_items', 
@@ -221,7 +237,7 @@ const BudgetReview = () => {
                 <div className="font-medium">{reviewDialog.allocation.head?.name}</div>
                 
                 <div className="text-muted-foreground">Requested Amount:</div>
-                <div className="font-medium">${reviewDialog.allocation.allocated_amount?.toLocaleString()}</div>
+                <div className="font-medium">{currencySymbol}{reviewDialog.allocation.allocated_amount?.toLocaleString()}</div>
 
                 <div className="text-muted-foreground">Line Items:</div>
                 <div className="font-medium">{reviewDialog.allocation.line_items?.length || 0}</div>
