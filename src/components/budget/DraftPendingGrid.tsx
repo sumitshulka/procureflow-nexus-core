@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Clock, FileEdit, TrendingUp, TrendingDown, Send, Loader2 } from "lucide-react";
+import { Clock, FileEdit, TrendingUp, TrendingDown, Send, Loader2, Undo2, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -18,6 +18,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface DraftPendingGridProps {
   submissions: any[];
@@ -37,6 +43,7 @@ const DraftPendingGrid = ({ submissions, currencySymbol, departmentName, onEditC
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [confirmSubmitCycleId, setConfirmSubmitCycleId] = useState<string | null>(null);
+  const [confirmRevokeCycleId, setConfirmRevokeCycleId] = useState<string | null>(null);
 
   // Group submissions by cycle
   const groupedByCycle = useMemo(() => {
@@ -148,14 +155,84 @@ const DraftPendingGrid = ({ submissions, currencySymbol, departmentName, onEditC
     }
   });
 
+  // Revoke submission mutation
+  const revokeMutation = useMutation({
+    mutationFn: async (cycleId: string) => {
+      const group = groupedByCycle[cycleId];
+      if (!group) throw new Error("Cycle not found");
+
+      // Get all submitted/under_review IDs for this cycle
+      const submittedIds = group.submissions
+        .filter(s => s.status === 'submitted' || s.status === 'under_review')
+        .map(s => s.id);
+
+      if (submittedIds.length === 0) {
+        throw new Error("No submitted entries to revoke");
+      }
+
+      const { error } = await supabase
+        .from('budget_allocations')
+        .update({ 
+          status: 'draft',
+          submitted_at: null
+        })
+        .in('id', submittedIds);
+
+      if (error) throw error;
+      return submittedIds.length;
+    },
+    onSuccess: (count) => {
+      queryClient.invalidateQueries({ queryKey: ['manager-pending-submissions'] });
+      queryClient.invalidateQueries({ queryKey: ['manager-approved-submissions'] });
+      queryClient.invalidateQueries({ queryKey: ['manager-all-dept-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['budget-allocations-overview'] });
+      
+      toast({
+        title: "Submission Revoked",
+        description: `${count} budget entries have been reverted to draft status.`
+      });
+      setConfirmRevokeCycleId(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Revoke Failed",
+        description: error.message,
+        variant: "destructive"
+      });
+      setConfirmRevokeCycleId(null);
+    }
+  });
+
   const handleSubmitClick = (cycleId: string) => {
     setConfirmSubmitCycleId(cycleId);
+  };
+
+  const handleRevokeClick = (cycleId: string) => {
+    setConfirmRevokeCycleId(cycleId);
   };
 
   const handleConfirmSubmit = () => {
     if (confirmSubmitCycleId) {
       submitMutation.mutate(confirmSubmitCycleId);
     }
+  };
+
+  const handleConfirmRevoke = () => {
+    if (confirmRevokeCycleId) {
+      revokeMutation.mutate(confirmRevokeCycleId);
+    }
+  };
+
+  const handleEditClick = (cycleStatus: string, cycle: any, cycleId: string) => {
+    if (cycleStatus === 'submitted') {
+      toast({
+        title: "Cannot Edit Budget",
+        description: "Budget has been sent for approval and cannot be edited now. Please contact your administrator or revoke the submission first.",
+        variant: "destructive"
+      });
+      return;
+    }
+    onEditCycle(cycle, cycleId);
   };
 
   const renderTypeSection = (
@@ -319,14 +396,35 @@ const DraftPendingGrid = ({ submissions, currencySymbol, departmentName, onEditC
                   )}
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onEditCycle(group.cycle, cycleId)}
-                  >
-                    <FileEdit className="h-4 w-4 mr-2" />
-                    Edit Budget
-                  </Button>
+                  {cycleStatus === 'submitted' ? (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="opacity-60"
+                            onClick={() => handleEditClick(cycleStatus, group.cycle, cycleId)}
+                          >
+                            <AlertCircle className="h-4 w-4 mr-2 text-amber-500" />
+                            Edit Budget
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Budget is pending approval. Revoke submission to edit.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEditClick(cycleStatus, group.cycle, cycleId)}
+                    >
+                      <FileEdit className="h-4 w-4 mr-2" />
+                      Edit Budget
+                    </Button>
+                  )}
                   {hasDraftEntries && (
                     <Button
                       size="sm"
@@ -339,6 +437,22 @@ const DraftPendingGrid = ({ submissions, currencySymbol, departmentName, onEditC
                         <Send className="h-4 w-4 mr-2" />
                       )}
                       Submit for Approval
+                    </Button>
+                  )}
+                  {(cycleStatus === 'submitted' || cycleStatus === 'mixed') && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleRevokeClick(cycleId)}
+                      disabled={revokeMutation.isPending}
+                      className="text-amber-600 border-amber-300 hover:bg-amber-50"
+                    >
+                      {revokeMutation.isPending && confirmRevokeCycleId === cycleId ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Undo2 className="h-4 w-4 mr-2" />
+                      )}
+                      Revoke Submission
                     </Button>
                   )}
                 </div>
@@ -355,7 +469,7 @@ const DraftPendingGrid = ({ submissions, currencySymbol, departmentName, onEditC
         );
       })}
 
-      {/* Confirmation Dialog */}
+      {/* Submit Confirmation Dialog */}
       <AlertDialog open={!!confirmSubmitCycleId} onOpenChange={() => setConfirmSubmitCycleId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -377,6 +491,35 @@ const DraftPendingGrid = ({ submissions, currencySymbol, departmentName, onEditC
                 </>
               ) : (
                 'Submit'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Revoke Confirmation Dialog */}
+      <AlertDialog open={!!confirmRevokeCycleId} onOpenChange={() => setConfirmRevokeCycleId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Revoke Budget Submission?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will revert all submitted budget entries back to draft status. You will be able to edit them again, but you'll need to resubmit for approval.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={revokeMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleConfirmRevoke}
+              disabled={revokeMutation.isPending}
+              className="bg-amber-600 hover:bg-amber-700"
+            >
+              {revokeMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Revoking...
+                </>
+              ) : (
+                'Revoke Submission'
               )}
             </AlertDialogAction>
           </AlertDialogFooter>
