@@ -307,9 +307,12 @@ const BudgetEntryGrid = ({ cycle, departmentId, onBack }: BudgetEntryGridProps) 
       return submitAfterSave;
     },
     onSuccess: (wasSubmitted) => {
+      // Invalidate all budget-related queries so overview and allocation pages update
       queryClient.invalidateQueries({ queryKey: ['budget-allocations-grid'] });
+      queryClient.invalidateQueries({ queryKey: ['budget-allocations-overview'] });
       queryClient.invalidateQueries({ queryKey: ['manager-approved-submissions'] });
       queryClient.invalidateQueries({ queryKey: ['manager-pending-submissions'] });
+      queryClient.invalidateQueries({ queryKey: ['budget-cycles-overview'] });
       
       toast({
         title: wasSubmitted ? "Budget Submitted" : "Budget Saved",

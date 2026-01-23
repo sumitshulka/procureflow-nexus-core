@@ -11,12 +11,11 @@ import { TrendingUp, TrendingDown, DollarSign, AlertTriangle, Download, Calendar
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatCurrency } from "@/utils/currencyUtils";
+import { getCurrencySymbol } from "@/utils/currencyUtils";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useBudgetUserContext } from "@/hooks/useBudgetUserContext";
 
 const CHART_COLORS = ["hsl(var(--chart-1))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))"];
-
 const BudgetOverview = () => {
   const currentYear = new Date().getFullYear();
   const [selectedFiscalYear, setSelectedFiscalYear] = useState<string>(currentYear.toString());
@@ -52,6 +51,29 @@ const BudgetOverview = () => {
   const selectedDeptName = selectedDeptId === "all" 
     ? "All Departments" 
     : userDepartments.find(d => d.id === selectedDeptId)?.name || userDepartments[0]?.name;
+
+  // Fetch organization settings for currency - get the latest record
+  const { data: orgSettings, isLoading: orgSettingsLoading } = useQuery({
+    queryKey: ["organization-settings-budget-overview"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("organization_settings")
+        .select("base_currency")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const currencySymbol = getCurrencySymbol(orgSettings?.base_currency || 'USD');
+  const baseCurrency = orgSettings?.base_currency || 'USD';
+
+  // Helper function to format currency with org settings
+  const formatAmount = (amount: number) => {
+    return `${currencySymbol}${amount.toLocaleString()}`;
+  };
 
   // Fetch budget cycles
   const { data: budgetCycles, isLoading: cyclesLoading } = useQuery({
@@ -230,7 +252,7 @@ const BudgetOverview = () => {
       .sort((a, b) => b.value - a.value);
   }, [allocations]);
 
-  const isLoading = cyclesLoading || allocationsLoading || userContextLoading;
+  const isLoading = cyclesLoading || allocationsLoading || userContextLoading || orgSettingsLoading;
 
   const getCycleStatusBadge = (status: string | undefined) => {
     switch (status) {
@@ -390,7 +412,7 @@ const BudgetOverview = () => {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(budgetSummary.totalBudget)}</div>
+            <div className="text-2xl font-bold">{formatAmount(budgetSummary.totalBudget)}</div>
             <p className="text-xs text-muted-foreground">
               {isAdmin ? "Across all departments" : `For ${selectedDeptName}`} for FY {selectedFiscalYear}
             </p>
@@ -403,7 +425,7 @@ const BudgetOverview = () => {
             <CheckCircle2 className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(budgetSummary.totalApproved)}</div>
+            <div className="text-2xl font-bold">{formatAmount(budgetSummary.totalApproved)}</div>
             <p className="text-xs text-muted-foreground">
               {budgetSummary.allocationsByStatus.approved || 0} allocations approved
             </p>
@@ -482,7 +504,7 @@ const BudgetOverview = () => {
                           <span className="text-sm text-muted-foreground">
                             {dept.allocated > 0 ? (
                               <>
-                                {formatCurrency(dept.approved)} / {formatCurrency(dept.allocated)}
+                                {formatAmount(dept.approved)} / {formatAmount(dept.allocated)}
                               </>
                             ) : (
                               "No allocation"
@@ -529,7 +551,7 @@ const BudgetOverview = () => {
                         <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                    <Tooltip formatter={(value: number) => formatAmount(value)} />
                   </PieChart>
                 </ResponsiveContainer>
               )}
@@ -567,10 +589,10 @@ const BudgetOverview = () => {
                         <TableCell>{allocation.budget_heads?.name || '-'}</TableCell>
                         <TableCell>Period {allocation.period_number}</TableCell>
                         <TableCell className="text-right">
-                          {formatCurrency(allocation.allocated_amount || 0)}
+                          {formatAmount(allocation.allocated_amount || 0)}
                         </TableCell>
                         <TableCell className="text-right">
-                          {formatCurrency(allocation.approved_amount || 0)}
+                          {formatAmount(allocation.approved_amount || 0)}
                         </TableCell>
                         <TableCell>
                           {getAllocationStatusBadge(allocation.status)}
