@@ -38,21 +38,41 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [authInitialized, setAuthInitialized] = useState(false);
   const navigate = useNavigate();
 
+  // Track if user was previously authenticated to detect session invalidation
+  const wasAuthenticated = React.useRef(false);
+
   useEffect(() => {
     console.log("AuthContext: Setting up auth state management");
     
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, newSession) => {
-        console.log("Auth state change event:", event);
+        console.log("Auth state change event:", event, "Was authenticated:", wasAuthenticated.current);
         
         if (event === 'SIGNED_OUT') {
           // When signed out, clear all auth state
+          console.log("[Security] User signed out, clearing session");
+          wasAuthenticated.current = false;
           setSession(null);
           setUser(null);
           setUserData(null);
           setIsLoading(false);
+        } else if (event === 'TOKEN_REFRESHED') {
+          // Token was successfully refreshed
+          console.log("[Security] Token refreshed successfully");
+          if (newSession) {
+            setSession(newSession);
+            setUser(newSession.user);
+          }
+        } else if (event === 'USER_UPDATED') {
+          // User data was updated
+          if (newSession) {
+            setSession(newSession);
+            setUser(newSession.user);
+          }
         } else if (newSession) {
+          console.log("[Security] Valid session detected");
+          wasAuthenticated.current = true;
           setSession(newSession);
           setUser(newSession.user);
           
@@ -62,6 +82,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               fetchUserData(newSession.user.id);
             }, 0);
           }
+        } else if (wasAuthenticated.current && !newSession) {
+          // SECURITY: User was authenticated but session is now null
+          // This means session expired or was invalidated - force logout
+          console.log("[Security] Session invalidated - forcing logout to prevent anon state");
+          wasAuthenticated.current = false;
+          setSession(null);
+          setUser(null);
+          setUserData(null);
+          setIsLoading(false);
+          
+          // Navigate to login with a message
+          toast({
+            title: "Session Expired",
+            description: "Your session has expired. Please log in again.",
+            variant: "destructive",
+          });
+          navigate("/login", { replace: true });
         } else {
           setIsLoading(false);
         }
@@ -72,13 +109,45 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const initializeAuth = async () => {
       try {
         console.log("Checking for existing session");
-        const { data: { session: existingSession } } = await supabase.auth.getSession();
+        const { data: { session: existingSession }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error("[Security] Error getting session:", sessionError);
+          setIsLoading(false);
+          setAuthInitialized(true);
+          return;
+        }
+        
         console.log("Initial session check:", existingSession ? "Session exists" : "No session");
         
         if (existingSession?.user) {
-          setSession(existingSession);
-          setUser(existingSession.user);
-          await fetchUserData(existingSession.user.id);
+          // Verify the session is still valid by checking token expiry
+          const tokenExpiry = existingSession.expires_at;
+          const now = Math.floor(Date.now() / 1000);
+          
+          if (tokenExpiry && tokenExpiry < now) {
+            console.log("[Security] Session token expired, attempting refresh");
+            const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
+            
+            if (refreshError || !refreshedSession) {
+              console.log("[Security] Token refresh failed, forcing logout");
+              await supabase.auth.signOut();
+              setIsLoading(false);
+              setAuthInitialized(true);
+              navigate("/login", { replace: true });
+              return;
+            }
+            
+            wasAuthenticated.current = true;
+            setSession(refreshedSession);
+            setUser(refreshedSession.user);
+            await fetchUserData(refreshedSession.user.id);
+          } else {
+            wasAuthenticated.current = true;
+            setSession(existingSession);
+            setUser(existingSession.user);
+            await fetchUserData(existingSession.user.id);
+          }
         } else {
           setIsLoading(false);
         }
@@ -93,11 +162,46 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     initializeAuth();
 
+    // Set up periodic session validation to detect expired sessions
+    const sessionCheckInterval = setInterval(async () => {
+      if (wasAuthenticated.current) {
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        
+        if (!currentSession) {
+          console.log("[Security] Periodic check: Session no longer valid, forcing logout");
+          wasAuthenticated.current = false;
+          setSession(null);
+          setUser(null);
+          setUserData(null);
+          
+          toast({
+            title: "Session Expired",
+            description: "Your session has expired. Please log in again.",
+            variant: "destructive",
+          });
+          navigate("/login", { replace: true });
+        } else if (currentSession.expires_at) {
+          const now = Math.floor(Date.now() / 1000);
+          const timeUntilExpiry = currentSession.expires_at - now;
+          
+          // If token expires in less than 5 minutes, try to refresh
+          if (timeUntilExpiry < 300 && timeUntilExpiry > 0) {
+            console.log("[Security] Token expiring soon, proactively refreshing");
+            const { error: refreshError } = await supabase.auth.refreshSession();
+            if (refreshError) {
+              console.error("[Security] Proactive refresh failed:", refreshError);
+            }
+          }
+        }
+      }
+    }, 60000); // Check every minute
+
     return () => {
       console.log("Cleaning up auth subscription");
       subscription.unsubscribe();
+      clearInterval(sessionCheckInterval);
     };
-  }, []);
+  }, [navigate, toast]);
 
   const fetchUserData = async (userId: string) => {
     try {
