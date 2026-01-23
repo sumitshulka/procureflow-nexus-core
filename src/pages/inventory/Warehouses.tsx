@@ -63,13 +63,10 @@ const warehouseSchema = z.object({
 
 type WarehouseFormValues = z.infer<typeof warehouseSchema>;
 
-// Define the SupabaseUser type
-interface SupabaseUser {
+// Define the Profile type for manager selection
+interface Profile {
   id: string;
-  email: string;
-  user_metadata: {
-    full_name?: string;
-  };
+  full_name: string | null;
 }
 
 type Warehouse = {
@@ -103,8 +100,7 @@ type WarehouseWithLocations = Warehouse & {
   }[];
   manager?: {
     id: string;
-    email: string;
-    full_name?: string;
+    full_name?: string | null;
   };
 };
 
@@ -114,31 +110,41 @@ const Warehouses = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [currentWarehouse, setCurrentWarehouse] = useState<WarehouseWithLocations | null>(null);
 
-  // Fetch warehouses with their locations (optimized single query)
+  // Fetch profiles for manager mapping
+  const { data: profiles = [] } = useQuery({
+    queryKey: ["profiles_for_warehouse"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .eq("is_deleted", false)
+        .eq("is_vendor", false)
+        .eq("status", "active")
+        .order("full_name");
+      
+      if (error) throw error;
+      return data as Profile[];
+    },
+  });
+
+  // Fetch warehouses with their locations
   const { data: warehouses = [], isLoading: isLoadingWarehouses } = useQuery({
     queryKey: ["warehouses_with_locations"],
     queryFn: async () => {
-      // Fetch all data in parallel with a single optimized query using joins
-      const [warehousesResult, managersResult] = await Promise.all([
-        supabase
-          .from("warehouses")
-          .select(`
-            *,
-            warehouse_locations!inner (
-              location_id,
-              is_primary,
-              locations!inner (
-                id,
-                name
-              )
+      const { data: warehousesData, error: warehousesError } = await supabase
+        .from("warehouses")
+        .select(`
+          *,
+          warehouse_locations!inner (
+            location_id,
+            is_primary,
+            locations!inner (
+              id,
+              name
             )
-          `)
-          .order("name"),
-        // Fetch managers separately (only if needed)
-        supabase.functions.invoke('admin-list-users').catch(() => ({ data: null, error: null }))
-      ]);
-
-      const { data: warehousesData, error: warehousesError } = warehousesResult;
+          )
+        `)
+        .order("name");
       
       if (warehousesError) {
         toast({
@@ -149,9 +155,6 @@ const Warehouses = () => {
         throw warehousesError;
       }
       
-      // Extract managers from result
-      const managers: SupabaseUser[] = managersResult?.data?.data?.users || [];
-      
       // Transform the data structure
       const warehousesWithLocations = warehousesData.map((warehouse: any) => {
         // Transform warehouse_locations to the expected format
@@ -161,15 +164,14 @@ const Warehouses = () => {
           is_primary: wl.is_primary,
         }));
         
-        // Find manager if exists
+        // Find manager from profiles
         let manager;
         if (warehouse.manager_id) {
-          const managerData = managers.find(m => m.id === warehouse.manager_id);
+          const managerData = profiles.find(p => p.id === warehouse.manager_id);
           if (managerData) {
             manager = {
               id: managerData.id,
-              email: managerData.email,
-              full_name: managerData.user_metadata?.full_name,
+              full_name: managerData.full_name,
             };
           }
         }
@@ -186,6 +188,7 @@ const Warehouses = () => {
       
       return warehousesWithLocations as WarehouseWithLocations[];
     },
+    enabled: profiles.length > 0 || true, // Run even if no profiles yet
   });
 
   // Fetch locations for form
@@ -211,26 +214,8 @@ const Warehouses = () => {
     },
   });
 
-  // Fetch users for manager selection
-  const { data: users = [], isLoading: isLoadingUsers } = useQuery({
-    queryKey: ["users_for_warehouse_managers"],
-    queryFn: async () => {
-      try {
-        const { data, error } = await supabase.functions.invoke('admin-list-users');
-        
-        if (error) {
-          console.error("Failed to fetch users:", error);
-          return [];
-        }
-        
-        return data?.data?.users as SupabaseUser[] || [];
-      } catch (error) {
-        console.error("Failed to fetch users (this might be expected if not admin):", error);
-        return [];
-      }
-    },
-    retry: false, // Don't retry as this might fail if not an admin
-  });
+  // Use profiles directly for manager selection (no admin function needed)
+  const users = profiles;
 
   // Create warehouse mutation
   const createWarehouse = useMutation({
@@ -487,7 +472,7 @@ const Warehouses = () => {
       header: "Manager",
       cell: (row: WarehouseWithLocations) => (
         <div>
-          {row.manager ? (row.manager.full_name || row.manager.email) : "-"}
+          {row.manager?.full_name || "-"}
         </div>
       ),
     },
@@ -526,11 +511,11 @@ const Warehouses = () => {
     },
   ];
 
-  // Fix the user mapping in the form
+  // Render user options for manager dropdown
   const renderUserOptions = () => {
-    return users.map((user: SupabaseUser) => (
+    return users.map((user: Profile) => (
       <SelectItem key={user.id} value={user.id}>
-        {user.user_metadata?.full_name || user.email}
+        {user.full_name || 'Unnamed User'}
       </SelectItem>
     ));
   };
