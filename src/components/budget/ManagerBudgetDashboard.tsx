@@ -368,7 +368,11 @@ const ManagerBudgetDashboard = ({ departments, hasMultipleDepartments = false }:
           submissions={pendingSubmissions} 
           currencySymbol={currencySymbol}
           departmentName={selectedDepartment?.name}
-          onEditCycle={(cycle: any) => setSelectedCycle({ ...cycle, selectedDepartmentId: selectedDepartmentId })}
+          onEditCycle={(cycle: any, cycleId: string) => setSelectedCycle({ 
+            ...cycle, 
+            id: cycleId, 
+            selectedDepartmentId: selectedDepartmentId 
+          })}
         />
       )}
 
