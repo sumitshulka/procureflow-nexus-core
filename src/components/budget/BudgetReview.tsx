@@ -50,7 +50,6 @@ const BudgetReview = () => {
           cycle:budget_cycles(name, fiscal_year, period_type),
           head:budget_heads(name, code),
           department:departments(name),
-          submitter:profiles(full_name),
           line_items:budget_line_items(count)
         `)
         .in('status', ['submitted', 'under_review'])
