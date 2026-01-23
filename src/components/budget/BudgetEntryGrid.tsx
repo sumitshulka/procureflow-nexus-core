@@ -49,12 +49,15 @@ interface BudgetEntry {
   amount: number;
   allocationId?: string;
   status?: string;
+  approvedAmount?: number;
 }
 
 const BudgetEntryGrid = ({ cycle, departmentId, onBack }: BudgetEntryGridProps) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [entries, setEntries] = useState<Record<string, number>>({});
+  const [approvedEntries, setApprovedEntries] = useState<Record<string, number>>({});
+  const [hasApprovedBudget, setHasApprovedBudget] = useState(false);
   const [expandedHeads, setExpandedHeads] = useState<Set<string>>(new Set());
   const [isAddSubheadDialogOpen, setIsAddSubheadDialogOpen] = useState(false);
   const [selectedParentHead, setSelectedParentHead] = useState<BudgetHead | null>(null);
@@ -119,11 +122,23 @@ const BudgetEntryGrid = ({ cycle, departmentId, onBack }: BudgetEntryGridProps) 
   useEffect(() => {
     if (existingAllocations) {
       const initialEntries: Record<string, number> = {};
+      const initialApprovedEntries: Record<string, number> = {};
+      let foundApproved = false;
+      
       existingAllocations.forEach((allocation: any) => {
         const key = `${allocation.head_id}-${allocation.period_number}`;
         initialEntries[key] = allocation.allocated_amount || 0;
+        
+        // Track approved amounts if they exist
+        if (allocation.approved_amount && allocation.approved_amount > 0) {
+          initialApprovedEntries[key] = allocation.approved_amount;
+          foundApproved = true;
+        }
       });
+      
       setEntries(initialEntries);
+      setApprovedEntries(initialApprovedEntries);
+      setHasApprovedBudget(foundApproved);
     }
   }, [existingAllocations]);
 
@@ -435,33 +450,50 @@ const BudgetEntryGrid = ({ cycle, departmentId, onBack }: BudgetEntryGridProps) 
                   ) + (entries[getEntryKey(head.id, periodNumber)] || 0)).toLocaleString()}
                 </div>
               ) : (
-                <div className="flex items-center gap-1">
-                  <Input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={entries[getEntryKey(head.id, periodNumber)] || ''}
-                    onChange={(e) => handleValueChange(head.id, periodNumber, e.target.value)}
-                    className="h-8 text-right flex-1"
-                    placeholder="0"
-                  />
-                  {periodNumber < periodCount && (
-                    <TooltipProvider delayDuration={300}>
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-1">
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={entries[getEntryKey(head.id, periodNumber)] || ''}
+                      onChange={(e) => handleValueChange(head.id, periodNumber, e.target.value)}
+                      className="h-8 text-right flex-1"
+                      placeholder="0"
+                    />
+                    {periodNumber < periodCount && (
+                      <TooltipProvider delayDuration={300}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 shrink-0 text-muted-foreground hover:text-primary"
+                              onClick={() => handleCopyForward(head.id, periodNumber)}
+                              disabled={!entries[getEntryKey(head.id, periodNumber)]}
+                            >
+                              <CopyCheck className="h-3.5 w-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="bg-popover text-popover-foreground border z-50">
+                            <p>Copy to empty fields ahead</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
+                  </div>
+                  {/* Show approved value indicator if different from current */}
+                  {hasApprovedBudget && approvedEntries[getEntryKey(head.id, periodNumber)] !== undefined && (
+                    <TooltipProvider delayDuration={200}>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 shrink-0 text-muted-foreground hover:text-primary"
-                            onClick={() => handleCopyForward(head.id, periodNumber)}
-                            disabled={!entries[getEntryKey(head.id, periodNumber)]}
-                          >
-                            <CopyCheck className="h-3.5 w-3.5" />
-                          </Button>
+                          <div className="text-xs text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30 px-1.5 py-0.5 rounded whitespace-nowrap text-center">
+                            ✓ {currencySymbol}{approvedEntries[getEntryKey(head.id, periodNumber)]?.toLocaleString()}
+                          </div>
                         </TooltipTrigger>
-                        <TooltipContent side="top" className="bg-popover text-popover-foreground border z-50">
-                          <p>Copy to empty fields ahead</p>
+                        <TooltipContent>
+                          <p>Previously approved amount</p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
@@ -611,6 +643,27 @@ const BudgetEntryGrid = ({ cycle, departmentId, onBack }: BudgetEntryGridProps) 
           </p>
         </CardContent>
       </Card>
+
+      {/* Approved Budget Notice */}
+      {hasApprovedBudget && (
+        <Card className="border-emerald-200 bg-emerald-50/50 dark:bg-emerald-950/20 dark:border-emerald-800">
+          <CardContent className="py-4">
+            <div className="flex items-start gap-3">
+              <div className="h-8 w-8 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center shrink-0">
+                <span className="text-emerald-600 text-lg">✓</span>
+              </div>
+              <div>
+                <h4 className="font-semibold text-emerald-800 dark:text-emerald-200">Previously Approved Budget</h4>
+                <p className="text-sm text-emerald-700 dark:text-emerald-300 mt-1">
+                  This budget has approved values. If you submit changes and they are rejected, 
+                  the previously approved values will remain active. The approved amounts are shown 
+                  below each input field for reference.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Income Section */}
       {renderTypeSection('income', organizedHeads.income)}

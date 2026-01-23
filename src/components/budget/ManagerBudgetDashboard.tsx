@@ -5,7 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, ClipboardEdit, CheckCircle2, Clock, TrendingUp, Building2, FileEdit } from "lucide-react";
+import { Loader2, ClipboardEdit, CheckCircle2, Clock, TrendingUp, Building2, FileEdit, AlertCircle } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import DataTable from "@/components/common/DataTable";
 import BudgetEntryGrid from "./BudgetEntryGrid";
@@ -23,6 +25,7 @@ interface ManagerBudgetDashboardProps {
 }
 
 const ManagerBudgetDashboard = ({ departments, hasMultipleDepartments = false }: ManagerBudgetDashboardProps) => {
+  const { toast } = useToast();
   const [selectedCycle, setSelectedCycle] = useState<any>(null);
   const [selectedDepartmentId, setSelectedDepartmentId] = useState<string>(departments[0]?.id || '');
   
@@ -327,6 +330,42 @@ const ManagerBudgetDashboard = ({ departments, hasMultipleDepartments = false }:
                       // Check if this department is allowed in the cycle
                       const isAllowed = !cycle.allowed_department_ids || cycle.allowed_department_ids.includes(dept.id);
                       if (!isAllowed) return null;
+
+                      // Check if this department has pending submissions for this cycle
+                      const deptPendingSubs = pendingSubmissions?.filter(
+                        (sub: any) => sub.cycle_id === cycle.id && 
+                        (sub.status === 'submitted' || sub.status === 'under_review')
+                      ) || [];
+                      const hasPendingApproval = deptPendingSubs.length > 0;
+
+                      if (hasPendingApproval) {
+                        return (
+                          <TooltipProvider key={dept.id}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button 
+                                  variant="outline"
+                                  size="sm"
+                                  className="opacity-60"
+                                  onClick={() => {
+                                    toast({
+                                      title: "Cannot Enter Budget",
+                                      description: "Budget has been sent for approval and cannot be edited now. Please contact your administrator or revoke the submission from the pending section below.",
+                                      variant: "destructive"
+                                    });
+                                  }}
+                                >
+                                  <AlertCircle className="h-4 w-4 mr-2 text-amber-500" />
+                                  Enter Budget for {dept.name}
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Budget is pending approval. See pending submissions below.</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        );
+                      }
                       
                       return (
                         <Button 
