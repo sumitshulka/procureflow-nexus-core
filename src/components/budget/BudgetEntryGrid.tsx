@@ -9,7 +9,6 @@ import { Loader2, ArrowLeft, Save, Send, Plus, ChevronDown, ChevronRight, CopyCh
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import {
-  Table,
   TableBody,
   TableCell,
   TableHead,
@@ -470,15 +469,15 @@ const BudgetEntryGrid = ({ cycle, departmentId, onBack }: BudgetEntryGridProps) 
           </Badge>
         </h3>
         
-        <div className="border rounded-lg overflow-hidden">
-          <div 
-            className="overflow-x-auto overscroll-x-contain"
-            style={{ 
+        <div className="border rounded-lg overflow-hidden min-w-0">
+          <div
+            className="w-full max-w-full overflow-auto overscroll-contain"
+            style={{
               scrollbarWidth: 'auto',
               scrollbarColor: 'hsl(var(--border)) hsl(var(--muted))'
             }}
           >
-            <Table className="min-w-max">
+            <table className="min-w-max w-full caption-bottom text-sm">
               <TableHeader>
                 <TableRow className="bg-muted">
                   <TableHead className="sticky left-0 z-30 bg-muted border-r min-w-[200px] shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
@@ -513,7 +512,7 @@ const BudgetEntryGrid = ({ cycle, departmentId, onBack }: BudgetEntryGridProps) 
                 {/* Budget Head Rows */}
                 {heads.map(head => renderHeadRow(head))}
               </TableBody>
-            </Table>
+            </table>
           </div>
         </div>
       </div>
