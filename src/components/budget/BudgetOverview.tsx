@@ -31,17 +31,27 @@ const BudgetOverview = () => {
     isLoading: userContextLoading 
   } = useBudgetUserContext();
 
-  // Set initial selected department
+  // Set initial selected department to "all" for multi-department users
   React.useEffect(() => {
-    if (!selectedDeptId && primaryDepartmentId) {
-      setSelectedDeptId(primaryDepartmentId);
+    if (!selectedDeptId && userDepartments.length > 0) {
+      // Default to "all" for multi-department users, or single department id for single department
+      setSelectedDeptId(hasMultipleDepartments ? "all" : userDepartments[0].id);
     }
-  }, [primaryDepartmentId, selectedDeptId]);
+  }, [userDepartments, selectedDeptId, hasMultipleDepartments]);
 
-  // For filtering, use selected department for non-admins, or all for admins
-  const effectiveDeptIds = isAdmin ? null : userDepartments.map(d => d.id);
-  const userDepartmentId = isAdmin ? null : (selectedDeptId || primaryDepartmentId);
-  const userDepartmentName = isAdmin ? null : (userDepartments.find(d => d.id === selectedDeptId)?.name || primaryDepartmentName);
+  // For filtering, determine which department IDs to query
+  const getFilterDeptIds = () => {
+    if (isAdmin) return null; // Admin sees all
+    if (selectedDeptId === "all" || !selectedDeptId) {
+      return userDepartments.map(d => d.id); // All assigned departments
+    }
+    return [selectedDeptId]; // Single selected department
+  };
+  
+  const effectiveDeptIds = getFilterDeptIds();
+  const selectedDeptName = selectedDeptId === "all" 
+    ? "All Departments" 
+    : userDepartments.find(d => d.id === selectedDeptId)?.name || userDepartments[0]?.name;
 
   // Fetch budget cycles
   const { data: budgetCycles, isLoading: cyclesLoading } = useQuery({
@@ -58,7 +68,7 @@ const BudgetOverview = () => {
 
   const userContextReady = !userContextLoading && (isAdmin || userDepartments.length > 0);
 
-  const canLoadDepartmentScopedData = isAdmin || !!userDepartmentId;
+  const canLoadDepartmentScopedData = isAdmin || (effectiveDeptIds && effectiveDeptIds.length > 0);
 
   // Fetch budget allocations with related data - filter by departments for non-admin users
   const { data: allocations, isLoading: allocationsLoading } = useQuery({
@@ -278,12 +288,12 @@ const BudgetOverview = () => {
   return (
     <div className="space-y-6">
       {/* Department Context Banner for non-admin users */}
-      {!isAdmin && userContextReady && userDepartments.length > 0 && (
+      {!isAdmin && userContextReady && userDepartments.length > 0 && !hasMultipleDepartments && (
         <Alert>
           <Building2 className="h-4 w-4" />
           <AlertTitle>Department View</AlertTitle>
           <AlertDescription>
-            You are viewing budget data for <strong>{userDepartments.map(d => d.name).join(", ")}</strong>. Contact an administrator to view organization-wide budget data.
+            You are viewing budget data for <strong>{userDepartments[0]?.name}</strong>. Contact an administrator to view organization-wide budget data.
           </AlertDescription>
         </Alert>
       )}
@@ -301,7 +311,7 @@ const BudgetOverview = () => {
 
       {/* Controls */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="flex items-center space-x-4">
+        <div className="flex flex-wrap items-center gap-3">
           <Select value={selectedFiscalYear} onValueChange={setSelectedFiscalYear}>
             <SelectTrigger className="w-48">
               <Calendar className="h-4 w-4 mr-2" />
@@ -315,6 +325,25 @@ const BudgetOverview = () => {
               ))}
             </SelectContent>
           </Select>
+          
+          {/* Department filter for non-admin users with multiple departments */}
+          {!isAdmin && hasMultipleDepartments && (
+            <Select value={selectedDeptId} onValueChange={setSelectedDeptId}>
+              <SelectTrigger className="w-56">
+                <Building2 className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Select department" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Departments ({userDepartments.length})</SelectItem>
+                {userDepartments.map(dept => (
+                  <SelectItem key={dept.id} value={dept.id}>
+                    {dept.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          
           {getCycleStatusBadge(selectedCycle?.status)}
         </div>
         <Button variant="outline">
@@ -363,7 +392,7 @@ const BudgetOverview = () => {
           <CardContent>
             <div className="text-2xl font-bold">{formatCurrency(budgetSummary.totalBudget)}</div>
             <p className="text-xs text-muted-foreground">
-              {isAdmin ? "Across all departments" : `For ${hasMultipleDepartments ? "your departments" : (userDepartments[0]?.name || "your department")}`} for FY {selectedFiscalYear}
+              {isAdmin ? "Across all departments" : `For ${selectedDeptName}`} for FY {selectedFiscalYear}
             </p>
           </CardContent>
         </Card>
