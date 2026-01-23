@@ -415,7 +415,7 @@ const BudgetReview = () => {
     return (
       <React.Fragment key={head.id}>
         <TableRow className={isSubhead ? "bg-muted/30" : "bg-muted/10"}>
-          <TableCell className={`sticky left-0 z-10 border-r min-w-[220px] ${isSubhead ? 'bg-secondary' : 'bg-card'}`}>
+          <TableCell className={`sticky left-0 z-20 border-r min-w-[220px] shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] ${isSubhead ? 'bg-secondary' : 'bg-card'}`}>
             <div className={`flex items-center gap-2 ${isSubhead ? 'pl-6' : ''}`}>
               {hasSubheads && (
                 <button
@@ -453,7 +453,7 @@ const BudgetReview = () => {
           </TableCell>
 
           {/* Actions - only show if there's submitted data to review */}
-          <TableCell className="sticky right-0 z-10 bg-card border-l min-w-[120px]">
+          <TableCell className="sticky right-0 z-20 bg-card border-l min-w-[120px] shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]">
             {hasData ? (
               <div className="flex justify-center gap-1">
                 <Button size="sm" variant="ghost" onClick={() => handleBulkAction(departmentId, head.id, 'approve')} title="Approve All Periods">
@@ -482,14 +482,14 @@ const BudgetReview = () => {
 
   const renderCategorySummaryRow = (label: string, totals: Record<number, number>, grandTotal: number, colorClass: string) => (
     <TableRow className="bg-muted/50 font-semibold">
-      <TableCell className={`sticky left-0 z-10 bg-muted/50 border-r ${colorClass}`}>{label}</TableCell>
+      <TableCell className={`sticky left-0 z-20 bg-muted border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] ${colorClass}`}>{label}</TableCell>
       {Array.from({ length: periodCount }, (_, i) => i + 1).map(periodNumber => (
         <TableCell key={periodNumber} className={`text-right ${colorClass}`}>
           {formatAmount(totals[periodNumber] || 0)}
         </TableCell>
       ))}
       <TableCell className={`text-right bg-muted/30 ${colorClass}`}>{formatAmount(grandTotal)}</TableCell>
-      <TableCell className="sticky right-0 z-10 bg-muted/50 border-l" />
+      <TableCell className="sticky right-0 z-20 bg-muted border-l shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]" />
     </TableRow>
   );
 
@@ -618,12 +618,12 @@ const BudgetReview = () => {
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead className="sticky left-0 z-20 bg-card border-r min-w-[220px]">Budget Head</TableHead>
+                            <TableHead className="sticky left-0 z-30 bg-card border-r min-w-[220px] shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Budget Head</TableHead>
                             {periodLabels.map((label, idx) => (
-                              <TableHead key={idx} className="text-right min-w-[100px]">{label}</TableHead>
+                              <TableHead key={idx} className="text-right min-w-[100px] bg-card">{label}</TableHead>
                             ))}
-                            <TableHead className="text-right min-w-[120px] bg-muted/20">Total</TableHead>
-                            <TableHead className="sticky right-0 z-20 bg-card border-l text-center min-w-[120px]">Actions</TableHead>
+                            <TableHead className="text-right min-w-[120px] bg-muted">Total</TableHead>
+                            <TableHead className="sticky right-0 z-30 bg-card border-l text-center min-w-[120px] shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]">Actions</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -656,12 +656,12 @@ const BudgetReview = () => {
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead className="sticky left-0 z-20 bg-card border-r min-w-[220px]">Budget Head</TableHead>
+                            <TableHead className="sticky left-0 z-30 bg-card border-r min-w-[220px] shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Budget Head</TableHead>
                             {periodLabels.map((label, idx) => (
-                              <TableHead key={idx} className="text-right min-w-[100px]">{label}</TableHead>
+                              <TableHead key={idx} className="text-right min-w-[100px] bg-card">{label}</TableHead>
                             ))}
-                            <TableHead className="text-right min-w-[120px] bg-muted/20">Total</TableHead>
-                            <TableHead className="sticky right-0 z-20 bg-card border-l text-center min-w-[120px]">Actions</TableHead>
+                            <TableHead className="text-right min-w-[120px] bg-muted">Total</TableHead>
+                            <TableHead className="sticky right-0 z-30 bg-card border-l text-center min-w-[120px] shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]">Actions</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
