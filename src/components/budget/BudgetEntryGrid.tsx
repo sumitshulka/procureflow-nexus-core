@@ -23,8 +23,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-// Removed ScrollArea in favor of native scrollbar for better visibility
 import { getCurrencySymbol } from "@/utils/currencyUtils";
+import { logBudgetActivitiesBatch } from "@/lib/budgetActivityLogger";
 
 interface BudgetEntryGridProps {
   cycle: any;
@@ -319,6 +319,20 @@ const BudgetEntryGrid = ({ cycle, departmentId, onBack }: BudgetEntryGridProps) 
         if (updateError) throw updateError;
       }
 
+      // Log activity for audit trail
+      const allIds = [...newRecords, ...existingRecords].map(a => a.id || a.head_id + '-' + a.period_number);
+      // For proper logging, we need to refetch to get IDs of newly created records
+      const { data: updatedAllocations } = await supabase
+        .from('budget_allocations')
+        .select('id')
+        .eq('cycle_id', cycle.id)
+        .eq('department_id', departmentId);
+      
+      if (updatedAllocations && updatedAllocations.length > 0) {
+        const action = submitAfterSave ? 'budget_submitted' : 'budget_updated';
+        await logBudgetActivitiesBatch(action as any, updatedAllocations.map(a => a.id));
+      }
+
       return submitAfterSave;
     },
     onSuccess: (wasSubmitted) => {
@@ -328,6 +342,7 @@ const BudgetEntryGrid = ({ cycle, departmentId, onBack }: BudgetEntryGridProps) 
       queryClient.invalidateQueries({ queryKey: ['manager-approved-submissions'] });
       queryClient.invalidateQueries({ queryKey: ['manager-pending-submissions'] });
       queryClient.invalidateQueries({ queryKey: ['budget-cycles-overview'] });
+      queryClient.invalidateQueries({ queryKey: ['budget-audit-logs'] });
       
       toast({
         title: wasSubmitted ? "Budget Submitted" : "Budget Saved",

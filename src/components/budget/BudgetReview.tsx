@@ -14,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { getCurrencySymbol } from "@/utils/currencyUtils";
+import { logBudgetActivitiesBatch, BudgetAction } from "@/lib/budgetActivityLogger";
 
 interface BudgetAllocation {
   id: string;
@@ -346,10 +347,19 @@ const BudgetReview = () => {
         if (error) throw error;
       }
 
+      // Log activity for audit trail
+      const actionMap: Record<string, BudgetAction> = {
+        'approved': 'budget_approved',
+        'rejected': 'budget_rejected',
+        'revision_requested': 'budget_revision_requested'
+      };
+      await logBudgetActivitiesBatch(actionMap[status], allocationIds, { notes });
+
       return { count: allocationIds.length };
     },
     onSuccess: (result, variables) => {
       queryClient.invalidateQueries({ queryKey: ['pending-budget-submissions'] });
+      queryClient.invalidateQueries({ queryKey: ['budget-audit-logs'] });
       const actionLabel = 
         variables.status === 'approved' ? 'approved' : 
         variables.status === 'rejected' ? 'rejected' : 
