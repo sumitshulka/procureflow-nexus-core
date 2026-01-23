@@ -24,6 +24,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { logBudgetActivitiesBatch } from "@/lib/budgetActivityLogger";
 
 interface DraftPendingGridProps {
   submissions: any[];
@@ -134,6 +135,9 @@ const DraftPendingGrid = ({ submissions, currencySymbol, departmentName, onEditC
         .in('id', draftIds);
 
       if (error) throw error;
+      // Log activity for audit trail
+      await logBudgetActivitiesBatch('budget_submitted', draftIds);
+      
       return draftIds.length;
     },
     onSuccess: (count) => {
@@ -141,6 +145,7 @@ const DraftPendingGrid = ({ submissions, currencySymbol, departmentName, onEditC
       queryClient.invalidateQueries({ queryKey: ['manager-approved-submissions'] });
       queryClient.invalidateQueries({ queryKey: ['manager-all-dept-stats'] });
       queryClient.invalidateQueries({ queryKey: ['budget-allocations-overview'] });
+      queryClient.invalidateQueries({ queryKey: ['budget-audit-logs'] });
       
       toast({
         title: "Budget Submitted",
@@ -182,6 +187,10 @@ const DraftPendingGrid = ({ submissions, currencySymbol, departmentName, onEditC
         .in('id', submittedIds);
 
       if (error) throw error;
+      
+      // Log activity for audit trail
+      await logBudgetActivitiesBatch('budget_revoked', submittedIds);
+      
       return submittedIds.length;
     },
     onSuccess: (count) => {
@@ -189,6 +198,7 @@ const DraftPendingGrid = ({ submissions, currencySymbol, departmentName, onEditC
       queryClient.invalidateQueries({ queryKey: ['manager-approved-submissions'] });
       queryClient.invalidateQueries({ queryKey: ['manager-all-dept-stats'] });
       queryClient.invalidateQueries({ queryKey: ['budget-allocations-overview'] });
+      queryClient.invalidateQueries({ queryKey: ['budget-audit-logs'] });
       
       toast({
         title: "Submission Revoked",
