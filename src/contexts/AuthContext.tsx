@@ -40,6 +40,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   // Track if user was previously authenticated to detect session invalidation
   const wasAuthenticated = React.useRef(false);
+  // Track if this is a fresh login that should trigger navigation
+  const shouldNavigateAfterAuth = React.useRef(false);
 
   useEffect(() => {
     console.log("AuthContext: Setting up auth state management");
@@ -203,9 +205,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
   }, [navigate, toast]);
 
-  const fetchUserData = async (userId: string) => {
+  const fetchUserData = async (userId: string, navigateAfterFetch: boolean = false) => {
     try {
-      console.log("Fetching user data for:", userId);
+      console.log("Fetching user data for:", userId, "Navigate after:", navigateAfterFetch);
       
       // Fetch user profile
       const { data: profileData, error: profileError } = await supabase
@@ -246,13 +248,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.log("Setting userData to:", userData);
       setUserData(userData);
       
-      // Navigate based on vendor status after login
-      // All authenticated users go to /dashboard - access is controlled by ProtectedRoute
-      if (vendorData) {
-        console.log("Navigating to vendor dashboard");
-        navigate('/vendor-dashboard');
-      } else {
-        navigate('/dashboard');
+      // Only navigate after a fresh login, not on session restoration or token refresh
+      if (navigateAfterFetch || shouldNavigateAfterAuth.current) {
+        shouldNavigateAfterAuth.current = false;
+        if (vendorData) {
+          console.log("Navigating to vendor dashboard");
+          navigate('/vendor-dashboard');
+        } else {
+          navigate('/dashboard');
+        }
       }
       
     } catch (error) {
@@ -312,6 +316,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         
         // Log the user activity (legacy)
         await logUserActivity("login");
+        
+        // Set flag to navigate after user data is fetched
+        shouldNavigateAfterAuth.current = true;
       }
       
       // Navigation will happen after user data is fetched in the effect
