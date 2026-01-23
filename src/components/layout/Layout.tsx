@@ -16,9 +16,9 @@ const Layout = ({ children }: LayoutProps) => {
         <AppHeader />
         <div className="flex flex-1">
           <AppSidebar />
-          <SidebarInset className="flex-1 bg-gray-50">
-            <ScrollArea className="h-[calc(100vh-4rem)]">
-              <div className="p-6 pt-20">
+          <SidebarInset className="flex-1 bg-muted overflow-x-hidden">
+            <ScrollArea className="h-[calc(100vh-4rem)] w-full">
+              <div className="p-6 pt-20 min-w-0 max-w-full">
                 {children}
               </div>
             </ScrollArea>

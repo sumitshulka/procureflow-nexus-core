@@ -471,10 +471,14 @@ const BudgetEntryGrid = ({ cycle, departmentId, onBack }: BudgetEntryGridProps) 
         
         <div className="border rounded-lg overflow-hidden min-w-0">
           <div
-            className="w-full max-w-full overflow-auto overscroll-contain"
+            tabIndex={0}
+            role="region"
+            aria-label={`${type} budget grid`}
+            className="w-full max-w-full overflow-auto overscroll-contain focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
             style={{
               scrollbarWidth: 'auto',
-              scrollbarColor: 'hsl(var(--border)) hsl(var(--muted))'
+              scrollbarColor: 'hsl(var(--border)) hsl(var(--muted))',
+              maxHeight: 'calc(100vh - 350px)'
             }}
           >
             <table className="min-w-max w-full caption-bottom text-sm">
