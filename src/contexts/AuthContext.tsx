@@ -449,6 +449,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       setIsLoading(true);
       
+      // CRITICAL: Clear wasAuthenticated flag FIRST to prevent auth state listener
+      // from re-triggering navigation or session restoration during logout
+      wasAuthenticated.current = false;
+      shouldNavigateAfterAuth.current = false;
+      
       // Log activity before signing out (only if user exists)
       if (user) {
         try {
@@ -461,7 +466,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
       }
       
-      // Attempt to sign out - but don't fail if session is already gone
+      // Clear local state immediately to prevent UI flickering
+      setSession(null);
+      setUser(null);
+      setUserData(null);
+      
+      // Attempt to sign out from Supabase - but don't fail if session is already gone
       try {
         const { error } = await supabase.auth.signOut();
         if (error) {
@@ -472,16 +482,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         console.warn("SignOut failed (session may already be expired):", signOutError);
       }
       
-      // Always clear user data regardless of signOut result
-      setSession(null);
-      setUser(null);
-      setUserData(null);
-      
-      // Always navigate to login page after logout
+      // Navigate to login page
       navigate("/login", { replace: true });
     } catch (error: any) {
       console.error("Logout error:", error);
-      // Still clear state and navigate even on error
+      // Ensure state is cleared even on error
+      wasAuthenticated.current = false;
       setSession(null);
       setUser(null);
       setUserData(null);
