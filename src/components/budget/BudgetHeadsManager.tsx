@@ -199,8 +199,18 @@ const BudgetHeadsManager = () => {
 
   const createMutation = useMutation({
     mutationFn: async (values: HeadForm) => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error("Not authenticated");
+      // First refresh the session to ensure we have a valid token
+      const { data: { session }, error: sessionError } = await supabase.auth.refreshSession();
+      if (sessionError || !session) {
+        // Try getting existing session as fallback
+        const { data: { session: existingSession } } = await supabase.auth.getSession();
+        if (!existingSession) {
+          throw new Error("Not authenticated. Please log in again.");
+        }
+      }
+      
+      const currentSession = session || (await supabase.auth.getSession()).data.session;
+      if (!currentSession) throw new Error("Not authenticated. Please log in again.");
 
       // Calculate actual display_order for sub-heads
       let finalDisplayOrder = values.display_order;
@@ -235,7 +245,7 @@ const BudgetHeadsManager = () => {
           allow_department_subitems: values.allow_department_subitems,
           is_subhead: values.is_subhead,
           parent_id: values.parent_id || null,
-          created_by: session.user.id 
+          created_by: currentSession.user.id 
         }])
         .select()
         .single();
@@ -260,8 +270,18 @@ const BudgetHeadsManager = () => {
 
   const updateMutation = useMutation({
     mutationFn: async (values: HeadForm) => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error("Not authenticated");
+      // First refresh the session to ensure we have a valid token
+      const { data: { session }, error: sessionError } = await supabase.auth.refreshSession();
+      if (sessionError || !session) {
+        // Try getting existing session as fallback
+        const { data: { session: existingSession } } = await supabase.auth.getSession();
+        if (!existingSession) {
+          throw new Error("Not authenticated. Please log in again.");
+        }
+      }
+      
+      const currentSession = session || (await supabase.auth.getSession()).data.session;
+      if (!currentSession) throw new Error("Not authenticated. Please log in again.");
 
       // Calculate actual display_order for sub-heads
       let finalDisplayOrder = values.display_order;
