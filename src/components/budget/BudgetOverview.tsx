@@ -39,15 +39,15 @@ const BudgetOverview = () => {
   }, [userDepartments, selectedDeptId, hasMultipleDepartments]);
 
   // For filtering, determine which department IDs to query
-  const getFilterDeptIds = () => {
+  // Memoize the effective department IDs to ensure stable query keys
+  const effectiveDeptIds = useMemo(() => {
     if (isAdmin) return null; // Admin sees all
     if (selectedDeptId === "all" || !selectedDeptId) {
       return userDepartments.map(d => d.id); // All assigned departments
     }
     return [selectedDeptId]; // Single selected department
-  };
+  }, [isAdmin, selectedDeptId, userDepartments]);
   
-  const effectiveDeptIds = getFilterDeptIds();
   const selectedDeptName = selectedDeptId === "all" 
     ? "All Departments" 
     : userDepartments.find(d => d.id === selectedDeptId)?.name || userDepartments[0]?.name;
