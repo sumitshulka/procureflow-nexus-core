@@ -133,27 +133,37 @@ const BudgetReports = () => {
     enabled: userContextReady && (isAdmin || !!userDepartmentId),
   });
 
-  // Process data for variance report
-  const varianceData = React.useMemo(() => {
-    if (!budgetData || budgetData.length === 0) return [];
+  // Process data for variance report - separated by income and expense
+  const { incomeVarianceData, expenseVarianceData } = React.useMemo(() => {
+    if (!budgetData || budgetData.length === 0) return { incomeVarianceData: [], expenseVarianceData: [] };
     
-    const deptMap = new Map<string, { department: string; budgeted: number; actual: number; variance: number; variancePercent: number }>();
+    const incomeMap = new Map<string, { department: string; budgeted: number; actual: number; variance: number; variancePercent: number }>();
+    const expenseMap = new Map<string, { department: string; budgeted: number; actual: number; variance: number; variancePercent: number }>();
     
     budgetData.forEach((allocation: any) => {
       const deptName = allocation.departments?.name || 'Unassigned';
-      const existing = deptMap.get(deptName) || { department: deptName, budgeted: 0, actual: 0, variance: 0, variancePercent: 0 };
+      const headType = allocation.budget_heads?.type || 'expenditure';
+      const targetMap = headType === 'income' ? incomeMap : expenseMap;
+      
+      const existing = targetMap.get(deptName) || { department: deptName, budgeted: 0, actual: 0, variance: 0, variancePercent: 0 };
       
       existing.budgeted += allocation.allocated_amount || 0;
       existing.actual += allocation.approved_amount || 0;
       
-      deptMap.set(deptName, existing);
+      targetMap.set(deptName, existing);
     });
     
-    return Array.from(deptMap.values()).map(item => ({
-      ...item,
-      variance: item.actual - item.budgeted,
-      variancePercent: item.budgeted > 0 ? ((item.actual - item.budgeted) / item.budgeted) * 100 : 0
-    }));
+    const processMap = (map: Map<string, any>) => 
+      Array.from(map.values()).map(item => ({
+        ...item,
+        variance: item.actual - item.budgeted,
+        variancePercent: item.budgeted > 0 ? ((item.actual - item.budgeted) / item.budgeted) * 100 : 0
+      }));
+    
+    return {
+      incomeVarianceData: processMap(incomeMap),
+      expenseVarianceData: processMap(expenseMap)
+    };
   }, [budgetData]);
 
   // Process data for utilization report
@@ -296,7 +306,7 @@ const BudgetReports = () => {
       </Card>
 
       {/* No Data Message */}
-      {varianceData.length === 0 && utilizationData.length === 0 && (
+      {incomeVarianceData.length === 0 && expenseVarianceData.length === 0 && utilizationData.length === 0 && (
         <Card className="border-dashed border-2">
           <CardContent className="py-12 text-center">
             <AlertTriangle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
@@ -312,7 +322,7 @@ const BudgetReports = () => {
       )}
 
       {/* Report Content */}
-      {(varianceData.length > 0 || utilizationData.length > 0) && (
+      {(incomeVarianceData.length > 0 || expenseVarianceData.length > 0 || utilizationData.length > 0) && (
         <Tabs value={reportType} onValueChange={setReportType} className="w-full">
           <TabsList>
             <TabsTrigger value="variance">Budget Variance</TabsTrigger>
@@ -322,60 +332,174 @@ const BudgetReports = () => {
           </TabsList>
 
           <TabsContent value="variance" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Budget vs Actual Variance Analysis</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={400}>
-                  <BarChart data={varianceData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="department" />
-                    <YAxis tickFormatter={(value) => `${currencySymbol}${(value / 1000).toFixed(0)}K`} />
-                    <Tooltip formatter={(value) => `${currencySymbol}${Number(value).toLocaleString()}`} />
-                    <Legend />
-                    <Bar dataKey="budgeted" fill="hsl(var(--chart-1))" name="Budgeted" />
-                    <Bar dataKey="actual" fill="hsl(var(--chart-2))" name="Actual" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
+            {/* Income Variance Section */}
+            {incomeVarianceData.length > 0 && (
+              <>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <span className="h-3 w-3 rounded-full bg-emerald-500"></span>
+                      Income - Budget vs Actual Variance
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <BarChart data={incomeVarianceData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="department" />
+                        <YAxis tickFormatter={(value) => `${currencySymbol}${(value / 1000).toFixed(0)}K`} />
+                        <Tooltip formatter={(value) => `${currencySymbol}${Number(value).toLocaleString()}`} />
+                        <Legend />
+                        <Bar dataKey="budgeted" fill="#059669" name="Budgeted" />
+                        <Bar dataKey="actual" fill="#10b981" name="Actual" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Variance Summary</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse border border-border">
-                    <thead>
-                      <tr className="bg-muted">
-                        <th className="border border-border p-3 text-left">Department</th>
-                        <th className="border border-border p-3 text-right">Budgeted</th>
-                        <th className="border border-border p-3 text-right">Actual</th>
-                        <th className="border border-border p-3 text-right">Variance</th>
-                        <th className="border border-border p-3 text-right">Variance %</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {varianceData.map((row) => (
-                        <tr key={row.department}>
-                          <td className="border border-border p-3">{row.department}</td>
-                          <td className="border border-border p-3 text-right">{currencySymbol}{row.budgeted.toLocaleString()}</td>
-                          <td className="border border-border p-3 text-right">{currencySymbol}{row.actual.toLocaleString()}</td>
-                          <td className={`border border-border p-3 text-right ${row.variance >= 0 ? 'text-destructive' : 'text-primary'}`}>
-                            {currencySymbol}{Math.abs(row.variance).toLocaleString()}
-                          </td>
-                          <td className={`border border-border p-3 text-right ${row.variancePercent >= 0 ? 'text-destructive' : 'text-primary'}`}>
-                            {row.variancePercent > 0 ? '+' : ''}{row.variancePercent.toFixed(1)}%
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <span className="h-3 w-3 rounded-full bg-emerald-500"></span>
+                      Income Variance Summary
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse border border-border">
+                        <thead>
+                          <tr className="bg-emerald-50 dark:bg-emerald-950/30">
+                            <th className="border border-border p-3 text-left">Department</th>
+                            <th className="border border-border p-3 text-right">Budgeted</th>
+                            <th className="border border-border p-3 text-right">Actual</th>
+                            <th className="border border-border p-3 text-right">Variance</th>
+                            <th className="border border-border p-3 text-right">Variance %</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {incomeVarianceData.map((row) => (
+                            <tr key={row.department}>
+                              <td className="border border-border p-3">{row.department}</td>
+                              <td className="border border-border p-3 text-right">{currencySymbol}{row.budgeted.toLocaleString()}</td>
+                              <td className="border border-border p-3 text-right">{currencySymbol}{row.actual.toLocaleString()}</td>
+                              <td className={`border border-border p-3 text-right ${row.variance >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
+                                {row.variance >= 0 ? '+' : '-'}{currencySymbol}{Math.abs(row.variance).toLocaleString()}
+                              </td>
+                              <td className={`border border-border p-3 text-right ${row.variancePercent >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
+                                {row.variancePercent >= 0 ? '+' : ''}{row.variancePercent.toFixed(1)}%
+                              </td>
+                            </tr>
+                          ))}
+                          {/* Income Totals Row */}
+                          <tr className="bg-emerald-50 dark:bg-emerald-950/30 font-semibold">
+                            <td className="border border-border p-3">Total Income</td>
+                            <td className="border border-border p-3 text-right">
+                              {currencySymbol}{incomeVarianceData.reduce((sum, r) => sum + r.budgeted, 0).toLocaleString()}
+                            </td>
+                            <td className="border border-border p-3 text-right">
+                              {currencySymbol}{incomeVarianceData.reduce((sum, r) => sum + r.actual, 0).toLocaleString()}
+                            </td>
+                            <td className="border border-border p-3 text-right">
+                              {currencySymbol}{incomeVarianceData.reduce((sum, r) => sum + r.variance, 0).toLocaleString()}
+                            </td>
+                            <td className="border border-border p-3 text-right">-</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardContent>
+                </Card>
+              </>
+            )}
+
+            {/* Expense Variance Section */}
+            {expenseVarianceData.length > 0 && (
+              <>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <span className="h-3 w-3 rounded-full bg-orange-500"></span>
+                      Expense - Budget vs Actual Variance
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <BarChart data={expenseVarianceData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="department" />
+                        <YAxis tickFormatter={(value) => `${currencySymbol}${(value / 1000).toFixed(0)}K`} />
+                        <Tooltip formatter={(value) => `${currencySymbol}${Number(value).toLocaleString()}`} />
+                        <Legend />
+                        <Bar dataKey="budgeted" fill="#ea580c" name="Budgeted" />
+                        <Bar dataKey="actual" fill="#f97316" name="Actual" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <span className="h-3 w-3 rounded-full bg-orange-500"></span>
+                      Expense Variance Summary
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse border border-border">
+                        <thead>
+                          <tr className="bg-orange-50 dark:bg-orange-950/30">
+                            <th className="border border-border p-3 text-left">Department</th>
+                            <th className="border border-border p-3 text-right">Budgeted</th>
+                            <th className="border border-border p-3 text-right">Actual</th>
+                            <th className="border border-border p-3 text-right">Variance</th>
+                            <th className="border border-border p-3 text-right">Variance %</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {expenseVarianceData.map((row) => (
+                            <tr key={row.department}>
+                              <td className="border border-border p-3">{row.department}</td>
+                              <td className="border border-border p-3 text-right">{currencySymbol}{row.budgeted.toLocaleString()}</td>
+                              <td className="border border-border p-3 text-right">{currencySymbol}{row.actual.toLocaleString()}</td>
+                              <td className={`border border-border p-3 text-right ${row.variance <= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
+                                {row.variance >= 0 ? '+' : '-'}{currencySymbol}{Math.abs(row.variance).toLocaleString()}
+                              </td>
+                              <td className={`border border-border p-3 text-right ${row.variancePercent <= 0 ? 'text-emerald-600' : 'text-destructive'}`}>
+                                {row.variancePercent >= 0 ? '+' : ''}{row.variancePercent.toFixed(1)}%
+                              </td>
+                            </tr>
+                          ))}
+                          {/* Expense Totals Row */}
+                          <tr className="bg-orange-50 dark:bg-orange-950/30 font-semibold">
+                            <td className="border border-border p-3">Total Expense</td>
+                            <td className="border border-border p-3 text-right">
+                              {currencySymbol}{expenseVarianceData.reduce((sum, r) => sum + r.budgeted, 0).toLocaleString()}
+                            </td>
+                            <td className="border border-border p-3 text-right">
+                              {currencySymbol}{expenseVarianceData.reduce((sum, r) => sum + r.actual, 0).toLocaleString()}
+                            </td>
+                            <td className="border border-border p-3 text-right">
+                              {currencySymbol}{expenseVarianceData.reduce((sum, r) => sum + r.variance, 0).toLocaleString()}
+                            </td>
+                            <td className="border border-border p-3 text-right">-</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardContent>
+                </Card>
+              </>
+            )}
+
+            {/* No variance data message */}
+            {incomeVarianceData.length === 0 && expenseVarianceData.length === 0 && (
+              <Card className="border-dashed">
+                <CardContent className="py-12 text-center">
+                  <p className="text-muted-foreground">No variance data available for the selected filters.</p>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           <TabsContent value="utilization" className="space-y-6">
