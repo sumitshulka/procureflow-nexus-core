@@ -10,7 +10,7 @@ interface DraftPendingGridProps {
   submissions: any[];
   currencySymbol: string;
   departmentName?: string;
-  onEditCycle: (cycle: any) => void;
+  onEditCycle: (cycle: any, cycleId: string) => void;
 }
 
 const DraftPendingGrid = ({ submissions, currencySymbol, departmentName, onEditCycle }: DraftPendingGridProps) => {
@@ -147,7 +147,7 @@ const DraftPendingGrid = ({ submissions, currencySymbol, departmentName, onEditC
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => onEditCycle(group.cycle)}
+                  onClick={() => onEditCycle(group.cycle, cycleId)}
                 >
                   <FileEdit className="h-4 w-4 mr-2" />
                   Edit Budget
