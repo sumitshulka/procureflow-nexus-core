@@ -67,6 +67,7 @@ import Approvals from '@/pages/Approvals';
 import BudgetOverview from '@/pages/budget/BudgetOverview';
 import BudgetAllocation from '@/pages/budget/BudgetAllocation';
 import BudgetReports from '@/pages/budget/BudgetReports';
+import BudgetCycleDashboard from '@/pages/budget/BudgetCycleDashboard';
 
 // Compliance Pages
 import AuditTrail from '@/pages/compliance/AuditTrail';
@@ -545,6 +546,14 @@ function App() {
             element={
               <ProtectedRoute requiredRole={UserRole.ADMIN}>
                 <Layout><BudgetReports /></Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/budget/cycle/:cycleId"
+            element={
+              <ProtectedRoute requiredRole={UserRole.ADMIN}>
+                <Layout><BudgetCycleDashboard /></Layout>
               </ProtectedRoute>
             }
           />
