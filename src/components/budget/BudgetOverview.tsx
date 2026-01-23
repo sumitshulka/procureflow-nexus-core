@@ -610,18 +610,23 @@ const BudgetOverview = () => {
                       </PieChart>
                     </ResponsiveContainer>
                     <div className="space-y-2 max-h-32 overflow-y-auto">
-                      {incomeHeadSpending.map((entry, index) => (
-                        <div key={`income-legend-${index}`} className="flex items-center justify-between text-sm">
-                          <div className="flex items-center gap-2">
-                            <div 
-                              className="w-3 h-3 rounded-full flex-shrink-0" 
-                              style={{ backgroundColor: INCOME_COLORS[index % INCOME_COLORS.length] }} 
-                            />
-                            <span className="truncate max-w-[140px]" title={entry.name}>{entry.name}</span>
+                      {incomeHeadSpending.map((entry, index) => {
+                        const total = incomeHeadSpending.reduce((sum, e) => sum + e.value, 0);
+                        const percent = total > 0 ? ((entry.value / total) * 100).toFixed(1) : 0;
+                        return (
+                          <div key={`income-legend-${index}`} className="flex items-center justify-between text-sm">
+                            <div className="flex items-center gap-2">
+                              <div 
+                                className="w-3 h-3 rounded-full flex-shrink-0" 
+                                style={{ backgroundColor: INCOME_COLORS[index % INCOME_COLORS.length] }} 
+                              />
+                              <span className="truncate max-w-[120px]" title={entry.name}>{entry.name}</span>
+                              <span className="text-muted-foreground">({percent}%)</span>
+                            </div>
+                            <span className="font-medium text-emerald-600">{formatAmount(entry.value)}</span>
                           </div>
-                          <span className="font-medium text-emerald-600">{formatAmount(entry.value)}</span>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -675,18 +680,23 @@ const BudgetOverview = () => {
                       </PieChart>
                     </ResponsiveContainer>
                     <div className="space-y-2 max-h-32 overflow-y-auto">
-                      {expenseHeadSpending.map((entry, index) => (
-                        <div key={`expense-legend-${index}`} className="flex items-center justify-between text-sm">
-                          <div className="flex items-center gap-2">
-                            <div 
-                              className="w-3 h-3 rounded-full flex-shrink-0" 
-                              style={{ backgroundColor: EXPENSE_COLORS[index % EXPENSE_COLORS.length] }} 
-                            />
-                            <span className="truncate max-w-[140px]" title={entry.name}>{entry.name}</span>
+                      {expenseHeadSpending.map((entry, index) => {
+                        const total = expenseHeadSpending.reduce((sum, e) => sum + e.value, 0);
+                        const percent = total > 0 ? ((entry.value / total) * 100).toFixed(1) : 0;
+                        return (
+                          <div key={`expense-legend-${index}`} className="flex items-center justify-between text-sm">
+                            <div className="flex items-center gap-2">
+                              <div 
+                                className="w-3 h-3 rounded-full flex-shrink-0" 
+                                style={{ backgroundColor: EXPENSE_COLORS[index % EXPENSE_COLORS.length] }} 
+                              />
+                              <span className="truncate max-w-[120px]" title={entry.name}>{entry.name}</span>
+                              <span className="text-muted-foreground">({percent}%)</span>
+                            </div>
+                            <span className="font-medium text-rose-600">{formatAmount(entry.value)}</span>
                           </div>
-                          <span className="font-medium text-rose-600">{formatAmount(entry.value)}</span>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 )}
