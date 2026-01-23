@@ -260,8 +260,7 @@ const BudgetEntryGrid = ({ cycle, departmentId, onBack }: BudgetEntryGridProps) 
             (a: any) => a.head_id === headId && a.period_number === periodNumber
           );
 
-          allocationsToUpsert.push({
-            id: existing?.id,
+          const allocation: any = {
             cycle_id: cycle.id,
             head_id: headId,
             department_id: departmentId,
@@ -270,7 +269,14 @@ const BudgetEntryGrid = ({ cycle, departmentId, onBack }: BudgetEntryGridProps) 
             status: submitAfterSave ? 'submitted' : (existing?.status || 'draft'),
             submitted_by: user.id,
             submitted_at: submitAfterSave ? new Date().toISOString() : existing?.submitted_at
-          });
+          };
+
+          // Only include id if updating an existing record
+          if (existing?.id) {
+            allocation.id = existing.id;
+          }
+
+          allocationsToUpsert.push(allocation);
         }
       });
 
@@ -278,11 +284,26 @@ const BudgetEntryGrid = ({ cycle, departmentId, onBack }: BudgetEntryGridProps) 
         throw new Error("No budget entries to save");
       }
 
-      const { error } = await supabase
-        .from('budget_allocations')
-        .upsert(allocationsToUpsert, { onConflict: 'id' });
+      // Separate new records (no id) from updates (have id)
+      const newRecords = allocationsToUpsert.filter(a => !a.id);
+      const existingRecords = allocationsToUpsert.filter(a => a.id);
 
-      if (error) throw error;
+      // Insert new records
+      if (newRecords.length > 0) {
+        const { error: insertError } = await supabase
+          .from('budget_allocations')
+          .insert(newRecords);
+        if (insertError) throw insertError;
+      }
+
+      // Update existing records
+      if (existingRecords.length > 0) {
+        const { error: updateError } = await supabase
+          .from('budget_allocations')
+          .upsert(existingRecords, { onConflict: 'id' });
+        if (updateError) throw updateError;
+      }
+
       return submitAfterSave;
     },
     onSuccess: (wasSubmitted) => {
