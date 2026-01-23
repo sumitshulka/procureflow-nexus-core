@@ -170,17 +170,13 @@ const DraftPendingGrid = ({ submissions, currencySymbol, departmentName, onEditC
                     {Array.from({ length: periodCount }, (_, i) => i + 1).map(periodNumber => {
                       const sub = submissionLookup.get(`${head.id}-${periodNumber}`);
                       const amount = sub?.allocated_amount || 0;
-                      const status = sub?.status;
                       
                       return (
                         <TableCell key={periodNumber} className="text-center p-2">
                           {amount > 0 ? (
-                            <div className="flex flex-col items-center gap-1">
-                              <span className="font-medium">
-                                {currencySymbol}{amount.toLocaleString()}
-                              </span>
-                              {status && getStatusBadge(status)}
-                            </div>
+                            <span className="font-medium">
+                              {currencySymbol}{amount.toLocaleString()}
+                            </span>
                           ) : (
                             <span className="text-muted-foreground">-</span>
                           )}
