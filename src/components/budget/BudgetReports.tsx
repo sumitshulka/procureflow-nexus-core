@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getCurrencySymbol } from "@/utils/currencyUtils";
 
 const BudgetReports = () => {
   const [reportType, setReportType] = useState("variance");
@@ -20,7 +21,22 @@ const BudgetReports = () => {
 
   const { user, isLoading: authLoading } = useAuth();
 
-  // Check if user is admin and get their department
+  // Fetch organization settings for currency
+  const { data: orgSettings } = useQuery({
+    queryKey: ['organization-settings-budget-reports'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('organization_settings')
+        .select('base_currency')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  const currencySymbol = getCurrencySymbol(orgSettings?.base_currency || 'USD');
   const { data: userContext, isLoading: userContextLoading } = useQuery({
     queryKey: ['budget-reports-user-context', user?.id],
     queryFn: async () => {
@@ -315,8 +331,8 @@ const BudgetReports = () => {
                   <BarChart data={varianceData}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="department" />
-                    <YAxis tickFormatter={(value) => `$${(value / 1000).toFixed(0)}K`} />
-                    <Tooltip formatter={(value) => `$${Number(value).toLocaleString()}`} />
+                    <YAxis tickFormatter={(value) => `${currencySymbol}${(value / 1000).toFixed(0)}K`} />
+                    <Tooltip formatter={(value) => `${currencySymbol}${Number(value).toLocaleString()}`} />
                     <Legend />
                     <Bar dataKey="budgeted" fill="hsl(var(--chart-1))" name="Budgeted" />
                     <Bar dataKey="actual" fill="hsl(var(--chart-2))" name="Actual" />
@@ -345,10 +361,10 @@ const BudgetReports = () => {
                       {varianceData.map((row) => (
                         <tr key={row.department}>
                           <td className="border border-border p-3">{row.department}</td>
-                          <td className="border border-border p-3 text-right">${row.budgeted.toLocaleString()}</td>
-                          <td className="border border-border p-3 text-right">${row.actual.toLocaleString()}</td>
+                          <td className="border border-border p-3 text-right">{currencySymbol}{row.budgeted.toLocaleString()}</td>
+                          <td className="border border-border p-3 text-right">{currencySymbol}{row.actual.toLocaleString()}</td>
                           <td className={`border border-border p-3 text-right ${row.variance >= 0 ? 'text-destructive' : 'text-primary'}`}>
-                            ${Math.abs(row.variance).toLocaleString()}
+                            {currencySymbol}{Math.abs(row.variance).toLocaleString()}
                           </td>
                           <td className={`border border-border p-3 text-right ${row.variancePercent >= 0 ? 'text-destructive' : 'text-primary'}`}>
                             {row.variancePercent > 0 ? '+' : ''}{row.variancePercent.toFixed(1)}%
@@ -372,8 +388,8 @@ const BudgetReports = () => {
                   <BarChart data={utilizationData}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="category" />
-                    <YAxis tickFormatter={(value) => `$${(value / 1000).toFixed(0)}K`} />
-                    <Tooltip formatter={(value) => `$${Number(value).toLocaleString()}`} />
+                    <YAxis tickFormatter={(value) => `${currencySymbol}${(value / 1000).toFixed(0)}K`} />
+                    <Tooltip formatter={(value) => `${currencySymbol}${Number(value).toLocaleString()}`} />
                     <Legend />
                     <Bar dataKey="allocated" fill="hsl(var(--chart-1))" name="Allocated" />
                     <Bar dataKey="utilized" fill="hsl(var(--chart-2))" name="Utilized" />
