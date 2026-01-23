@@ -15,7 +15,8 @@ import { getCurrencySymbol } from "@/utils/currencyUtils";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useBudgetUserContext } from "@/hooks/useBudgetUserContext";
 
-const CHART_COLORS = ["hsl(var(--chart-1))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))"];
+const INCOME_COLORS = ["#10b981", "#34d399", "#6ee7b7", "#a7f3d0", "#d1fae5"];
+const EXPENSE_COLORS = ["#f43f5e", "#fb7185", "#fda4af", "#fecdd3", "#ffe4e6"];
 const BudgetOverview = () => {
   const currentYear = new Date().getFullYear();
   const [selectedFiscalYear, setSelectedFiscalYear] = useState<string>(currentYear.toString());
@@ -154,20 +155,34 @@ const BudgetOverview = () => {
     return budgetCycles?.find(c => c.fiscal_year === parseInt(selectedFiscalYear));
   }, [budgetCycles, selectedFiscalYear]);
 
-  // Calculate summary data
+  // Calculate summary data - separate income and expense
   const budgetSummary = useMemo(() => {
     if (!allocations || allocations.length === 0) {
       return {
-        totalBudget: 0,
-        totalApproved: 0,
-        totalPending: 0,
+        totalIncomeAllocated: 0,
+        totalExpenseAllocated: 0,
+        totalIncomeApproved: 0,
+        totalExpenseApproved: 0,
         hasBudget: false,
         allocationsByStatus: { draft: 0, submitted: 0, approved: 0, rejected: 0 },
       };
     }
 
-    const totalAllocated = allocations.reduce((sum, a) => sum + (a.allocated_amount || 0), 0);
-    const totalApproved = allocations.reduce((sum, a) => sum + (a.approved_amount || 0), 0);
+    let totalIncomeAllocated = 0;
+    let totalExpenseAllocated = 0;
+    let totalIncomeApproved = 0;
+    let totalExpenseApproved = 0;
+
+    allocations.forEach(a => {
+      const headType = a.budget_heads?.type;
+      if (headType === 'income') {
+        totalIncomeAllocated += a.allocated_amount || 0;
+        totalIncomeApproved += a.approved_amount || 0;
+      } else {
+        totalExpenseAllocated += a.allocated_amount || 0;
+        totalExpenseApproved += a.approved_amount || 0;
+      }
+    });
     
     const statusCounts = allocations.reduce((acc, a) => {
       const status = a.status || 'draft';
@@ -176,9 +191,10 @@ const BudgetOverview = () => {
     }, {} as Record<string, number>);
 
     return {
-      totalBudget: totalAllocated,
-      totalApproved: totalApproved,
-      totalPending: allocations.filter(a => a.status === 'submitted').length,
+      totalIncomeAllocated,
+      totalExpenseAllocated,
+      totalIncomeApproved,
+      totalExpenseApproved,
       hasBudget: allocations.length > 0,
       allocationsByStatus: statusCounts,
     };
@@ -234,13 +250,14 @@ const BudgetOverview = () => {
     return Array.from(deptMap.values()).sort((a, b) => a.department.localeCompare(b.department));
   }, [allocations, departments]);
 
-  // Calculate budget head-wise data for pie chart
-  const budgetHeadSpending = useMemo(() => {
+  // Calculate budget head-wise data for pie charts - separate income and expense
+  const incomeHeadSpending = useMemo(() => {
     if (!allocations) return [];
 
     const headMap = new Map<string, { name: string; value: number }>();
     
     allocations.forEach(a => {
+      if (a.budget_heads?.type !== 'income') return;
       const headName = a.budget_heads?.name || 'Unassigned';
       const existing = headMap.get(headName) || { name: headName, value: 0 };
       existing.value += a.allocated_amount || 0;
@@ -251,6 +268,29 @@ const BudgetOverview = () => {
       .filter(h => h.value > 0)
       .sort((a, b) => b.value - a.value);
   }, [allocations]);
+
+  const expenseHeadSpending = useMemo(() => {
+    if (!allocations) return [];
+
+    const headMap = new Map<string, { name: string; value: number }>();
+    
+    allocations.forEach(a => {
+      if (a.budget_heads?.type !== 'expenditure') return;
+      const headName = a.budget_heads?.name || 'Unassigned';
+      const existing = headMap.get(headName) || { name: headName, value: 0 };
+      existing.value += a.allocated_amount || 0;
+      headMap.set(headName, existing);
+    });
+
+    return Array.from(headMap.values())
+      .filter(h => h.value > 0)
+      .sort((a, b) => b.value - a.value);
+  }, [allocations]);
+
+  // Combined for total count
+  const budgetHeadSpending = useMemo(() => {
+    return [...incomeHeadSpending, ...expenseHeadSpending];
+  }, [incomeHeadSpending, expenseHeadSpending]);
 
   const isLoading = cyclesLoading || allocationsLoading || userContextLoading || orgSettingsLoading;
 
@@ -406,28 +446,28 @@ const BudgetOverview = () => {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
+        <Card className="border-l-4 border-l-emerald-500">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Allocated</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Total Income Allocated</CardTitle>
+            <TrendingUp className="h-4 w-4 text-emerald-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatAmount(budgetSummary.totalBudget)}</div>
+            <div className="text-2xl font-bold text-emerald-600">{formatAmount(budgetSummary.totalIncomeAllocated)}</div>
             <p className="text-xs text-muted-foreground">
-              {isAdmin ? "Across all departments" : `For ${selectedDeptName}`} for FY {selectedFiscalYear}
+              {isAdmin ? "Across all departments" : `For ${selectedDeptName}`}
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-l-4 border-l-rose-500">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Approved</CardTitle>
-            <CheckCircle2 className="h-4 w-4 text-green-500" />
+            <CardTitle className="text-sm font-medium">Total Expense Allocated</CardTitle>
+            <TrendingDown className="h-4 w-4 text-rose-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatAmount(budgetSummary.totalApproved)}</div>
+            <div className="text-2xl font-bold text-rose-600">{formatAmount(budgetSummary.totalExpenseAllocated)}</div>
             <p className="text-xs text-muted-foreground">
-              {budgetSummary.allocationsByStatus.approved || 0} allocations approved
+              {isAdmin ? "Across all departments" : `For ${selectedDeptName}`}
             </p>
           </CardContent>
         </Card>
@@ -435,7 +475,7 @@ const BudgetOverview = () => {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Pending Approval</CardTitle>
-            <Clock className="h-4 w-4 text-yellow-500" />
+            <Clock className="h-4 w-4 text-amber-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{budgetSummary.allocationsByStatus.submitted || 0}</div>
@@ -463,13 +503,15 @@ const BudgetOverview = () => {
         ) : (
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Budget Heads</CardTitle>
-              <FileText className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Net Budget</CardTitle>
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{budgetHeadSpending.length}</div>
+              <div className={`text-2xl font-bold ${budgetSummary.totalIncomeAllocated - budgetSummary.totalExpenseAllocated >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                {formatAmount(budgetSummary.totalIncomeAllocated - budgetSummary.totalExpenseAllocated)}
+              </div>
               <p className="text-xs text-muted-foreground">
-                Categories with allocations
+                Income - Expenses
               </p>
             </CardContent>
           </Card>
@@ -479,8 +521,7 @@ const BudgetOverview = () => {
       <Tabs defaultValue={isAdmin ? "departments" : "heads"} className="w-full">
         <TabsList>
           {isAdmin && <TabsTrigger value="departments">Department View</TabsTrigger>}
-          <TabsTrigger value="heads">Budget Heads</TabsTrigger>
-          <TabsTrigger value="details">Allocation Details</TabsTrigger>
+          <TabsTrigger value="heads">Budget by Category</TabsTrigger>
         </TabsList>
 
         {isAdmin && (
@@ -526,84 +567,103 @@ const BudgetOverview = () => {
             </Card>
           </TabsContent>
         )}
-        <TabsContent value="heads" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Budget by Category</CardTitle>
-              <CardDescription>Allocation distribution across budget heads</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {budgetHeadSpending.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">No budget data available</p>
-              ) : (
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={budgetHeadSpending}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                      outerRadius={80}
-                      dataKey="value"
-                    >
-                      {budgetHeadSpending.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value: number) => formatAmount(value)} />
-                  </PieChart>
-                </ResponsiveContainer>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
 
-        <TabsContent value="details" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Allocation Details</CardTitle>
-              <CardDescription>Detailed view of all budget allocations</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {!allocations || allocations.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">No allocations found for the selected year</p>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Department</TableHead>
-                      <TableHead>Budget Head</TableHead>
-                      <TableHead>Period</TableHead>
-                      <TableHead className="text-right">Allocated</TableHead>
-                      <TableHead className="text-right">Approved</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {allocations.map((allocation) => (
-                      <TableRow key={allocation.id}>
-                        <TableCell className="font-medium">
-                          {allocation.departments?.name || 'Unassigned'}
-                        </TableCell>
-                        <TableCell>{allocation.budget_heads?.name || '-'}</TableCell>
-                        <TableCell>Period {allocation.period_number}</TableCell>
-                        <TableCell className="text-right">
-                          {formatAmount(allocation.allocated_amount || 0)}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {formatAmount(allocation.approved_amount || 0)}
-                        </TableCell>
-                        <TableCell>
-                          {getAllocationStatusBadge(allocation.status)}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
+        <TabsContent value="heads" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Income Chart */}
+            <Card className="border-t-4 border-t-emerald-500">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5 text-emerald-500" />
+                  Income by Category
+                </CardTitle>
+                <CardDescription>Distribution of income allocations across budget heads</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {incomeHeadSpending.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+                    <TrendingUp className="h-12 w-12 mb-2 opacity-30" />
+                    <p>No income data available</p>
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height={280}>
+                    <PieChart>
+                      <Pie
+                        data={incomeHeadSpending}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        outerRadius={80}
+                        dataKey="value"
+                      >
+                        {incomeHeadSpending.map((entry, index) => (
+                          <Cell key={`income-cell-${index}`} fill={INCOME_COLORS[index % INCOME_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value: number) => formatAmount(value)} />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                )}
+                {incomeHeadSpending.length > 0 && (
+                  <div className="mt-4 pt-4 border-t">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium text-muted-foreground">Total Income</span>
+                      <span className="text-lg font-bold text-emerald-600">{formatAmount(budgetSummary.totalIncomeAllocated)}</span>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Expense Chart */}
+            <Card className="border-t-4 border-t-rose-500">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingDown className="h-5 w-5 text-rose-500" />
+                  Expenses by Category
+                </CardTitle>
+                <CardDescription>Distribution of expense allocations across budget heads</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {expenseHeadSpending.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+                    <TrendingDown className="h-12 w-12 mb-2 opacity-30" />
+                    <p>No expense data available</p>
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height={280}>
+                    <PieChart>
+                      <Pie
+                        data={expenseHeadSpending}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        outerRadius={80}
+                        dataKey="value"
+                      >
+                        {expenseHeadSpending.map((entry, index) => (
+                          <Cell key={`expense-cell-${index}`} fill={EXPENSE_COLORS[index % EXPENSE_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value: number) => formatAmount(value)} />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                )}
+                {expenseHeadSpending.length > 0 && (
+                  <div className="mt-4 pt-4 border-t">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium text-muted-foreground">Total Expenses</span>
+                      <span className="text-lg font-bold text-rose-600">{formatAmount(budgetSummary.totalExpenseAllocated)}</span>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
     </div>
