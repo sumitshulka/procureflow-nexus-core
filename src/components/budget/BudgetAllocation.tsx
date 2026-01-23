@@ -5,7 +5,7 @@ import { Loader2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import BudgetCyclesManager from "./BudgetCyclesManager";
 import BudgetHeadsManager from "./BudgetHeadsManager";
-import BudgetSubmissions from "./BudgetSubmissions";
+import BudgetAuditLog from "./BudgetAuditLog";
 import BudgetReview from "./BudgetReview";
 import ManagerBudgetDashboard from "./ManagerBudgetDashboard";
 import { useBudgetUserContext } from "@/hooks/useBudgetUserContext";
@@ -71,7 +71,7 @@ const BudgetAllocation = () => {
             <TabsTrigger value="cycles">Budget Cycles</TabsTrigger>
             <TabsTrigger value="heads">Budget Heads</TabsTrigger>
             <TabsTrigger value="review">Review Submissions</TabsTrigger>
-            <TabsTrigger value="submissions">All Submissions</TabsTrigger>
+            <TabsTrigger value="audit">Audit Log</TabsTrigger>
           </TabsList>
 
           <TabsContent value="cycles">
@@ -86,8 +86,8 @@ const BudgetAllocation = () => {
             <BudgetReview />
           </TabsContent>
 
-          <TabsContent value="submissions">
-            <BudgetSubmissions isAdmin={true} />
+          <TabsContent value="audit">
+            <BudgetAuditLog />
           </TabsContent>
         </Tabs>
       </Card>
