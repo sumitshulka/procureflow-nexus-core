@@ -22,6 +22,8 @@ interface OpenBudgetDialogProps {
   onOpenChange: (open: boolean) => void;
   cycleId: string;
   cycleName: string;
+  currentStatus?: string;
+  currentDepartmentIds?: string[] | null;
 }
 
 const OpenBudgetDialog = ({
@@ -29,11 +31,27 @@ const OpenBudgetDialog = ({
   onOpenChange,
   cycleId,
   cycleName,
+  currentStatus = 'draft',
+  currentDepartmentIds = null,
 }: OpenBudgetDialogProps) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [accessType, setAccessType] = useState<"all" | "selected">("all");
-  const [selectedDepartments, setSelectedDepartments] = useState<string[]>([]);
+  const [accessType, setAccessType] = useState<"all" | "selected">(
+    currentDepartmentIds && currentDepartmentIds.length > 0 ? "selected" : "all"
+  );
+  const [selectedDepartments, setSelectedDepartments] = useState<string[]>(
+    currentDepartmentIds || []
+  );
+
+  // Update state when props change
+  React.useEffect(() => {
+    if (open) {
+      setAccessType(currentDepartmentIds && currentDepartmentIds.length > 0 ? "selected" : "all");
+      setSelectedDepartments(currentDepartmentIds || []);
+    }
+  }, [open, currentDepartmentIds]);
+
+  const isEditMode = currentStatus === 'open';
 
   // Fetch all active departments
   const { data: departments, isLoading: isLoadingDepartments } = useQuery({
@@ -81,7 +99,7 @@ const OpenBudgetDialog = ({
 
       // Prepare update data
       const updateData: any = {
-        status: "open",
+        status: isEditMode ? currentStatus : "open",
         allowed_department_ids: accessType === "all" ? null : selectedDepartments,
       };
 
@@ -102,13 +120,12 @@ const OpenBudgetDialog = ({
           ? "All departments"
           : `${selectedDepartments.length} selected department(s)`;
       toast({
-        title: "Budget cycle opened",
-        description: `${cycleName} is now open for ${departmentMessage} to submit budgets.`,
+        title: isEditMode ? "Departments updated" : "Budget cycle opened",
+        description: isEditMode 
+          ? `${cycleName} is now accessible to ${departmentMessage}.`
+          : `${cycleName} is now open for ${departmentMessage} to submit budgets.`,
       });
       onOpenChange(false);
-      // Reset state
-      setAccessType("all");
-      setSelectedDepartments([]);
     },
     onError: (error: any) => {
       toast({
@@ -153,9 +170,12 @@ const OpenBudgetDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Open Budget Cycle</DialogTitle>
+          <DialogTitle>{isEditMode ? "Manage Departments" : "Open Budget Cycle"}</DialogTitle>
           <DialogDescription>
-            Choose which departments can submit budgets for "{cycleName}"
+            {isEditMode 
+              ? `Update which departments can submit budgets for "${cycleName}"`
+              : `Choose which departments can submit budgets for "${cycleName}"`
+            }
           </DialogDescription>
         </DialogHeader>
 
@@ -165,7 +185,7 @@ const OpenBudgetDialog = ({
           </div>
         ) : (
           <div className="space-y-4 py-4">
-            {(!budgetHeads || budgetHeads.length === 0) && (
+            {!isEditMode && (!budgetHeads || budgetHeads.length === 0) && (
               <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
                 ⚠️ No budget heads are set up. Please configure budget heads before opening this cycle.
               </div>
@@ -256,15 +276,14 @@ const OpenBudgetDialog = ({
             disabled={
               openBudgetMutation.isPending ||
               isLoading ||
-              !budgetHeads ||
-              budgetHeads.length === 0 ||
+              (!isEditMode && (!budgetHeads || budgetHeads.length === 0)) ||
               (accessType === "selected" && selectedDepartments.length === 0)
             }
           >
             {openBudgetMutation.isPending && (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             )}
-            Open Budget
+            {isEditMode ? "Update Departments" : "Open Budget"}
           </Button>
         </DialogFooter>
       </DialogContent>

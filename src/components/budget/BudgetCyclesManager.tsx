@@ -204,6 +204,36 @@ const BudgetCyclesManager = () => {
     return <Badge variant={variants[status] || "default"}>{status}</Badge>;
   };
 
+  // Fetch departments for display
+  const { data: departments } = useQuery({
+    queryKey: ['departments-for-cycles'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('departments')
+        .select('id, name')
+        .eq('is_active', true)
+        .order('name');
+      if (error) throw error;
+      return data || [];
+    }
+  });
+
+  const getDepartmentNames = (allowedIds: string[] | null) => {
+    if (!allowedIds || allowedIds.length === 0) {
+      return <span className="text-muted-foreground">All Departments</span>;
+    }
+    if (!departments) return <span className="text-muted-foreground">Loading...</span>;
+    
+    const names = allowedIds
+      .map(id => departments.find(d => d.id === id)?.name)
+      .filter(Boolean);
+    
+    if (names.length <= 2) {
+      return names.join(', ');
+    }
+    return `${names.slice(0, 2).join(', ')} +${names.length - 2} more`;
+  };
+
   const columns = [
     { 
       id: 'name', 
@@ -229,6 +259,15 @@ const BudgetCyclesManager = () => {
       header: 'Type',
       cell: (row: any) => <span className="capitalize">{row.period_type}</span>
     },
+    {
+      id: 'departments',
+      header: 'Departments',
+      cell: (row: any) => (
+        <div className="max-w-[200px] truncate" title={row.allowed_department_ids?.join(', ') || 'All'}>
+          {getDepartmentNames(row.allowed_department_ids)}
+        </div>
+      )
+    },
     { 
       id: 'status', 
       header: 'Status',
@@ -246,6 +285,15 @@ const BudgetCyclesManager = () => {
               onClick={() => handleOpenBudget(row)}
             >
               Open Budget
+            </Button>
+          )}
+          {row.status === 'open' && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => handleOpenBudget(row)}
+            >
+              Manage Depts
             </Button>
           )}
           <Button variant="ghost" size="sm" onClick={() => handleEdit(row)}>
@@ -431,6 +479,8 @@ const BudgetCyclesManager = () => {
           onOpenChange={setOpenBudgetDialogOpen}
           cycleId={cycleToOpen.id}
           cycleName={cycleToOpen.name}
+          currentStatus={cycleToOpen.status}
+          currentDepartmentIds={cycleToOpen.allowed_department_ids}
         />
       )}
     </div>
