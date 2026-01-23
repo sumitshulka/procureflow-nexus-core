@@ -163,39 +163,44 @@ const BudgetReview = () => {
   });
 
   // Fetch approved allocations for the selected cycle to calculate approval progress
-  const { data: approvedAllocations } = useQuery({
-    queryKey: ['approved-budget-allocations', selectedCycle],
+  // Fetch department approval status for the selected cycle
+  const { data: departmentApprovalStatus } = useQuery({
+    queryKey: ['department-approval-status', selectedCycle],
     queryFn: async () => {
-      if (!selectedCycle) return [];
+      if (!selectedCycle) return { approved: 0, total: 0 };
       
+      // Get all allocations grouped by department and status
       const { data, error } = await supabase
         .from('budget_allocations')
-        .select('department_id')
-        .eq('cycle_id', selectedCycle)
-        .eq('status', 'approved');
-      
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!selectedCycle
-  });
-
-  // Fetch all submitted departments for the cycle (to know total count)
-  const { data: allSubmittedDepts } = useQuery({
-    queryKey: ['all-submitted-departments', selectedCycle],
-    queryFn: async () => {
-      if (!selectedCycle) return [];
-      
-      const { data, error } = await supabase
-        .from('budget_allocations')
-        .select('department_id')
+        .select('department_id, status')
         .eq('cycle_id', selectedCycle)
         .in('status', ['submitted', 'under_review', 'approved', 'rejected', 'revision_requested']);
       
       if (error) throw error;
-      // Get unique department IDs
-      const uniqueDepts = [...new Set(data.map(d => d.department_id))];
-      return uniqueDepts;
+      if (!data || data.length === 0) return { approved: 0, total: 0 };
+      
+      // Group by department
+      const deptStatusMap: Record<string, Set<string>> = {};
+      data.forEach(row => {
+        if (!deptStatusMap[row.department_id]) {
+          deptStatusMap[row.department_id] = new Set();
+        }
+        deptStatusMap[row.department_id].add(row.status);
+      });
+      
+      // A department is fully approved if it has approved allocations AND no pending ones
+      let approvedCount = 0;
+      const totalDepts = Object.keys(deptStatusMap).length;
+      
+      Object.values(deptStatusMap).forEach(statuses => {
+        const hasApproved = statuses.has('approved');
+        const hasPending = statuses.has('submitted') || statuses.has('under_review');
+        if (hasApproved && !hasPending) {
+          approvedCount++;
+        }
+      });
+      
+      return { approved: approvedCount, total: totalDepts };
     },
     enabled: !!selectedCycle
   });
@@ -305,22 +310,16 @@ const BudgetReview = () => {
   const overallSummary = useMemo(() => {
     const deptValues = Object.values(groupedData);
     
-    // Calculate approved departments
-    const approvedDeptIds = approvedAllocations 
-      ? [...new Set(approvedAllocations.map(a => a.department_id))]
-      : [];
-    const totalSubmittedDepts = allSubmittedDepts?.length || 0;
-    
     return {
       totalDepartments: deptValues.length,
       totalAllocations: pendingSubmissions?.length || 0,
       totalIncome: deptValues.reduce((sum, d) => sum + d.totals.incomeTotal, 0),
       totalExpense: deptValues.reduce((sum, d) => sum + d.totals.expenseTotal, 0),
       netBudget: deptValues.reduce((sum, d) => sum + (d.totals.incomeTotal - d.totals.expenseTotal), 0),
-      approvedDepartments: approvedDeptIds.length,
-      totalSubmittedDepartments: totalSubmittedDepts
+      approvedDepartments: departmentApprovalStatus?.approved || 0,
+      totalSubmittedDepartments: departmentApprovalStatus?.total || 0
     };
-  }, [groupedData, pendingSubmissions, approvedAllocations, allSubmittedDepts]);
+  }, [groupedData, pendingSubmissions, departmentApprovalStatus]);
 
   const reviewMutation = useMutation({
     mutationFn: async ({ allocationIds, status, notes }: { 
