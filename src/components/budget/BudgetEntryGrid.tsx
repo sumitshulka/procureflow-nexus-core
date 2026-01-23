@@ -249,8 +249,11 @@ const BudgetEntryGrid = ({ cycle, departmentId, onBack }: BudgetEntryGridProps) 
       const allocationsToUpsert: any[] = [];
 
       Object.entries(entries).forEach(([key, amount]) => {
-        const [headId, periodStr] = key.split('-');
-        const periodNumber = parseInt(periodStr);
+        // Key format is "headId-periodNumber" but headId is a UUID with hyphens
+        // So we split on the last hyphen only
+        const lastHyphenIndex = key.lastIndexOf('-');
+        const headId = key.substring(0, lastHyphenIndex);
+        const periodNumber = parseInt(key.substring(lastHyphenIndex + 1));
 
         if (amount > 0) {
           const existing = existingAllocations?.find(
