@@ -69,13 +69,13 @@ const BudgetEntryGrid = ({ cycle, departmentId, onBack }: BudgetEntryGridProps) 
   }, [cycle.period_type]);
 
   // Fetch organization settings for currency
-  const { data: orgSettings } = useQuery({
+  const { data: orgSettings, isLoading: orgSettingsLoading } = useQuery({
     queryKey: ['organization-settings-budget'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('organization_settings')
         .select('base_currency')
-        .single();
+        .maybeSingle();
       if (error) throw error;
       return data;
     }
@@ -465,7 +465,7 @@ const BudgetEntryGrid = ({ cycle, departmentId, onBack }: BudgetEntryGridProps) 
     );
   };
 
-  if (headsLoading || allocationsLoading || !orgSettings) {
+  if (headsLoading || allocationsLoading || orgSettingsLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
