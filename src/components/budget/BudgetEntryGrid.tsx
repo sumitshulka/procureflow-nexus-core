@@ -342,7 +342,7 @@ const BudgetEntryGrid = ({ cycle, departmentId, onBack }: BudgetEntryGridProps) 
     return (
       <React.Fragment key={head.id}>
         <TableRow className={isSubhead ? "bg-muted/30" : "bg-muted/10 font-medium"}>
-          <TableCell className="sticky left-0 z-10 bg-inherit border-r min-w-[200px]">
+          <TableCell className={`sticky left-0 z-20 border-r min-w-[200px] ${isSubhead ? 'bg-secondary' : 'bg-card'}`}>
             <div className={`flex items-center gap-2 ${isSubhead ? 'pl-6' : ''}`}>
               {hasSubheads && (
                 <button
@@ -398,7 +398,7 @@ const BudgetEntryGrid = ({ cycle, departmentId, onBack }: BudgetEntryGridProps) 
           ))}
 
           {/* Row total */}
-          <TableCell className="text-right font-semibold bg-muted/20 sticky right-0 z-10 min-w-[120px]">
+          <TableCell className={`text-right font-semibold sticky right-0 z-20 min-w-[120px] border-l ${isSubhead ? 'bg-secondary' : 'bg-card'}`}>
             {currencySymbol}{(isParentHead ? getParentTotal(head) : getHeadTotal(head.id)).toLocaleString()}
           </TableCell>
         </TableRow>
@@ -433,7 +433,7 @@ const BudgetEntryGrid = ({ cycle, departmentId, onBack }: BudgetEntryGridProps) 
             <Table className="min-w-max">
               <TableHeader>
                 <TableRow className="bg-muted">
-                  <TableHead className="sticky left-0 z-10 bg-muted border-r min-w-[200px]">
+                  <TableHead className="sticky left-0 z-30 bg-muted border-r min-w-[200px] shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                     Budget Head
                   </TableHead>
                   {periodLabels.map((label, i) => (
@@ -441,7 +441,7 @@ const BudgetEntryGrid = ({ cycle, departmentId, onBack }: BudgetEntryGridProps) 
                       {label}
                     </TableHead>
                   ))}
-                  <TableHead className="text-right sticky right-0 z-10 bg-muted min-w-[120px]">
+                  <TableHead className="text-right sticky right-0 z-30 bg-muted min-w-[120px] shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                     Total
                   </TableHead>
                 </TableRow>
@@ -449,7 +449,7 @@ const BudgetEntryGrid = ({ cycle, departmentId, onBack }: BudgetEntryGridProps) 
               <TableBody>
                 {/* Period Totals Row */}
                 <TableRow className="bg-primary/10 font-bold">
-                  <TableCell className="sticky left-0 z-10 bg-primary/10 border-r">
+                  <TableCell className="sticky left-0 z-20 bg-accent border-r shadow-[2px_0_5px_-2px_hsl(var(--border))]">
                     Total {type === 'income' ? 'Income' : 'Expenditure'}
                   </TableCell>
                   {Array.from({ length: periodCount }, (_, i) => i + 1).map(periodNumber => (
@@ -457,7 +457,7 @@ const BudgetEntryGrid = ({ cycle, departmentId, onBack }: BudgetEntryGridProps) 
                       {currencySymbol}{getPeriodTotal(periodNumber, type).toLocaleString()}
                     </TableCell>
                   ))}
-                  <TableCell className="text-right sticky right-0 z-10 bg-primary/10">
+                  <TableCell className="text-right sticky right-0 z-20 bg-accent shadow-[-2px_0_5px_-2px_hsl(var(--border))]">
                     {currencySymbol}{getGrandTotal(type).toLocaleString()}
                   </TableCell>
                 </TableRow>
