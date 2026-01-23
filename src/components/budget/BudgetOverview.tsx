@@ -60,9 +60,9 @@ const BudgetOverview = () => {
 
   const canLoadDepartmentScopedData = isAdmin || !!userDepartmentId;
 
-  // Fetch budget allocations with related data - filter by department for non-admin users
+  // Fetch budget allocations with related data - filter by departments for non-admin users
   const { data: allocations, isLoading: allocationsLoading } = useQuery({
-    queryKey: ["budget-allocations-overview", selectedFiscalYear, userDepartmentId, isAdmin],
+    queryKey: ["budget-allocations-overview", selectedFiscalYear, effectiveDeptIds, isAdmin],
     queryFn: async () => {
       let query = supabase
         .from("budget_allocations")
@@ -74,9 +74,9 @@ const BudgetOverview = () => {
         `)
         .eq("budget_cycles.fiscal_year", parseInt(selectedFiscalYear));
       
-      // Filter by department for non-admin users
-      if (!isAdmin && userDepartmentId) {
-        query = query.eq("department_id", userDepartmentId);
+      // Filter by user's assigned departments for non-admin users
+      if (!isAdmin && effectiveDeptIds && effectiveDeptIds.length > 0) {
+        query = query.in("department_id", effectiveDeptIds);
       }
       
       const { data, error } = await query;
@@ -86,18 +86,18 @@ const BudgetOverview = () => {
     enabled: !!selectedFiscalYear && userContextReady && canLoadDepartmentScopedData,
   });
 
-  // Fetch departments - for non-admin, only show their department
+  // Fetch departments - for non-admin, show all their assigned departments
   const { data: departments } = useQuery({
-    queryKey: ["departments-overview", userDepartmentId, isAdmin],
+    queryKey: ["departments-overview", effectiveDeptIds, isAdmin],
     queryFn: async () => {
       let query = supabase
         .from("departments")
         .select("*")
         .eq("is_active", true);
       
-      // Filter by user's department for non-admin users
-      if (!isAdmin && userDepartmentId) {
-        query = query.eq("id", userDepartmentId);
+      // Filter by user's assigned departments for non-admin users
+      if (!isAdmin && effectiveDeptIds && effectiveDeptIds.length > 0) {
+        query = query.in("id", effectiveDeptIds);
       }
       
       const { data, error } = await query.order("name");
@@ -278,18 +278,18 @@ const BudgetOverview = () => {
   return (
     <div className="space-y-6">
       {/* Department Context Banner for non-admin users */}
-      {!isAdmin && userContextReady && userDepartmentName && (
+      {!isAdmin && userContextReady && userDepartments.length > 0 && (
         <Alert>
           <Building2 className="h-4 w-4" />
           <AlertTitle>Department View</AlertTitle>
           <AlertDescription>
-            You are viewing budget data for <strong>{userDepartmentName}</strong>. Contact an administrator to view organization-wide budget data.
+            You are viewing budget data for <strong>{userDepartments.map(d => d.name).join(", ")}</strong>. Contact an administrator to view organization-wide budget data.
           </AlertDescription>
         </Alert>
       )}
 
       {/* No Department Warning for non-admin users without department */}
-      {!isAdmin && userContextReady && !userDepartmentId && (
+      {!isAdmin && userContextReady && userDepartments.length === 0 && (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>No Department Assigned</AlertTitle>
@@ -363,7 +363,7 @@ const BudgetOverview = () => {
           <CardContent>
             <div className="text-2xl font-bold">{formatCurrency(budgetSummary.totalBudget)}</div>
             <p className="text-xs text-muted-foreground">
-              {isAdmin ? "Across all departments" : `For ${userDepartmentName || "your department"}`} for FY {selectedFiscalYear}
+              {isAdmin ? "Across all departments" : `For ${hasMultipleDepartments ? "your departments" : (userDepartments[0]?.name || "your department")}`} for FY {selectedFiscalYear}
             </p>
           </CardContent>
         </Card>
