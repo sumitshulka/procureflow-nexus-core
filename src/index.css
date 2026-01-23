@@ -111,3 +111,27 @@
     @apply space-y-4 pb-4 border-b last:border-b-0 last:pb-0;
   }
 }
+
+/* Custom scrollbar styles for budget entry grid and long forms */
+.overflow-x-auto {
+  scrollbar-width: auto;
+}
+
+.overflow-x-auto::-webkit-scrollbar {
+  height: 12px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-track {
+  background: hsl(var(--muted));
+  border-radius: 6px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 6px;
+  border: 2px solid hsl(var(--muted));
+}
+
+.overflow-x-auto::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.5);
+}

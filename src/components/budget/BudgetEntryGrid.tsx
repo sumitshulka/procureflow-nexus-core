@@ -23,7 +23,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+// Removed ScrollArea in favor of native scrollbar for better visibility
 import { getCurrencySymbol } from "@/utils/currencyUtils";
 
 interface BudgetEntryGridProps {
@@ -342,7 +342,7 @@ const BudgetEntryGrid = ({ cycle, departmentId, onBack }: BudgetEntryGridProps) 
     return (
       <React.Fragment key={head.id}>
         <TableRow className={isSubhead ? "bg-muted/30" : "bg-muted/10 font-medium"}>
-          <TableCell className="sticky left-0 bg-inherit border-r min-w-[200px]">
+          <TableCell className="sticky left-0 z-10 bg-inherit border-r min-w-[200px]">
             <div className={`flex items-center gap-2 ${isSubhead ? 'pl-6' : ''}`}>
               {hasSubheads && (
                 <button
@@ -398,7 +398,7 @@ const BudgetEntryGrid = ({ cycle, departmentId, onBack }: BudgetEntryGridProps) 
           ))}
 
           {/* Row total */}
-          <TableCell className="text-right font-semibold bg-muted/20 sticky right-0 min-w-[120px]">
+          <TableCell className="text-right font-semibold bg-muted/20 sticky right-0 z-10 min-w-[120px]">
             {currencySymbol}{(isParentHead ? getParentTotal(head) : getHeadTotal(head.id)).toLocaleString()}
           </TableCell>
         </TableRow>
@@ -423,11 +423,17 @@ const BudgetEntryGrid = ({ cycle, departmentId, onBack }: BudgetEntryGridProps) 
         </h3>
         
         <div className="border rounded-lg overflow-hidden">
-          <ScrollArea className="w-full">
-            <Table>
+          <div 
+            className="overflow-x-auto overscroll-x-contain"
+            style={{ 
+              scrollbarWidth: 'auto',
+              scrollbarColor: 'hsl(var(--border)) hsl(var(--muted))'
+            }}
+          >
+            <Table className="min-w-max">
               <TableHeader>
                 <TableRow className="bg-muted">
-                  <TableHead className="sticky left-0 bg-muted border-r min-w-[200px]">
+                  <TableHead className="sticky left-0 z-10 bg-muted border-r min-w-[200px]">
                     Budget Head
                   </TableHead>
                   {periodLabels.map((label, i) => (
@@ -435,7 +441,7 @@ const BudgetEntryGrid = ({ cycle, departmentId, onBack }: BudgetEntryGridProps) 
                       {label}
                     </TableHead>
                   ))}
-                  <TableHead className="text-right sticky right-0 bg-muted min-w-[120px]">
+                  <TableHead className="text-right sticky right-0 z-10 bg-muted min-w-[120px]">
                     Total
                   </TableHead>
                 </TableRow>
@@ -443,7 +449,7 @@ const BudgetEntryGrid = ({ cycle, departmentId, onBack }: BudgetEntryGridProps) 
               <TableBody>
                 {/* Period Totals Row */}
                 <TableRow className="bg-primary/10 font-bold">
-                  <TableCell className="sticky left-0 bg-primary/10 border-r">
+                  <TableCell className="sticky left-0 z-10 bg-primary/10 border-r">
                     Total {type === 'income' ? 'Income' : 'Expenditure'}
                   </TableCell>
                   {Array.from({ length: periodCount }, (_, i) => i + 1).map(periodNumber => (
@@ -451,7 +457,7 @@ const BudgetEntryGrid = ({ cycle, departmentId, onBack }: BudgetEntryGridProps) 
                       {currencySymbol}{getPeriodTotal(periodNumber, type).toLocaleString()}
                     </TableCell>
                   ))}
-                  <TableCell className="text-right sticky right-0 bg-primary/10">
+                  <TableCell className="text-right sticky right-0 z-10 bg-primary/10">
                     {currencySymbol}{getGrandTotal(type).toLocaleString()}
                   </TableCell>
                 </TableRow>
@@ -460,8 +466,7 @@ const BudgetEntryGrid = ({ cycle, departmentId, onBack }: BudgetEntryGridProps) 
                 {heads.map(head => renderHeadRow(head))}
               </TableBody>
             </Table>
-            <ScrollBar orientation="horizontal" />
-          </ScrollArea>
+          </div>
         </div>
       </div>
     );
