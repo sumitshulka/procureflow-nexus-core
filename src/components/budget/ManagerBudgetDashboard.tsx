@@ -91,7 +91,7 @@ const ManagerBudgetDashboard = ({ departments, hasMultipleDepartments = false }:
     enabled: !!selectedDepartmentId
   });
 
-  // Fetch in-progress/pending/draft submissions for selected department
+  // Fetch in-progress/pending/draft submissions for selected department (for DraftPendingGrid)
   const { data: pendingSubmissions } = useQuery({
     queryKey: ['manager-pending-submissions', selectedDepartmentId],
     queryFn: async () => {
@@ -110,6 +110,23 @@ const ManagerBudgetDashboard = ({ departments, hasMultipleDepartments = false }:
       return data || [];
     },
     enabled: !!selectedDepartmentId
+  });
+
+  // Fetch submitted/pending allocations for ALL user's departments (for Enter Budget button checks)
+  const { data: allDeptPendingSubmissions } = useQuery({
+    queryKey: ['manager-all-dept-pending', departments.map(d => d.id)],
+    queryFn: async () => {
+      const deptIds = departments.map(d => d.id);
+      const { data, error } = await supabase
+        .from('budget_allocations')
+        .select('id, cycle_id, department_id, status')
+        .in('department_id', deptIds)
+        .in('status', ['submitted', 'under_review']);
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: departments.length > 0
   });
 
   // Aggregate stats across all departments for summary cards
@@ -331,9 +348,10 @@ const ManagerBudgetDashboard = ({ departments, hasMultipleDepartments = false }:
                       const isAllowed = !cycle.allowed_department_ids || cycle.allowed_department_ids.includes(dept.id);
                       if (!isAllowed) return null;
 
-                      // Check if this department has pending submissions for this cycle
-                      const deptPendingSubs = pendingSubmissions?.filter(
+                      // Check if THIS SPECIFIC department has pending submissions for this cycle
+                      const deptPendingSubs = allDeptPendingSubmissions?.filter(
                         (sub: any) => sub.cycle_id === cycle.id && 
+                        sub.department_id === dept.id &&
                         (sub.status === 'submitted' || sub.status === 'under_review')
                       ) || [];
                       const hasPendingApproval = deptPendingSubs.length > 0;
