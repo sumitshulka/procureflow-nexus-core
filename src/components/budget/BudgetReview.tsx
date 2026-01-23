@@ -453,23 +453,26 @@ const BudgetReview = () => {
           </TableCell>
 
           {/* Actions - only show if there's submitted data to review */}
-          <TableCell className="sticky right-0 z-20 bg-card border-l min-w-[120px] shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]">
-            {hasData ? (
-              <div className="flex justify-center gap-1">
-                <Button size="sm" variant="ghost" onClick={() => handleBulkAction(departmentId, head.id, 'approve')} title="Approve All Periods">
-                  <Check className="h-4 w-4 text-emerald-600" />
-                </Button>
-                <Button size="sm" variant="ghost" onClick={() => handleBulkAction(departmentId, head.id, 'revision')} title="Request Modifications">
-                  <RotateCcw className="h-4 w-4 text-amber-600" />
-                </Button>
-                <Button size="sm" variant="ghost" onClick={() => handleBulkAction(departmentId, head.id, 'reject')} title="Reject">
-                  <X className="h-4 w-4 text-rose-600" />
-                </Button>
-              </div>
-            ) : (
-              <span className="text-xs text-muted-foreground italic">No entry</span>
-            )}
-          </TableCell>
+          {/* Actions - only show if viewing single department AND there's submitted data */}
+          {selectedDepartment !== 'all' && (
+            <TableCell className="sticky right-0 z-20 bg-card border-l min-w-[120px] shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]">
+              {hasData ? (
+                <div className="flex justify-center gap-1">
+                  <Button size="sm" variant="ghost" onClick={() => handleBulkAction(departmentId, head.id, 'approve')} title="Approve All Periods">
+                    <Check className="h-4 w-4 text-emerald-600" />
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => handleBulkAction(departmentId, head.id, 'revision')} title="Request Modifications">
+                    <RotateCcw className="h-4 w-4 text-amber-600" />
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => handleBulkAction(departmentId, head.id, 'reject')} title="Reject">
+                    <X className="h-4 w-4 text-rose-600" />
+                  </Button>
+                </div>
+              ) : (
+                <span className="text-xs text-muted-foreground italic">No entry</span>
+              )}
+            </TableCell>
+          )}
         </TableRow>
 
         {/* Subheads */}
@@ -489,7 +492,9 @@ const BudgetReview = () => {
         </TableCell>
       ))}
       <TableCell className={`text-right bg-muted/30 ${colorClass}`}>{formatAmount(grandTotal)}</TableCell>
-      <TableCell className="sticky right-0 z-20 bg-muted border-l shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]" />
+      {selectedDepartment !== 'all' && (
+        <TableCell className="sticky right-0 z-20 bg-muted border-l shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]" />
+      )}
     </TableRow>
   );
 
@@ -623,7 +628,9 @@ const BudgetReview = () => {
                               <TableHead key={idx} className="text-right min-w-[100px] bg-card">{label}</TableHead>
                             ))}
                             <TableHead className="text-right min-w-[120px] bg-muted">Total</TableHead>
-                            <TableHead className="sticky right-0 z-30 bg-card border-l text-center min-w-[120px] shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]">Actions</TableHead>
+                            {selectedDepartment !== 'all' && (
+                              <TableHead className="sticky right-0 z-30 bg-card border-l text-center min-w-[120px] shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]">Actions</TableHead>
+                            )}
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -661,7 +668,9 @@ const BudgetReview = () => {
                               <TableHead key={idx} className="text-right min-w-[100px] bg-card">{label}</TableHead>
                             ))}
                             <TableHead className="text-right min-w-[120px] bg-muted">Total</TableHead>
-                            <TableHead className="sticky right-0 z-30 bg-card border-l text-center min-w-[120px] shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]">Actions</TableHead>
+                            {selectedDepartment !== 'all' && (
+                              <TableHead className="sticky right-0 z-30 bg-card border-l text-center min-w-[120px] shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]">Actions</TableHead>
+                            )}
                           </TableRow>
                         </TableHeader>
                         <TableBody>
