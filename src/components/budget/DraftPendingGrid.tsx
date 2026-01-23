@@ -1,10 +1,23 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Clock, FileEdit, TrendingUp, TrendingDown } from "lucide-react";
+import { Clock, FileEdit, TrendingUp, TrendingDown, Send, Loader2 } from "lucide-react";
 import { format } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface DraftPendingGridProps {
   submissions: any[];
@@ -21,6 +34,10 @@ interface BudgetHeadInfo {
 }
 
 const DraftPendingGrid = ({ submissions, currencySymbol, departmentName, onEditCycle }: DraftPendingGridProps) => {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [confirmSubmitCycleId, setConfirmSubmitCycleId] = useState<string | null>(null);
+
   // Group submissions by cycle
   const groupedByCycle = useMemo(() => {
     const groups: Record<string, {
@@ -74,19 +91,6 @@ const DraftPendingGrid = ({ submissions, currencySymbol, departmentName, onEditC
     return ['Q1', 'Q2', 'Q3', 'Q4'];
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'draft':
-        return <Badge variant="outline" className="text-xs">Draft</Badge>;
-      case 'submitted':
-        return <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200">Pending</Badge>;
-      case 'under_review':
-        return <Badge variant="secondary" className="text-xs bg-sky-100 text-sky-800 dark:bg-sky-900/50 dark:text-sky-200">Review</Badge>;
-      default:
-        return null;
-    }
-  };
-
   // Get the overall status for a cycle (draft if any draft, else submitted)
   const getCycleStatus = (subs: any[]) => {
     const hasDraft = subs.some(s => s.status === 'draft');
@@ -94,6 +98,64 @@ const DraftPendingGrid = ({ submissions, currencySymbol, departmentName, onEditC
     if (hasDraft && hasSubmitted) return 'mixed';
     if (hasDraft) return 'draft';
     return 'submitted';
+  };
+
+  // Submit mutation
+  const submitMutation = useMutation({
+    mutationFn: async (cycleId: string) => {
+      const group = groupedByCycle[cycleId];
+      if (!group) throw new Error("Cycle not found");
+
+      // Get all draft submission IDs for this cycle
+      const draftIds = group.submissions
+        .filter(s => s.status === 'draft')
+        .map(s => s.id);
+
+      if (draftIds.length === 0) {
+        throw new Error("No draft entries to submit");
+      }
+
+      const { error } = await supabase
+        .from('budget_allocations')
+        .update({ 
+          status: 'submitted',
+          submitted_at: new Date().toISOString()
+        })
+        .in('id', draftIds);
+
+      if (error) throw error;
+      return draftIds.length;
+    },
+    onSuccess: (count) => {
+      queryClient.invalidateQueries({ queryKey: ['manager-pending-submissions'] });
+      queryClient.invalidateQueries({ queryKey: ['manager-approved-submissions'] });
+      queryClient.invalidateQueries({ queryKey: ['manager-all-dept-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['budget-allocations-overview'] });
+      
+      toast({
+        title: "Budget Submitted",
+        description: `${count} budget entries have been submitted for approval.`
+      });
+      setConfirmSubmitCycleId(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Submission Failed",
+        description: error.message,
+        variant: "destructive"
+      });
+      setConfirmSubmitCycleId(null);
+    }
+  });
+
+  const handleSubmitClick = (cycleId: string) => {
+    setConfirmSubmitCycleId(cycleId);
+  };
+
+  const handleConfirmSubmit = () => {
+    if (confirmSubmitCycleId) {
+      submitMutation.mutate(confirmSubmitCycleId);
+    }
   };
 
   const renderTypeSection = (
@@ -226,6 +288,7 @@ const DraftPendingGrid = ({ submissions, currencySymbol, departmentName, onEditC
         });
 
         const cycleStatus = getCycleStatus(group.submissions);
+        const hasDraftEntries = group.submissions.some(s => s.status === 'draft');
         const lastUpdated = group.submissions.reduce((latest, sub) => {
           const subDate = new Date(sub.updated_at || sub.created_at);
           return subDate > latest ? subDate : latest;
@@ -236,8 +299,8 @@ const DraftPendingGrid = ({ submissions, currencySymbol, departmentName, onEditC
         return (
           <Card key={cycleId} className="border-amber-500/30 bg-amber-50/20 dark:bg-amber-950/10">
             <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-3 flex-wrap">
                   <CardTitle className="flex items-center gap-2 text-base">
                     <Clock className="h-5 w-5 text-amber-600" />
                     {group.cycle?.name} (FY {group.cycle?.fiscal_year})
@@ -255,14 +318,30 @@ const DraftPendingGrid = ({ submissions, currencySymbol, departmentName, onEditC
                     <Badge variant="outline">{departmentName}</Badge>
                   )}
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onEditCycle(group.cycle, cycleId)}
-                >
-                  <FileEdit className="h-4 w-4 mr-2" />
-                  Edit Budget
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onEditCycle(group.cycle, cycleId)}
+                  >
+                    <FileEdit className="h-4 w-4 mr-2" />
+                    Edit Budget
+                  </Button>
+                  {hasDraftEntries && (
+                    <Button
+                      size="sm"
+                      onClick={() => handleSubmitClick(cycleId)}
+                      disabled={submitMutation.isPending}
+                    >
+                      {submitMutation.isPending && confirmSubmitCycleId === cycleId ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Send className="h-4 w-4 mr-2" />
+                      )}
+                      Submit for Approval
+                    </Button>
+                  )}
+                </div>
               </div>
               <CardDescription>
                 Last updated: {format(lastUpdated, 'MMM dd, yyyy HH:mm')} • {totalHeads} budget head(s) • {group.submissions.length} entries
@@ -275,6 +354,34 @@ const DraftPendingGrid = ({ submissions, currencySymbol, departmentName, onEditC
           </Card>
         );
       })}
+
+      {/* Confirmation Dialog */}
+      <AlertDialog open={!!confirmSubmitCycleId} onOpenChange={() => setConfirmSubmitCycleId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Submit Budget for Approval?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will submit all draft budget entries for this cycle. Once submitted, you won't be able to edit them until they are reviewed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={submitMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleConfirmSubmit}
+              disabled={submitMutation.isPending}
+            >
+              {submitMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Submitting...
+                </>
+              ) : (
+                'Submit'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };
