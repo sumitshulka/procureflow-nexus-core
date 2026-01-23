@@ -34,9 +34,10 @@ interface BudgetAllocation {
 
 interface ReviewDialogState {
   open: boolean;
-  headId: string | null;
+  headId: string | null;  // null means entire department
   departmentId: string | null;
   mode: 'approve' | 'reject' | 'revision' | null;
+  isBulkDepartment?: boolean;  // true when approving entire department
 }
 
 interface BudgetHead {
@@ -60,7 +61,8 @@ const BudgetReview = () => {
     open: false,
     headId: null,
     departmentId: null,
-    mode: null
+    mode: null,
+    isBulkDepartment: false
   });
   const [reviewNotes, setReviewNotes] = useState("");
   const [approvalAdjustments, setApprovalAdjustments] = useState<Record<string, number>>({});
@@ -313,26 +315,39 @@ const BudgetReview = () => {
     }
   });
 
-  const handleBulkAction = (departmentId: string, headId: string, mode: 'approve' | 'reject' | 'revision') => {
-    setReviewDialog({ open: true, headId, departmentId, mode });
+  const handleBulkAction = (departmentId: string, headId: string | null, mode: 'approve' | 'reject' | 'revision', isBulkDepartment: boolean = false) => {
+    setReviewDialog({ open: true, headId, departmentId, mode, isBulkDepartment });
     setReviewNotes("");
   };
 
   const closeDialog = () => {
-    setReviewDialog({ open: false, headId: null, departmentId: null, mode: null });
+    setReviewDialog({ open: false, headId: null, departmentId: null, mode: null, isBulkDepartment: false });
     setReviewNotes("");
   };
 
   const submitReview = () => {
-    if (!reviewDialog.headId || !reviewDialog.departmentId || !reviewDialog.mode) return;
+    if (!reviewDialog.departmentId || !reviewDialog.mode) return;
 
     const deptData = groupedData[reviewDialog.departmentId];
     if (!deptData) return;
 
-    const allocations = deptData.allocations[reviewDialog.headId];
-    if (!allocations) return;
+    let allocationIds: string[] = [];
 
-    const allocationIds = Object.values(allocations).map(a => a.id);
+    if (reviewDialog.isBulkDepartment) {
+      // Bulk department action - get ALL allocations for this department
+      Object.values(deptData.allocations).forEach(headAllocations => {
+        Object.values(headAllocations).forEach(allocation => {
+          allocationIds.push(allocation.id);
+        });
+      });
+    } else if (reviewDialog.headId) {
+      // Single budget head action
+      const allocations = deptData.allocations[reviewDialog.headId];
+      if (!allocations) return;
+      allocationIds = Object.values(allocations).map(a => a.id);
+    }
+
+    if (allocationIds.length === 0) return;
 
     const statusMap: Record<'approve' | 'reject' | 'revision', 'approved' | 'rejected' | 'revision_requested'> = {
       approve: 'approved',
@@ -374,6 +389,14 @@ const BudgetReview = () => {
   const formatAmount = (amount: number) => `${currencySymbol}${amount.toLocaleString()}`;
 
   const getDialogTitle = () => {
+    if (reviewDialog.isBulkDepartment) {
+      switch (reviewDialog.mode) {
+        case 'approve': return 'Approve Entire Department Budget';
+        case 'reject': return 'Reject Entire Department Budget';
+        case 'revision': return 'Request Modifications for Department';
+        default: return 'Review Budget';
+      }
+    }
     switch (reviewDialog.mode) {
       case 'approve': return 'Approve Budget Line';
       case 'reject': return 'Reject Budget Line';
@@ -383,6 +406,19 @@ const BudgetReview = () => {
   };
 
   const getDialogDescription = () => {
+    if (reviewDialog.isBulkDepartment && reviewDialog.departmentId) {
+      const deptName = groupedData[reviewDialog.departmentId]?.departmentName || 'this department';
+      const totalAllocations = Object.values(groupedData[reviewDialog.departmentId]?.allocations || {})
+        .reduce((sum, headAllocs) => sum + Object.keys(headAllocs).length, 0);
+      
+      switch (reviewDialog.mode) {
+        case 'approve': return `Approve all ${totalAllocations} budget allocations for ${deptName}. This will approve the entire submitted budget.`;
+        case 'reject': return `Reject all ${totalAllocations} budget allocations for ${deptName}. Please provide a reason.`;
+        case 'revision': return `Send all ${totalAllocations} budget allocations for ${deptName} back for modifications. Please provide detailed comments.`;
+        default: return '';
+      }
+    }
+
     const headName = reviewDialog.headId && reviewDialog.departmentId 
       ? groupedData[reviewDialog.departmentId]?.heads.find(h => h.id === reviewDialog.headId)?.name 
       : '';
@@ -458,13 +494,13 @@ const BudgetReview = () => {
             <TableCell className="sticky right-0 z-20 bg-card border-l min-w-[120px] shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]">
               {hasData ? (
                 <div className="flex justify-center gap-1">
-                  <Button size="sm" variant="ghost" onClick={() => handleBulkAction(departmentId, head.id, 'approve')} title="Approve All Periods">
+                  <Button size="sm" variant="ghost" onClick={() => handleBulkAction(departmentId, head.id, 'approve', false)} title="Approve All Periods">
                     <Check className="h-4 w-4 text-emerald-600" />
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={() => handleBulkAction(departmentId, head.id, 'revision')} title="Request Modifications">
+                  <Button size="sm" variant="ghost" onClick={() => handleBulkAction(departmentId, head.id, 'revision', false)} title="Request Modifications">
                     <RotateCcw className="h-4 w-4 text-amber-600" />
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={() => handleBulkAction(departmentId, head.id, 'reject')} title="Reject">
+                  <Button size="sm" variant="ghost" onClick={() => handleBulkAction(departmentId, head.id, 'reject', false)} title="Reject">
                     <X className="h-4 w-4 text-rose-600" />
                   </Button>
                 </div>
@@ -600,12 +636,46 @@ const BudgetReview = () => {
                   <CardTitle className="text-lg">{deptData.departmentName}</CardTitle>
                   <p className="text-sm text-muted-foreground">{deptData.cycleName}</p>
                 </div>
-                <div className="flex items-center gap-4 text-sm">
-                  <span className="text-emerald-600 font-medium">Income: {formatAmount(deptData.totals.incomeTotal)}</span>
-                  <span className="text-rose-600 font-medium">Expense: {formatAmount(deptData.totals.expenseTotal)}</span>
-                  <Badge variant={netTotal >= 0 ? "default" : "destructive"}>
-                    Net: {formatAmount(netTotal)}
-                  </Badge>
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-3 text-sm">
+                    <span className="text-emerald-600 font-medium">Income: {formatAmount(deptData.totals.incomeTotal)}</span>
+                    <span className="text-rose-600 font-medium">Expense: {formatAmount(deptData.totals.expenseTotal)}</span>
+                    <Badge variant={netTotal >= 0 ? "default" : "destructive"}>
+                      Net: {formatAmount(netTotal)}
+                    </Badge>
+                  </div>
+                  {/* Department-level bulk actions */}
+                  {selectedDepartment !== 'all' && (
+                    <div className="flex items-center gap-1 border-l pl-4 ml-2">
+                      <Button 
+                        size="sm" 
+                        variant="default"
+                        className="bg-emerald-600 hover:bg-emerald-700"
+                        onClick={() => handleBulkAction(deptId, null, 'approve', true)}
+                      >
+                        <Check className="h-4 w-4 mr-1" />
+                        Approve All
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        className="border-amber-500 text-amber-600 hover:bg-amber-50"
+                        onClick={() => handleBulkAction(deptId, null, 'revision', true)}
+                      >
+                        <RotateCcw className="h-4 w-4 mr-1" />
+                        Request Revision
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        className="border-rose-500 text-rose-600 hover:bg-rose-50"
+                        onClick={() => handleBulkAction(deptId, null, 'reject', true)}
+                      >
+                        <X className="h-4 w-4 mr-1" />
+                        Reject All
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
             </CardHeader>
@@ -713,7 +783,36 @@ const BudgetReview = () => {
           </DialogHeader>
 
           <div className="space-y-4 py-4">
-            {reviewDialog.mode === 'approve' && reviewDialog.headId && reviewDialog.departmentId && (
+            {/* Show bulk department summary when approving entire department */}
+            {reviewDialog.isBulkDepartment && reviewDialog.departmentId && (
+              <div className="rounded-lg border bg-muted/50 p-4 space-y-2">
+                <div className="text-sm font-medium">Budget Summary</div>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div>Total Income:</div>
+                  <div className="text-right text-emerald-600 font-medium">
+                    {formatAmount(groupedData[reviewDialog.departmentId]?.totals.incomeTotal || 0)}
+                  </div>
+                  <div>Total Expense:</div>
+                  <div className="text-right text-rose-600 font-medium">
+                    {formatAmount(groupedData[reviewDialog.departmentId]?.totals.expenseTotal || 0)}
+                  </div>
+                  <div className="font-medium">Net Budget:</div>
+                  <div className={`text-right font-bold ${
+                    (groupedData[reviewDialog.departmentId]?.totals.incomeTotal || 0) - 
+                    (groupedData[reviewDialog.departmentId]?.totals.expenseTotal || 0) >= 0 
+                      ? 'text-emerald-600' : 'text-rose-600'
+                  }`}>
+                    {formatAmount(
+                      (groupedData[reviewDialog.departmentId]?.totals.incomeTotal || 0) - 
+                      (groupedData[reviewDialog.departmentId]?.totals.expenseTotal || 0)
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Show period-by-period adjustments only for single head approval (not bulk) */}
+            {reviewDialog.mode === 'approve' && reviewDialog.headId && reviewDialog.departmentId && !reviewDialog.isBulkDepartment && (
               <div className="space-y-2">
                 <Label>Review Period Amounts (optional adjustments)</Label>
                 <div className="max-h-[200px] overflow-y-auto space-y-2 border rounded-md p-2">
