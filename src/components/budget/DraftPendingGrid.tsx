@@ -163,7 +163,7 @@ const DraftPendingGrid = ({ submissions, currencySymbol, departmentName, onEditC
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-muted/50">
-                        <TableHead className="sticky left-0 bg-muted/50 z-10 min-w-[200px] font-semibold">
+                        <TableHead className="sticky left-0 bg-muted z-20 min-w-[200px] font-semibold border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                           Budget Head
                         </TableHead>
                         {periodLabels.map((label, idx) => (
@@ -179,7 +179,7 @@ const DraftPendingGrid = ({ submissions, currencySymbol, departmentName, onEditC
                     <TableBody>
                       {budgetHeadsArray.map((head) => (
                         <TableRow key={head.id} className="hover:bg-muted/30">
-                          <TableCell className="sticky left-0 bg-card z-10 border-r">
+                          <TableCell className="sticky left-0 bg-card z-10 border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                             <div>
                               <div className="font-medium">{head.name}</div>
                               <div className="text-xs text-muted-foreground">{head.code}</div>
@@ -212,7 +212,7 @@ const DraftPendingGrid = ({ submissions, currencySymbol, departmentName, onEditC
                       ))}
                       {/* Totals Row */}
                       <TableRow className="bg-muted/50 font-semibold">
-                        <TableCell className="sticky left-0 bg-muted/50 z-10 border-r">
+                        <TableCell className="sticky left-0 bg-muted z-10 border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                           Total
                         </TableCell>
                         {Array.from({ length: group.periodCount }, (_, i) => i + 1).map(periodNumber => (
