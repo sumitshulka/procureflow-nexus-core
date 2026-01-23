@@ -91,7 +91,7 @@ const ManagerBudgetDashboard = ({ departments, hasMultipleDepartments = false }:
     enabled: !!selectedDepartmentId
   });
 
-  // Fetch in-progress/pending/draft submissions for selected department (for DraftPendingGrid)
+  // Fetch in-progress/pending/draft/revision_requested submissions for selected department (for DraftPendingGrid)
   const { data: pendingSubmissions } = useQuery({
     queryKey: ['manager-pending-submissions', selectedDepartmentId],
     queryFn: async () => {
@@ -103,7 +103,7 @@ const ManagerBudgetDashboard = ({ departments, hasMultipleDepartments = false }:
           head:budget_heads(name, code, type)
         `)
         .eq('department_id', selectedDepartmentId)
-        .in('status', ['submitted', 'under_review', 'draft'])
+        .in('status', ['submitted', 'under_review', 'draft', 'revision_requested'])
         .order('updated_at', { ascending: false });
 
       if (error) throw error;
@@ -145,6 +145,7 @@ const ManagerBudgetDashboard = ({ departments, hasMultipleDepartments = false }:
       let totalApproved = 0;
       let pendingCount = 0;
       let draftCount = 0;
+      let revisionCount = 0;
 
       (data || []).forEach(item => {
         if (item.status === 'approved') {
@@ -153,10 +154,12 @@ const ManagerBudgetDashboard = ({ departments, hasMultipleDepartments = false }:
           pendingCount++;
         } else if (item.status === 'draft') {
           draftCount++;
+        } else if (item.status === 'revision_requested') {
+          revisionCount++;
         }
       });
 
-      return { totalApproved, pendingCount, draftCount };
+      return { totalApproved, pendingCount, draftCount, revisionCount };
     },
     enabled: departments.length > 0
   });
@@ -164,6 +167,7 @@ const ManagerBudgetDashboard = ({ departments, hasMultipleDepartments = false }:
   const totalApprovedBudget = allDeptStats?.totalApproved || 0;
   const pendingCount = allDeptStats?.pendingCount || 0;
   const draftCount = allDeptStats?.draftCount || 0;
+  const revisionCount = allDeptStats?.revisionCount || 0;
 
   const getPeriodLabel = (periodNumber: number, periodType: string) => {
     if (periodType === 'monthly') {
@@ -256,7 +260,7 @@ const ManagerBudgetDashboard = ({ departments, hasMultipleDepartments = false }:
       )}
 
       {/* Summary Cards - Aggregated across all departments */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-5">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Approved Budget</CardTitle>
@@ -291,6 +295,17 @@ const ManagerBudgetDashboard = ({ departments, hasMultipleDepartments = false }:
           <CardContent>
             <div className="text-2xl font-bold">{pendingCount}</div>
             <p className="text-xs text-muted-foreground">Awaiting review</p>
+          </CardContent>
+        </Card>
+
+        <Card className={revisionCount > 0 ? "border-amber-500/50 bg-amber-50/50 dark:bg-amber-950/20" : ""}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Needs Revision</CardTitle>
+            <FileEdit className="h-4 w-4 text-amber-500" />
+          </CardHeader>
+          <CardContent>
+            <div className={`text-2xl font-bold ${revisionCount > 0 ? "text-amber-600" : ""}`}>{revisionCount}</div>
+            <p className="text-xs text-muted-foreground">Action required</p>
           </CardContent>
         </Card>
 

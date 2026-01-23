@@ -98,10 +98,13 @@ const DraftPendingGrid = ({ submissions, currencySymbol, departmentName, onEditC
     return ['Q1', 'Q2', 'Q3', 'Q4'];
   };
 
-  // Get the overall status for a cycle (draft if any draft, else submitted)
+  // Get the overall status for a cycle (draft if any draft, else submitted, or revision_requested)
   const getCycleStatus = (subs: any[]) => {
     const hasDraft = subs.some(s => s.status === 'draft');
     const hasSubmitted = subs.some(s => s.status === 'submitted' || s.status === 'under_review');
+    const hasRevisionRequested = subs.some(s => s.status === 'revision_requested');
+    
+    if (hasRevisionRequested) return 'revision_requested';
     if (hasDraft && hasSubmitted) return 'mixed';
     if (hasDraft) return 'draft';
     return 'submitted';
@@ -232,8 +235,56 @@ const DraftPendingGrid = ({ submissions, currencySymbol, departmentName, onEditC
       });
       return;
     }
+    // Allow editing for draft, revision_requested, and mixed statuses
     onEditCycle(cycle, cycleId);
   };
+
+  // Resubmit mutation for revision_requested budgets
+  const resubmitMutation = useMutation({
+    mutationFn: async (cycleId: string) => {
+      const group = groupedByCycle[cycleId];
+      if (!group) throw new Error("Cycle not found");
+
+      // Get all revision_requested IDs for this cycle
+      const revisionIds = group.submissions
+        .filter(s => s.status === 'revision_requested')
+        .map(s => s.id);
+
+      if (revisionIds.length === 0) {
+        throw new Error("No entries to resubmit");
+      }
+
+      const { error } = await supabase
+        .from('budget_allocations')
+        .update({ 
+          status: 'submitted',
+          submitted_at: new Date().toISOString(),
+          notes: null // Clear old notes
+        })
+        .in('id', revisionIds);
+
+      if (error) throw error;
+      return revisionIds.length;
+    },
+    onSuccess: (count) => {
+      queryClient.invalidateQueries({ queryKey: ['manager-pending-submissions'] });
+      queryClient.invalidateQueries({ queryKey: ['manager-approved-submissions'] });
+      queryClient.invalidateQueries({ queryKey: ['manager-all-dept-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['budget-allocations-overview'] });
+      
+      toast({
+        title: "Budget Resubmitted",
+        description: `${count} budget entries have been resubmitted for approval.`
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Resubmission Failed",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
 
   const renderTypeSection = (
     type: 'income' | 'expenditure',
@@ -391,6 +442,9 @@ const DraftPendingGrid = ({ submissions, currencySymbol, departmentName, onEditC
                   {cycleStatus === 'mixed' && (
                     <Badge variant="secondary" className="bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-200">Partially Submitted</Badge>
                   )}
+                  {cycleStatus === 'revision_requested' && (
+                    <Badge variant="destructive" className="bg-amber-500">Revision Requested</Badge>
+                  )}
                   {departmentName && (
                     <Badge variant="outline">{departmentName}</Badge>
                   )}
@@ -455,6 +509,21 @@ const DraftPendingGrid = ({ submissions, currencySymbol, departmentName, onEditC
                       Revoke Submission
                     </Button>
                   )}
+                  {cycleStatus === 'revision_requested' && (
+                    <Button
+                      size="sm"
+                      onClick={() => resubmitMutation.mutate(cycleId)}
+                      disabled={resubmitMutation.isPending}
+                      className="bg-amber-600 hover:bg-amber-700"
+                    >
+                      {resubmitMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Send className="h-4 w-4 mr-2" />
+                      )}
+                      Resubmit for Approval
+                    </Button>
+                  )}
                 </div>
               </div>
               <CardDescription>
@@ -462,6 +531,30 @@ const DraftPendingGrid = ({ submissions, currencySymbol, departmentName, onEditC
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+              {/* Show revision notes if any */}
+              {cycleStatus === 'revision_requested' && (
+                <div className="rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/30 p-4">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <h4 className="font-medium text-amber-800 dark:text-amber-200">Revision Requested</h4>
+                      <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+                        Your budget submission requires modifications. Please review the comments below, make the necessary changes, and resubmit.
+                      </p>
+                      {group.submissions.some(s => s.notes) && (
+                        <div className="mt-3 space-y-2">
+                          <p className="text-xs font-medium text-amber-800 dark:text-amber-200">Admin Comments:</p>
+                          {group.submissions.filter(s => s.notes).map((sub, idx) => (
+                            <div key={idx} className="text-sm bg-white/50 dark:bg-black/20 rounded p-2">
+                              <span className="font-medium">{sub.head?.name}:</span> {sub.notes}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
               {renderTypeSection('income', incomeHeadsArray, submissionLookup, periodLabels, group.periodCount)}
               {renderTypeSection('expenditure', expenditureHeadsArray, submissionLookup, periodLabels, group.periodCount)}
             </CardContent>
