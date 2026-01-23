@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -10,7 +11,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit, Loader2, Info } from "lucide-react";
+import { Plus, Edit, Loader2, Info, BarChart3 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import DataTable from "@/components/common/DataTable";
@@ -31,6 +32,7 @@ type CycleForm = z.infer<typeof cycleSchema>;
 const BudgetCyclesManager = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCycle, setEditingCycle] = useState<any>(null);
   const [openBudgetDialogOpen, setOpenBudgetDialogOpen] = useState(false);
@@ -238,7 +240,14 @@ const BudgetCyclesManager = () => {
     { 
       id: 'name', 
       header: 'Cycle Name',
-      cell: (row: any) => row.name 
+      cell: (row: any) => (
+        <button 
+          onClick={() => navigate(`/budget/cycle/${row.id}`)}
+          className="text-primary hover:underline font-medium text-left"
+        >
+          {row.name}
+        </button>
+      )
     },
     { 
       id: 'fiscal_year', 
@@ -278,6 +287,14 @@ const BudgetCyclesManager = () => {
       header: 'Actions',
       cell: (row: any) => (
         <div className="flex gap-2">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => navigate(`/budget/cycle/${row.id}`)}
+            title="View Dashboard"
+          >
+            <BarChart3 className="h-4 w-4" />
+          </Button>
           {row.status === 'draft' && (
             <Button 
               variant="default" 
