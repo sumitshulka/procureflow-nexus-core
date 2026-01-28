@@ -446,19 +446,29 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const logout = async () => {
+    // Prevent multiple logout attempts
+    if (!wasAuthenticated.current && !session && !user) {
+      console.log("[Logout] Already logged out, navigating to login");
+      navigate("/login", { replace: true });
+      return;
+    }
+    
     try {
       setIsLoading(true);
       
-      // CRITICAL: Clear wasAuthenticated flag FIRST to prevent auth state listener
+      // Store user info for logging before clearing
+      const currentUserId = user?.id;
+      
+      // CRITICAL: Clear all auth flags FIRST to prevent auth state listener
       // from re-triggering navigation or session restoration during logout
       wasAuthenticated.current = false;
       shouldNavigateAfterAuth.current = false;
       
       // Log activity before signing out (only if user exists)
-      if (user) {
+      if (currentUserId) {
         try {
           await logUserActivity("logout");
-          await logSecurityEvent(user.id, 'logout', { 
+          await logSecurityEvent(currentUserId, 'logout', { 
             user_agent: navigator.userAgent 
           });
         } catch (logError) {
@@ -471,9 +481,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setUser(null);
       setUserData(null);
       
-      // Attempt to sign out from Supabase - but don't fail if session is already gone
+      // Attempt to sign out from Supabase with scope: 'local' to avoid server errors
+      // when session is already expired on server side
       try {
-        const { error } = await supabase.auth.signOut();
+        const { error } = await supabase.auth.signOut({ scope: 'local' });
         if (error) {
           // Only log, don't throw - session might already be expired
           console.warn("SignOut returned error (session may already be expired):", error.message);
