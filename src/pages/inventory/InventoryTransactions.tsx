@@ -29,7 +29,7 @@ import {
   Card,
   CardContent,
 } from "@/components/ui/card";
-import { ArrowDownToLine, ArrowUpFromLine, MoveRight, Search, Filter, Trash2, PackageCheck, ExternalLink } from "lucide-react";
+import { ArrowDownToLine, ArrowUpFromLine, Search, Filter, Trash2, PackageCheck } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -379,7 +379,7 @@ const InventoryTransactions = () => {
     <div className="page-container">
       <PageHeader
         title="Inventory Transactions"
-        description="Manage inventory check-ins, check-outs, and transfers"
+        description="Manage inventory check-ins and check-outs"
       />
 
       {/* Delivery Details Dialog */}
@@ -423,7 +423,7 @@ const InventoryTransactions = () => {
       </AlertDialog>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-6">
-        <TabsList className="grid grid-cols-4 w-full">
+        <TabsList className="grid grid-cols-3 w-full">
           <TabsTrigger value="transactions">All Transactions</TabsTrigger>
           <TabsTrigger value="check_in">
             <ArrowDownToLine className="w-4 h-4 mr-2" />
@@ -432,10 +432,6 @@ const InventoryTransactions = () => {
           <TabsTrigger value="check_out">
             <ArrowUpFromLine className="w-4 h-4 mr-2" />
             Check Out
-          </TabsTrigger>
-          <TabsTrigger value="transfer">
-            <MoveRight className="w-4 h-4 mr-2" />
-            Transfer
           </TabsTrigger>
         </TabsList>
 
@@ -460,7 +456,6 @@ const InventoryTransactions = () => {
                   <SelectItem value="all">All Types</SelectItem>
                   <SelectItem value="check_in">Check In</SelectItem>
                   <SelectItem value="check_out">Check Out</SelectItem>
-                  <SelectItem value="transfer">Transfer</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -528,27 +523,6 @@ const InventoryTransactions = () => {
                   setActiveTab("transactions");
                 }}
               />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="transfer">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-center py-12 space-y-4">
-                <MoveRight className="h-12 w-12 mx-auto text-muted-foreground" />
-                <div>
-                  <h3 className="text-lg font-semibold">Warehouse Transfers</h3>
-                  <p className="text-muted-foreground mt-1">
-                    Inter-warehouse transfers are now managed with full batch tracking, 
-                    courier details, and multi-step workflow.
-                  </p>
-                </div>
-                <Button onClick={() => navigate("/inventory/transfers")}>
-                  <ExternalLink className="h-4 w-4 mr-2" />
-                  Go to Warehouse Transfers
-                </Button>
-              </div>
             </CardContent>
           </Card>
         </TabsContent>
