@@ -1042,6 +1042,251 @@ export type Database = {
           },
         ]
       }
+      goods_received_notes: {
+        Row: {
+          approval_comments: string | null
+          approved_at: string | null
+          approved_by: string | null
+          attachments: Json | null
+          created_at: string
+          created_by: string
+          discrepancies: string | null
+          grn_number: string
+          id: string
+          is_published_to_vendor: boolean | null
+          published_at: string | null
+          purchase_order_id: string
+          receipt_date: string
+          received_by: string
+          rejected_at: string | null
+          rejected_by: string | null
+          rejection_reason: string | null
+          remarks: string | null
+          status: Database["public"]["Enums"]["grn_status"]
+          updated_at: string
+          vendor_id: string
+          warehouse_id: string | null
+        }
+        Insert: {
+          approval_comments?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          attachments?: Json | null
+          created_at?: string
+          created_by: string
+          discrepancies?: string | null
+          grn_number: string
+          id?: string
+          is_published_to_vendor?: boolean | null
+          published_at?: string | null
+          purchase_order_id: string
+          receipt_date?: string
+          received_by: string
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_reason?: string | null
+          remarks?: string | null
+          status?: Database["public"]["Enums"]["grn_status"]
+          updated_at?: string
+          vendor_id: string
+          warehouse_id?: string | null
+        }
+        Update: {
+          approval_comments?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          attachments?: Json | null
+          created_at?: string
+          created_by?: string
+          discrepancies?: string | null
+          grn_number?: string
+          id?: string
+          is_published_to_vendor?: boolean | null
+          published_at?: string | null
+          purchase_order_id?: string
+          receipt_date?: string
+          received_by?: string
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_reason?: string | null
+          remarks?: string | null
+          status?: Database["public"]["Enums"]["grn_status"]
+          updated_at?: string
+          vendor_id?: string
+          warehouse_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "goods_received_notes_purchase_order_id_fkey"
+            columns: ["purchase_order_id"]
+            isOneToOne: false
+            referencedRelation: "po_delivery_summary"
+            referencedColumns: ["po_id"]
+          },
+          {
+            foreignKeyName: "goods_received_notes_purchase_order_id_fkey"
+            columns: ["purchase_order_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goods_received_notes_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_registrations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goods_received_notes_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      grn_invoice_links: {
+        Row: {
+          grn_id: string
+          id: string
+          invoice_id: string
+          linked_at: string
+          linked_by: string
+          notes: string | null
+        }
+        Insert: {
+          grn_id: string
+          id?: string
+          invoice_id: string
+          linked_at?: string
+          linked_by: string
+          notes?: string | null
+        }
+        Update: {
+          grn_id?: string
+          id?: string
+          invoice_id?: string
+          linked_at?: string
+          linked_by?: string
+          notes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grn_invoice_links_grn_id_fkey"
+            columns: ["grn_id"]
+            isOneToOne: false
+            referencedRelation: "goods_received_notes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grn_invoice_links_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grn_invoice_links_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "three_way_match_results"
+            referencedColumns: ["invoice_id"]
+          },
+        ]
+      }
+      grn_items: {
+        Row: {
+          batch_number: string | null
+          condition_remarks: string | null
+          created_at: string
+          description: string
+          expiry_date: string | null
+          grn_id: string
+          id: string
+          po_item_id: string
+          product_id: string | null
+          quantity_accepted: number
+          quantity_ordered: number
+          quantity_received: number
+          quantity_rejected: number
+          rejection_reason: string | null
+          serial_numbers: string[] | null
+          total_value: number
+          unit_price: number
+          updated_at: string
+        }
+        Insert: {
+          batch_number?: string | null
+          condition_remarks?: string | null
+          created_at?: string
+          description: string
+          expiry_date?: string | null
+          grn_id: string
+          id?: string
+          po_item_id: string
+          product_id?: string | null
+          quantity_accepted?: number
+          quantity_ordered: number
+          quantity_received: number
+          quantity_rejected?: number
+          rejection_reason?: string | null
+          serial_numbers?: string[] | null
+          total_value: number
+          unit_price: number
+          updated_at?: string
+        }
+        Update: {
+          batch_number?: string | null
+          condition_remarks?: string | null
+          created_at?: string
+          description?: string
+          expiry_date?: string | null
+          grn_id?: string
+          id?: string
+          po_item_id?: string
+          product_id?: string | null
+          quantity_accepted?: number
+          quantity_ordered?: number
+          quantity_received?: number
+          quantity_rejected?: number
+          rejection_reason?: string | null
+          serial_numbers?: string[] | null
+          total_value?: number
+          unit_price?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grn_items_grn_id_fkey"
+            columns: ["grn_id"]
+            isOneToOne: false
+            referencedRelation: "goods_received_notes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grn_items_po_item_id_fkey"
+            columns: ["po_item_id"]
+            isOneToOne: false
+            referencedRelation: "po_item_receipt_status"
+            referencedColumns: ["po_item_id"]
+          },
+          {
+            foreignKeyName: "grn_items_po_item_id_fkey"
+            columns: ["po_item_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_order_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grn_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory_items: {
         Row: {
           id: string
@@ -1225,6 +1470,13 @@ export type Database = {
             referencedRelation: "invoices"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "invoice_approval_history_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "three_way_match_results"
+            referencedColumns: ["invoice_id"]
+          },
         ]
       }
       invoice_approval_levels: {
@@ -1380,6 +1632,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "invoices"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "three_way_match_results"
+            referencedColumns: ["invoice_id"]
+          },
+          {
+            foreignKeyName: "invoice_items_po_item_id_fkey"
+            columns: ["po_item_id"]
+            isOneToOne: false
+            referencedRelation: "po_item_receipt_status"
+            referencedColumns: ["po_item_id"]
           },
           {
             foreignKeyName: "invoice_items_po_item_id_fkey"
@@ -1544,6 +1810,13 @@ export type Database = {
             foreignKeyName: "invoices_purchase_order_id_fkey"
             columns: ["purchase_order_id"]
             isOneToOne: false
+            referencedRelation: "po_delivery_summary"
+            referencedColumns: ["po_id"]
+          },
+          {
+            foreignKeyName: "invoices_purchase_order_id_fkey"
+            columns: ["purchase_order_id"]
+            isOneToOne: false
             referencedRelation: "purchase_orders"
             referencedColumns: ["id"]
           },
@@ -1599,6 +1872,51 @@ export type Database = {
           postal_code?: string | null
           state?: string | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      matching_settings: {
+        Row: {
+          allow_over_receipt: boolean | null
+          auto_approve_matched: boolean | null
+          created_at: string
+          created_by: string | null
+          id: string
+          price_tolerance_percentage: number | null
+          quantity_tolerance_percentage: number | null
+          require_grn_for_invoice: boolean | null
+          strict_matching_mode: boolean | null
+          tax_tolerance_percentage: number | null
+          total_tolerance_percentage: number | null
+          updated_at: string
+        }
+        Insert: {
+          allow_over_receipt?: boolean | null
+          auto_approve_matched?: boolean | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          price_tolerance_percentage?: number | null
+          quantity_tolerance_percentage?: number | null
+          require_grn_for_invoice?: boolean | null
+          strict_matching_mode?: boolean | null
+          tax_tolerance_percentage?: number | null
+          total_tolerance_percentage?: number | null
+          updated_at?: string
+        }
+        Update: {
+          allow_over_receipt?: boolean | null
+          auto_approve_matched?: boolean | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          price_tolerance_percentage?: number | null
+          quantity_tolerance_percentage?: number | null
+          require_grn_for_invoice?: boolean | null
+          strict_matching_mode?: boolean | null
+          tax_tolerance_percentage?: number | null
+          total_tolerance_percentage?: number | null
+          updated_at?: string
         }
         Relationships: []
       }
@@ -1807,6 +2125,13 @@ export type Database = {
             foreignKeyName: "po_approval_history_purchase_order_id_fkey"
             columns: ["purchase_order_id"]
             isOneToOne: false
+            referencedRelation: "po_delivery_summary"
+            referencedColumns: ["po_id"]
+          },
+          {
+            foreignKeyName: "po_approval_history_purchase_order_id_fkey"
+            columns: ["purchase_order_id"]
+            isOneToOne: false
             referencedRelation: "purchase_orders"
             referencedColumns: ["id"]
           },
@@ -1938,6 +2263,13 @@ export type Database = {
           subject?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "po_email_logs_purchase_order_id_fkey"
+            columns: ["purchase_order_id"]
+            isOneToOne: false
+            referencedRelation: "po_delivery_summary"
+            referencedColumns: ["po_id"]
+          },
           {
             foreignKeyName: "po_email_logs_purchase_order_id_fkey"
             columns: ["purchase_order_id"]
@@ -2275,6 +2607,13 @@ export type Database = {
             foreignKeyName: "product_price_history_purchase_order_id_fkey"
             columns: ["purchase_order_id"]
             isOneToOne: false
+            referencedRelation: "po_delivery_summary"
+            referencedColumns: ["po_id"]
+          },
+          {
+            foreignKeyName: "product_price_history_purchase_order_id_fkey"
+            columns: ["purchase_order_id"]
+            isOneToOne: false
             referencedRelation: "purchase_orders"
             referencedColumns: ["id"]
           },
@@ -2491,6 +2830,13 @@ export type Database = {
             foreignKeyName: "purchase_order_items_po_id_fkey"
             columns: ["po_id"]
             isOneToOne: false
+            referencedRelation: "po_delivery_summary"
+            referencedColumns: ["po_id"]
+          },
+          {
+            foreignKeyName: "purchase_order_items_po_id_fkey"
+            columns: ["po_id"]
+            isOneToOne: false
             referencedRelation: "purchase_orders"
             referencedColumns: ["id"]
           },
@@ -2523,6 +2869,7 @@ export type Database = {
           currency: string | null
           current_approval_level: number | null
           delivery_address: Json | null
+          delivery_status: string | null
           delivery_terms: string | null
           discount_amount: number | null
           expected_delivery_date: string | null
@@ -2541,6 +2888,8 @@ export type Database = {
           tax_amount: number | null
           terms_and_conditions: string | null
           total_amount: number
+          total_received_quantity: number | null
+          total_received_value: number | null
           updated_at: string
           vendor_id: string
           warranty_terms: string | null
@@ -2557,6 +2906,7 @@ export type Database = {
           currency?: string | null
           current_approval_level?: number | null
           delivery_address?: Json | null
+          delivery_status?: string | null
           delivery_terms?: string | null
           discount_amount?: number | null
           expected_delivery_date?: string | null
@@ -2575,6 +2925,8 @@ export type Database = {
           tax_amount?: number | null
           terms_and_conditions?: string | null
           total_amount: number
+          total_received_quantity?: number | null
+          total_received_value?: number | null
           updated_at?: string
           vendor_id: string
           warranty_terms?: string | null
@@ -2591,6 +2943,7 @@ export type Database = {
           currency?: string | null
           current_approval_level?: number | null
           delivery_address?: Json | null
+          delivery_status?: string | null
           delivery_terms?: string | null
           discount_amount?: number | null
           expected_delivery_date?: string | null
@@ -2609,6 +2962,8 @@ export type Database = {
           tax_amount?: number | null
           terms_and_conditions?: string | null
           total_amount?: number
+          total_received_quantity?: number | null
+          total_received_value?: number | null
           updated_at?: string
           vendor_id?: string
           warranty_terms?: string | null
@@ -4589,6 +4944,106 @@ export type Database = {
           },
         ]
       }
+      po_delivery_summary: {
+        Row: {
+          delivery_status: string | null
+          grn_count: number | null
+          po_id: string | null
+          po_number: string | null
+          po_status: string | null
+          po_value: number | null
+          total_ordered: number | null
+          total_pending: number | null
+          total_received: number | null
+          vendor_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_orders_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_registrations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      po_item_receipt_status: {
+        Row: {
+          description: string | null
+          ordered_value: number | null
+          po_id: string | null
+          po_item_id: string | null
+          product_id: string | null
+          quantity_ordered: number | null
+          quantity_pending: number | null
+          quantity_received: number | null
+          received_value: number | null
+          unit_price: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_order_items_po_id_fkey"
+            columns: ["po_id"]
+            isOneToOne: false
+            referencedRelation: "po_delivery_summary"
+            referencedColumns: ["po_id"]
+          },
+          {
+            foreignKeyName: "purchase_order_items_po_id_fkey"
+            columns: ["po_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_order_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      three_way_match_results: {
+        Row: {
+          grn_value: number | null
+          grn_variance: number | null
+          grn_variance_percent: number | null
+          invoice_amount: number | null
+          invoice_id: string | null
+          invoice_number: string | null
+          linked_grn_count: number | null
+          po_amount: number | null
+          po_number: string | null
+          po_variance: number | null
+          po_variance_percent: number | null
+          purchase_order_id: string | null
+          vendor_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_purchase_order_id_fkey"
+            columns: ["purchase_order_id"]
+            isOneToOne: false
+            referencedRelation: "po_delivery_summary"
+            referencedColumns: ["po_id"]
+          },
+          {
+            foreignKeyName: "invoices_purchase_order_id_fkey"
+            columns: ["purchase_order_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_registrations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_department_history: {
         Row: {
           assigned_at: string | null
@@ -4679,6 +5134,7 @@ export type Database = {
         Args: { p_request_id: string }
         Returns: Json
       }
+      generate_grn_number: { Args: never; Returns: string }
       generate_vendor_number: { Args: never; Returns: string }
       get_applicable_tax_code:
         | {
@@ -4893,6 +5349,13 @@ export type Database = {
         | "quickbooks_enterprise"
         | "tally_prime"
         | "custom_rest"
+      grn_status:
+        | "draft"
+        | "pending_approval"
+        | "approved"
+        | "rejected"
+        | "cancelled"
+      po_delivery_status: "pending" | "partially_received" | "fully_received"
       request_priority: "low" | "medium" | "high" | "urgent"
       request_status:
         | "draft"
@@ -5074,6 +5537,14 @@ export const Constants = {
         "tally_prime",
         "custom_rest",
       ],
+      grn_status: [
+        "draft",
+        "pending_approval",
+        "approved",
+        "rejected",
+        "cancelled",
+      ],
+      po_delivery_status: ["pending", "partially_received", "fully_received"],
       request_priority: ["low", "medium", "high", "urgent"],
       request_status: [
         "draft",
