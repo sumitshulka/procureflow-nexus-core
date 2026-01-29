@@ -53,7 +53,6 @@ import {
   Truck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { TransferItemInput } from "@/types/transfer";
 
 const transferFormSchema = z.object({
   source_warehouse_id: z.string().min(1, "Source warehouse is required"),
@@ -67,7 +66,7 @@ const transferFormSchema = z.object({
       z.object({
         product_id: z.string().min(1),
         product_name: z.string(),
-        batch_number: z.string().min(1),
+        batch_number: z.string().nullable().optional(),
         expiry_date: z.string().nullable().optional(),
         quantity: z.number().min(1, "Quantity must be at least 1"),
         available_quantity: z.number(),
@@ -94,8 +93,9 @@ interface TransferInitiateFormProps {
 }
 
 export function TransferInitiateForm({ onSuccess, onCancel }: TransferInitiateFormProps) {
-  const { initiateTransfer, isInitiating, useAvailableBatches } = useWarehouseTransfers();
-  const [selectedProduct, setSelectedProduct] = useState<string>("");
+  const { initiateTransfer, isInitiating, useWarehouseInventory, useAvailableBatches } = useWarehouseTransfers();
+  const [selectedProductFilter, setSelectedProductFilter] = useState<string>("");
+  const [expandedProduct, setExpandedProduct] = useState<string | null>(null);
 
   const form = useForm<TransferFormValues>({
     resolver: zodResolver(transferFormSchema),
@@ -115,7 +115,6 @@ export function TransferInitiateForm({ onSuccess, onCancel }: TransferInitiateFo
   });
 
   const sourceWarehouseId = form.watch("source_warehouse_id");
-  const targetWarehouseId = form.watch("target_warehouse_id");
 
   // Fetch warehouses
   const { data: warehouses = [] } = useQuery({
@@ -131,30 +130,24 @@ export function TransferInitiateForm({ onSuccess, onCancel }: TransferInitiateFo
     },
   });
 
-  // Fetch products
-  const { data: products = [] } = useQuery({
-    queryKey: ["products_for_transfer"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("products")
-        .select("id, name")
-        .eq("is_active", true)
-        .order("name");
-      if (error) throw error;
-      return data;
-    },
-  });
+  // Fetch inventory items (products) for source warehouse
+  const { data: inventoryItems = [], isLoading: inventoryLoading } = useWarehouseInventory(sourceWarehouseId);
 
-  // Fetch available batches
-  const { data: availableBatches = [], isLoading: batchesLoading } = useAvailableBatches(sourceWarehouseId);
+  // Fetch available batches for source warehouse
+  const { data: availableBatches = [] } = useAvailableBatches(sourceWarehouseId);
 
-  // Filter batches by selected product
-  const filteredBatches = selectedProduct
-    ? availableBatches.filter((b) => b.product_id === selectedProduct)
-    : availableBatches;
+  // Filter inventory items by selected product
+  const filteredInventory = selectedProductFilter
+    ? inventoryItems.filter((item) => item.product_id === selectedProductFilter)
+    : inventoryItems;
 
   // Get target warehouses (exclude source)
   const targetWarehouses = warehouses.filter((w) => w.id !== sourceWarehouseId);
+
+  // Get batches for a specific product
+  const getBatchesForProduct = (productId: string) => {
+    return availableBatches.filter((b) => b.product_id === productId);
+  };
 
   const getExpiryStatus = (expiryDate: string | null) => {
     if (!expiryDate) return null;
@@ -170,6 +163,27 @@ export function TransferInitiateForm({ onSuccess, onCancel }: TransferInitiateFo
     return { label: "Valid", variant: "success" as const };
   };
 
+  // Add product without batch
+  const addProductToItems = (product: typeof inventoryItems[0]) => {
+    const existingIndex = fields.findIndex(
+      (f) => f.product_id === product.product_id && !f.batch_number
+    );
+
+    if (existingIndex >= 0) return;
+
+    append({
+      product_id: product.product_id,
+      product_name: product.product_name,
+      batch_number: null,
+      expiry_date: null,
+      quantity: 1,
+      available_quantity: product.available_quantity,
+      unit_price: product.unit_price,
+      currency: product.currency || "USD",
+    });
+  };
+
+  // Add specific batch to items
   const addBatchToItems = (batch: typeof availableBatches[0]) => {
     const existingIndex = fields.findIndex(
       (f) => f.batch_number === batch.batch_number && f.product_id === batch.product_id
@@ -201,7 +215,7 @@ export function TransferInitiateForm({ onSuccess, onCancel }: TransferInitiateFo
         items: data.items.map((item) => ({
           product_id: item.product_id,
           product_name: item.product_name,
-          batch_number: item.batch_number,
+          batch_number: item.batch_number || undefined,
           expiry_date: item.expiry_date || undefined,
           quantity: item.quantity,
           available_quantity: item.available_quantity,
@@ -211,6 +225,16 @@ export function TransferInitiateForm({ onSuccess, onCancel }: TransferInitiateFo
       },
       { onSuccess }
     );
+  };
+
+  // Check if product is already added (without batch)
+  const isProductAdded = (productId: string) => {
+    return fields.some((f) => f.product_id === productId && !f.batch_number);
+  };
+
+  // Check if batch is already added
+  const isBatchAdded = (productId: string, batchNumber: string) => {
+    return fields.some((f) => f.product_id === productId && f.batch_number === batchNumber);
   };
 
   return (
@@ -223,7 +247,7 @@ export function TransferInitiateForm({ onSuccess, onCancel }: TransferInitiateFo
               Initiate Warehouse Transfer
             </CardTitle>
             <CardDescription>
-              Transfer inventory items between warehouses with batch tracking
+              Transfer inventory items between warehouses. Select products and optionally specify batches if available.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -239,6 +263,7 @@ export function TransferInitiateForm({ onSuccess, onCancel }: TransferInitiateFo
                       onValueChange={(value) => {
                         field.onChange(value);
                         form.setValue("items", []);
+                        setExpandedProduct(null);
                       }}
                       value={field.value}
                     >
@@ -359,7 +384,7 @@ export function TransferInitiateForm({ onSuccess, onCancel }: TransferInitiateFo
               </div>
             </div>
 
-            {/* Batch Selection */}
+            {/* Product Selection */}
             {sourceWarehouseId && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
@@ -367,99 +392,155 @@ export function TransferInitiateForm({ onSuccess, onCancel }: TransferInitiateFo
                     <Package className="h-4 w-4" />
                     Select Items to Transfer
                   </h4>
-                  <Select value={selectedProduct || "all"} onValueChange={(val) => setSelectedProduct(val === "all" ? "" : val)}>
+                  <Select 
+                    value={selectedProductFilter || "all"} 
+                    onValueChange={(val) => setSelectedProductFilter(val === "all" ? "" : val)}
+                  >
                     <SelectTrigger className="w-[200px]">
                       <SelectValue placeholder="Filter by product" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Products</SelectItem>
-                      {products.map((product) => (
-                        <SelectItem key={product.id} value={product.id}>
-                          {product.name}
+                      {inventoryItems.map((item) => (
+                        <SelectItem key={item.product_id} value={item.product_id}>
+                          {item.product_name}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
 
-                {batchesLoading ? (
+                {inventoryLoading ? (
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin" />
                   </div>
-                ) : filteredBatches.length === 0 ? (
+                ) : filteredInventory.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
-                    No batches available in this warehouse
+                    No products available in this warehouse
                   </div>
                 ) : (
-                  <div className="border rounded-lg max-h-[300px] overflow-auto">
+                  <div className="border rounded-lg max-h-[400px] overflow-auto">
                     <Table>
                       <TableHeader>
                         <TableRow>
                           <TableHead>Product</TableHead>
-                          <TableHead>Batch #</TableHead>
-                          <TableHead>Available</TableHead>
-                          <TableHead>Expiry</TableHead>
-                          <TableHead>Status</TableHead>
+                          <TableHead>SKU</TableHead>
+                          <TableHead>Available Qty</TableHead>
+                          <TableHead>Batches</TableHead>
                           <TableHead></TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {filteredBatches.map((batch) => {
-                          const expiryStatus = getExpiryStatus(batch.expiry_date);
-                          const isAdded = fields.some(
-                            (f) =>
-                              f.batch_number === batch.batch_number &&
-                              f.product_id === batch.product_id
-                          );
+                        {filteredInventory.map((product) => {
+                          const productBatches = getBatchesForProduct(product.product_id);
+                          const hasBatches = productBatches.length > 0;
+                          const isExpanded = expandedProduct === product.product_id;
+                          const productAdded = isProductAdded(product.product_id);
 
                           return (
-                            <TableRow
-                              key={`${batch.batch_number}_${batch.product_id}`}
-                              className={isAdded ? "bg-muted/50" : undefined}
-                            >
-                              <TableCell className="font-medium">
-                                {batch.product_name}
-                              </TableCell>
-                              <TableCell>{batch.batch_number}</TableCell>
-                              <TableCell>{batch.quantity}</TableCell>
-                              <TableCell>
-                                {batch.expiry_date
-                                  ? format(new Date(batch.expiry_date), "MMM dd, yyyy")
-                                  : "N/A"}
-                              </TableCell>
-                              <TableCell>
-                                {expiryStatus && (
-                                  <Badge
-                                    variant={
-                                      expiryStatus.variant === "success"
-                                        ? "default"
-                                        : expiryStatus.variant
-                                    }
-                                    className={
-                                      expiryStatus.variant === "success"
-                                        ? "bg-green-100 text-green-800"
-                                        : expiryStatus.variant === "warning"
-                                        ? "bg-yellow-100 text-yellow-800"
-                                        : undefined
-                                    }
+                            <React.Fragment key={product.product_id}>
+                              <TableRow className={productAdded ? "bg-muted/50" : undefined}>
+                                <TableCell className="font-medium">
+                                  {product.product_name}
+                                </TableCell>
+                                <TableCell className="text-muted-foreground">
+                                  {product.product_sku || "-"}
+                                </TableCell>
+                                <TableCell>{product.available_quantity}</TableCell>
+                                <TableCell>
+                                  {hasBatches ? (
+                                    <Button
+                                      type="button"
+                                      variant="link"
+                                      size="sm"
+                                      className="h-auto p-0"
+                                      onClick={() => setExpandedProduct(isExpanded ? null : product.product_id)}
+                                    >
+                                      {productBatches.length} batch{productBatches.length > 1 ? "es" : ""} 
+                                      {isExpanded ? " ▲" : " ▼"}
+                                    </Button>
+                                  ) : (
+                                    <span className="text-muted-foreground text-sm">No batches</span>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  {!hasBatches && (
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant={productAdded ? "secondary" : "outline"}
+                                      onClick={() => addProductToItems(product)}
+                                      disabled={productAdded}
+                                    >
+                                      <Plus className="h-4 w-4 mr-1" />
+                                      {productAdded ? "Added" : "Add"}
+                                    </Button>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                              
+                              {/* Expanded batch rows */}
+                              {isExpanded && productBatches.map((batch) => {
+                                const expiryStatus = getExpiryStatus(batch.expiry_date);
+                                const batchAdded = isBatchAdded(batch.product_id, batch.batch_number);
+
+                                return (
+                                  <TableRow 
+                                    key={`${batch.product_id}_${batch.batch_number}`}
+                                    className={cn(
+                                      "bg-muted/30",
+                                      batchAdded && "bg-muted/50"
+                                    )}
                                   >
-                                    {expiryStatus.label}
-                                  </Badge>
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant={isAdded ? "secondary" : "outline"}
-                                  onClick={() => addBatchToItems(batch)}
-                                  disabled={isAdded}
-                                >
-                                  <Plus className="h-4 w-4 mr-1" />
-                                  {isAdded ? "Added" : "Add"}
-                                </Button>
-                              </TableCell>
-                            </TableRow>
+                                    <TableCell className="pl-8">
+                                      <span className="text-muted-foreground">└</span>{" "}
+                                      Batch: <span className="font-mono">{batch.batch_number}</span>
+                                    </TableCell>
+                                    <TableCell></TableCell>
+                                    <TableCell>{batch.quantity}</TableCell>
+                                    <TableCell>
+                                      {batch.expiry_date && (
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-sm">
+                                            {format(new Date(batch.expiry_date), "MMM dd, yyyy")}
+                                          </span>
+                                          {expiryStatus && (
+                                            <Badge
+                                              variant={
+                                                expiryStatus.variant === "success"
+                                                  ? "default"
+                                                  : expiryStatus.variant
+                                              }
+                                              className={
+                                                expiryStatus.variant === "success"
+                                                  ? "bg-green-100 text-green-800"
+                                                  : expiryStatus.variant === "warning"
+                                                  ? "bg-yellow-100 text-yellow-800"
+                                                  : undefined
+                                              }
+                                            >
+                                              {expiryStatus.label}
+                                            </Badge>
+                                          )}
+                                        </div>
+                                      )}
+                                    </TableCell>
+                                    <TableCell>
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        variant={batchAdded ? "secondary" : "outline"}
+                                        onClick={() => addBatchToItems(batch)}
+                                        disabled={batchAdded}
+                                      >
+                                        <Plus className="h-4 w-4 mr-1" />
+                                        {batchAdded ? "Added" : "Add"}
+                                      </Button>
+                                    </TableCell>
+                                  </TableRow>
+                                );
+                              })}
+                            </React.Fragment>
                           );
                         })}
                       </TableBody>
@@ -490,7 +571,13 @@ export function TransferInitiateForm({ onSuccess, onCancel }: TransferInitiateFo
                           <TableCell className="font-medium">
                             {field.product_name}
                           </TableCell>
-                          <TableCell>{field.batch_number}</TableCell>
+                          <TableCell>
+                            {field.batch_number ? (
+                              <span className="font-mono">{field.batch_number}</span>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
                           <TableCell>{field.available_quantity}</TableCell>
                           <TableCell>
                             <Controller

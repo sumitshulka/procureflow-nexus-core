@@ -22,6 +22,16 @@ interface BatchInfo {
   currency: string | null;
 }
 
+interface WarehouseInventoryItem {
+  product_id: string;
+  product_name: string;
+  product_sku: string | null;
+  warehouse_id: string;
+  available_quantity: number;
+  unit_price: number | null;
+  currency: string | null;
+}
+
 export function useWarehouseTransfers() {
   const { toast } = useToast();
   const { userData } = useAuth();
@@ -198,6 +208,69 @@ export function useWarehouseTransfers() {
       enabled: !!warehouseId,
     });
 
+  // Fetch inventory items (products) for a warehouse - includes products without batches
+  const useWarehouseInventory = (warehouseId: string | undefined) =>
+    useQuery({
+      queryKey: ["warehouse_inventory_for_transfer", warehouseId],
+      queryFn: async () => {
+        if (!warehouseId) return [];
+
+        // Fetch inventory items with product details
+        const { data: inventoryItems, error } = await supabase
+          .from("inventory_items")
+          .select(`
+            id,
+            product_id,
+            quantity,
+            warehouse_id,
+            product:product_id(id, name, sku)
+          `)
+          .eq("warehouse_id", warehouseId)
+          .gt("quantity", 0);
+
+        if (error) throw error;
+
+        // Get pending outgoing transfers to calculate reserved quantity
+        const { data: outTransfers } = await supabase
+          .from("warehouse_transfers")
+          .select(`
+            id,
+            items:warehouse_transfer_items(product_id, quantity_sent, quantity_returned)
+          `)
+          .eq("source_warehouse_id", warehouseId)
+          .in("status", ["initiated", "in_transit"]);
+
+        // Calculate reserved quantities per product
+        const reservedMap = new Map<string, number>();
+        outTransfers?.forEach((transfer: any) => {
+          transfer.items?.forEach((item: any) => {
+            const reserved = item.quantity_sent - (item.quantity_returned || 0);
+            const current = reservedMap.get(item.product_id) || 0;
+            reservedMap.set(item.product_id, current + reserved);
+          });
+        });
+
+        // Map to inventory items with available quantity
+        const items: WarehouseInventoryItem[] = (inventoryItems || []).map((inv: any) => {
+          const reserved = reservedMap.get(inv.product_id) || 0;
+          const available = inv.quantity - reserved;
+          
+          return {
+            product_id: inv.product_id,
+            product_name: inv.product?.name || "Unknown",
+            product_sku: inv.product?.sku || null,
+            warehouse_id: warehouseId,
+            available_quantity: Math.max(0, available),
+            unit_price: null, // Will be set from batch if available
+            currency: "USD",
+          };
+        });
+
+        return items.filter(item => item.available_quantity > 0);
+      },
+      enabled: !!warehouseId,
+    });
+
   // Initiate transfer mutation
   const initiateTransferMutation = useMutation({
     mutationFn: async (values: TransferInitiateFormValues) => {
@@ -226,7 +299,7 @@ export function useWarehouseTransfers() {
       const itemsToInsert = values.items.map((item) => ({
         transfer_id: transfer.id,
         product_id: item.product_id,
-        batch_number: item.batch_number,
+        batch_number: item.batch_number || null, // Optional - not all products have batches
         expiry_date: item.expiry_date || null,
         unit_price: item.unit_price || null,
         currency: item.currency || "USD",
@@ -610,6 +683,7 @@ export function useWarehouseTransfers() {
     error: transfersQuery.error,
     useTransferDetail,
     useAvailableBatches,
+    useWarehouseInventory,
     initiateTransfer: initiateTransferMutation.mutate,
     isInitiating: initiateTransferMutation.isPending,
     dispatchTransfer: dispatchTransferMutation.mutate,

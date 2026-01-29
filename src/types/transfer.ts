@@ -65,7 +65,7 @@ export interface WarehouseTransferItem {
   id: string;
   transfer_id: string;
   product_id: string;
-  batch_number: string;
+  batch_number?: string | null; // Optional - not all products have batches
   expiry_date?: string;
   unit_price?: number;
   currency?: string;
@@ -129,8 +129,8 @@ export interface TransferInitiateFormValues {
 export interface TransferItemInput {
   product_id: string;
   product_name: string;
-  batch_number: string;
-  expiry_date?: string;
+  batch_number?: string | null; // Optional - not all products have batches
+  expiry_date?: string | null;
   quantity: number;
   available_quantity: number;
   unit_price?: number;
@@ -145,7 +145,7 @@ export interface TransferReceiveFormValues {
 export interface TransferReceiveItemInput {
   item_id: string;
   product_name: string;
-  batch_number: string;
+  batch_number?: string | null; // Optional - not all products have batches
   quantity_sent: number;
   quantity_received: number;
   quantity_rejected: number;
