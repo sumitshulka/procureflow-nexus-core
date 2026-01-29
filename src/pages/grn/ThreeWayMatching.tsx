@@ -143,7 +143,7 @@ const ThreeWayMatching = () => {
                   Total Tolerance: <strong>{settings.total_tolerance_percentage}%</strong>
                 </span>
               </div>
-              <Button variant="outline" size="sm" onClick={() => navigate('/settings')}>
+              <Button variant="outline" size="sm" onClick={() => navigate('/settings#matching')}>
                 Configure Settings
               </Button>
             </div>
