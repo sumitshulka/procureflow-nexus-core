@@ -93,22 +93,16 @@ const AppSidebar = () => {
       ],
     },
     {
-      title: "Purchase Orders",
+      title: "Purchase Management",
       icon: ShoppingCart,
-      href: "/purchase-orders",
+      href: "/purchase-management",
       moduleRoute: "/purchase-orders",
-    },
-    {
-      title: "Goods Receipt (GRN)",
-      icon: Package,
-      href: "/grn",
-      moduleRoute: "/grn",
-    },
-    {
-      title: "Invoice Management",
-      icon: Receipt,
-      href: "/invoices",
-      moduleRoute: "/invoices",
+      subItems: [
+        { title: "Vendor Management", href: "/vendors" },
+        { title: "Purchase Orders", href: "/purchase-orders" },
+        { title: "Goods Receipt (GRN)", href: "/grn" },
+        { title: "Invoice Management", href: "/invoices" },
+      ],
     },
     {
       title: "Approvals",
@@ -153,13 +147,7 @@ const AppSidebar = () => {
       title: "Reports",
       icon: BarChart,
       href: "/reports",
-      moduleRoute: "/analytics", // Maps to Analytics & Reports module
-    },
-    {
-      title: "Vendor Management",
-      icon: Building2,
-      href: "/vendors",
-      moduleRoute: "/vendors",
+      moduleRoute: "/analytics",
     },
     {
       title: "Vendor Portal",
