@@ -127,7 +127,7 @@ export function useWarehouseTransfers() {
             currency,
             delivery_details,
             product_id,
-            product:product_id(id, name, sku)
+            product:product_id(id, name)
           `)
           .eq("type", "check_in")
           .eq("target_warehouse_id", warehouseId)
@@ -223,7 +223,7 @@ export function useWarehouseTransfers() {
             product_id,
             quantity,
             warehouse_id,
-            product:product_id(id, name, sku)
+            product:product_id(id, name)
           `)
           .eq("warehouse_id", warehouseId)
           .gt("quantity", 0);
@@ -258,10 +258,10 @@ export function useWarehouseTransfers() {
           return {
             product_id: inv.product_id,
             product_name: inv.product?.name || "Unknown",
-            product_sku: inv.product?.sku || null,
+            product_sku: null, // SKU column doesn't exist
             warehouse_id: warehouseId,
             available_quantity: Math.max(0, available),
-            unit_price: null, // Will be set from batch if available
+            unit_price: null,
             currency: "USD",
           };
         });
