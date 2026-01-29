@@ -57,17 +57,12 @@ const AppSidebar = () => {
       moduleRoute: "/dashboard",
     },
     {
-      title: "Product Catalog",
-      icon: ShoppingBag,
-      href: "/products",
-      moduleRoute: "/catalog", // Maps to system_modules route_path
-    },
-    {
       title: "Inventory Management",
       icon: Package,
       href: "/inventory",
       moduleRoute: "/inventory",
       subItems: [
+        { title: "Product Catalog", href: "/products" },
         { title: "Inventory Items", href: "/inventory/items" },
         { title: "Inventory Transactions", href: "/inventory/transactions" },
         { title: "Warehouses", href: "/inventory/warehouses" },
