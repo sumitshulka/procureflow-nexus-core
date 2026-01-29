@@ -60,6 +60,12 @@ import ActivePurchaseOrders from '@/pages/purchase-orders/ActivePurchaseOrders';
 import PurchaseOrderHistory from '@/pages/purchase-orders/PurchaseOrderHistory';
 import PurchaseOrderDetail from '@/pages/purchase-orders/PurchaseOrderDetail';
 
+// GRN Pages
+import GRNList from '@/pages/grn/GRNList';
+import GRNDetail from '@/pages/grn/GRNDetail';
+import CreateGRN from '@/pages/grn/CreateGRN';
+import ThreeWayMatching from '@/pages/grn/ThreeWayMatching';
+
 // Approval Pages
 import Approvals from '@/pages/Approvals';
 
@@ -510,6 +516,40 @@ function App() {
             element={
               <ProtectedRoute requiredRole={UserRole.ADMIN}>
                 <Layout><CreatePurchaseOrder /></Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* GRN Management */}
+          <Route
+            path="/grn"
+            element={
+              <ProtectedRoute requiredRole={UserRole.ADMIN}>
+                <Layout><GRNList /></Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/grn/create"
+            element={
+              <ProtectedRoute requiredRole={UserRole.ADMIN}>
+                <Layout><CreateGRN /></Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/grn/:id"
+            element={
+              <ProtectedRoute requiredRole={UserRole.ADMIN}>
+                <Layout><GRNDetail /></Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/grn/matching"
+            element={
+              <ProtectedRoute requiredRole={UserRole.ADMIN}>
+                <Layout><ThreeWayMatching /></Layout>
               </ProtectedRoute>
             }
           />

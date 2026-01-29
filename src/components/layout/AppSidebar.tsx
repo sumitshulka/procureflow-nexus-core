@@ -99,6 +99,17 @@ const AppSidebar = () => {
       moduleRoute: "/purchase-orders",
     },
     {
+      title: "Goods Receipt (GRN)",
+      icon: Package,
+      href: "/grn",
+      moduleRoute: "/grn",
+      subItems: [
+        { title: "All GRNs", href: "/grn" },
+        { title: "Create GRN", href: "/grn/create" },
+        { title: "3-Way Matching", href: "/grn/matching" },
+      ],
+    },
+    {
       title: "Invoice Management",
       icon: Receipt,
       href: "/invoices",
