@@ -8,7 +8,13 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { Plus, Eye, FileText, Package, Loader2, Search } from 'lucide-react';
+import { Plus, Eye, FileText, Package, Loader2, Search, Scale, MoreHorizontal } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { format } from 'date-fns';
 import { formatCurrency } from '@/utils/currencyUtils';
 
@@ -60,10 +66,16 @@ const GRNList = () => {
           title="Goods Received Notes"
           description="Manage goods receipt against purchase orders"
         />
-        <Button onClick={() => navigate('/grn/create')}>
-          <Plus className="h-4 w-4 mr-2" />
-          Create GRN
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => navigate('/grn/matching')}>
+            <Scale className="h-4 w-4 mr-2" />
+            3-Way Matching
+          </Button>
+          <Button onClick={() => navigate('/grn/create')}>
+            <Plus className="h-4 w-4 mr-2" />
+            Create GRN
+          </Button>
+        </div>
       </div>
 
       {/* Summary Cards */}
@@ -174,13 +186,32 @@ const GRNList = () => {
                     <TableCell>{grn.receiver?.full_name || '-'}</TableCell>
                     <TableCell>{getStatusBadge(grn.status)}</TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => navigate(`/grn/${grn.id}`)}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => navigate(`/grn/${grn.id}`)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => navigate(`/grn/${grn.id}`)}>
+                              <Eye className="h-4 w-4 mr-2" />
+                              View Details
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => navigate(`/grn/matching?grn=${grn.id}`)}>
+                              <Scale className="h-4 w-4 mr-2" />
+                              3-Way Match
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
