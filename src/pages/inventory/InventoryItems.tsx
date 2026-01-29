@@ -21,6 +21,8 @@ import {
 } from "@/components/ui/select";
 import { useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
+import BatchDetailsPanel from "@/components/inventory/BatchDetailsPanel";
+
 
 interface InventoryItem {
   id: string;
@@ -63,6 +65,15 @@ const InventoryItems = () => {
   const [categoryFilter, setCategoryFilter] = useState<string>("");
   const [stockStatusFilter, setStockStatusFilter] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState<string>("");
+  
+  // Batch panel state
+  const [batchPanelOpen, setBatchPanelOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<{ id: string; name: string } | null>(null);
+
+  const handleProductClick = (productId: string, productName: string) => {
+    setSelectedProduct({ id: productId, name: productName });
+    setBatchPanelOpen(true);
+  };
 
   // Fetch inventory items with related data
   const { data: inventoryItems = [], isLoading } = useQuery({
@@ -187,12 +198,15 @@ const InventoryItems = () => {
       id: "product",
       header: "Product",
       cell: (row: InventoryItem) => (
-        <div>
-          <div className="font-medium">{row.product.name}</div>
+        <button
+          onClick={() => handleProductClick(row.product_id, row.product.name)}
+          className="text-left hover:underline focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded"
+        >
+          <div className="font-medium text-primary">{row.product.name}</div>
           <div className="text-sm text-muted-foreground">
             {row.product.category.name}
           </div>
-        </div>
+        </button>
       ),
     },
     {
@@ -359,6 +373,15 @@ const InventoryItems = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Batch Details Panel */}
+      <BatchDetailsPanel
+        open={batchPanelOpen}
+        onOpenChange={setBatchPanelOpen}
+        productId={selectedProduct?.id || null}
+        productName={selectedProduct?.name || ""}
+        warehouseFilter={warehouseFilter}
+      />
     </div>
   );
 };
