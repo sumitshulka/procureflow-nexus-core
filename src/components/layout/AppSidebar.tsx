@@ -81,24 +81,13 @@ const AppSidebar = () => {
       moduleRoute: "/requests",
     },
     {
-      title: "RFP Management",
-      icon: FileText,
-      href: "/rfp",
-      moduleRoute: "/rfp",
-      subItems: [
-        { title: "Create RFP", href: "/rfp/create" },
-        { title: "Active RFPs", href: "/rfp/active" },
-        { title: "RFP Responses", href: "/rfp/responses" },
-        { title: "RFP Templates", href: "/rfp/templates" },
-      ],
-    },
-    {
       title: "Purchase Management",
       icon: ShoppingCart,
       href: "/purchase-management",
       moduleRoute: "/purchase-orders",
       subItems: [
         { title: "Vendor Management", href: "/vendors" },
+        { title: "RFP Management", href: "/rfp" },
         { title: "Purchase Orders", href: "/purchase-orders" },
         { title: "Goods Receipt (GRN)", href: "/grn" },
         { title: "Invoice Management", href: "/invoices" },

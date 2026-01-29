@@ -39,6 +39,7 @@ import ProcurementRequests from '@/pages/ProcurementRequests';
 import ProcurementRequestDetail from '@/pages/ProcurementRequestDetail';
 
 // RFP Pages
+import RfpManagement from '@/pages/rfp/RfpManagement';
 import CreateRfp from '@/pages/CreateRfp';
 import ActiveRfps from '@/pages/rfp/ActiveRfps';
 import RfpResponses from '@/pages/rfp/RfpResponses';
@@ -357,6 +358,14 @@ function App() {
           />
 
           {/* RFP Management */}
+          <Route
+            path="/rfp"
+            element={
+              <ProtectedRoute requiredRole={UserRole.ADMIN}>
+                <Layout><RfpManagement /></Layout>
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/rfp/create"
             element={
