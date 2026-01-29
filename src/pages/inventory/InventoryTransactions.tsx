@@ -1,6 +1,7 @@
 
 import React, { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import DataTable from "@/components/common/DataTable";
 import { format } from "date-fns";
@@ -10,7 +11,6 @@ import {
   CheckInForm, 
   CheckOutForm, 
   CheckOutRequestForm, 
-  TransferForm,
   DeliveryRecordDialog,
   ProductTransactionHistory
 } from "@/components/inventory";
@@ -29,7 +29,7 @@ import {
   Card,
   CardContent,
 } from "@/components/ui/card";
-import { ArrowDownToLine, ArrowUpFromLine, MoveRight, Search, Filter, Trash2, PackageCheck } from "lucide-react";
+import { ArrowDownToLine, ArrowUpFromLine, MoveRight, Search, Filter, Trash2, PackageCheck, ExternalLink } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -43,6 +43,7 @@ interface EnhancedInventoryTransaction extends InventoryTransaction {
 const InventoryTransactions = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const { hasRole } = useAuth();
   const [activeTab, setActiveTab] = useState<string>("transactions");
   const [searchTerm, setSearchTerm] = useState("");
@@ -534,21 +535,20 @@ const InventoryTransactions = () => {
         <TabsContent value="transfer">
           <Card>
             <CardContent className="pt-6">
-              <TransferForm
-                onSuccess={() => {
-                  toast({
-                    title: "Success",
-                    description: "Inventory transfer completed successfully",
-                  });
-                  queryClient.invalidateQueries({
-                    queryKey: ["inventory_transactions"],
-                  });
-                  queryClient.invalidateQueries({
-                    queryKey: ["inventory_items"],
-                  });
-                  setActiveTab("transactions");
-                }}
-              />
+              <div className="text-center py-12 space-y-4">
+                <MoveRight className="h-12 w-12 mx-auto text-muted-foreground" />
+                <div>
+                  <h3 className="text-lg font-semibold">Warehouse Transfers</h3>
+                  <p className="text-muted-foreground mt-1">
+                    Inter-warehouse transfers are now managed with full batch tracking, 
+                    courier details, and multi-step workflow.
+                  </p>
+                </div>
+                <Button onClick={() => navigate("/inventory/transfers")}>
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Go to Warehouse Transfers
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

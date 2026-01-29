@@ -4892,6 +4892,234 @@ export type Database = {
           },
         ]
       }
+      warehouse_transfer_items: {
+        Row: {
+          batch_number: string
+          condition_notes: string | null
+          created_at: string
+          currency: string | null
+          disposal_reason: string | null
+          expiry_date: string | null
+          id: string
+          item_status: string | null
+          product_id: string
+          quantity_disposed: number | null
+          quantity_received: number | null
+          quantity_rejected: number | null
+          quantity_returned: number | null
+          quantity_sent: number
+          rejection_reason: string | null
+          transfer_id: string
+          unit_price: number | null
+          updated_at: string
+        }
+        Insert: {
+          batch_number: string
+          condition_notes?: string | null
+          created_at?: string
+          currency?: string | null
+          disposal_reason?: string | null
+          expiry_date?: string | null
+          id?: string
+          item_status?: string | null
+          product_id: string
+          quantity_disposed?: number | null
+          quantity_received?: number | null
+          quantity_rejected?: number | null
+          quantity_returned?: number | null
+          quantity_sent: number
+          rejection_reason?: string | null
+          transfer_id: string
+          unit_price?: number | null
+          updated_at?: string
+        }
+        Update: {
+          batch_number?: string
+          condition_notes?: string | null
+          created_at?: string
+          currency?: string | null
+          disposal_reason?: string | null
+          expiry_date?: string | null
+          id?: string
+          item_status?: string | null
+          product_id?: string
+          quantity_disposed?: number | null
+          quantity_received?: number | null
+          quantity_rejected?: number | null
+          quantity_returned?: number | null
+          quantity_sent?: number
+          rejection_reason?: string | null
+          transfer_id?: string
+          unit_price?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "warehouse_transfer_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "warehouse_transfer_items_transfer_id_fkey"
+            columns: ["transfer_id"]
+            isOneToOne: false
+            referencedRelation: "warehouse_transfers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      warehouse_transfer_logs: {
+        Row: {
+          action: string
+          action_at: string
+          action_by: string
+          details: Json | null
+          id: string
+          ip_address: string | null
+          new_status: string | null
+          notes: string | null
+          previous_status: string | null
+          transfer_id: string
+          transfer_item_id: string | null
+        }
+        Insert: {
+          action: string
+          action_at?: string
+          action_by: string
+          details?: Json | null
+          id?: string
+          ip_address?: string | null
+          new_status?: string | null
+          notes?: string | null
+          previous_status?: string | null
+          transfer_id: string
+          transfer_item_id?: string | null
+        }
+        Update: {
+          action?: string
+          action_at?: string
+          action_by?: string
+          details?: Json | null
+          id?: string
+          ip_address?: string | null
+          new_status?: string | null
+          notes?: string | null
+          previous_status?: string | null
+          transfer_id?: string
+          transfer_item_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "warehouse_transfer_logs_transfer_id_fkey"
+            columns: ["transfer_id"]
+            isOneToOne: false
+            referencedRelation: "warehouse_transfers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "warehouse_transfer_logs_transfer_item_id_fkey"
+            columns: ["transfer_item_id"]
+            isOneToOne: false
+            referencedRelation: "warehouse_transfer_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      warehouse_transfers: {
+        Row: {
+          attachments: Json | null
+          courier_name: string | null
+          created_at: string
+          dispatch_date: string | null
+          expected_delivery_date: string | null
+          id: string
+          initiated_at: string
+          initiated_by: string
+          initiation_notes: string | null
+          receipt_notes: string | null
+          received_at: string | null
+          received_by: string | null
+          return_courier_name: string | null
+          return_dispatch_date: string | null
+          return_received_at: string | null
+          return_received_by: string | null
+          return_tracking_number: string | null
+          source_warehouse_id: string
+          status: string
+          target_warehouse_id: string
+          tracking_number: string | null
+          transfer_number: string
+          updated_at: string
+        }
+        Insert: {
+          attachments?: Json | null
+          courier_name?: string | null
+          created_at?: string
+          dispatch_date?: string | null
+          expected_delivery_date?: string | null
+          id?: string
+          initiated_at?: string
+          initiated_by: string
+          initiation_notes?: string | null
+          receipt_notes?: string | null
+          received_at?: string | null
+          received_by?: string | null
+          return_courier_name?: string | null
+          return_dispatch_date?: string | null
+          return_received_at?: string | null
+          return_received_by?: string | null
+          return_tracking_number?: string | null
+          source_warehouse_id: string
+          status?: string
+          target_warehouse_id: string
+          tracking_number?: string | null
+          transfer_number: string
+          updated_at?: string
+        }
+        Update: {
+          attachments?: Json | null
+          courier_name?: string | null
+          created_at?: string
+          dispatch_date?: string | null
+          expected_delivery_date?: string | null
+          id?: string
+          initiated_at?: string
+          initiated_by?: string
+          initiation_notes?: string | null
+          receipt_notes?: string | null
+          received_at?: string | null
+          received_by?: string | null
+          return_courier_name?: string | null
+          return_dispatch_date?: string | null
+          return_received_at?: string | null
+          return_received_by?: string | null
+          return_tracking_number?: string | null
+          source_warehouse_id?: string
+          status?: string
+          target_warehouse_id?: string
+          tracking_number?: string | null
+          transfer_number?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "warehouse_transfers_source_warehouse_id_fkey"
+            columns: ["source_warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "warehouse_transfers_target_warehouse_id_fkey"
+            columns: ["target_warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       warehouses: {
         Row: {
           created_at: string | null

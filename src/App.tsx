@@ -30,6 +30,8 @@ import InventoryItems from '@/pages/inventory/InventoryItems';
 import InventoryTransactions from '@/pages/inventory/InventoryTransactions';
 import Warehouses from '@/pages/inventory/Warehouses';
 import BatchManagement from '@/pages/inventory/BatchManagement';
+import WarehouseTransfers from '@/pages/inventory/WarehouseTransfers';
+import TransferDetail from '@/pages/inventory/TransferDetail';
 import InventoryReports from '@/pages/inventory/InventoryReports';
 import InventoryValuationReport from '@/pages/inventory/InventoryValuationReport';
 import StockAgingReport from '@/pages/inventory/StockAgingReport';
@@ -312,6 +314,22 @@ function App() {
             element={
               <ProtectedRoute requiredRole={UserRole.ADMIN}>
                 <Layout><BatchManagement /></Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/inventory/transfers"
+            element={
+              <ProtectedRoute requiredRole={UserRole.ADMIN}>
+                <Layout><WarehouseTransfers /></Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/inventory/transfers/:id"
+            element={
+              <ProtectedRoute requiredRole={UserRole.ADMIN}>
+                <Layout><TransferDetail /></Layout>
               </ProtectedRoute>
             }
           />
