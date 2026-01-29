@@ -367,12 +367,12 @@ export function TransferInitiateForm({ onSuccess, onCancel }: TransferInitiateFo
                     <Package className="h-4 w-4" />
                     Select Items to Transfer
                   </h4>
-                  <Select value={selectedProduct} onValueChange={setSelectedProduct}>
+                  <Select value={selectedProduct || "all"} onValueChange={(val) => setSelectedProduct(val === "all" ? "" : val)}>
                     <SelectTrigger className="w-[200px]">
                       <SelectValue placeholder="Filter by product" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All Products</SelectItem>
+                      <SelectItem value="all">All Products</SelectItem>
                       {products.map((product) => (
                         <SelectItem key={product.id} value={product.id}>
                           {product.name}
