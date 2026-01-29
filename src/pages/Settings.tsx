@@ -12,6 +12,7 @@ import POSettings from "@/components/settings/POSettings";
 import POApprovalMatrix from "@/components/settings/POApprovalMatrix";
 import InvoiceApprovalMatrix from "@/components/settings/InvoiceApprovalMatrix";
 import ApprovalHierarchy from "@/components/user-management/ApprovalHierarchy";
+import MatchingSettings from "@/components/settings/MatchingSettings";
 import { useNavigate, useLocation } from "react-router-dom";
 
 const Settings = () => {
@@ -102,6 +103,12 @@ const Settings = () => {
               >
                 Purchase Orders
               </TabsTrigger>
+              <TabsTrigger 
+                value="matching" 
+                className="data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none border-b-2 border-transparent px-4 py-3 rounded-none"
+              >
+                Matching
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -150,6 +157,10 @@ const Settings = () => {
           
           <TabsContent value="purchase-orders" className="p-6">
             <POSettings />
+          </TabsContent>
+          
+          <TabsContent value="matching" className="p-6">
+            <MatchingSettings />
           </TabsContent>
         </Tabs>
       </div>
