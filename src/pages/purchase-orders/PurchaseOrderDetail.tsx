@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import PageHeader from '@/components/common/PageHeader';
 import POApprovalStatus from '@/components/purchase-orders/POApprovalStatus';
+import POGRNSection from '@/components/grn/POGRNSection';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
@@ -425,6 +426,11 @@ const PurchaseOrderDetail = () => {
             </Card>
           )}
         </div>
+      )}
+
+      {/* GRN Section - Show for approved/sent POs */}
+      {['approved', 'sent', 'acknowledged', 'in_progress', 'delivered', 'completed'].includes(po.status) && (
+        <POGRNSection poId={po.id} currency={po.currency} />
       )}
     </div>
   );
