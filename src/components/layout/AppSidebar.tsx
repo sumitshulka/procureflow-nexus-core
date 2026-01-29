@@ -83,6 +83,7 @@ const AppSidebar = () => {
       subItems: [
         { title: "Product Catalog", href: "/products" },
         { title: "Inventory Items", href: "/inventory/items" },
+        { title: "Batch Management", href: "/inventory/batches" },
         { title: "Inventory Transactions", href: "/inventory/transactions" },
         { title: "Warehouses", href: "/inventory/warehouses" },
         { title: "Inventory Reports", href: "/inventory/reports" },
