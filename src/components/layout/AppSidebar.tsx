@@ -57,19 +57,6 @@ const AppSidebar = () => {
       moduleRoute: "/dashboard",
     },
     {
-      title: "Inventory Management",
-      icon: Package,
-      href: "/inventory",
-      moduleRoute: "/inventory",
-      subItems: [
-        { title: "Product Catalog", href: "/products" },
-        { title: "Inventory Items", href: "/inventory/items" },
-        { title: "Inventory Transactions", href: "/inventory/transactions" },
-        { title: "Warehouses", href: "/inventory/warehouses" },
-        { title: "Inventory Reports", href: "/inventory/reports" },
-      ],
-    },
-    {
       title: "Procurement Requests",
       icon: ListChecks,
       href: "/requests",
@@ -89,10 +76,17 @@ const AppSidebar = () => {
       ],
     },
     {
-      title: "Approvals",
-      icon: ClipboardList,
-      href: "/approvals",
-      moduleRoute: "/approvals",
+      title: "Inventory Management",
+      icon: Package,
+      href: "/inventory",
+      moduleRoute: "/inventory",
+      subItems: [
+        { title: "Product Catalog", href: "/products" },
+        { title: "Inventory Items", href: "/inventory/items" },
+        { title: "Inventory Transactions", href: "/inventory/transactions" },
+        { title: "Warehouses", href: "/inventory/warehouses" },
+        { title: "Inventory Reports", href: "/inventory/reports" },
+      ],
     },
     {
       title: "Budget Management",
@@ -126,6 +120,12 @@ const AppSidebar = () => {
         { title: "Risk Monitoring", href: "/risk/monitoring" },
         { title: "Risk Reports", href: "/risk/reports" },
       ],
+    },
+    {
+      title: "Approvals",
+      icon: ClipboardList,
+      href: "/approvals",
+      moduleRoute: "/approvals",
     },
     {
       title: "Reports",
