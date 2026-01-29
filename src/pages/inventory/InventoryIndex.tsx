@@ -2,7 +2,7 @@
 import React from "react";
 import { Outlet, NavLink } from "react-router-dom";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Package, BarChart4, ArrowRightLeft, Warehouse } from "lucide-react";
+import { Package, BarChart4, ArrowRightLeft, Warehouse, Layers } from "lucide-react";
 import { useLocation } from "react-router-dom";
 
 const InventoryIndex = () => {
@@ -13,6 +13,8 @@ const InventoryIndex = () => {
   const getActiveTab = () => {
     if (currentPath.includes("/inventory/warehouses")) {
       return "warehouses";
+    } else if (currentPath.includes("/inventory/batches")) {
+      return "batches";
     } else if (currentPath.includes("/inventory/transactions")) {
       return "transactions";
     } else if (currentPath.includes("/inventory/reports")) {
@@ -45,6 +47,12 @@ const InventoryIndex = () => {
             <NavLink to="/inventory/warehouses" className="flex items-center gap-2">
               <Warehouse className="h-4 w-4" />
               <span>Warehouses</span>
+            </NavLink>
+          </TabsTrigger>
+          <TabsTrigger value="batches" asChild>
+            <NavLink to="/inventory/batches" className="flex items-center gap-2">
+              <Layers className="h-4 w-4" />
+              <span>Batch Management</span>
             </NavLink>
           </TabsTrigger>
           <TabsTrigger value="transactions" asChild>

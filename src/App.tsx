@@ -29,6 +29,7 @@ import InventoryIndex from '@/pages/inventory/InventoryIndex';
 import InventoryItems from '@/pages/inventory/InventoryItems';
 import InventoryTransactions from '@/pages/inventory/InventoryTransactions';
 import Warehouses from '@/pages/inventory/Warehouses';
+import BatchManagement from '@/pages/inventory/BatchManagement';
 import InventoryReports from '@/pages/inventory/InventoryReports';
 import InventoryValuationReport from '@/pages/inventory/InventoryValuationReport';
 import StockAgingReport from '@/pages/inventory/StockAgingReport';
@@ -303,6 +304,14 @@ function App() {
             element={
               <ProtectedRoute requiredRole={UserRole.ADMIN}>
                 <Layout><Warehouses /></Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/inventory/batches"
+            element={
+              <ProtectedRoute requiredRole={UserRole.ADMIN}>
+                <Layout><BatchManagement /></Layout>
               </ProtectedRoute>
             }
           />
