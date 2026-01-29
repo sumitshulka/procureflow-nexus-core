@@ -3,7 +3,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Workflow, FileText } from "lucide-react";
+import { Workflow, FileText, ArrowLeft } from "lucide-react";
 
 const CreateRfp = () => {
   const navigate = useNavigate();
@@ -11,6 +11,12 @@ const CreateRfp = () => {
   return (
     <div className="container mx-auto py-6">
       <div className="max-w-4xl mx-auto">
+        <div className="mb-6">
+          <Button variant="ghost" onClick={() => navigate("/rfp?tab=rfps")}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to RFP Management
+          </Button>
+        </div>
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold mb-2">Create Request for Proposal</h1>
           <p className="text-muted-foreground">
