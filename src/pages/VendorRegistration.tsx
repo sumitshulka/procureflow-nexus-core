@@ -30,16 +30,62 @@ const GST_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
 const IFSC_REGEX = /^[A-Z]{4}0[A-Z0-9]{6}$/;
 const PHONE_REGEX = /^[\+]?[(]?[0-9]{1,4}[)]?[-\s\.]?[0-9]{1,4}[-\s\.]?[0-9]{1,9}$/;
 
+// Helper function for PAN validation
+const panValidation = (value: string, ctx: z.RefinementCtx, isRequired: boolean = true) => {
+  if (!value || value === '') {
+    if (isRequired) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'PAN number is required',
+      });
+    }
+    return;
+  }
+  if (value.length !== 10) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'PAN must be exactly 10 characters',
+    });
+    return;
+  }
+  if (!PAN_REGEX.test(value)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Invalid PAN format. Expected: ABCDE1234F (5 letters, 4 digits, 1 letter)',
+    });
+  }
+};
+
+// Helper function for GST validation
+const gstValidation = (value: string, ctx: z.RefinementCtx) => {
+  if (!value || value === '') {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'GST number is required',
+    });
+    return;
+  }
+  if (value.length !== 15) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'GST must be exactly 15 characters',
+    });
+    return;
+  }
+  if (!GST_REGEX.test(value)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Invalid GST format. Expected: 22ABCDE1234F1Z5 (2 digits state code, PAN, entity code, Z, checksum)',
+    });
+  }
+};
+
 const vendorRegistrationSchema = z.object({
   company_name: z.string().min(1, 'Company name is required'),
   company_type: z.string().optional(),
   registration_number: z.string().optional(),
-  pan_number: z.string()
-    .length(10, 'PAN number must be exactly 10 characters')
-    .regex(PAN_REGEX, 'Invalid PAN format. Expected: ABCDE1234F (5 letters, 4 digits, 1 letter)'),
-  gst_number: z.string()
-    .length(15, 'GST number must be exactly 15 characters')
-    .regex(GST_REGEX, 'Invalid GST format. Expected: 22ABCDE1234F1Z5'),
+  pan_number: z.string().superRefine((val, ctx) => panValidation(val, ctx, true)),
+  gst_number: z.string().superRefine(gstValidation),
   primary_email: z.string().email('Invalid email address'),
   secondary_email: z.string().email('Invalid email address').optional().or(z.literal('')),
   primary_phone: z.string()
@@ -56,24 +102,54 @@ const vendorRegistrationSchema = z.object({
   signatory_designation: z.string().optional(),
   signatory_email: z.string().email('Invalid email address').optional().or(z.literal('')),
   signatory_phone: z.string().regex(PHONE_REGEX, 'Invalid phone number format').optional().or(z.literal('')),
-  signatory_pan: z.string()
-    .length(10, 'PAN number must be exactly 10 characters')
-    .regex(PAN_REGEX, 'Invalid PAN format. Expected: ABCDE1234F')
-    .optional()
-    .or(z.literal('')),
+  signatory_pan: z.string().optional().superRefine((val, ctx) => {
+    if (val && val !== '') {
+      panValidation(val, ctx, false);
+    }
+  }),
   bank_name: z.string().optional(),
   bank_branch: z.string().optional(),
-  account_number: z.string()
-    .min(9, 'Account number must be at least 9 digits')
-    .max(18, 'Account number cannot exceed 18 digits')
-    .regex(/^[0-9]+$/, 'Account number must contain only digits')
-    .optional()
-    .or(z.literal('')),
-  ifsc_code: z.string()
-    .length(11, 'IFSC code must be exactly 11 characters')
-    .regex(IFSC_REGEX, 'Invalid IFSC format. Expected: ABCD0123456')
-    .optional()
-    .or(z.literal('')),
+  account_number: z.string().optional().superRefine((val, ctx) => {
+    if (val && val !== '') {
+      if (val.length < 9) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Account number must be at least 9 digits',
+        });
+        return;
+      }
+      if (val.length > 18) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Account number cannot exceed 18 digits',
+        });
+        return;
+      }
+      if (!/^[0-9]+$/.test(val)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Account number must contain only digits',
+        });
+      }
+    }
+  }),
+  ifsc_code: z.string().optional().superRefine((val, ctx) => {
+    if (val && val !== '') {
+      if (val.length !== 11) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'IFSC code must be exactly 11 characters',
+        });
+        return;
+      }
+      if (!IFSC_REGEX.test(val)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Invalid IFSC format. Expected: ABCD0123456 (4 letters, 0, 6 alphanumeric)',
+        });
+      }
+    }
+  }),
   account_holder_name: z.string().optional(),
   business_description: z.string().optional(),
   years_in_business: z.number().min(0).optional(),
@@ -119,11 +195,34 @@ const VendorRegistrationPage = () => {
     resolver: zodResolver(vendorRegistrationSchema),
     mode: 'onChange', // Enable inline validation on change
     defaultValues: {
+      company_name: '',
+      company_type: '',
+      registration_number: '',
+      pan_number: '',
+      gst_number: '',
+      primary_email: '',
+      secondary_email: '',
+      primary_phone: '',
+      secondary_phone: '',
+      website: '',
       country: 'India',
       currency: getOrganizationCurrency(orgSettings),
       registered_address: { country: 'India', street: '', city: '', state: '', postal_code: '' },
       business_address: { country: 'India', street: '', city: '', state: '', postal_code: '' },
       billing_address: { country: 'India', street: '', city: '', state: '', postal_code: '' },
+      signatory_name: '',
+      signatory_designation: '',
+      signatory_email: '',
+      signatory_phone: '',
+      signatory_pan: '',
+      bank_name: '',
+      bank_branch: '',
+      account_number: '',
+      ifsc_code: '',
+      account_holder_name: '',
+      business_description: '',
+      password: '',
+      confirmPassword: '',
     },
   });
 
