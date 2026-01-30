@@ -24,17 +24,29 @@ const addressSchema = z.object({
   country: z.string().default('India'),
 });
 
+// Regex patterns for validation
+const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+const GST_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+const IFSC_REGEX = /^[A-Z]{4}0[A-Z0-9]{6}$/;
+const PHONE_REGEX = /^[\+]?[(]?[0-9]{1,4}[)]?[-\s\.]?[0-9]{1,4}[-\s\.]?[0-9]{1,9}$/;
+
 const vendorRegistrationSchema = z.object({
   company_name: z.string().min(1, 'Company name is required'),
   company_type: z.string().optional(),
   registration_number: z.string().optional(),
-  pan_number: z.string().min(10, 'PAN number must be 10 characters').max(10),
-  gst_number: z.string().min(15, 'GST number must be 15 characters').max(15),
+  pan_number: z.string()
+    .length(10, 'PAN number must be exactly 10 characters')
+    .regex(PAN_REGEX, 'Invalid PAN format. Expected: ABCDE1234F (5 letters, 4 digits, 1 letter)'),
+  gst_number: z.string()
+    .length(15, 'GST number must be exactly 15 characters')
+    .regex(GST_REGEX, 'Invalid GST format. Expected: 22ABCDE1234F1Z5'),
   primary_email: z.string().email('Invalid email address'),
-  secondary_email: z.string().email().optional().or(z.literal('')),
-  primary_phone: z.string().min(10, 'Phone number must be at least 10 digits'),
-  secondary_phone: z.string().optional(),
-  website: z.string().url().optional().or(z.literal('')),
+  secondary_email: z.string().email('Invalid email address').optional().or(z.literal('')),
+  primary_phone: z.string()
+    .min(10, 'Phone number must be at least 10 digits')
+    .regex(PHONE_REGEX, 'Invalid phone number format'),
+  secondary_phone: z.string().regex(PHONE_REGEX, 'Invalid phone number format').optional().or(z.literal('')),
+  website: z.string().url('Invalid URL format').optional().or(z.literal('')),
   country: z.string().min(1, 'Country is required'),
   currency: z.string().min(3, 'Currency is required'),
   registered_address: addressSchema,
@@ -42,18 +54,35 @@ const vendorRegistrationSchema = z.object({
   billing_address: addressSchema.optional(),
   signatory_name: z.string().min(1, 'Signatory name is required'),
   signatory_designation: z.string().optional(),
-  signatory_email: z.string().email().optional().or(z.literal('')),
-  signatory_phone: z.string().optional(),
-  signatory_pan: z.string().min(10).max(10).optional().or(z.literal('')),
+  signatory_email: z.string().email('Invalid email address').optional().or(z.literal('')),
+  signatory_phone: z.string().regex(PHONE_REGEX, 'Invalid phone number format').optional().or(z.literal('')),
+  signatory_pan: z.string()
+    .length(10, 'PAN number must be exactly 10 characters')
+    .regex(PAN_REGEX, 'Invalid PAN format. Expected: ABCDE1234F')
+    .optional()
+    .or(z.literal('')),
   bank_name: z.string().optional(),
   bank_branch: z.string().optional(),
-  account_number: z.string().optional(),
-  ifsc_code: z.string().optional(),
+  account_number: z.string()
+    .min(9, 'Account number must be at least 9 digits')
+    .max(18, 'Account number cannot exceed 18 digits')
+    .regex(/^[0-9]+$/, 'Account number must contain only digits')
+    .optional()
+    .or(z.literal('')),
+  ifsc_code: z.string()
+    .length(11, 'IFSC code must be exactly 11 characters')
+    .regex(IFSC_REGEX, 'Invalid IFSC format. Expected: ABCD0123456')
+    .optional()
+    .or(z.literal('')),
   account_holder_name: z.string().optional(),
   business_description: z.string().optional(),
   years_in_business: z.number().min(0).optional(),
   annual_turnover: z.number().min(0).optional(),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
+  password: z.string()
+    .min(8, 'Password must be at least 8 characters')
+    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+    .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+    .regex(/[0-9]/, 'Password must contain at least one number'),
   confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
@@ -88,6 +117,7 @@ const VendorRegistrationPage = () => {
 
   const form = useForm<VendorRegistrationForm>({
     resolver: zodResolver(vendorRegistrationSchema),
+    mode: 'onChange', // Enable inline validation on change
     defaultValues: {
       country: 'India',
       currency: getOrganizationCurrency(orgSettings),
@@ -441,7 +471,12 @@ const VendorRegistrationPage = () => {
                         <FormItem>
                           <FormLabel>PAN Number *</FormLabel>
                           <FormControl>
-                            <Input placeholder="ABCDE1234F" {...field} />
+                            <Input 
+                              placeholder="ABCDE1234F" 
+                              {...field} 
+                              onChange={(e) => field.onChange(e.target.value.toUpperCase())}
+                              maxLength={10}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -454,7 +489,12 @@ const VendorRegistrationPage = () => {
                         <FormItem>
                           <FormLabel>GST Number *</FormLabel>
                           <FormControl>
-                            <Input placeholder="22ABCDE1234F1Z5" {...field} />
+                            <Input 
+                              placeholder="22ABCDE1234F1Z5" 
+                              {...field} 
+                              onChange={(e) => field.onChange(e.target.value.toUpperCase())}
+                              maxLength={15}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -1022,7 +1062,12 @@ const VendorRegistrationPage = () => {
                       <FormItem>
                         <FormLabel>PAN Number</FormLabel>
                         <FormControl>
-                          <Input placeholder="ABCDE1234F" {...field} />
+                          <Input 
+                            placeholder="ABCDE1234F" 
+                            {...field} 
+                            onChange={(e) => field.onChange(e.target.value.toUpperCase())}
+                            maxLength={10}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -1080,7 +1125,12 @@ const VendorRegistrationPage = () => {
                         <FormItem>
                           <FormLabel>Account Number</FormLabel>
                           <FormControl>
-                            <Input placeholder="Enter account number" {...field} />
+                            <Input 
+                              placeholder="Enter account number" 
+                              {...field}
+                              onChange={(e) => field.onChange(e.target.value.replace(/\D/g, ''))}
+                              maxLength={18}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -1093,7 +1143,12 @@ const VendorRegistrationPage = () => {
                         <FormItem>
                           <FormLabel>IFSC Code</FormLabel>
                           <FormControl>
-                            <Input placeholder="Enter IFSC code" {...field} />
+                            <Input 
+                              placeholder="ABCD0123456" 
+                              {...field}
+                              onChange={(e) => field.onChange(e.target.value.toUpperCase())}
+                              maxLength={11}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
