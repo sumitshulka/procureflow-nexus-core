@@ -19,8 +19,17 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import VendorApprovalGuard from '@/components/vendor/VendorApprovalGuard';
 
 const VendorSettings = () => {
+  return (
+    <VendorApprovalGuard>
+      <VendorSettingsContent />
+    </VendorApprovalGuard>
+  );
+};
+
+const VendorSettingsContent = () => {
   const { userData } = useAuth();
 
   return (

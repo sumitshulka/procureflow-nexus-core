@@ -19,8 +19,17 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
+import VendorApprovalGuard from '@/components/vendor/VendorApprovalGuard';
 
 const VendorAnalytics = () => {
+  return (
+    <VendorApprovalGuard>
+      <VendorAnalyticsContent />
+    </VendorApprovalGuard>
+  );
+};
+
+const VendorAnalyticsContent = () => {
   const { user } = useAuth();
   const [timeframe, setTimeframe] = useState<string>('90');
 

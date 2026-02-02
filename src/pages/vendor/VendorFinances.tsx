@@ -29,8 +29,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import VendorApprovalGuard from '@/components/vendor/VendorApprovalGuard';
 
 const VendorFinances = () => {
+  return (
+    <VendorApprovalGuard>
+      <VendorFinancesContent />
+    </VendorApprovalGuard>
+  );
+};
+
+const VendorFinancesContent = () => {
   const { user } = useAuth();
   const [timeframe, setTimeframe] = useState('12m');
 

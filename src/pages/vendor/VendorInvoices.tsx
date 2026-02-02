@@ -27,8 +27,17 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { formatCurrency } from '@/utils/currencyUtils';
+import VendorApprovalGuard from '@/components/vendor/VendorApprovalGuard';
 
 const VendorInvoices = () => {
+  return (
+    <VendorApprovalGuard>
+      <VendorInvoicesContent />
+    </VendorApprovalGuard>
+  );
+};
+
+const VendorInvoicesContent = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');

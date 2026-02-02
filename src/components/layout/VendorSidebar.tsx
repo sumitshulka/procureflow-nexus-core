@@ -34,6 +34,26 @@ const VendorSidebar = () => {
   const location = useLocation();
   const { user } = useAuth();
 
+  // Fetch vendor approval status
+  const { data: vendorStatus } = useQuery({
+    queryKey: ["vendor_approval_status", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      
+      const { data, error } = await supabase
+        .from("vendor_registrations")
+        .select("status")
+        .eq("user_id", user.id)
+        .single();
+      
+      if (error) return null;
+      return data?.status;
+    },
+    enabled: !!user?.id,
+  });
+
+  const isApproved = vendorStatus === 'approved';
+
   // Fetch unread message count for badge
   const { data: messageCount } = useQuery({
     queryKey: ["vendor_message_count", user?.id],
@@ -58,51 +78,61 @@ const VendorSidebar = () => {
       title: "Dashboard",
       icon: LayoutDashboard,
       href: "/vendor-dashboard",
+      requiresApproval: false, // Always accessible
     },
     {
       title: "Profile",
       icon: User,
       href: "/vendor/profile",
-    },
-    {
-      title: "RFPs",
-      icon: FileText,
-      href: "/vendor/rfps",
-    },
-    {
-      title: "Purchase Orders",
-      icon: ShoppingCart,
-      href: "/vendor/purchase-orders",
-    },
-    {
-      title: "Invoices",
-      icon: Receipt,
-      href: "/vendor/invoices",
-    },
-    {
-      title: "Products",
-      icon: Package,
-      href: "/vendor/products",
-    },
-    {
-      title: "Finances",
-      icon: DollarSign,
-      href: "/vendor/finances",
+      requiresApproval: false, // Always accessible for editing
     },
     {
       title: "Messages",
       icon: MessageSquare,
       href: "/vendor/messages",
+      requiresApproval: false, // Allow messages for communication about registration
+    },
+    {
+      title: "RFPs",
+      icon: FileText,
+      href: "/vendor/rfps",
+      requiresApproval: true,
+    },
+    {
+      title: "Purchase Orders",
+      icon: ShoppingCart,
+      href: "/vendor/purchase-orders",
+      requiresApproval: true,
+    },
+    {
+      title: "Invoices",
+      icon: Receipt,
+      href: "/vendor/invoices",
+      requiresApproval: true,
+    },
+    {
+      title: "Products",
+      icon: Package,
+      href: "/vendor/products",
+      requiresApproval: true,
+    },
+    {
+      title: "Finances",
+      icon: DollarSign,
+      href: "/vendor/finances",
+      requiresApproval: true,
     },
     {
       title: "Analytics",
       icon: BarChart3,
       href: "/vendor/analytics",
+      requiresApproval: true,
     },
     {
       title: "Settings",
       icon: Settings,
       href: "/vendor/settings",
+      requiresApproval: true,
     },
   ];
 
@@ -126,32 +156,53 @@ const VendorSidebar = () => {
           <SidebarGroup className="px-2 py-4">
             <SidebarGroupContent>
               <SidebarMenu>
-                {menuItems.map((item) => {
+              {menuItems.map((item) => {
                   const isActive = location.pathname === item.href;
                   const showBadge = item.href === '/vendor/messages' && messageCount && messageCount > 0;
+                  const isDisabled = item.requiresApproval && !isApproved;
                   
                   return (
                     <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton asChild>
-                        <NavLink
-                          to={item.href}
-                          className={cn(
-                            "flex items-center justify-between space-x-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                            isActive 
-                              ? "bg-sidebar-accent text-sidebar-accent-foreground" 
-                              : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
-                          )}
-                        >
-                          <div className="flex items-center space-x-3">
-                            <item.icon className="h-4 w-4 shrink-0" />
-                            {state === "expanded" && <span>{item.title}</span>}
+                      <SidebarMenuButton asChild disabled={isDisabled}>
+                        {isDisabled ? (
+                          <div
+                            className={cn(
+                              "flex items-center justify-between space-x-3 rounded-md px-3 py-2 text-sm font-medium",
+                              "text-sidebar-foreground/40 cursor-not-allowed"
+                            )}
+                            title="Available after vendor approval"
+                          >
+                            <div className="flex items-center space-x-3">
+                              <item.icon className="h-4 w-4 shrink-0 opacity-40" />
+                              {state === "expanded" && <span>{item.title}</span>}
+                            </div>
+                            {state === "expanded" && (
+                              <Badge variant="outline" className="ml-auto text-[10px] px-1 py-0 opacity-60">
+                                Locked
+                              </Badge>
+                            )}
                           </div>
-                          {state === "expanded" && showBadge && (
-                            <Badge variant="destructive" className="ml-auto h-5 w-5 p-0 text-xs">
-                              {messageCount}
-                            </Badge>
-                          )}
-                        </NavLink>
+                        ) : (
+                          <NavLink
+                            to={item.href}
+                            className={cn(
+                              "flex items-center justify-between space-x-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                              isActive 
+                                ? "bg-sidebar-accent text-sidebar-accent-foreground" 
+                                : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+                            )}
+                          >
+                            <div className="flex items-center space-x-3">
+                              <item.icon className="h-4 w-4 shrink-0" />
+                              {state === "expanded" && <span>{item.title}</span>}
+                            </div>
+                            {state === "expanded" && showBadge && (
+                              <Badge variant="destructive" className="ml-auto h-5 w-5 p-0 text-xs">
+                                {messageCount}
+                              </Badge>
+                            )}
+                          </NavLink>
+                        )}
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   );
