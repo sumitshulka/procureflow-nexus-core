@@ -11,6 +11,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Search, Package, AlertTriangle, CheckCircle, Edit } from 'lucide-react';
 import ProductRegistrationDialog from '@/components/vendor/ProductRegistrationDialog';
 import VendorPriceUpdateDialog from '@/components/vendor/VendorPriceUpdateDialog';
+import VendorApprovalGuard from '@/components/vendor/VendorApprovalGuard';
 
 interface Product {
   id: string;
@@ -33,6 +34,14 @@ interface VendorStatus {
 }
 
 const VendorProducts = () => {
+  return (
+    <VendorApprovalGuard>
+      <VendorProductsContent />
+    </VendorApprovalGuard>
+  );
+};
+
+const VendorProductsContent = () => {
   const { toast } = useToast();
   const { userData } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);

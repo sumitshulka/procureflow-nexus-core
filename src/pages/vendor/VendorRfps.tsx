@@ -27,8 +27,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import VendorApprovalGuard from '@/components/vendor/VendorApprovalGuard';
 
 const VendorRfps = () => {
+  return (
+    <VendorApprovalGuard>
+      <VendorRfpsContent />
+    </VendorApprovalGuard>
+  );
+};
+
+const VendorRfpsContent = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');

@@ -187,26 +187,41 @@ const VendorDashboard = () => {
           </div>
         </div>
 
-        {/* Message Alert for Unapproved Vendors */}
-        {vendorProfile && vendorProfile.status !== 'approved' && messageCount > 0 && (
+        {/* Approval Pending Alert for Unapproved Vendors */}
+        {vendorProfile && vendorProfile.status !== 'approved' && (
           <Card className="border-amber-200 bg-amber-50">
             <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <MessageSquare className="w-5 h-5 text-amber-600" />
-                  <div>
-                    <h3 className="font-medium text-amber-800">New Message from Procurement Team</h3>
-                    <p className="text-sm text-amber-700">
-                      You have {messageCount} unread message{messageCount > 1 ? 's' : ''} regarding your vendor registration.
-                    </p>
+              <div className="flex items-start gap-4">
+                <div className="p-2 rounded-full bg-amber-100">
+                  <AlertCircle className="w-5 h-5 text-amber-600" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-amber-800">Vendor Approval Pending</h3>
+                  <p className="text-sm text-amber-700 mt-1">
+                    Your vendor registration is currently under review. Some features are restricted until your account is approved.
+                    You can update your profile and communicate with the procurement team while waiting.
+                  </p>
+                  <div className="flex gap-2 mt-3">
+                    <Button 
+                      size="sm"
+                      onClick={() => navigate('/vendor/profile')}
+                      className="bg-amber-600 hover:bg-amber-700"
+                    >
+                      Update Profile
+                    </Button>
+                    {messageCount && messageCount > 0 && (
+                      <Button 
+                        size="sm"
+                        variant="outline"
+                        onClick={() => navigate('/vendor/messages')}
+                        className="border-amber-600 text-amber-700 hover:bg-amber-100"
+                      >
+                        <MessageSquare className="w-4 h-4 mr-2" />
+                        View Messages ({messageCount})
+                      </Button>
+                    )}
                   </div>
                 </div>
-                <Button 
-                  onClick={() => navigate('/vendor/messages')}
-                  className="bg-amber-600 hover:bg-amber-700"
-                >
-                  View Messages
-                </Button>
               </div>
             </CardContent>
           </Card>

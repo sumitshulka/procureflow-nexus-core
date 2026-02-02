@@ -30,8 +30,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import VendorApprovalGuard from '@/components/vendor/VendorApprovalGuard';
 
 const VendorPurchaseOrders = () => {
+  return (
+    <VendorApprovalGuard>
+      <VendorPurchaseOrdersContent />
+    </VendorApprovalGuard>
+  );
+};
+
+const VendorPurchaseOrdersContent = () => {
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
