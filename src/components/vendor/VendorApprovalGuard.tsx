@@ -55,7 +55,7 @@ const VendorApprovalGuard: React.FC<VendorApprovalGuardProps> = ({ children }) =
           <div className="text-center">
             <Badge 
               variant={isPending ? "outline" : "destructive"} 
-              className={isPending ? "bg-amber-100 text-amber-800 border-amber-300" : ""}
+              className={isPending ? "bg-amber-100 text-amber-800 border-amber-300" : "bg-red-100 text-red-800 border-red-300"}
             >
               {isPending ? 'Pending Review' : isRejected ? 'Registration Rejected' : 'Not Approved'}
             </Badge>
@@ -64,7 +64,7 @@ const VendorApprovalGuard: React.FC<VendorApprovalGuardProps> = ({ children }) =
           <p className="text-center text-muted-foreground text-sm">
             {isPending 
               ? 'Your vendor registration is currently under review. You will have full access to all features once your account is approved.'
-              : 'Your vendor registration has not been approved. Please contact the procurement team for assistance.'}
+              : 'Your vendor registration has been rejected. Please contact the procurement team for assistance.'}
           </p>
 
           <div className="flex flex-col gap-2 pt-4">
