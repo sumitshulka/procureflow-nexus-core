@@ -182,6 +182,7 @@ function App() {
           <Route path="/unauthorized" element={<UnauthorizedPage />} />
           <Route path="/vendor-registration" element={<VendorRegistration />} />
           <Route path="/vendor-registration-success" element={<VendorRegistrationSuccess />} />
+          <Route path="/vendor-registration/success" element={<VendorRegistrationSuccess />} />
           <Route path="/vendor-registration-duplicate" element={<VendorRegistrationDuplicate />} />
 
           {/* Protected Routes with Layout (permissions enforced in ProtectedRoute) */}
