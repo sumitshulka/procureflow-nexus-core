@@ -1761,16 +1761,19 @@ const VendorRegistrationPage = () => {
 
                   {/* Navigation Buttons */}
                   <div className="flex items-center justify-between pt-4">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setCurrentStep(Math.max(1, currentStep - 1))}
-                      disabled={currentStep === 1}
-                      className="gap-2 h-11 px-6"
-                    >
-                      <ArrowLeft className="w-4 h-4" />
-                      Previous
-                    </Button>
+                    {currentStep > 1 ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setCurrentStep(Math.max(1, currentStep - 1))}
+                        className="gap-2 h-11 px-6"
+                      >
+                        <ArrowLeft className="w-4 h-4" />
+                        Previous
+                      </Button>
+                    ) : (
+                      <div />
+                    )}
                     
                     {currentStep < 6 ? (
                       <Button
