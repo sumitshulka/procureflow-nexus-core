@@ -12,8 +12,9 @@ interface VendorApprovalGuardProps {
 
 const VendorApprovalGuard: React.FC<VendorApprovalGuardProps> = ({ children }) => {
   const navigate = useNavigate();
-  const { isApproved, isPending, isRejected, isLoading, companyName } = useVendorApprovalStatus();
+  const { isApproved, isPending, isRejected, isLoading, isError, companyName } = useVendorApprovalStatus();
 
+  // Show loading while data is being fetched or hasn't been fetched yet
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -25,8 +26,44 @@ const VendorApprovalGuard: React.FC<VendorApprovalGuardProps> = ({ children }) =
     );
   }
 
+  // If approved, render children immediately
   if (isApproved) {
     return <>{children}</>;
+  }
+
+  // If there was an error fetching status, show a retry-friendly message
+  if (isError) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px] p-6">
+        <Card className="max-w-lg w-full">
+          <CardHeader className="text-center">
+            <div className="mx-auto mb-4">
+              <div className="p-4 rounded-full bg-destructive/10">
+                <AlertCircle className="h-8 w-8 text-destructive" />
+              </div>
+            </div>
+            <CardTitle className="text-xl">Unable to Load Status</CardTitle>
+            <CardDescription>
+              We couldn't verify your vendor approval status. Please try refreshing the page.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col gap-2 pt-4">
+              <Button onClick={() => window.location.reload()} className="w-full">
+                Refresh Page
+              </Button>
+              <Button 
+                variant="ghost"
+                onClick={() => navigate('/vendor-dashboard')}
+                className="w-full"
+              >
+                Back to Dashboard
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   return (
