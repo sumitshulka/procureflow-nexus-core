@@ -20,32 +20,35 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   allowedRoles,
   requireVendor = false
 }) => {
-  const { user, userData, isLoading } = useAuth();
+  const { user, userData, isLoading, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
   // Check if user is a vendor when vendor access is required
-  const { data: isVendor, isLoading: vendorLoading } = useQuery({
-    queryKey: ["is_vendor", user?.id],
+  const { data: vendorData, isLoading: vendorLoading } = useQuery({
+    queryKey: ["is_vendor_check", user?.id],
     queryFn: async () => {
-      if (!user?.id) return false;
+      if (!user?.id) return null;
       
       const { data, error } = await supabase
         .from("vendor_registrations")
-        .select("id")
+        .select("id, status")
         .eq("user_id", user.id)
         .single();
       
-      return !error && !!data;
+      if (error) return null;
+      return data;
     },
-    enabled: !!user?.id && requireVendor,
+    enabled: !!user?.id,
   });
+
+  const isVendor = !!vendorData;
 
   // Module permission helper (database-driven)
   const { hasModuleAccess, isLoading: permissionLoading } = useModulePermissions();
 
   // Show loading state - always wait for permissions to load for authenticated users
-  if (isLoading || (requireVendor && vendorLoading) || (user && permissionLoading)) {
+  if (isLoading || (user && vendorLoading) || (user && !requireVendor && permissionLoading)) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -91,6 +94,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   if (!requireVendor) {
     // Check if user has module access via database permissions
     if (!hasModuleAccess(location.pathname)) {
+      // If user is a vendor, redirect them to vendor dashboard instead of blocking
+      if (isVendor) {
+        return <Navigate to="/vendor-dashboard" replace />;
+      }
+
       return (
         <div className="min-h-screen bg-gray-50 flex items-center justify-center">
           <div className="text-center max-w-md mx-auto px-4">
@@ -98,12 +106,20 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
             <p className="text-gray-600 mb-6">
               You don't have the required permissions to access this page.
             </p>
-            <button
-              onClick={() => navigate('/dashboard')}
-              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
-            >
-              Go to Dashboard
-            </button>
+            <div className="flex gap-2 justify-center">
+              <button
+                onClick={() => navigate('/dashboard')}
+                className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+              >
+                Go to Dashboard
+              </button>
+              <button
+                onClick={() => logout()}
+                className="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700"
+              >
+                Logout
+              </button>
+            </div>
           </div>
         </div>
       );

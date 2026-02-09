@@ -16,6 +16,8 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/components/ui/use-toast";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 const LoginPage = () => {
   const { login, isLoading, user, session } = useAuth();
@@ -36,14 +38,30 @@ const LoginPage = () => {
   const [loginError, setLoginError] = useState<string | null>(null);
   const [redirected, setRedirected] = useState(false);
 
+  // Check if authenticated user is a vendor to redirect correctly
+  const { data: isVendorUser, isLoading: vendorCheckLoading } = useQuery({
+    queryKey: ["login_vendor_check", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return false;
+      const { data, error } = await supabase
+        .from("vendor_registrations")
+        .select("id")
+        .eq("user_id", user.id)
+        .single();
+      return !error && !!data;
+    },
+    enabled: !!user?.id,
+  });
+
   // Redirect if user is already logged in
   useEffect(() => {
-    if (!isLoading && user && session && !redirected) {
-      console.log("User already authenticated, redirecting to:", redirectPath);
+    if (!isLoading && user && session && !redirected && !vendorCheckLoading) {
+      const destination = isVendorUser ? '/vendor-dashboard' : redirectPath;
+      console.log("User already authenticated, redirecting to:", destination);
       setRedirected(true);
-      navigate(redirectPath, { replace: true });
+      navigate(destination, { replace: true });
     }
-  }, [user, session, navigate, redirectPath, isLoading, redirected]);
+  }, [user, session, navigate, redirectPath, isLoading, redirected, isVendorUser, vendorCheckLoading]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
