@@ -28,31 +28,15 @@ import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useVendorApprovalStatus } from "@/hooks/useVendorApprovalStatus";
 
 const VendorSidebar = () => {
   const { state } = useSidebar();
   const location = useLocation();
   const { user } = useAuth();
 
-  // Fetch vendor approval status
-  const { data: vendorStatus } = useQuery({
-    queryKey: ["vendor_approval_status", user?.id],
-    queryFn: async () => {
-      if (!user?.id) return null;
-      
-      const { data, error } = await supabase
-        .from("vendor_registrations")
-        .select("status")
-        .eq("user_id", user.id)
-        .single();
-      
-      if (error) return null;
-      return data?.status;
-    },
-    enabled: !!user?.id,
-  });
-
-  const isApproved = vendorStatus === 'approved';
+  // Use shared vendor approval status hook (with refetchInterval for live updates)
+  const { isApproved } = useVendorApprovalStatus();
 
   // Fetch unread message count for badge
   const { data: messageCount } = useQuery({
