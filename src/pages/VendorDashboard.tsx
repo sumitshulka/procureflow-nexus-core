@@ -188,12 +188,12 @@ const VendorDashboard = () => {
         </div>
 
         {/* Approval Pending Alert for Unapproved Vendors */}
-        {vendorProfile && vendorProfile.status !== 'approved' && (
+        {vendorProfile && vendorProfile.status === 'pending' && (
           <Card className="border-amber-200 bg-amber-50">
             <CardContent className="p-4">
               <div className="flex items-start gap-4">
                 <div className="p-2 rounded-full bg-amber-100">
-                  <AlertCircle className="w-5 h-5 text-amber-600" />
+                  <Clock className="w-5 h-5 text-amber-600" />
                 </div>
                 <div className="flex-1">
                   <h3 className="font-semibold text-amber-800">Vendor Approval Pending</h3>
@@ -220,6 +220,42 @@ const VendorDashboard = () => {
                         View Messages ({messageCount})
                       </Button>
                     )}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {vendorProfile && vendorProfile.status === 'rejected' && (
+          <Card className="border-red-200 bg-red-50">
+            <CardContent className="p-4">
+              <div className="flex items-start gap-4">
+                <div className="p-2 rounded-full bg-red-100">
+                  <AlertCircle className="w-5 h-5 text-red-600" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-red-800">Registration Rejected</h3>
+                  <p className="text-sm text-red-700 mt-1">
+                    Your vendor registration has been rejected. Please contact the procurement team for more details or update your profile and resubmit.
+                  </p>
+                  <div className="flex gap-2 mt-3">
+                    <Button 
+                      size="sm"
+                      onClick={() => navigate('/vendor/profile')}
+                      className="bg-red-600 hover:bg-red-700"
+                    >
+                      Update Profile
+                    </Button>
+                    <Button 
+                      size="sm"
+                      variant="outline"
+                      onClick={() => navigate('/vendor/messages')}
+                      className="border-red-600 text-red-700 hover:bg-red-100"
+                    >
+                      <MessageSquare className="w-4 h-4 mr-2" />
+                      Contact Procurement Team
+                    </Button>
                   </div>
                 </div>
               </div>
