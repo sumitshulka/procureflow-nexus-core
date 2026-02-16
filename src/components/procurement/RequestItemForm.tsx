@@ -38,7 +38,7 @@ import {
 
 // Define the schema for the item form
 const requestItemSchema = z.object({
-  product_id: z.string().optional(),
+  product_id: z.string().min(1, "Please select a product before adding an item"),
   description: z.string().min(3, "Description must be at least 3 characters").optional(),
   quantity: z.coerce.number().positive({
     message: "Quantity must be a positive number",
