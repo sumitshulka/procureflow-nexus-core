@@ -1,6 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { FileText, Plus } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import PageHeader from "@/components/common/PageHeader";
 import DashboardStats from "@/components/dashboard/DashboardStats";
 import ActivityFeed from "@/components/dashboard/ActivityFeed";
@@ -9,6 +10,7 @@ import DataTable from "@/components/common/DataTable";
 import { Badge } from "@/components/ui/badge";
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const upcomingDeliveries = [
     {
       id: "PO-2023-089",
@@ -114,7 +116,7 @@ const Dashboard = () => {
               <FileText className="mr-2 h-4 w-4" />
               Generate Report
             </Button>
-            <Button size="sm">
+            <Button size="sm" onClick={() => navigate('/requests')}>
               <Plus className="mr-2 h-4 w-4" />
               New Request
             </Button>
