@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { format } from "date-fns";
 import PageHeader from "@/components/common/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -109,6 +109,15 @@ const ProcurementRequests = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const { user, userData } = useAuth();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Auto-open new request dialog when navigated with ?new=true
+  useEffect(() => {
+    if (searchParams.get('new') === 'true') {
+      setOpenNewRequestDialog(true);
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   // Fetch departments for the dropdown
   const { data: departments = [] } = useQuery({

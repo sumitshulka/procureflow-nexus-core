@@ -116,7 +116,7 @@ const Dashboard = () => {
               <FileText className="mr-2 h-4 w-4" />
               Generate Report
             </Button>
-            <Button size="sm" onClick={() => navigate('/requests')}>
+            <Button size="sm" onClick={() => navigate('/requests?new=true')}>
               <Plus className="mr-2 h-4 w-4" />
               New Request
             </Button>
