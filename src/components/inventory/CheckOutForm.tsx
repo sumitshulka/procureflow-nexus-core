@@ -273,13 +273,20 @@ const CheckOutForm = ({ productId, onSuccess, onCancel }: CheckOutFormProps) => 
         }
       });
 
-      // Filter out batches with zero or negative quantity
-      return Array.from(batchMap.values()).filter((b) => b.quantity > 0);
+      // FEFO sort: earliest expiry first, items without expiry last
+      return Array.from(batchMap.values())
+        .filter((b) => b.quantity > 0)
+        .sort((a, b) => {
+          if (!a.expiry_date && !b.expiry_date) return 0;
+          if (!a.expiry_date) return 1;
+          if (!b.expiry_date) return -1;
+          return new Date(a.expiry_date).getTime() - new Date(b.expiry_date).getTime();
+        });
     },
     enabled: !!warehouseId,
   });
 
-  // Filter batches by selected product
+  // Filter batches by selected product (already FEFO sorted)
   const filteredBatches = selectedProduct
     ? availableBatches.filter((b) => b.product_id === selectedProduct)
     : availableBatches;
