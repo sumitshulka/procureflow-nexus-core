@@ -18,7 +18,7 @@ import { RfpFieldHistory } from "@/components/rfp/RfpFieldHistory";
 import { FieldOverrideIndicator } from "@/components/rfp/FieldOverrideIndicator";
 import TechnicalScoreReview from "@/components/rfp/TechnicalScoreReview";
 import { format } from "date-fns";
-import { getEffectiveRfpData, getOverriddenFields } from "@/utils/rfpHelpers";
+import { getEffectiveRfpData, getOverriddenFields, getEffectiveRfpStatus } from "@/utils/rfpHelpers";
 
 interface RFPResponse {
   id: string;
@@ -269,6 +269,7 @@ const RfpResponses = () => {
       // Transform the data to match our RFP interface
       const transformedRfps = (data || []).map(rfp => ({
         ...rfp,
+        status: getEffectiveRfpStatus(rfp.status, rfp.submission_deadline),
         evaluation_criteria: typeof rfp.evaluation_criteria === 'string' 
           ? JSON.parse(rfp.evaluation_criteria) 
           : rfp.evaluation_criteria
@@ -294,7 +295,10 @@ const RfpResponses = () => {
       }
 
       // The helper already handles parsing evaluation_criteria
-      const transformedRfp: RFP = effectiveData as RFP;
+      const transformedRfp: RFP = {
+        ...effectiveData as RFP,
+        status: getEffectiveRfpStatus((effectiveData as any).status, (effectiveData as any).submission_deadline),
+      };
       setRfp(transformedRfp);
       
       // Fetch which fields have been overridden

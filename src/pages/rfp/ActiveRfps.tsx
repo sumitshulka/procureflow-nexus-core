@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
+import { getEffectiveRfpStatus } from "@/utils/rfpHelpers";
 
 interface RFP {
   id: string;
@@ -57,7 +58,11 @@ const ActiveRfps = () => {
       
       console.log("Fetched RFPs:", data?.length || 0, "RFPs");
       console.log("RFPs data:", data);
-      setRfps(data || []);
+      const enriched = (data || []).map(rfp => ({
+        ...rfp,
+        status: getEffectiveRfpStatus(rfp.status, rfp.submission_deadline),
+      }));
+      setRfps(enriched);
     } catch (error: any) {
       console.error("fetchRfps error:", error);
       toast({
