@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,8 +21,9 @@ import { differenceInDays } from "date-fns";
 
 const InvoiceManagement = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState(() => searchParams.get('status') || "all");
   const [vendorFilter, setVendorFilter] = useState("all");
   const [invoiceDateRange, setInvoiceDateRange] = useState<DateRange | undefined>();
   const [dueDateRange, setDueDateRange] = useState<DateRange | undefined>();

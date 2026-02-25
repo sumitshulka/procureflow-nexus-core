@@ -111,13 +111,19 @@ const ProcurementRequests = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Auto-open new request dialog when navigated with ?new=true
+  // Read query params for deep linking from dashboard
   useEffect(() => {
     if (searchParams.get('new') === 'true') {
       setOpenNewRequestDialog(true);
       setSearchParams({}, { replace: true });
     }
-  }, [searchParams, setSearchParams]);
+    const statusParam = searchParams.get('status');
+    if (statusParam) {
+      setStatusFilter(statusParam);
+      searchParams.delete('status');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, []);
 
   // Fetch departments for the dropdown
   const { data: departments = [] } = useQuery({

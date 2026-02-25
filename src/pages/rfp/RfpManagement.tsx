@@ -80,7 +80,7 @@ const RfpManagement = () => {
   const [filteredRfps, setFilteredRfps] = useState<RFP[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState(searchParams.get("status") || "all");
   
   // Templates state
   const [templates, setTemplates] = useState<RfpTemplate[]>([]);
