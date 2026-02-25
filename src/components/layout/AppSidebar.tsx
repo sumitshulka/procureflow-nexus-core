@@ -86,6 +86,7 @@ const AppSidebar = () => {
         { title: "Inventory Items", href: "/inventory/items" },
         { title: "Inventory Transactions", href: "/inventory/transactions" },
         { title: "Batch Management", href: "/inventory/batches" },
+        { title: "Serial Numbers", href: "/inventory/serial-numbers" },
         { title: "Warehouse Transfers", href: "/inventory/transfers" },
         { title: "Inventory Reports", href: "/inventory/reports" },
       ],

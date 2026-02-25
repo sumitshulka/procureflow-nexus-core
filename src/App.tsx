@@ -36,6 +36,7 @@ import InventoryReports from '@/pages/inventory/InventoryReports';
 import InventoryValuationReport from '@/pages/inventory/InventoryValuationReport';
 import StockAgingReport from '@/pages/inventory/StockAgingReport';
 import StockMovementReport from '@/pages/inventory/StockMovementReport';
+import SerialNumberManagement from '@/pages/inventory/SerialNumberManagement';
 
 // Procurement Pages
 import ProcurementRequests from '@/pages/ProcurementRequests';
@@ -363,6 +364,14 @@ function App() {
             element={
               <ProtectedRoute requiredRole={UserRole.ADMIN}>
                 <Layout><StockMovementReport /></Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/inventory/serial-numbers"
+            element={
+              <ProtectedRoute requiredRole={UserRole.ADMIN}>
+                <Layout><SerialNumberManagement /></Layout>
               </ProtectedRoute>
             }
           />

@@ -1287,6 +1287,79 @@ export type Database = {
           },
         ]
       }
+      inventory_batches: {
+        Row: {
+          batch_number: string
+          created_at: string
+          currency: string | null
+          expiry_date: string | null
+          id: string
+          manufacturing_date: string | null
+          product_id: string
+          quantity: number
+          sku_id: string | null
+          status: string
+          supplier_batch_ref: string | null
+          unit_price: number | null
+          updated_at: string
+          warehouse_id: string
+        }
+        Insert: {
+          batch_number: string
+          created_at?: string
+          currency?: string | null
+          expiry_date?: string | null
+          id?: string
+          manufacturing_date?: string | null
+          product_id: string
+          quantity?: number
+          sku_id?: string | null
+          status?: string
+          supplier_batch_ref?: string | null
+          unit_price?: number | null
+          updated_at?: string
+          warehouse_id: string
+        }
+        Update: {
+          batch_number?: string
+          created_at?: string
+          currency?: string | null
+          expiry_date?: string | null
+          id?: string
+          manufacturing_date?: string | null
+          product_id?: string
+          quantity?: number
+          sku_id?: string | null
+          status?: string
+          supplier_batch_ref?: string | null
+          unit_price?: number | null
+          updated_at?: string
+          warehouse_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_batches_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_batches_sku_id_fkey"
+            columns: ["sku_id"]
+            isOneToOne: false
+            referencedRelation: "product_skus"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_batches_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory_items: {
         Row: {
           id: string
@@ -1295,6 +1368,7 @@ export type Database = {
           product_id: string
           quantity: number
           reorder_level: number | null
+          sku_id: string | null
           warehouse_id: string
         }
         Insert: {
@@ -1304,6 +1378,7 @@ export type Database = {
           product_id: string
           quantity?: number
           reorder_level?: number | null
+          sku_id?: string | null
           warehouse_id: string
         }
         Update: {
@@ -1313,6 +1388,7 @@ export type Database = {
           product_id?: string
           quantity?: number
           reorder_level?: number | null
+          sku_id?: string | null
           warehouse_id?: string
         }
         Relationships: [
@@ -1321,6 +1397,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_items_sku_id_fkey"
+            columns: ["sku_id"]
+            isOneToOne: false
+            referencedRelation: "product_skus"
             referencedColumns: ["id"]
           },
           {
@@ -1335,6 +1418,7 @@ export type Database = {
       inventory_transactions: {
         Row: {
           approval_status: string | null
+          batch_id: string | null
           currency: string | null
           delivery_details: Json | null
           delivery_status: string | null
@@ -1344,6 +1428,8 @@ export type Database = {
           quantity: number
           reference: string | null
           request_id: string | null
+          serial_numbers_data: Json | null
+          sku_id: string | null
           source_warehouse_id: string | null
           target_warehouse_id: string | null
           transaction_date: string | null
@@ -1354,6 +1440,7 @@ export type Database = {
         }
         Insert: {
           approval_status?: string | null
+          batch_id?: string | null
           currency?: string | null
           delivery_details?: Json | null
           delivery_status?: string | null
@@ -1363,6 +1450,8 @@ export type Database = {
           quantity: number
           reference?: string | null
           request_id?: string | null
+          serial_numbers_data?: Json | null
+          sku_id?: string | null
           source_warehouse_id?: string | null
           target_warehouse_id?: string | null
           transaction_date?: string | null
@@ -1373,6 +1462,7 @@ export type Database = {
         }
         Update: {
           approval_status?: string | null
+          batch_id?: string | null
           currency?: string | null
           delivery_details?: Json | null
           delivery_status?: string | null
@@ -1382,6 +1472,8 @@ export type Database = {
           quantity?: number
           reference?: string | null
           request_id?: string | null
+          serial_numbers_data?: Json | null
+          sku_id?: string | null
           source_warehouse_id?: string | null
           target_warehouse_id?: string | null
           transaction_date?: string | null
@@ -1392,10 +1484,24 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "inventory_transactions_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_batches"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "inventory_transactions_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_transactions_sku_id_fkey"
+            columns: ["sku_id"]
+            isOneToOne: false
+            referencedRelation: "product_skus"
             referencedColumns: ["id"]
           },
           {
@@ -2619,6 +2725,53 @@ export type Database = {
           },
         ]
       }
+      product_skus: {
+        Row: {
+          barcode: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          name: string
+          product_id: string
+          sku_code: string
+          updated_at: string
+          variant_attributes: Json | null
+        }
+        Insert: {
+          barcode?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          product_id: string
+          sku_code: string
+          updated_at?: string
+          variant_attributes?: Json | null
+        }
+        Update: {
+          barcode?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          product_id?: string
+          sku_code?: string
+          updated_at?: string
+          variant_attributes?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_skus_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           category_id: string
@@ -2632,8 +2785,10 @@ export type Database = {
           id: string
           is_active: boolean | null
           name: string
+          requires_serial_tracking: boolean
           tags: string[] | null
           tax_code_id: string | null
+          tracking_type: string
           unit_id: string
           updated_at: string | null
         }
@@ -2649,8 +2804,10 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name: string
+          requires_serial_tracking?: boolean
           tags?: string[] | null
           tax_code_id?: string | null
+          tracking_type?: string
           unit_id: string
           updated_at?: string | null
         }
@@ -2666,8 +2823,10 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name?: string
+          requires_serial_tracking?: boolean
           tags?: string[] | null
           tax_code_id?: string | null
+          tracking_type?: string
           unit_id?: string
           updated_at?: string | null
         }
@@ -4144,6 +4303,100 @@ export type Database = {
         }
         Relationships: []
       }
+      serial_numbers: {
+        Row: {
+          batch_id: string | null
+          checked_out_date: string | null
+          checked_out_transaction_id: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          product_id: string
+          received_date: string | null
+          received_transaction_id: string | null
+          serial_number: string
+          sku_id: string | null
+          status: string
+          updated_at: string
+          warehouse_id: string | null
+        }
+        Insert: {
+          batch_id?: string | null
+          checked_out_date?: string | null
+          checked_out_transaction_id?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          product_id: string
+          received_date?: string | null
+          received_transaction_id?: string | null
+          serial_number: string
+          sku_id?: string | null
+          status?: string
+          updated_at?: string
+          warehouse_id?: string | null
+        }
+        Update: {
+          batch_id?: string | null
+          checked_out_date?: string | null
+          checked_out_transaction_id?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          product_id?: string
+          received_date?: string | null
+          received_transaction_id?: string | null
+          serial_number?: string
+          sku_id?: string | null
+          status?: string
+          updated_at?: string
+          warehouse_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "serial_numbers_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "serial_numbers_checked_out_transaction_id_fkey"
+            columns: ["checked_out_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "serial_numbers_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "serial_numbers_received_transaction_id_fkey"
+            columns: ["received_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "serial_numbers_sku_id_fkey"
+            columns: ["sku_id"]
+            isOneToOne: false
+            referencedRelation: "product_skus"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "serial_numbers_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       standard_po_settings: {
         Row: {
           created_at: string | null
@@ -5412,6 +5665,21 @@ export type Database = {
         Returns: string
       }
       get_effective_rfp_data: { Args: { p_rfp_id: string }; Returns: Json }
+      get_fefo_batches: {
+        Args: {
+          p_product_id: string
+          p_sku_id?: string
+          p_warehouse_id: string
+        }
+        Returns: {
+          available_quantity: number
+          batch_id: string
+          batch_number: string
+          days_until_expiry: number
+          expiry_date: string
+          unit_price: number
+        }[]
+      }
       get_invoice_approval_level: {
         Args: { invoice_amount: number }
         Returns: string
