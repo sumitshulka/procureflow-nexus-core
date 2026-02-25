@@ -27,6 +27,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { format } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
+import { getEffectiveRfpStatus } from "@/utils/rfpHelpers";
 
 interface RFP {
   id: string;
@@ -116,7 +117,12 @@ const RfpManagement = () => {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setRfps(data || []);
+      // Apply effective status (mark expired RFPs)
+      const enriched = (data || []).map(rfp => ({
+        ...rfp,
+        status: getEffectiveRfpStatus(rfp.status, rfp.submission_deadline),
+      }));
+      setRfps(enriched);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -463,7 +469,7 @@ const RfpManagement = () => {
                                   Publish RFP
                                 </DropdownMenuItem>
                               )}
-                              {(rfp.status === "published" || rfp.status === "evaluation") && (
+                              {(rfp.status === "published" || rfp.status === "evaluation" || rfp.status === "expired") && (
                                 <DropdownMenuItem onClick={() => handleCloseRfp(rfp.id)}>
                                   <Lock className="h-4 w-4 mr-2" />
                                   Close RFP

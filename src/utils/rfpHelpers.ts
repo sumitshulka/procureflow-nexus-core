@@ -1,4 +1,16 @@
 import { supabase } from "@/integrations/supabase/client";
+import { isPast } from "date-fns";
+
+/**
+ * Compute the effective display status of an RFP.
+ * If a "published" RFP's submission deadline has passed, it is considered "expired".
+ */
+export const getEffectiveRfpStatus = (status: string, submissionDeadline: string | null): string => {
+  if (status === "published" && submissionDeadline && isPast(new Date(submissionDeadline))) {
+    return "expired";
+  }
+  return status;
+};
 
 /**
  * Get effective RFP data with addendum overrides applied
