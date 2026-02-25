@@ -33,7 +33,8 @@ const DashboardStats = () => {
         supabase
           .from("rfps")
           .select("*", { count: "exact", head: true })
-          .in("status", ["draft", "published"]),
+          .in("status", ["draft", "published"])
+          .or(`submission_deadline.is.null,submission_deadline.gt.${new Date().toISOString()}`),
         supabase
           .from("purchase_orders")
           .select("*", { count: "exact", head: true })
