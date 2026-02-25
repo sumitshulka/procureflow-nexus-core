@@ -5,14 +5,16 @@ import {
   FileCheck,
   FileText,
   ShoppingCart,
-  TrendingUp,
   Users,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useNavigate } from "react-router-dom";
 
 const DashboardStats = () => {
+  const navigate = useNavigate();
+
   const { data: stats, isLoading } = useQuery({
     queryKey: ["dashboard-stats"],
     queryFn: async () => {
@@ -47,7 +49,7 @@ const DashboardStats = () => {
         supabase
           .from("inventory_items")
           .select("*", { count: "exact", head: true })
-          .lt("quantity", 10), // items below a low threshold
+          .lt("quantity", 10),
       ]);
 
       return [
@@ -57,6 +59,7 @@ const DashboardStats = () => {
           icon: ShoppingCart,
           bgColor: "bg-blue-50",
           iconColor: "text-blue-500",
+          link: "/requests?status=submitted",
         },
         {
           title: "Pending RFPs",
@@ -64,6 +67,7 @@ const DashboardStats = () => {
           icon: FileText,
           bgColor: "bg-green-50",
           iconColor: "text-green-500",
+          link: "/rfp?tab=rfps&status=published",
         },
         {
           title: "Open Purchase Orders",
@@ -71,6 +75,7 @@ const DashboardStats = () => {
           icon: ClipboardList,
           bgColor: "bg-purple-50",
           iconColor: "text-purple-500",
+          link: "/purchase-orders/active",
         },
         {
           title: "Unpaid Invoices",
@@ -78,6 +83,7 @@ const DashboardStats = () => {
           icon: FileCheck,
           bgColor: "bg-amber-50",
           iconColor: "text-amber-500",
+          link: "/invoices?status=pending_approval",
         },
         {
           title: "Active Vendors",
@@ -85,6 +91,7 @@ const DashboardStats = () => {
           icon: Users,
           bgColor: "bg-red-50",
           iconColor: "text-red-500",
+          link: "/vendors?status=approved",
         },
         {
           title: "Low Stock Items",
@@ -92,6 +99,7 @@ const DashboardStats = () => {
           icon: Box,
           bgColor: "bg-cyan-50",
           iconColor: "text-cyan-500",
+          link: "/inventory/items",
         },
       ];
     },
@@ -113,7 +121,11 @@ const DashboardStats = () => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {stats?.map((stat, index) => (
-        <div key={index} className="dashboard-stat-card">
+        <div
+          key={index}
+          className="dashboard-stat-card cursor-pointer transition-shadow hover:shadow-md hover:ring-1 hover:ring-primary/20"
+          onClick={() => navigate(stat.link)}
+        >
           <div className="flex items-center justify-between">
             <div className={`p-2 rounded-md ${stat.bgColor} ${stat.iconColor}`}>
               <stat.icon size={20} />
