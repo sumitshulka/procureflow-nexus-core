@@ -8,35 +8,43 @@ import ActivityFeed from "@/components/dashboard/ActivityFeed";
 import ProcurementSummary from "@/components/dashboard/ProcurementSummary";
 import DataTable from "@/components/common/DataTable";
 import { Badge } from "@/components/ui/badge";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const upcomingDeliveries = [
-    {
-      id: "PO-2023-089",
-      vendor: "Office Supplies Inc.",
-      items: "Office Furniture",
-      value: 12500,
-      dueDate: "2023-09-15",
-      status: "in_transit",
+
+  const { data: upcomingDeliveries = [] } = useQuery({
+    queryKey: ["dashboard-upcoming-deliveries"],
+    queryFn: async () => {
+      const { data: orders } = await supabase
+        .from("purchase_orders")
+        .select("id, po_number, vendor_id, final_amount, expected_delivery_date, status")
+        .in("status", ["approved", "sent", "partially_received"])
+        .order("expected_delivery_date", { ascending: true })
+        .limit(10);
+
+      if (!orders || orders.length === 0) return [];
+
+      const vendorIds = [...new Set(orders.map((o) => o.vendor_id).filter(Boolean))];
+      const { data: vendors } = await supabase
+        .from("vendor_registrations")
+        .select("id, company_name")
+        .in("id", vendorIds);
+
+      const vendorMap = new Map(vendors?.map((v) => [v.id, v.company_name]) || []);
+
+      return orders.map((o) => ({
+        id: o.po_number || o.id,
+        vendor: vendorMap.get(o.vendor_id) || "Unknown Vendor",
+        items: "-",
+        value: Number(o.final_amount) || 0,
+        dueDate: o.expected_delivery_date || "",
+        status: o.status === "sent" ? "in_transit" : o.status === "approved" ? "pending" : o.status,
+      }));
     },
-    {
-      id: "PO-2023-092",
-      vendor: "Tech Solutions Ltd.",
-      items: "Laptops and Accessories",
-      value: 28750,
-      dueDate: "2023-09-18",
-      status: "pending",
-    },
-    {
-      id: "PO-2023-095",
-      vendor: "Global Stationary Corp.",
-      items: "Printer Paper and Toners",
-      value: 4300,
-      dueDate: "2023-09-20",
-      status: "in_transit",
-    },
-  ];
+    refetchInterval: 30000,
+  });
 
   const deliveryColumns = [
     {
@@ -50,57 +58,28 @@ const Dashboard = () => {
       cell: (row: any) => row.vendor,
     },
     {
-      id: "items",
-      header: "Items",
-      cell: (row: any) => row.items,
-    },
-    {
       id: "value",
       header: "Value",
       cell: (row: any) =>
-        new Intl.NumberFormat("en-US", {
-          style: "currency",
-          currency: "USD",
-        }).format(row.value),
+        new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(row.value),
     },
     {
       id: "dueDate",
       header: "Due Date",
-      cell: (row: any) => new Date(row.dueDate).toLocaleDateString(),
+      cell: (row: any) => row.dueDate ? new Date(row.dueDate).toLocaleDateString() : "N/A",
     },
     {
       id: "status",
       header: "Status",
       cell: (row: any) => {
         const statusMap: Record<string, { label: string; className: string }> = {
-          pending: {
-            label: "Pending",
-            className: "bg-amber-50 text-amber-600 border-amber-200",
-          },
-          in_transit: {
-            label: "In Transit",
-            className: "bg-blue-50 text-blue-600 border-blue-200",
-          },
-          delivered: {
-            label: "Delivered",
-            className: "bg-green-50 text-green-600 border-green-200",
-          },
-          delayed: {
-            label: "Delayed",
-            className: "bg-red-50 text-red-600 border-red-200",
-          },
+          pending: { label: "Pending", className: "bg-amber-50 text-amber-600 border-amber-200" },
+          in_transit: { label: "In Transit", className: "bg-blue-50 text-blue-600 border-blue-200" },
+          delivered: { label: "Delivered", className: "bg-green-50 text-green-600 border-green-200" },
+          partially_received: { label: "Partial", className: "bg-purple-50 text-purple-600 border-purple-200" },
         };
-
-        const status = statusMap[row.status] || {
-          label: "Unknown",
-          className: "bg-gray-50 text-gray-600 border-gray-200",
-        };
-
-        return (
-          <Badge variant="outline" className={status.className}>
-            {status.label}
-          </Badge>
-        );
+        const status = statusMap[row.status] || { label: row.status || "Unknown", className: "bg-gray-50 text-gray-600 border-gray-200" };
+        return <Badge variant="outline" className={status.className}>{status.label}</Badge>;
       },
     },
   ];

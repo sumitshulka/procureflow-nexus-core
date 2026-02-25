@@ -1,6 +1,5 @@
 
 import {
-  Archive,
   Box,
   ClipboardList,
   FileCheck,
@@ -9,85 +8,115 @@ import {
   TrendingUp,
   Users,
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const DashboardStats = () => {
-  const stats = [
-    {
-      title: "Active Requests",
-      value: 24,
-      trend: "+8%",
-      trendUp: true,
-      icon: ShoppingCart,
-      bgColor: "bg-blue-50",
-      iconColor: "text-blue-500",
+  const { data: stats, isLoading } = useQuery({
+    queryKey: ["dashboard-stats"],
+    queryFn: async () => {
+      const [
+        { count: activeRequests },
+        { count: pendingRfps },
+        { count: openPOs },
+        { count: unpaidInvoices },
+        { count: activeVendors },
+        { count: lowStockItems },
+      ] = await Promise.all([
+        supabase
+          .from("procurement_requests")
+          .select("*", { count: "exact", head: true })
+          .in("status", ["submitted", "approved", "in_review"]),
+        supabase
+          .from("rfps")
+          .select("*", { count: "exact", head: true })
+          .in("status", ["draft", "published"]),
+        supabase
+          .from("purchase_orders")
+          .select("*", { count: "exact", head: true })
+          .in("status", ["draft", "pending_approval", "approved", "sent"]),
+        supabase
+          .from("invoices")
+          .select("*", { count: "exact", head: true })
+          .in("status", ["draft", "submitted", "pending_approval", "approved"]),
+        supabase
+          .from("vendor_registrations")
+          .select("*", { count: "exact", head: true })
+          .eq("status", "approved"),
+        supabase
+          .from("inventory_items")
+          .select("*", { count: "exact", head: true })
+          .lt("quantity", 10), // items below a low threshold
+      ]);
+
+      return [
+        {
+          title: "Active Requests",
+          value: activeRequests ?? 0,
+          icon: ShoppingCart,
+          bgColor: "bg-blue-50",
+          iconColor: "text-blue-500",
+        },
+        {
+          title: "Pending RFPs",
+          value: pendingRfps ?? 0,
+          icon: FileText,
+          bgColor: "bg-green-50",
+          iconColor: "text-green-500",
+        },
+        {
+          title: "Open Purchase Orders",
+          value: openPOs ?? 0,
+          icon: ClipboardList,
+          bgColor: "bg-purple-50",
+          iconColor: "text-purple-500",
+        },
+        {
+          title: "Unpaid Invoices",
+          value: unpaidInvoices ?? 0,
+          icon: FileCheck,
+          bgColor: "bg-amber-50",
+          iconColor: "text-amber-500",
+        },
+        {
+          title: "Active Vendors",
+          value: activeVendors ?? 0,
+          icon: Users,
+          bgColor: "bg-red-50",
+          iconColor: "text-red-500",
+        },
+        {
+          title: "Low Stock Items",
+          value: lowStockItems ?? 0,
+          icon: Box,
+          bgColor: "bg-cyan-50",
+          iconColor: "text-cyan-500",
+        },
+      ];
     },
-    {
-      title: "Pending RFPs",
-      value: 16,
-      trend: "+4%",
-      trendUp: true,
-      icon: FileText,
-      bgColor: "bg-green-50",
-      iconColor: "text-green-500",
-    },
-    {
-      title: "Open Purchase Orders",
-      value: 32,
-      trend: "-2%",
-      trendUp: false,
-      icon: ClipboardList,
-      bgColor: "bg-purple-50",
-      iconColor: "text-purple-500",
-    },
-    {
-      title: "Unpaid Invoices",
-      value: 12,
-      trend: "-6%",
-      trendUp: false,
-      icon: FileCheck,
-      bgColor: "bg-amber-50",
-      iconColor: "text-amber-500",
-    },
-    {
-      title: "Active Vendors",
-      value: 87,
-      trend: "+12%",
-      trendUp: true,
-      icon: Users,
-      bgColor: "bg-red-50",
-      iconColor: "text-red-500",
-    },
-    {
-      title: "Low Stock Items",
-      value: 8,
-      trend: "+3%",
-      trendUp: true,
-      icon: Box,
-      bgColor: "bg-cyan-50",
-      iconColor: "text-cyan-500",
-    },
-  ];
+    refetchInterval: 30000,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="dashboard-stat-card">
+            <Skeleton className="h-20 w-full" />
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {stats.map((stat, index) => (
+      {stats?.map((stat, index) => (
         <div key={index} className="dashboard-stat-card">
           <div className="flex items-center justify-between">
-            <div
-              className={`p-2 rounded-md ${stat.bgColor} ${stat.iconColor}`}
-            >
+            <div className={`p-2 rounded-md ${stat.bgColor} ${stat.iconColor}`}>
               <stat.icon size={20} />
-            </div>
-            <div
-              className={`text-xs flex items-center ${
-                stat.trendUp ? "text-green-600" : "text-red-600"
-              }`}
-            >
-              <TrendingUp
-                size={14}
-                className={!stat.trendUp ? "rotate-180" : ""}
-              />
-              <span className="ml-1">{stat.trend}</span>
             </div>
           </div>
           <div className="flex flex-col mt-2">
