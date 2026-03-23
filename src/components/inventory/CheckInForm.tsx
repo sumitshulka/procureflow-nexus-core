@@ -271,6 +271,13 @@ const CheckInForm: React.FC<CheckInFormProps> = ({ onSuccess }) => {
     },
   });
 
+  // Set currency from org settings when loaded
+  useEffect(() => {
+    if (orgSettings?.base_currency) {
+      form.setValue("currency", orgSettings.base_currency);
+    }
+  }, [orgSettings?.base_currency, form]);
+
   // Create inventory check-in mutation
   const checkInMutation = useMutation({
     mutationFn: async (values: CheckInFormValues) => {
