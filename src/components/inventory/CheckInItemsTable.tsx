@@ -200,16 +200,11 @@ const CheckInItemRow: React.FC<{
             <Badge variant="secondary" className="ml-2 text-xs">From PO</Badge>
             <TrackingBadge trackingType={trackingType} requiresSerial={requiresSerial} />
           </div>
-        ) : (
+          ) : (
           <div>
             <Select
               value={item.product_id}
-              onValueChange={(value) => {
-                const product = products.find((p) => p.id === value);
-                onUpdateItem(index, "product_id", value);
-                onUpdateItem(index, "product_name", product?.name || "");
-                onUpdateSku(index, "", "");
-              }}
+              onValueChange={(value) => onSelectProduct(index, value)}
             >
               <SelectTrigger className="h-8 text-xs">
                 <SelectValue placeholder="Select product" />
