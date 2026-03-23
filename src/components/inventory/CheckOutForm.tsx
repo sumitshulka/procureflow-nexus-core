@@ -657,7 +657,7 @@ const CheckOutForm = ({ productId, onSuccess, onCancel }: CheckOutFormProps) => 
                       <SelectValue placeholder="Filter by product" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All Products</SelectItem>
+                      <SelectItem value="all">All Products</SelectItem>
                       {products.map((p) => (
                         <SelectItem key={p.id} value={p.id}>
                           {p.name}
