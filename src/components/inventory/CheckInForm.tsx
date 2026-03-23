@@ -105,6 +105,13 @@ const CheckInForm: React.FC<CheckInFormProps> = ({ onSuccess }) => {
   const checkinType = form.watch("checkin_type");
   const selectedPOId = form.watch("purchase_order_id");
 
+  // Set currency from org settings when loaded
+  useEffect(() => {
+    if (orgSettings?.base_currency) {
+      form.setValue("currency", orgSettings.base_currency);
+    }
+  }, [orgSettings?.base_currency, form]);
+
   // Reset items when switching check-in type
   useEffect(() => {
     setCheckInItems([]);
