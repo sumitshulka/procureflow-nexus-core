@@ -105,6 +105,7 @@ const CheckInForm: React.FC<CheckInFormProps> = ({ onSuccess }) => {
   const checkinType = form.watch("checkin_type");
   const selectedPOId = form.watch("purchase_order_id");
 
+
   // Reset items when switching check-in type
   useEffect(() => {
     setCheckInItems([]);
@@ -269,6 +270,13 @@ const CheckInForm: React.FC<CheckInFormProps> = ({ onSuccess }) => {
       return data;
     },
   });
+
+  // Set currency from org settings when loaded
+  useEffect(() => {
+    if (orgSettings?.base_currency) {
+      form.setValue("currency", orgSettings.base_currency);
+    }
+  }, [orgSettings?.base_currency, form]);
 
   // Create inventory check-in mutation
   const checkInMutation = useMutation({
