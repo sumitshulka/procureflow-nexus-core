@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Edit, Package, Users, Barcode, Hash } from "lucide-react";
+import { ArrowLeft, Edit, Package, Users, Barcode, Hash, ClipboardList } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import CreateRfpForProduct from "@/components/product/CreateRfpForProduct";
 import ProductPriceHistory from "@/components/product/ProductPriceHistory";
