@@ -501,6 +501,7 @@ const CheckInItemsTable: React.FC<CheckInItemsTableProps> = ({
                   isPOBased={isPOBased}
                   products={products}
                   onUpdateItem={updateItem}
+                  onSelectProduct={selectProduct}
                   onUpdateSku={updateItemSku}
                   onRemoveItem={removeItem}
                   onTrackingLoaded={handleTrackingLoaded}
