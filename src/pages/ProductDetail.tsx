@@ -278,6 +278,10 @@ const ProductDetail = () => {
           <ProductPriceHistory productId={product.id} productName={product.name} />
         </TabsContent>
 
+        <TabsContent value="movement">
+          <ProductMovementLedger productId={product.id} productName={product.name} />
+        </TabsContent>
+
         <TabsContent value="suppliers">
           {vendors && vendors.length > 0 ? (
             <Card>
