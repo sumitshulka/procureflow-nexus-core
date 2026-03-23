@@ -257,6 +257,20 @@ const InventoryTransactions = () => {
       cell: (row: EnhancedInventoryTransaction) => <div>{row.product?.name}</div>,
     },
     {
+      id: "sku",
+      header: "SKU",
+      cell: (row: any) => {
+        const sku = row.sku;
+        if (!sku) return <div className="text-muted-foreground">-</div>;
+        return (
+          <div>
+            <div className="font-medium text-xs">{sku.sku_code}</div>
+            {sku.sku_name && <div className="text-xs text-muted-foreground">{sku.sku_name}</div>}
+          </div>
+        );
+      },
+    },
+    {
       id: "quantity",
       header: "Quantity",
       cell: (row: EnhancedInventoryTransaction) => <div>{row.quantity}</div>,
