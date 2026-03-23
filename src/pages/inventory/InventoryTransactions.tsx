@@ -260,7 +260,7 @@ const InventoryTransactions = () => {
       id: "sku",
       header: "SKU",
       cell: (row: any) => {
-        const sku = row.sku;
+        const sku = row.product_skus;
         if (!sku) return <div className="text-muted-foreground">-</div>;
         return (
           <div>
