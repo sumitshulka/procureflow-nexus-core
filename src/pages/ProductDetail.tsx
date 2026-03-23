@@ -94,7 +94,7 @@ const ProductDetail = () => {
         id: data.id, name: data.name, description: data.description, classification: data.classification,
         current_price: data.current_price, currency: data.currency, tags: data.tags || [],
         tracking_type: (data as any).tracking_type, requires_serial_tracking: (data as any).requires_serial_tracking,
-        category: data.category, unit: data.unit, tax_code: taxCode, created_by: createdBy, created_at: data.created_at,
+        category_id: data.category_id, category: data.category, unit: data.unit, tax_code: taxCode, created_by: createdBy, created_at: data.created_at,
       } as Product;
     },
     enabled: !!productId,
