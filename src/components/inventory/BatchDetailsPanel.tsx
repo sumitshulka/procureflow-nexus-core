@@ -20,7 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Package, Calendar, Warehouse, Hash, DollarSign } from "lucide-react";
 import { format, isPast, isWithinInterval, addDays } from "date-fns";
-import { formatCurrency, getCurrencySymbol } from "@/utils/currencyUtils";
+import { formatCurrency } from "@/utils/currencyUtils";
 
 interface BatchDetailsProps {
   open: boolean;
@@ -30,15 +30,14 @@ interface BatchDetailsProps {
   warehouseFilter: string;
 }
 
-interface BatchRecord {
-  id: string;
+interface BatchInfo {
   batch_number: string;
   warehouse_id: string;
   warehouse_name: string;
   quantity: number;
   expiry_date: string | null;
   unit_price: number | null;
-  currency: string | null;
+  currency: string;
   total_value: number;
   sku_code: string | null;
 }
@@ -68,53 +67,105 @@ const BatchDetailsPanel: React.FC<BatchDetailsProps> = ({
 
   const baseCurrency = orgSettings?.base_currency || "USD";
 
-  // Fetch batch data from inventory_batches (source of truth)
+  // Fetch batch information from inventory transactions
   const { data: batchData = [], isLoading } = useQuery({
-    queryKey: ["batch_details", productId, warehouseFilter],
+    queryKey: ["batch_details", productId, warehouseFilter, baseCurrency],
     queryFn: async () => {
       if (!productId) return [];
 
+      // Fetch check_in transactions with batch information
       let query = supabase
-        .from("inventory_batches")
+        .from("inventory_transactions")
         .select(`
           id,
-          batch_number,
-          warehouse_id,
           quantity,
-          expiry_date,
           unit_price,
           currency,
+          delivery_details,
+          target_warehouse_id,
           sku_id,
-          warehouse:warehouse_id(name),
-          sku:sku_id(sku_code)
+          warehouse:target_warehouse_id(id, name),
+          product_skus:sku_id(sku_code)
         `)
         .eq("product_id", productId)
-        .eq("status", "active")
-        .gt("quantity", 0);
+        .eq("type", "check_in");
 
       if (warehouseFilter && warehouseFilter !== "_all") {
-        query = query.eq("warehouse_id", warehouseFilter);
+        query = query.eq("target_warehouse_id", warehouseFilter);
       }
 
-      const { data, error } = await query.order("created_at", { ascending: true });
+      const { data: transactions, error } = await query;
 
       if (error) {
         console.error("Error fetching batch data:", error);
         return [];
       }
 
-      return (data || []).map((batch: any) => ({
-        id: batch.id,
-        batch_number: batch.batch_number,
-        warehouse_id: batch.warehouse_id,
-        warehouse_name: batch.warehouse?.name || "Unknown",
-        quantity: batch.quantity,
-        expiry_date: batch.expiry_date,
-        unit_price: batch.unit_price,
-        currency: batch.currency || baseCurrency,
-        total_value: (batch.unit_price || 0) * batch.quantity,
-        sku_code: batch.sku?.sku_code || null,
-      })) as BatchRecord[];
+      // Aggregate batch information
+      const batchMap = new Map<string, BatchInfo>();
+
+      transactions?.forEach((tx: any) => {
+        const details = tx.delivery_details as Record<string, any> || {};
+        const batchNumber = details.batch_number || "No Batch";
+        const warehouseId = tx.target_warehouse_id;
+        const warehouseName = tx.warehouse?.name || "Unknown";
+        const txCurrency = tx.currency || baseCurrency;
+        const skuCode = tx.product_skus?.sku_code || details.sku_code || null;
+        const key = `${batchNumber}_${warehouseId}_${tx.sku_id || "no_sku"}`;
+
+        if (batchMap.has(key)) {
+          const existing = batchMap.get(key)!;
+          existing.quantity += tx.quantity;
+          existing.total_value += (tx.unit_price || 0) * tx.quantity;
+        } else {
+          batchMap.set(key, {
+            batch_number: batchNumber,
+            warehouse_id: warehouseId,
+            warehouse_name: warehouseName,
+            quantity: tx.quantity,
+            expiry_date: details.expiry_date || null,
+            unit_price: tx.unit_price,
+            currency: txCurrency,
+            total_value: (tx.unit_price || 0) * tx.quantity,
+            sku_code: skuCode,
+          });
+        }
+      });
+
+      // Account for check_outs reducing the batch quantity
+      let checkoutQuery = supabase
+        .from("inventory_transactions")
+        .select(`
+          id,
+          quantity,
+          delivery_details,
+          source_warehouse_id,
+          sku_id
+        `)
+        .eq("product_id", productId)
+        .eq("type", "check_out");
+
+      if (warehouseFilter && warehouseFilter !== "_all") {
+        checkoutQuery = checkoutQuery.eq("source_warehouse_id", warehouseFilter);
+      }
+
+      const { data: checkouts } = await checkoutQuery;
+
+      checkouts?.forEach((tx: any) => {
+        const details = tx.delivery_details as Record<string, any> || {};
+        const batchNumber = details.batch_number || "No Batch";
+        const warehouseId = tx.source_warehouse_id;
+        const key = `${batchNumber}_${warehouseId}_${tx.sku_id || "no_sku"}`;
+
+        if (batchMap.has(key)) {
+          const existing = batchMap.get(key)!;
+          existing.quantity -= tx.quantity;
+          existing.total_value -= (existing.unit_price || 0) * tx.quantity;
+        }
+      });
+
+      // Filter out batches with zero or negative quantity
+      return Array.from(batchMap.values()).filter(b => b.quantity > 0);
     },
     enabled: open && !!productId,
   });
@@ -122,8 +173,7 @@ const BatchDetailsPanel: React.FC<BatchDetailsProps> = ({
   // Calculate totals
   const totalQuantity = batchData.reduce((sum, b) => sum + b.quantity, 0);
   const totalValue = batchData.reduce((sum, b) => sum + b.total_value, 0);
-  // Use the currency from the first batch, or org base currency
-  const displayCurrency = batchData.length > 0 ? (batchData[0].currency || baseCurrency) : baseCurrency;
+  const displayCurrency = batchData.length > 0 ? batchData[0].currency : baseCurrency;
 
   const getExpiryStatus = (expiryDate: string | null) => {
     if (!expiryDate) return null;
@@ -226,10 +276,10 @@ const BatchDetailsPanel: React.FC<BatchDetailsProps> = ({
                     </TableCell>
                   </TableRow>
                 ) : (
-                  batchData.map((batch) => {
+                  batchData.map((batch, index) => {
                     const expiryStatus = getExpiryStatus(batch.expiry_date);
                     return (
-                      <TableRow key={batch.id}>
+                      <TableRow key={`${batch.batch_number}_${batch.warehouse_id}_${index}`}>
                         <TableCell className="font-medium">
                           {batch.batch_number}
                         </TableCell>
@@ -270,7 +320,7 @@ const BatchDetailsPanel: React.FC<BatchDetailsProps> = ({
                         </TableCell>
                         <TableCell className="text-right">
                           {batch.total_value > 0 
-                            ? formatCurrency(batch.total_value, batch.currency || displayCurrency) 
+                            ? formatCurrency(batch.total_value, batch.currency) 
                             : "—"}
                         </TableCell>
                       </TableRow>
@@ -291,7 +341,7 @@ const BatchDetailsPanel: React.FC<BatchDetailsProps> = ({
                 {Object.entries(
                   batchData.reduce((acc, batch) => {
                     if (!acc[batch.warehouse_name]) {
-                      acc[batch.warehouse_name] = { quantity: 0, value: 0, batches: 0, currency: batch.currency || displayCurrency };
+                      acc[batch.warehouse_name] = { quantity: 0, value: 0, batches: 0, currency: batch.currency };
                     }
                     acc[batch.warehouse_name].quantity += batch.quantity;
                     acc[batch.warehouse_name].value += batch.total_value;
