@@ -384,6 +384,10 @@ const CheckInForm: React.FC<CheckInFormProps> = ({ onSuccess }) => {
             non_po_reason: values.non_po_reason || null,
             sku_id: item.sku_id || null,
             sku_code: item.sku_code || null,
+            tracking_type: item.tracking_type || "none",
+            serial_numbers: item.serial_numbers
+              ? item.serial_numbers.split(",").map((s) => s.trim()).filter(Boolean)
+              : null,
           },
         };
 
