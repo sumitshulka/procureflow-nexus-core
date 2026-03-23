@@ -127,7 +127,7 @@ const BatchManagement = () => {
             batch_number: batchNumber,
             product_id: tx.product_id,
             product_name: tx.product?.name || "Unknown",
-            product_sku: tx.product?.sku || null,
+            product_sku: tx.sku?.sku_code || null,
             warehouse_id: warehouseId,
             warehouse_name: tx.warehouse?.name || "Unknown",
             quantity: tx.quantity,
