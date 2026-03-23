@@ -113,6 +113,7 @@ interface BatchInfo {
   batch_number: string;
   product_id: string;
   product_name: string;
+  sku_code: string | null;
   warehouse_id: string;
   quantity: number;
   expiry_date: string | null;
@@ -218,7 +219,9 @@ const CheckOutForm = ({ productId, onSuccess, onCancel }: CheckOutFormProps) => 
           unit_price,
           delivery_details,
           product_id,
-          product:product_id(id, name, sku)
+          sku_id,
+          product:product_id(id, name),
+          sku:sku_id(sku_code, name)
         `
         )
         .eq("type", "check_in")
@@ -235,7 +238,7 @@ const CheckOutForm = ({ productId, onSuccess, onCancel }: CheckOutFormProps) => 
         const batchNumber = details.batch_number;
         if (!batchNumber) return;
 
-        const key = `${batchNumber}_${tx.product_id}`;
+        const key = `${batchNumber}_${tx.product_id}_${tx.sku_id || "no-sku"}`;
 
         if (batchMap.has(key)) {
           const existing = batchMap.get(key)!;
@@ -245,6 +248,7 @@ const CheckOutForm = ({ productId, onSuccess, onCancel }: CheckOutFormProps) => 
             batch_number: batchNumber,
             product_id: tx.product_id,
             product_name: tx.product?.name || "Unknown",
+            sku_code: tx.sku?.sku_code || details.sku_code || null,
             warehouse_id: warehouseId,
             quantity: tx.quantity,
             expiry_date: details.expiry_date || null,
@@ -678,6 +682,7 @@ const CheckOutForm = ({ productId, onSuccess, onCancel }: CheckOutFormProps) => 
                     <TableHeader>
                       <TableRow>
                         <TableHead>Product</TableHead>
+                        <TableHead>SKU</TableHead>
                         <TableHead>Batch #</TableHead>
                         <TableHead className="text-right">Available</TableHead>
                         <TableHead>Expiry</TableHead>
@@ -696,6 +701,9 @@ const CheckOutForm = ({ productId, onSuccess, onCancel }: CheckOutFormProps) => 
                           <TableRow key={`${batch.batch_number}_${batch.product_id}_${idx}`}>
                             <TableCell className="font-medium">
                               {batch.product_name}
+                            </TableCell>
+                            <TableCell className="font-mono text-xs">
+                              {batch.sku_code || "—"}
                             </TableCell>
                             <TableCell className="font-mono">
                               {batch.batch_number}

@@ -28,6 +28,7 @@ interface InventoryItem {
   id: string;
   product_id: string;
   warehouse_id: string;
+  sku_id: string | null;
   quantity: number;
   minimum_level: number | null;
   reorder_level: number | null;
@@ -46,6 +47,11 @@ interface InventoryItem {
   warehouse: {
     name: string;
   };
+  sku: {
+    sku_code: string;
+    name: string;
+    variant_attributes: Record<string, string>;
+  } | null;
 }
 
 interface Category {
@@ -89,7 +95,8 @@ const InventoryItems = () => {
             category:category_id(name),
             unit:unit_id(name, abbreviation)
           ),
-          warehouse:warehouse_id(name)
+          warehouse:warehouse_id(name),
+          sku:sku_id(sku_code, name, variant_attributes)
         `);
       
       if (warehouseFilter) {
@@ -207,6 +214,31 @@ const InventoryItems = () => {
             {row.product.category.name}
           </div>
         </button>
+      ),
+    },
+    {
+      id: "sku",
+      header: "SKU Variant",
+      cell: (row: InventoryItem) => (
+        <div>
+          {row.sku ? (
+            <div>
+              <div className="font-mono text-sm font-medium">{row.sku.sku_code}</div>
+              <div className="text-xs text-muted-foreground">{row.sku.name}</div>
+              {row.sku.variant_attributes && Object.keys(row.sku.variant_attributes).length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {Object.entries(row.sku.variant_attributes).map(([key, val]) => (
+                    <Badge key={key} variant="secondary" className="text-xs py-0">
+                      {key}: {val}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <span className="text-xs text-muted-foreground">—</span>
+          )}
+        </div>
       ),
     },
     {
