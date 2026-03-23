@@ -399,6 +399,41 @@ export type Database = {
         }
         Relationships: []
       }
+      category_sku_attributes: {
+        Row: {
+          attribute_name: string
+          category_id: string
+          created_at: string
+          display_order: number
+          id: string
+          is_required: boolean
+        }
+        Insert: {
+          attribute_name: string
+          category_id: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_required?: boolean
+        }
+        Update: {
+          attribute_name?: string
+          category_id?: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_required?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "category_sku_attributes_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       compliance_areas: {
         Row: {
           color: string | null
