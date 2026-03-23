@@ -163,6 +163,10 @@ const ProductDetail = () => {
             SKU Variants
           </TabsTrigger>
           <TabsTrigger value="pricing">Price History</TabsTrigger>
+          <TabsTrigger value="movement">
+            <ClipboardList className="h-4 w-4 mr-1" />
+            Movement
+          </TabsTrigger>
           <TabsTrigger value="suppliers">Suppliers</TabsTrigger>
         </TabsList>
 
