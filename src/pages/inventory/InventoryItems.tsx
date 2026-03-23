@@ -28,6 +28,7 @@ interface InventoryItem {
   id: string;
   product_id: string;
   warehouse_id: string;
+  sku_id: string | null;
   quantity: number;
   minimum_level: number | null;
   reorder_level: number | null;
@@ -46,6 +47,11 @@ interface InventoryItem {
   warehouse: {
     name: string;
   };
+  sku: {
+    sku_code: string;
+    name: string;
+    variant_attributes: Record<string, string>;
+  } | null;
 }
 
 interface Category {
