@@ -258,7 +258,9 @@ const CheckInForm: React.FC<CheckInFormProps> = ({ onSuccess }) => {
       const { data, error } = await supabase
         .from("organization_settings")
         .select("base_currency")
-        .single();
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
       if (error && error.code !== "PGRST116") {
         throw error;
