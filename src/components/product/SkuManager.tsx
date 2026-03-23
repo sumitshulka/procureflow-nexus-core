@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit, Trash2, Barcode, Package } from "lucide-react";
+import { Plus, Edit, Trash2, Barcode, Info } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface ProductSku {
@@ -22,12 +22,20 @@ interface ProductSku {
   created_at: string;
 }
 
+interface SkuAttribute {
+  id: string;
+  attribute_name: string;
+  display_order: number;
+  is_required: boolean;
+}
+
 interface SkuManagerProps {
   productId: string;
   productName: string;
+  categoryId?: string;
 }
 
-const SkuManager = ({ productId, productName }: SkuManagerProps) => {
+const SkuManager = ({ productId, productName, categoryId }: SkuManagerProps) => {
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -36,8 +44,23 @@ const SkuManager = ({ productId, productName }: SkuManagerProps) => {
   const [skuCode, setSkuCode] = useState("");
   const [skuName, setSkuName] = useState("");
   const [barcode, setBarcode] = useState("");
-  const [variantKeys, setVariantKeys] = useState<string[]>([""]);
-  const [variantValues, setVariantValues] = useState<string[]>([""]);
+  const [attrValues, setAttrValues] = useState<Record<string, string>>({});
+
+  // Fetch category SKU attributes
+  const { data: categoryAttributes = [] } = useQuery({
+    queryKey: ["category-sku-attributes", categoryId],
+    queryFn: async () => {
+      if (!categoryId) return [];
+      const { data, error } = await supabase
+        .from("category_sku_attributes")
+        .select("*")
+        .eq("category_id", categoryId)
+        .order("display_order");
+      if (error) throw error;
+      return data as SkuAttribute[];
+    },
+    enabled: !!categoryId,
+  });
 
   const { data: skus = [], isLoading } = useQuery({
     queryKey: ["product-skus", productId],
@@ -54,10 +77,14 @@ const SkuManager = ({ productId, productName }: SkuManagerProps) => {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
+      // Build attributes from category-defined keys + user-entered values
       const attributes: Record<string, string> = {};
-      variantKeys.forEach((key, i) => {
-        if (key.trim() && variantValues[i]?.trim()) {
-          attributes[key.trim()] = variantValues[i].trim();
+      categoryAttributes.forEach((attr) => {
+        const val = attrValues[attr.attribute_name]?.trim();
+        if (val) {
+          attributes[attr.attribute_name] = val;
+        } else if (attr.is_required) {
+          throw new Error(`"${attr.attribute_name}" is required`);
         }
       });
 
@@ -115,8 +142,7 @@ const SkuManager = ({ productId, productName }: SkuManagerProps) => {
     setSkuCode("");
     setSkuName("");
     setBarcode("");
-    setVariantKeys([""]);
-    setVariantValues([""]);
+    setAttrValues({});
   };
 
   const openEditDialog = (sku: ProductSku) => {
@@ -124,22 +150,20 @@ const SkuManager = ({ productId, productName }: SkuManagerProps) => {
     setSkuCode(sku.sku_code);
     setSkuName(sku.name);
     setBarcode(sku.barcode || "");
-    const attrs = sku.variant_attributes || {};
-    const keys = Object.keys(attrs);
-    setVariantKeys(keys.length > 0 ? keys : [""]);
-    setVariantValues(keys.length > 0 ? keys.map(k => attrs[k]) : [""]);
+    setAttrValues(sku.variant_attributes || {});
     setShowDialog(true);
   };
 
-  const addVariantRow = () => {
-    setVariantKeys([...variantKeys, ""]);
-    setVariantValues([...variantValues, ""]);
+  const openCreateDialog = () => {
+    resetForm();
+    // Pre-populate attribute keys with empty values
+    const defaults: Record<string, string> = {};
+    categoryAttributes.forEach(a => { defaults[a.attribute_name] = ""; });
+    setAttrValues(defaults);
+    setShowDialog(true);
   };
 
-  const removeVariantRow = (index: number) => {
-    setVariantKeys(variantKeys.filter((_, i) => i !== index));
-    setVariantValues(variantValues.filter((_, i) => i !== index));
-  };
+  const hasAttributes = categoryAttributes.length > 0;
 
   return (
     <Card>
@@ -149,13 +173,22 @@ const SkuManager = ({ productId, productName }: SkuManagerProps) => {
             <Barcode className="h-4 w-4" />
             SKU Variants ({skus.filter(s => s.is_active).length})
           </CardTitle>
-          <Button size="sm" onClick={() => { resetForm(); setShowDialog(true); }}>
+          <Button size="sm" onClick={openCreateDialog}>
             <Plus className="h-4 w-4 mr-1" />
             Add SKU
           </Button>
         </div>
       </CardHeader>
       <CardContent>
+        {!hasAttributes && (
+          <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 mb-4">
+            <Info className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+            <p className="text-xs text-amber-800">
+              No SKU attributes are defined for this product's category. Go to <strong>Settings → Master Data → Categories</strong> and configure SKU attributes (e.g., Color, Size) for the category first.
+            </p>
+          </div>
+        )}
+
         {skus.filter(s => s.is_active).length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-4">
             No SKU variants defined. Add SKUs to track inventory at the variant level.
@@ -220,42 +253,38 @@ const SkuManager = ({ productId, productName }: SkuManagerProps) => {
                 <Label>Barcode</Label>
                 <Input value={barcode} onChange={(e) => setBarcode(e.target.value)} placeholder="EAN / UPC barcode" />
               </div>
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <Label>Variant Attributes</Label>
-                  <Button type="button" variant="ghost" size="sm" onClick={addVariantRow}>
-                    <Plus className="h-3 w-3 mr-1" />
-                    Add
-                  </Button>
-                </div>
-                {variantKeys.map((key, i) => (
-                  <div key={i} className="flex gap-2 mb-2">
-                    <Input
-                      placeholder="Attribute (e.g., Color)"
-                      value={key}
-                      onChange={(e) => {
-                        const newKeys = [...variantKeys];
-                        newKeys[i] = e.target.value;
-                        setVariantKeys(newKeys);
-                      }}
-                    />
-                    <Input
-                      placeholder="Value (e.g., Black)"
-                      value={variantValues[i]}
-                      onChange={(e) => {
-                        const newVals = [...variantValues];
-                        newVals[i] = e.target.value;
-                        setVariantValues(newVals);
-                      }}
-                    />
-                    {variantKeys.length > 1 && (
-                      <Button type="button" variant="ghost" size="icon" className="shrink-0" onClick={() => removeVariantRow(i)}>
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    )}
+
+              {/* Category-driven attribute fields */}
+              {hasAttributes ? (
+                <div>
+                  <Label className="text-sm font-medium mb-2 block">Variant Attributes</Label>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Attributes inherited from category. Enter a value for each.
+                  </p>
+                  <div className="space-y-3">
+                    {categoryAttributes.map((attr) => (
+                      <div key={attr.id}>
+                        <Label className="text-xs">
+                          {attr.attribute_name} {attr.is_required && <span className="text-destructive">*</span>}
+                        </Label>
+                        <Input
+                          placeholder={`Enter ${attr.attribute_name.toLowerCase()}...`}
+                          value={attrValues[attr.attribute_name] || ""}
+                          onChange={(e) =>
+                            setAttrValues((prev) => ({ ...prev, [attr.attribute_name]: e.target.value }))
+                          }
+                        />
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                </div>
+              ) : (
+                <div className="rounded-md border border-dashed p-3">
+                  <p className="text-xs text-muted-foreground text-center">
+                    No category attributes configured. SKU will be created without variant attributes.
+                  </p>
+                </div>
+              )}
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={resetForm}>Cancel</Button>

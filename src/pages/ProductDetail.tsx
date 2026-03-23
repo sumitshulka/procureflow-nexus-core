@@ -24,6 +24,7 @@ interface Product {
   tags: string[];
   tracking_type?: string;
   requires_serial_tracking?: boolean;
+  category_id: string;
   category: { name: string };
   unit: { name: string; abbreviation: string };
   tax_code?: { code: string; name: string; rates: Array<{ rate_name: string; rate_percentage: number }> } | null;
@@ -265,7 +266,7 @@ const ProductDetail = () => {
         </TabsContent>
 
         <TabsContent value="skus">
-          <SkuManager productId={product.id} productName={product.name} />
+          <SkuManager productId={product.id} productName={product.name} categoryId={product.category_id} />
         </TabsContent>
 
         <TabsContent value="pricing">
