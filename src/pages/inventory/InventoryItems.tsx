@@ -217,6 +217,31 @@ const InventoryItems = () => {
       ),
     },
     {
+      id: "sku",
+      header: "SKU Variant",
+      cell: (row: InventoryItem) => (
+        <div>
+          {row.sku ? (
+            <div>
+              <div className="font-mono text-sm font-medium">{row.sku.sku_code}</div>
+              <div className="text-xs text-muted-foreground">{row.sku.name}</div>
+              {row.sku.variant_attributes && Object.keys(row.sku.variant_attributes).length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {Object.entries(row.sku.variant_attributes).map(([key, val]) => (
+                    <Badge key={key} variant="secondary" className="text-xs py-0">
+                      {key}: {val}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <span className="text-xs text-muted-foreground">—</span>
+          )}
+        </div>
+      ),
+    },
+    {
       id: "warehouse",
       header: "Warehouse",
       cell: (row: InventoryItem) => <div>{row.warehouse.name}</div>,

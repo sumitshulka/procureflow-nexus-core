@@ -702,6 +702,9 @@ const CheckOutForm = ({ productId, onSuccess, onCancel }: CheckOutFormProps) => 
                             <TableCell className="font-medium">
                               {batch.product_name}
                             </TableCell>
+                            <TableCell className="font-mono text-xs">
+                              {batch.sku_code || "—"}
+                            </TableCell>
                             <TableCell className="font-mono">
                               {batch.batch_number}
                             </TableCell>

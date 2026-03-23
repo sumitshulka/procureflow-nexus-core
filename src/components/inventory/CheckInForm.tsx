@@ -335,6 +335,7 @@ const CheckInForm: React.FC<CheckInFormProps> = ({ onSuccess }) => {
         const transaction = {
           type: "check_in",
           product_id: item.product_id,
+          sku_id: item.sku_id || null,
           target_warehouse_id: values.target_warehouse_id,
           quantity: item.check_in_quantity,
           reference: referenceStr,
@@ -348,6 +349,8 @@ const CheckInForm: React.FC<CheckInFormProps> = ({ onSuccess }) => {
             po_item_id: item.po_item_id || null,
             checkin_type: values.checkin_type,
             non_po_reason: values.non_po_reason || null,
+            sku_id: item.sku_id || null,
+            sku_code: item.sku_code || null,
           },
         };
 
@@ -359,13 +362,20 @@ const CheckInForm: React.FC<CheckInFormProps> = ({ onSuccess }) => {
         if (transactionError) throw transactionError;
         transactions.push(transactionData[0]);
 
-        // Update inventory
-        const { data: inventoryItem, error: inventoryError } = await supabase
+        // Update inventory - check for SKU-level record first, then product-level
+        const inventoryQuery = supabase
           .from("inventory_items")
           .select("*")
           .eq("product_id", item.product_id)
-          .eq("warehouse_id", values.target_warehouse_id)
-          .maybeSingle();
+          .eq("warehouse_id", values.target_warehouse_id);
+
+        if (item.sku_id) {
+          inventoryQuery.eq("sku_id", item.sku_id);
+        } else {
+          inventoryQuery.is("sku_id", null);
+        }
+
+        const { data: inventoryItem, error: inventoryError } = await inventoryQuery.maybeSingle();
 
         if (inventoryError) throw inventoryError;
 
@@ -385,6 +395,7 @@ const CheckInForm: React.FC<CheckInFormProps> = ({ onSuccess }) => {
             .insert([
               {
                 product_id: item.product_id,
+                sku_id: item.sku_id || null,
                 warehouse_id: values.target_warehouse_id,
                 quantity: item.check_in_quantity,
                 last_updated: new Date().toISOString(),
@@ -392,6 +403,41 @@ const CheckInForm: React.FC<CheckInFormProps> = ({ onSuccess }) => {
             ]);
 
           if (insertError) throw insertError;
+        }
+
+        // Create/update inventory batch record if batch number provided
+        if (item.batch_number) {
+          const { data: existingBatch } = await supabase
+            .from("inventory_batches")
+            .select("id, quantity")
+            .eq("product_id", item.product_id)
+            .eq("warehouse_id", values.target_warehouse_id)
+            .eq("batch_number", item.batch_number)
+            .maybeSingle();
+
+          if (existingBatch) {
+            await supabase
+              .from("inventory_batches")
+              .update({
+                quantity: existingBatch.quantity + item.check_in_quantity,
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", existingBatch.id);
+          } else {
+            await supabase
+              .from("inventory_batches")
+              .insert({
+                product_id: item.product_id,
+                sku_id: item.sku_id || null,
+                warehouse_id: values.target_warehouse_id,
+                batch_number: item.batch_number,
+                quantity: item.check_in_quantity,
+                expiry_date: item.expiry_date || null,
+                unit_price: item.unit_price || null,
+                currency: values.currency || orgSettings?.base_currency || "USD",
+                status: "active",
+              });
+          }
         }
 
         inventoryUpdates.push({
