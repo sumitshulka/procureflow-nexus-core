@@ -95,7 +95,8 @@ const InventoryItems = () => {
             category:category_id(name),
             unit:unit_id(name, abbreviation)
           ),
-          warehouse:warehouse_id(name)
+          warehouse:warehouse_id(name),
+          sku:sku_id(sku_code, name, variant_attributes)
         `);
       
       if (warehouseFilter) {
