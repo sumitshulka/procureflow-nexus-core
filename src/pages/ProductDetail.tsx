@@ -266,7 +266,7 @@ const ProductDetail = () => {
         </TabsContent>
 
         <TabsContent value="skus">
-          <SkuManager productId={product.id} productName={product.name} />
+          <SkuManager productId={product.id} productName={product.name} categoryId={product.category_id} />
         </TabsContent>
 
         <TabsContent value="pricing">
