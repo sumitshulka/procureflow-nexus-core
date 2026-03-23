@@ -311,6 +311,29 @@ const CheckInForm: React.FC<CheckInFormProps> = ({ onSuccess }) => {
         }
       }
 
+      // Validate tracking-type-specific fields
+      for (const item of validItems) {
+        const trackingType = item.tracking_type || "none";
+        const requiresSerial = item.requires_serial_tracking || false;
+
+        // Batch tracking: batch number required
+        if ((trackingType === "batch" || trackingType === "both") && !item.batch_number) {
+          throw new Error(`Batch number is required for "${item.product_name}" (batch-tracked product)`);
+        }
+
+        // Serial tracking: serial numbers required if mandatory
+        if ((trackingType === "serial" || trackingType === "both" || requiresSerial) && requiresSerial) {
+          if (!item.serial_numbers || item.serial_numbers.trim().length === 0) {
+            throw new Error(`Serial numbers are required for "${item.product_name}" (serial-tracked product)`);
+          }
+          // Validate serial count matches quantity
+          const serialCount = item.serial_numbers.split(",").filter((s) => s.trim()).length;
+          if (serialCount !== item.check_in_quantity) {
+            throw new Error(`Serial number count (${serialCount}) must match check-in quantity (${item.check_in_quantity}) for "${item.product_name}"`);
+          }
+        }
+      }
+
       // Validate quantities for PO-based
       if (values.checkin_type === "po_based") {
         for (const item of validItems) {
