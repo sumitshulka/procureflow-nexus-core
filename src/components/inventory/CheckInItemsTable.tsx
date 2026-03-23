@@ -170,10 +170,11 @@ const CheckInItemRow: React.FC<{
   isPOBased: boolean;
   products: Product[];
   onUpdateItem: (index: number, field: keyof CheckInItem, value: any) => void;
+  onSelectProduct: (index: number, productId: string) => void;
   onUpdateSku: (index: number, skuId: string, skuCode: string) => void;
   onRemoveItem: (index: number) => void;
   onTrackingLoaded: (index: number, trackingType: string, requiresSerial: boolean) => void;
-}> = ({ item, index, isPOBased, products, onUpdateItem, onUpdateSku, onRemoveItem, onTrackingLoaded }) => {
+}> = ({ item, index, isPOBased, products, onUpdateItem, onSelectProduct, onUpdateSku, onRemoveItem, onTrackingLoaded }) => {
   const { data: productTracking } = useProductTracking(item.product_id);
   
   const trackingType = item.tracking_type || productTracking?.tracking_type || "none";
