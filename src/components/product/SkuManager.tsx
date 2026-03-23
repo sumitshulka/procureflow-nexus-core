@@ -86,6 +86,8 @@ const SkuManager = ({ productId, productName }: SkuManagerProps) => {
     onSuccess: () => {
       toast({ title: "Success", description: `SKU ${editingSku ? "updated" : "created"} successfully` });
       queryClient.invalidateQueries({ queryKey: ["product-skus", productId] });
+      queryClient.invalidateQueries({ queryKey: ["inventory_transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["inventory-items"] });
       resetForm();
     },
     onError: (err: any) => {
