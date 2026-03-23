@@ -46,20 +46,35 @@ const SkuManager = ({ productId, productName, categoryId }: SkuManagerProps) => 
   const [barcode, setBarcode] = useState("");
   const [attrValues, setAttrValues] = useState<Record<string, string>>({});
 
+  const { data: resolvedCategoryId } = useQuery({
+    queryKey: ["product-category-id", productId, categoryId],
+    queryFn: async () => {
+      if (categoryId) return categoryId;
+      const { data, error } = await supabase
+        .from("products")
+        .select("category_id")
+        .eq("id", productId)
+        .single();
+      if (error) throw error;
+      return data.category_id as string;
+    },
+    enabled: !!productId,
+  });
+
   // Fetch category SKU attributes
   const { data: categoryAttributes = [] } = useQuery({
-    queryKey: ["category-sku-attributes", categoryId],
+    queryKey: ["category-sku-attributes", resolvedCategoryId],
     queryFn: async () => {
-      if (!categoryId) return [];
+      if (!resolvedCategoryId) return [];
       const { data, error } = await supabase
         .from("category_sku_attributes")
         .select("*")
-        .eq("category_id", categoryId)
+        .eq("category_id", resolvedCategoryId)
         .order("display_order");
       if (error) throw error;
       return data as SkuAttribute[];
     },
-    enabled: !!categoryId,
+    enabled: !!resolvedCategoryId,
   });
 
   const { data: skus = [], isLoading } = useQuery({
