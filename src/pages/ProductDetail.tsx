@@ -13,6 +13,7 @@ import CreateRfpForProduct from "@/components/product/CreateRfpForProduct";
 import ProductPriceHistory from "@/components/product/ProductPriceHistory";
 import SuppliersTable from "@/components/product/SuppliersTable";
 import SkuManager from "@/components/product/SkuManager";
+import ProductMovementLedger from "@/components/product/ProductMovementLedger";
 
 interface Product {
   id: string;
