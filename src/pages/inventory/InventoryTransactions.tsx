@@ -68,7 +68,8 @@ const InventoryTransactions = () => {
           *,
           product:product_id(name),
           source_warehouse:source_warehouse_id(name),
-          target_warehouse:target_warehouse_id(name)
+          target_warehouse:target_warehouse_id(name),
+          sku:sku_id(id, sku_code, sku_name, variant_attributes)
         `)
         .order("transaction_date", { ascending: false });
       
@@ -254,6 +255,20 @@ const InventoryTransactions = () => {
       id: "product",
       header: "Product",
       cell: (row: EnhancedInventoryTransaction) => <div>{row.product?.name}</div>,
+    },
+    {
+      id: "sku",
+      header: "SKU",
+      cell: (row: any) => {
+        const sku = row.sku;
+        if (!sku) return <div className="text-muted-foreground">-</div>;
+        return (
+          <div>
+            <div className="font-medium text-xs">{sku.sku_code}</div>
+            {sku.sku_name && <div className="text-xs text-muted-foreground">{sku.sku_name}</div>}
+          </div>
+        );
+      },
     },
     {
       id: "quantity",
