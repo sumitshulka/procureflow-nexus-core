@@ -264,9 +264,8 @@ const InventoryTransactions = () => {
         const sku = row.product_skus;
         if (!sku) return <div className="text-muted-foreground">-</div>;
         return (
-          <div>
+           <div>
             <div className="font-medium text-xs">{sku.sku_code}</div>
-            {sku.sku_name && <div className="text-xs text-muted-foreground">{sku.sku_name}</div>}
           </div>
         );
       },
