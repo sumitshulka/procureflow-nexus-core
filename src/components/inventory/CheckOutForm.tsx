@@ -113,6 +113,7 @@ interface BatchInfo {
   batch_number: string;
   product_id: string;
   product_name: string;
+  sku_code: string | null;
   warehouse_id: string;
   quantity: number;
   expiry_date: string | null;
