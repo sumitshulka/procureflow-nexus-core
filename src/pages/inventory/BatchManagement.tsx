@@ -82,7 +82,9 @@ const BatchManagement = () => {
           transaction_date,
           target_warehouse_id,
           product_id,
-          product:product_id(id, name, sku),
+          sku_id,
+          product:product_id(id, name),
+          sku:sku_id(sku_code, name),
           warehouse:target_warehouse_id(id, name)
         `)
         .eq("type", "check_in")
