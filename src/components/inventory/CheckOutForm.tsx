@@ -682,6 +682,7 @@ const CheckOutForm = ({ productId, onSuccess, onCancel }: CheckOutFormProps) => 
                     <TableHeader>
                       <TableRow>
                         <TableHead>Product</TableHead>
+                        <TableHead>SKU</TableHead>
                         <TableHead>Batch #</TableHead>
                         <TableHead className="text-right">Available</TableHead>
                         <TableHead>Expiry</TableHead>
