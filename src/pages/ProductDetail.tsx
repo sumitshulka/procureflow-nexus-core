@@ -7,12 +7,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Edit, Package, Users, Barcode, Hash } from "lucide-react";
+import { ArrowLeft, Edit, Package, Users, Barcode, Hash, ClipboardList } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import CreateRfpForProduct from "@/components/product/CreateRfpForProduct";
 import ProductPriceHistory from "@/components/product/ProductPriceHistory";
 import SuppliersTable from "@/components/product/SuppliersTable";
 import SkuManager from "@/components/product/SkuManager";
+import ProductMovementLedger from "@/components/product/ProductMovementLedger";
 
 interface Product {
   id: string;
@@ -162,6 +163,10 @@ const ProductDetail = () => {
             SKU Variants
           </TabsTrigger>
           <TabsTrigger value="pricing">Price History</TabsTrigger>
+          <TabsTrigger value="movement">
+            <ClipboardList className="h-4 w-4 mr-1" />
+            Movement
+          </TabsTrigger>
           <TabsTrigger value="suppliers">Suppliers</TabsTrigger>
         </TabsList>
 
@@ -271,6 +276,10 @@ const ProductDetail = () => {
 
         <TabsContent value="pricing">
           <ProductPriceHistory productId={product.id} productName={product.name} />
+        </TabsContent>
+
+        <TabsContent value="movement">
+          <ProductMovementLedger productId={product.id} productName={product.name} />
         </TabsContent>
 
         <TabsContent value="suppliers">
