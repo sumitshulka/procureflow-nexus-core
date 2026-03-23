@@ -373,6 +373,24 @@ const CheckInItemsTable: React.FC<CheckInItemsTableProps> = ({
     onItemsChange(updatedItems);
   };
 
+  const selectProduct = (index: number, productId: string) => {
+    const product = products.find((p) => p.id === productId);
+    const updatedItems = [...items];
+    updatedItems[index] = {
+      ...updatedItems[index],
+      product_id: productId,
+      product_name: product?.name || "",
+      sku_id: undefined,
+      sku_code: undefined,
+      tracking_type: undefined,
+      requires_serial_tracking: undefined,
+      batch_number: "",
+      expiry_date: "",
+      serial_numbers: "",
+    };
+    onItemsChange(updatedItems);
+  };
+
   const updateItemSku = (index: number, skuId: string, skuCode: string) => {
     const updatedItems = [...items];
     updatedItems[index] = { ...updatedItems[index], sku_id: skuId || undefined, sku_code: skuCode || undefined };
