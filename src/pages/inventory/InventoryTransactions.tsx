@@ -74,9 +74,10 @@ const InventoryTransactions = () => {
         .order("transaction_date", { ascending: false });
       
       if (error) {
+        console.error("Failed to fetch inventory transactions:", error.message, error.code, error.details, error.hint);
         toast({
           title: "Error",
-          description: "Failed to fetch inventory transactions",
+          description: `Failed to fetch inventory transactions: ${error.message}`,
           variant: "destructive",
         });
         throw error;
