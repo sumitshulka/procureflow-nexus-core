@@ -291,7 +291,7 @@ const CheckOutForm = ({ productId, onSuccess, onCancel }: CheckOutFormProps) => 
   });
 
   // Filter batches by selected product (already FEFO sorted)
-  const filteredBatches = selectedProduct
+  const filteredBatches = selectedProduct && selectedProduct !== "all"
     ? availableBatches.filter((b) => b.product_id === selectedProduct)
     : availableBatches;
 
