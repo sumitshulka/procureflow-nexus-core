@@ -463,6 +463,44 @@ const VendorRegistrationPage = () => {
     { number: 6, title: 'Security', subtitle: 'Create account', icon: Lock },
   ];
 
+  const stepFields: Record<number, (keyof VendorRegistrationForm)[]> = {
+    1: ['company_name', 'pan_number', 'gst_number', 'country', 'currency'],
+    2: ['primary_email', 'primary_phone'],
+    3: ['registered_address'],
+    4: ['signatory_name'],
+    5: ['bank_name', 'account_number', 'ifsc_code'],
+    6: ['password', 'confirmPassword'],
+  };
+
+  const handleContinue = async () => {
+    const fields = stepFields[currentStep] || [];
+    // For nested fields like registered_address, trigger all sub-fields
+    const fieldsToValidate: any[] = [];
+    fields.forEach((f) => {
+      if (f === 'registered_address') {
+        fieldsToValidate.push(
+          'registered_address.street',
+          'registered_address.city',
+          'registered_address.state',
+          'registered_address.postal_code'
+        );
+      } else {
+        fieldsToValidate.push(f);
+      }
+    });
+
+    const result = await form.trigger(fieldsToValidate as any);
+    if (result) {
+      setCurrentStep(Math.min(6, currentStep + 1));
+    } else {
+      toast({
+        title: 'Please fix the errors',
+        description: 'Complete all required fields before proceeding.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const progressPercentage = ((currentStep - 1) / (steps.length - 1)) * 100;
 
   return (
@@ -508,7 +546,9 @@ const VendorRegistrationPage = () => {
                   <div key={step.number} className="relative">
                     <button
                       type="button"
-                      onClick={() => isCompleted && setCurrentStep(step.number)}
+                      onClick={() => {
+                        if (isCompleted) setCurrentStep(step.number);
+                      }}
                       disabled={!isCompleted && !isActive}
                       className={cn(
                         "w-full flex items-center gap-4 p-3 rounded-xl transition-all duration-200 text-left",
@@ -1778,7 +1818,7 @@ const VendorRegistrationPage = () => {
                     {currentStep < 6 ? (
                       <Button
                         type="button"
-                        onClick={() => setCurrentStep(Math.min(6, currentStep + 1))}
+                        onClick={handleContinue}
                         className="gap-2 h-11 px-6"
                       >
                         Continue
