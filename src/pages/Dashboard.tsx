@@ -10,9 +10,24 @@ import DataTable from "@/components/common/DataTable";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { getCurrencySymbol } from "@/utils/currencyUtils";
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const { data: orgSettings } = useQuery({
+    queryKey: ["org-settings-currency-dash"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("organization_settings")
+        .select("base_currency")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return data;
+    },
+  });
+  const baseCurrency = orgSettings?.base_currency || "USD";
+  const currencySymbol = getCurrencySymbol(baseCurrency);
 
   const { data: upcomingDeliveries = [] } = useQuery({
     queryKey: ["dashboard-upcoming-deliveries"],
@@ -61,7 +76,7 @@ const Dashboard = () => {
       id: "value",
       header: "Value",
       cell: (row: any) =>
-        new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(row.value),
+        `${currencySymbol}${Number(row.value).toLocaleString()}`,
     },
     {
       id: "dueDate",

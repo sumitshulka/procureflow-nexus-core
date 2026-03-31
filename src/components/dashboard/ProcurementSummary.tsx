@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState } from "react";
 import {
   Card,
   CardContent,
@@ -7,6 +7,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   AreaChart,
   Area,
@@ -22,48 +29,82 @@ import {
 } from "recharts";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format, subMonths, startOfMonth } from "date-fns";
+import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getCurrencySymbol } from "@/utils/currencyUtils";
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8"];
 
-const ProcurementSummary = () => {
-  const { data, isLoading } = useQuery({
-    queryKey: ["procurement-summary-charts"],
-    queryFn: async () => {
-      const eightMonthsAgo = subMonths(new Date(), 8);
+const MONTH_ORDER = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-      // Fetch POs for monthly volume
+const ProcurementSummary = () => {
+  const currentYear = new Date().getFullYear();
+  const [selectedYear, setSelectedYear] = useState<number>(currentYear);
+
+  const { data: orgSettings } = useQuery({
+    queryKey: ["org-settings-currency-dashboard"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("organization_settings")
+        .select("base_currency")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return data;
+    },
+  });
+
+  const baseCurrency = orgSettings?.base_currency || "USD";
+  const currencySymbol = getCurrencySymbol(baseCurrency);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["procurement-summary-charts", selectedYear],
+    queryFn: async () => {
+      const yearStart = `${selectedYear}-01-01`;
+      const yearEnd = `${selectedYear}-12-31`;
+
+      // Fetch POs for the selected year
       const { data: orders } = await supabase
         .from("purchase_orders")
         .select("po_date, final_amount")
-        .gte("po_date", eightMonthsAgo.toISOString())
+        .gte("po_date", yearStart)
+        .lte("po_date", yearEnd)
         .order("po_date", { ascending: true });
 
-      // Fetch PO items with category info for spend by category
+      // Fetch all distinct years for the dropdown
+      const { data: allOrders } = await supabase
+        .from("purchase_orders")
+        .select("po_date")
+        .order("po_date", { ascending: true });
+
+      const availableYears = new Set<number>();
+      availableYears.add(currentYear);
+      allOrders?.forEach((o) => {
+        if (o.po_date) availableYears.add(new Date(o.po_date).getFullYear());
+      });
+
+      // Fetch PO items for spend by category
       const { data: poItems } = await supabase
         .from("purchase_order_items")
         .select("total_price, description");
 
-      // Build monthly data
+      // Build monthly data for selected year
       const monthlyMap: Record<string, number> = {};
-      for (let i = 7; i >= 0; i--) {
-        const d = subMonths(new Date(), i);
-        const key = format(startOfMonth(d), "MMM");
-        monthlyMap[key] = 0;
-      }
+      MONTH_ORDER.forEach((m) => { monthlyMap[m] = 0; });
+
       orders?.forEach((o) => {
         const key = format(new Date(o.po_date), "MMM");
         if (key in monthlyMap) {
           monthlyMap[key] += Number(o.final_amount) || 0;
         }
       });
-      const monthlyData = Object.entries(monthlyMap).map(([name, value]) => ({
+
+      const monthlyData = MONTH_ORDER.map((name) => ({
         name,
-        value,
+        value: monthlyMap[name],
       }));
 
-      // Build category data - group by first word of description as proxy for category
+      // Build category data
       const catMap: Record<string, number> = {};
       poItems?.forEach((item) => {
         const cat = item.description?.split(" ")[0] || "Other";
@@ -78,7 +119,11 @@ const ProcurementSummary = () => {
         value: Math.round((val / total) * 100),
       }));
 
-      return { monthlyData, categoryData };
+      return {
+        monthlyData,
+        categoryData,
+        availableYears: Array.from(availableYears).sort((a, b) => b - a),
+      };
     },
     refetchInterval: 60000,
   });
@@ -94,13 +139,31 @@ const ProcurementSummary = () => {
 
   const monthlyData = data?.monthlyData || [];
   const categoryData = data?.categoryData || [];
+  const availableYears = data?.availableYears || [currentYear];
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <Card>
-        <CardHeader>
-          <CardTitle>Monthly Procurement Volume</CardTitle>
-          <CardDescription>Total procurement spend by month</CardDescription>
+        <CardHeader className="flex flex-row items-start justify-between space-y-0">
+          <div>
+            <CardTitle>Monthly Procurement Volume</CardTitle>
+            <CardDescription>Total procurement spend by month ({currencySymbol})</CardDescription>
+          </div>
+          <Select
+            value={String(selectedYear)}
+            onValueChange={(v) => setSelectedYear(Number(v))}
+          >
+            <SelectTrigger className="w-[100px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {availableYears.map((year) => (
+                <SelectItem key={year} value={String(year)}>
+                  {year}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </CardHeader>
         <CardContent className="h-[300px]">
           <ResponsiveContainer width="100%" height="100%">
@@ -110,7 +173,7 @@ const ProcurementSummary = () => {
               <YAxis />
               <Tooltip
                 formatter={(value) =>
-                  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value as number)
+                  `${currencySymbol}${Number(value).toLocaleString()}`
                 }
               />
               <Area type="monotone" dataKey="value" stroke="#0284c7" fill="#0ea5e9" fillOpacity={0.3} />
