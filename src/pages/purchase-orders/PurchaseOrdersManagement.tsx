@@ -431,7 +431,7 @@ const PurchaseOrdersManagement = () => {
                 <div className="space-y-2 flex-1">
                   <div className="flex items-center gap-3">
                     <ShoppingCart className="h-5 w-5 text-primary" />
-                    <h3 className="text-lg font-semibold">{po.po_number}</h3>
+                    <h3 className="text-lg font-semibold cursor-pointer text-primary hover:underline" onClick={() => navigate(`/purchase-orders/${po.id}`)}>{po.po_number}</h3>
                     {getStatusBadge(po.status)}
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
