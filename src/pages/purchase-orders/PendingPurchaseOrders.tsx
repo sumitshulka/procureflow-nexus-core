@@ -194,7 +194,7 @@ const PendingPurchaseOrders = () => {
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-4 mb-2">
-                      <h3 className="text-lg font-semibold">PO {order.po_number}</h3>
+                      <h3 className="text-lg font-semibold cursor-pointer text-primary hover:underline" onClick={() => navigate(`/purchase-orders/${order.id}`)}>PO {order.po_number}</h3>
                       <Badge variant={getStatusBadgeVariant(order.status)}>
                         {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                       </Badge>
