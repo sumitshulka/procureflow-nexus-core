@@ -402,7 +402,7 @@ const CreatePurchaseOrder = () => {
     if (!user) {
       toast({
         title: "Error",
-        description: "You must be logged in to create a purchase order",
+        description: "You must be logged in",
         variant: "destructive",
       });
       return;
@@ -412,34 +412,60 @@ const CreatePurchaseOrder = () => {
     try {
       const orderTotals = calculateOrderTotals(data.items);
 
-      // Insert Purchase Order - don't include po_number as it's auto-generated
-      const { data: poData, error: poError } = await supabase
-        .from("purchase_orders")
-        .insert({
-          vendor_id: data.vendor_id,
-          procurement_request_id: data.procurement_request_id || null,
-          expected_delivery_date: data.expected_delivery_date?.toISOString(),
-          payment_terms: data.payment_terms,
-          delivery_terms: data.delivery_terms,
-          warranty_terms: data.warranty_terms,
-          special_instructions: data.special_instructions,
-          terms_and_conditions: data.terms_and_conditions,
-          specific_instructions: data.specific_instructions,
-          currency: data.currency,
-          created_by: user.id,
-          status: "draft",
-          ...orderTotals,
-        } as any)
-        .select()
-        .single();
+      const poPayload = {
+        vendor_id: data.vendor_id,
+        procurement_request_id: data.procurement_request_id || null,
+        expected_delivery_date: data.expected_delivery_date?.toISOString(),
+        payment_terms: data.payment_terms,
+        delivery_terms: data.delivery_terms,
+        warranty_terms: data.warranty_terms,
+        special_instructions: data.special_instructions,
+        terms_and_conditions: data.terms_and_conditions,
+        specific_instructions: data.specific_instructions,
+        currency: data.currency,
+        ...orderTotals,
+      };
 
-      if (poError) throw poError;
+      let poId: string;
+
+      if (isEditMode && editId) {
+        // Update existing PO
+        const { error: poError } = await supabase
+          .from("purchase_orders")
+          .update(poPayload as any)
+          .eq("id", editId);
+
+        if (poError) throw poError;
+        poId = editId;
+
+        // Delete old items and re-insert
+        const { error: deleteError } = await supabase
+          .from("purchase_order_items")
+          .delete()
+          .eq("po_id", editId);
+
+        if (deleteError) throw deleteError;
+      } else {
+        // Insert new PO
+        const { data: poData, error: poError } = await supabase
+          .from("purchase_orders")
+          .insert({
+            ...poPayload,
+            created_by: user.id,
+            status: "draft",
+          } as any)
+          .select()
+          .single();
+
+        if (poError) throw poError;
+        poId = poData.id;
+      }
 
       // Insert Purchase Order Items
       const itemsData = data.items.map((item) => {
         const totals = calculateItemTotals(item);
         return {
-          po_id: poData.id,
+          po_id: poId,
           product_id: (item as any).product_id || null,
           description: item.description,
           quantity: item.quantity,
@@ -462,14 +488,14 @@ const CreatePurchaseOrder = () => {
 
       toast({
         title: "Success",
-        description: "Purchase order created successfully",
+        description: isEditMode ? "Purchase order updated successfully" : "Purchase order created successfully",
       });
 
-      navigate("/purchase-orders/pending");
+      navigate(isEditMode ? `/purchase-orders/${poId}` : "/purchase-orders/pending");
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Failed to create purchase order",
+        description: error.message || `Failed to ${isEditMode ? 'update' : 'create'} purchase order`,
         variant: "destructive",
       });
     } finally {
