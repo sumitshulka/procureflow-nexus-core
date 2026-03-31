@@ -546,7 +546,9 @@ const VendorRegistrationPage = () => {
                   <div key={step.number} className="relative">
                     <button
                       type="button"
-                      onClick={() => isCompleted && setCurrentStep(step.number)}
+                      onClick={() => {
+                        if (isCompleted) setCurrentStep(step.number);
+                      }}
                       disabled={!isCompleted && !isActive}
                       className={cn(
                         "w-full flex items-center gap-4 p-3 rounded-xl transition-all duration-200 text-left",
