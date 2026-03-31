@@ -10,6 +10,7 @@ import DataTable from "@/components/common/DataTable";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { getCurrencySymbol } from "@/utils/currencyUtils";
 
 const Dashboard = () => {
   const navigate = useNavigate();
