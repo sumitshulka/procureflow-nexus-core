@@ -61,6 +61,8 @@ interface Vendor {
 }
 
 const CreatePurchaseOrder = () => {
+  const { id: editId } = useParams<{ id: string }>();
+  const isEditMode = !!editId;
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -72,6 +74,7 @@ const CreatePurchaseOrder = () => {
   const [orgCurrency, setOrgCurrency] = useState<string>("");
   const [taxCodes, setTaxCodes] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
+  const [editPoNumber, setEditPoNumber] = useState<string>("");
 
   const form = useForm<PurchaseOrderFormData>({
     resolver: zodResolver(purchaseOrderSchema),
@@ -97,11 +100,77 @@ const CreatePurchaseOrder = () => {
   useEffect(() => {
     fetchVendors();
     fetchStandardSettings();
-    fetchNextPoNumber();
+    if (!isEditMode) {
+      fetchNextPoNumber();
+    }
     fetchOrganizationCurrency();
     fetchTaxCodes();
     fetchProducts();
   }, []);
+
+  // Load existing PO data in edit mode
+  useEffect(() => {
+    if (!isEditMode || !editId) return;
+    
+    const loadExistingPO = async () => {
+      try {
+        const { data: po, error } = await supabase
+          .from("purchase_orders")
+          .select(`
+            *,
+            purchase_order_items(*)
+          `)
+          .eq("id", editId)
+          .single();
+
+        if (error) throw error;
+        if (!po) return;
+
+        setEditPoNumber(po.po_number || "");
+
+        // Populate form fields
+        form.reset({
+          vendor_id: po.vendor_id || "",
+          procurement_request_id: po.procurement_request_id || undefined,
+          expected_delivery_date: po.expected_delivery_date ? new Date(po.expected_delivery_date) : undefined,
+          payment_terms: po.payment_terms || "",
+          delivery_terms: po.delivery_terms || "",
+          warranty_terms: po.warranty_terms || "",
+          special_instructions: po.special_instructions || "",
+          terms_and_conditions: po.terms_and_conditions || "",
+          specific_instructions: po.specific_instructions || "",
+          currency: po.currency || "",
+          items: po.purchase_order_items?.length > 0
+            ? po.purchase_order_items.map((item: any) => ({
+                product_id: item.product_id || undefined,
+                description: item.description || "",
+                quantity: item.quantity || 1,
+                unit_price: item.unit_price || 0,
+                tax_code_id: item.tax_code_id || undefined,
+                tax_rate: item.tax_rate || 0,
+                discount_rate: item.discount_rate || 0,
+                delivery_date: item.delivery_date ? new Date(item.delivery_date) : undefined,
+                specifications: item.specifications || undefined,
+                warranty_period: item.warranty_period || undefined,
+              }))
+            : [{ description: "", quantity: 1, unit_price: 0, tax_rate: 0, discount_rate: 0 }],
+        });
+
+        // Set selected vendor
+        const vendor = vendors.find(v => v.id === po.vendor_id);
+        if (vendor) setSelectedVendor(vendor);
+      } catch (error: any) {
+        console.error("Error loading PO for edit:", error.message);
+        toast({
+          title: "Error",
+          description: "Failed to load purchase order data",
+          variant: "destructive",
+        });
+      }
+    };
+
+    loadExistingPO();
+  }, [editId, isEditMode, vendors]);
 
   useEffect(() => {
     const subscription = form.watch((values) => {
