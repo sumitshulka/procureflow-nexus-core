@@ -993,7 +993,7 @@ const CreatePurchaseOrder = () => {
                   Cancel
                 </Button>
                 <Button type="submit" disabled={isLoading}>
-                  {isLoading ? "Creating..." : "Create Purchase Order"}
+                  {isLoading ? (isEditMode ? "Updating..." : "Creating...") : (isEditMode ? "Update Purchase Order" : "Create Purchase Order")}
                 </Button>
               </div>
             </form>
