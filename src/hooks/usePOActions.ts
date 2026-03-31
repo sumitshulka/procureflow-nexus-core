@@ -4,6 +4,23 @@ import { useToast } from "@/hooks/use-toast";
 import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas";
 
+const waitForImages = async (doc: Document) => {
+  const images = Array.from(doc.images || []);
+  await Promise.all(
+    images.map(
+      (img) =>
+        new Promise<void>((resolve) => {
+          if (img.complete) {
+            resolve();
+            return;
+          }
+          img.addEventListener("load", () => resolve(), { once: true });
+          img.addEventListener("error", () => resolve(), { once: true });
+        })
+    )
+  );
+};
+
 export const usePOActions = () => {
   const { toast } = useToast();
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
@@ -11,75 +28,121 @@ export const usePOActions = () => {
 
   const generatePDF = async (poId: string) => {
     setIsGeneratingPDF(true);
+
+    let previewWindow: Window | null = null;
+
     try {
+      previewWindow = window.open("", "_blank", "noopener,noreferrer");
+
+      if (!previewWindow) {
+        throw new Error("Popup was blocked. Please allow popups and try again.");
+      }
+
+      previewWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Generating Purchase Order...</title>
+            <style>
+              body {
+                margin: 0;
+                font-family: Arial, sans-serif;
+                background: #f8fafc;
+                color: #0f172a;
+                display: grid;
+                place-items: center;
+                min-height: 100vh;
+              }
+              .status {
+                text-align: center;
+                padding: 32px;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="status">
+              <h2>Preparing purchase order…</h2>
+              <p>Please wait while the PDF is generated.</p>
+            </div>
+          </body>
+        </html>
+      `);
+      previewWindow.document.close();
+
       const { data, error } = await supabase.functions.invoke("generate-po-pdf", {
         body: { po_id: poId },
       });
 
       if (error) throw error;
+      if (!data?.html) throw new Error("No purchase order content was returned.");
 
-      // Render HTML into a hidden container
-      const container = document.createElement("div");
-      container.style.position = "absolute";
-      container.style.left = "-9999px";
-      container.style.top = "0";
-      container.style.width = "794px"; // A4 width at 96dpi
-      container.style.background = "white";
-      container.innerHTML = data.html;
-      document.body.appendChild(container);
+      previewWindow.document.open();
+      previewWindow.document.write(data.html);
+      previewWindow.document.close();
 
-      // Wait for rendering
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      await waitForImages(previewWindow.document);
 
-      const canvas = await html2canvas(container, {
+      const target = previewWindow.document.body;
+      if (!target) {
+        throw new Error("Unable to render purchase order preview.");
+      }
+
+      const canvas = await html2canvas(target, {
         scale: 2,
         useCORS: true,
         logging: false,
-        width: 794,
-        windowWidth: 794,
+        backgroundColor: "#ffffff",
+        windowWidth: Math.max(target.scrollWidth, 1024),
+        windowHeight: Math.max(target.scrollHeight, 1448),
       });
-
-      document.body.removeChild(container);
 
       const pdf = new jsPDF("p", "mm", "a4");
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
-
       const imgWidth = pdfWidth;
-      const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      const imgData = canvas.toDataURL("image/png");
 
       let heightLeft = imgHeight;
       let position = 0;
-      const imgData = canvas.toDataURL("image/png");
 
-      // First page
       pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
       heightLeft -= pdfHeight;
 
-      // Additional pages
       while (heightLeft > 0) {
-        position -= pdfHeight;
+        position = heightLeft - imgHeight;
         pdf.addPage();
         pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
         heightLeft -= pdfHeight;
       }
 
-      // Download the PDF
       const fileName = `PO-${data.po_number || poId}.pdf`;
-      pdf.save(fileName);
-
-      // Also open in new tab for viewing
       const pdfBlob = pdf.output("blob");
       const blobUrl = URL.createObjectURL(pdfBlob);
-      window.open(blobUrl, "_blank");
+
+      previewWindow.location.href = blobUrl;
+
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
 
       toast({
-        title: "Purchase Order Downloaded",
-        description: `${fileName} has been downloaded and opened in a new tab.`,
+        title: "Purchase Order Ready",
+        description: `${fileName} was opened in a new tab and download was triggered.`,
       });
 
       return data;
     } catch (error: any) {
+      if (previewWindow && !previewWindow.closed) {
+        previewWindow.close();
+      }
+
       console.error("PO PDF generation error:", error);
       toast({
         title: "Error",
