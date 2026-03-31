@@ -76,7 +76,7 @@ const Dashboard = () => {
       id: "value",
       header: "Value",
       cell: (row: any) =>
-        new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(row.value),
+        `${currencySymbol}${Number(row.value).toLocaleString()}`,
     },
     {
       id: "dueDate",
