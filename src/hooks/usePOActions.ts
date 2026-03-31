@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { jsPDF } from "jspdf";
+import html2canvas from "html2canvas";
 
 export const usePOActions = () => {
   const { toast } = useToast();
@@ -16,44 +18,72 @@ export const usePOActions = () => {
 
       if (error) throw error;
 
-      // Open the PO in a new tab for viewing/printing
-      const newWindow = window.open("", "_blank");
-      if (newWindow) {
-        newWindow.document.write(data.html);
-        newWindow.document.close();
-        // Add a print button to the opened window
-        const printBtn = newWindow.document.createElement("div");
-        printBtn.innerHTML = `
-          <div style="position:fixed;top:10px;right:10px;z-index:9999;display:flex;gap:8px;">
-            <button onclick="window.print()" style="padding:10px 20px;background:#1e40af;color:white;border:none;border-radius:6px;cursor:pointer;font-size:14px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,0.15);">
-              🖨️ Print / Save as PDF
-            </button>
-          </div>
-        `;
-        newWindow.document.body.appendChild(printBtn);
-      } else {
-        // Fallback: download as HTML file
-        const blob = new Blob([data.html], { type: "text/html" });
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `PO-${data.po_number}.html`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
+      // Render HTML into a hidden container
+      const container = document.createElement("div");
+      container.style.position = "absolute";
+      container.style.left = "-9999px";
+      container.style.top = "0";
+      container.style.width = "794px"; // A4 width at 96dpi
+      container.style.background = "white";
+      container.innerHTML = data.html;
+      document.body.appendChild(container);
+
+      // Wait for rendering
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      const canvas = await html2canvas(container, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        width: 794,
+        windowWidth: 794,
+      });
+
+      document.body.removeChild(container);
+
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+
+      const imgWidth = pdfWidth;
+      const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+
+      let heightLeft = imgHeight;
+      let position = 0;
+      const imgData = canvas.toDataURL("image/png");
+
+      // First page
+      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+      heightLeft -= pdfHeight;
+
+      // Additional pages
+      while (heightLeft > 0) {
+        position -= pdfHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+        heightLeft -= pdfHeight;
       }
 
+      // Download the PDF
+      const fileName = `PO-${data.po_number || poId}.pdf`;
+      pdf.save(fileName);
+
+      // Also open in new tab for viewing
+      const pdfBlob = pdf.output("blob");
+      const blobUrl = URL.createObjectURL(pdfBlob);
+      window.open(blobUrl, "_blank");
+
       toast({
-        title: "Purchase Order Generated",
-        description: "The PO has been opened in a new tab. Use 'Print / Save as PDF' to download.",
+        title: "Purchase Order Downloaded",
+        description: `${fileName} has been downloaded and opened in a new tab.`,
       });
 
       return data;
     } catch (error: any) {
+      console.error("PO PDF generation error:", error);
       toast({
         title: "Error",
-        description: error.message || "Failed to generate PO",
+        description: error.message || "Failed to generate PDF",
         variant: "destructive",
       });
       throw error;
@@ -67,8 +97,11 @@ export const usePOActions = () => {
     try {
       let html = pdfHtml;
       if (!html) {
-        const pdfData = await generatePDF(poId);
-        html = pdfData.html;
+        const { data, error } = await supabase.functions.invoke("generate-po-pdf", {
+          body: { po_id: poId },
+        });
+        if (error) throw error;
+        html = data.html;
       }
 
       const { data, error } = await supabase.functions.invoke("send-po-email", {
