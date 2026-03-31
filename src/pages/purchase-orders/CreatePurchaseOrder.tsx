@@ -511,11 +511,11 @@ const CreatePurchaseOrder = () => {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>Create Purchase Order</CardTitle>
-            {nextPoNumber && (
+            <CardTitle>{isEditMode ? 'Edit Purchase Order' : 'Create Purchase Order'}</CardTitle>
+            {(isEditMode ? editPoNumber : nextPoNumber) && (
               <div className="flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-md border border-primary/20">
                 <span className="text-sm font-medium text-muted-foreground">PO Number:</span>
-                <span className="text-lg font-bold text-primary">{nextPoNumber}</span>
+                <span className="text-lg font-bold text-primary">{isEditMode ? editPoNumber : nextPoNumber}</span>
               </div>
             )}
           </div>
