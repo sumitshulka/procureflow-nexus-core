@@ -14,6 +14,20 @@ import { getCurrencySymbol } from "@/utils/currencyUtils";
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const { data: orgSettings } = useQuery({
+    queryKey: ["org-settings-currency-dash"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("organization_settings")
+        .select("base_currency")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return data;
+    },
+  });
+  const baseCurrency = orgSettings?.base_currency || "USD";
+  const currencySymbol = getCurrencySymbol(baseCurrency);
 
   const { data: upcomingDeliveries = [] } = useQuery({
     queryKey: ["dashboard-upcoming-deliveries"],
