@@ -1816,7 +1816,7 @@ const VendorRegistrationPage = () => {
                     {currentStep < 6 ? (
                       <Button
                         type="button"
-                        onClick={() => setCurrentStep(Math.min(6, currentStep + 1))}
+                        onClick={handleContinue}
                         className="gap-2 h-11 px-6"
                       >
                         Continue
