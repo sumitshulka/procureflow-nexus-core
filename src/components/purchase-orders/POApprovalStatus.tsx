@@ -309,7 +309,7 @@ const POApprovalStatus: React.FC<POApprovalStatusProps> = ({
                     rows={3}
                   />
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <Button
                     onClick={() => handleApprovalAction("approved")}
                     disabled={isProcessing}
@@ -317,6 +317,15 @@ const POApprovalStatus: React.FC<POApprovalStatusProps> = ({
                   >
                     <CheckCircle2 className="h-4 w-4 mr-2" />
                     Approve
+                  </Button>
+                  <Button
+                    onClick={() => handleApprovalAction("info_requested")}
+                    disabled={isProcessing}
+                    variant="outline"
+                    className="flex-1"
+                  >
+                    <HelpCircle className="h-4 w-4 mr-2" />
+                    Need More Info
                   </Button>
                   <Button
                     onClick={() => handleApprovalAction("rejected")}
