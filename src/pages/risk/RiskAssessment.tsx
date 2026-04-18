@@ -115,6 +115,12 @@ const RiskAssessment = () => {
     status: editing.status,
     mitigation_strategy: editing.mitigation_strategy || "",
     due_date: editing.due_date || "",
+    treatment_strategy: (editing as any).treatment_strategy || "Treat",
+    vendor_id: (editing as any).vendor_id || "",
+    department_id: (editing as any).department_id || "",
+    residual_probability: (editing as any).residual_probability || 0,
+    residual_impact: (editing as any).residual_impact || 0,
+    review_frequency_days: (editing as any).review_frequency_days || 90,
   } : null;
 
   if (isLoading) return <div className="container mx-auto py-6">Loading...</div>;
