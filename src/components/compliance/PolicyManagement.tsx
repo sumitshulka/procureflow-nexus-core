@@ -215,7 +215,7 @@ const PolicyManagement = () => {
       const { error } = await supabase.from("compliance_policies").delete().eq("id", id);
       if (error) throw error;
       toast.success("Policy deleted successfully");
-      fetchPolicies();
+      refetchPolicies();
     } catch (error: any) {
       toast.error("Failed to delete policy", { description: error.message });
     }
@@ -260,7 +260,7 @@ const PolicyManagement = () => {
       setIsDialogOpen(false);
       setEditingPolicy(null);
       form.reset();
-      fetchPolicies();
+      refetchPolicies();
     } catch (error: any) {
       toast.error(editingPolicy ? "Failed to update policy" : "Failed to create policy", {
         description: error.message,
