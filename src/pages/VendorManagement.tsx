@@ -398,7 +398,7 @@ const VendorManagement = () => {
               {filteredVendors.map((vendor) => (
                 <Card key={vendor.id} className="hover:shadow-lg transition-all duration-200 border-2 border-border/60 shadow-sm">
                   <CardContent className="p-0">
-                    <div className="flex flex-col lg:flex-row">
+                    <div className="flex flex-col xl:flex-row">
                       {/* Main vendor information */}
                       <div className="flex-1 p-6">
                         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
@@ -417,7 +417,7 @@ const VendorManagement = () => {
                         </div>
                         
                         {/* Key Information Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-3 gap-4 mb-4">
                           <div className="flex items-center gap-2 text-sm">
                             <MessageSquare className="w-4 h-4 text-muted-foreground" />
                             <span className="font-medium">Email:</span>
@@ -480,7 +480,7 @@ const VendorManagement = () => {
                       </div>
                       
                       {/* Action Buttons */}
-                      <div className="border-t lg:border-t-0 lg:border-l bg-muted/20 p-6 lg:min-w-[280px]">
+                      <div className="border-t xl:border-t-0 xl:border-l bg-muted/20 p-6 xl:min-w-[260px] xl:max-w-[280px]">
                         <div className="flex flex-col gap-3">
                           <Button
                             variant="outline"
