@@ -239,7 +239,7 @@ const VendorCompliance: React.FC = () => {
       </div>
     );
 
-  const incomplete = stats.mandatory - stats.approved;
+  const incomplete = stats.pendingMandatory;
 
   return (
     <div className="page-container space-y-6">
@@ -265,10 +265,11 @@ const VendorCompliance: React.FC = () => {
         </Alert>
       )}
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <Card><CardContent className="p-4"><div className="text-xs text-muted-foreground">Total policies</div><div className="text-2xl font-bold">{stats.total}</div></CardContent></Card>
         <Card><CardContent className="p-4"><div className="text-xs text-muted-foreground">Mandatory</div><div className="text-2xl font-bold">{stats.mandatory}</div></CardContent></Card>
         <Card><CardContent className="p-4"><div className="text-xs text-muted-foreground">Approved</div><div className="text-2xl font-bold text-green-600">{stats.approved}</div></CardContent></Card>
+        <Card><CardContent className="p-4"><div className="text-xs text-muted-foreground">Under review</div><div className="text-2xl font-bold text-amber-600">{stats.underReview}</div></CardContent></Card>
         <Card><CardContent className="p-4"><div className="text-xs text-muted-foreground">Pending action</div><div className="text-2xl font-bold text-destructive">{stats.pending}</div></CardContent></Card>
       </div>
 
