@@ -156,6 +156,7 @@ import VendorInvoices from '@/pages/vendor/VendorInvoices';
 import VendorCreateInvoice from '@/pages/vendor/VendorCreateInvoice';
 import VendorInvoiceDetail from '@/pages/vendor/VendorInvoiceDetail';
 import VendorPurchaseOrders from '@/pages/vendor/VendorPurchaseOrders';
+import VendorPurchaseOrderDetail from '@/pages/vendor/VendorPurchaseOrderDetail';
 import VendorProducts from '@/pages/vendor/VendorProducts';
 import VendorFinances from '@/pages/vendor/VendorFinances';
 import VendorMessages from '@/pages/vendor/VendorMessages';
@@ -1008,6 +1009,14 @@ function App() {
             element={
               <ProtectedRoute requireVendor={true}>
                 <VendorLayout><VendorPurchaseOrders /></VendorLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/vendor/purchase-orders/:id"
+            element={
+              <ProtectedRoute requireVendor={true}>
+                <VendorLayout><VendorPurchaseOrderDetail /></VendorLayout>
               </ProtectedRoute>
             }
           />
