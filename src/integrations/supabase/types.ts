@@ -586,11 +586,18 @@ export type Database = {
           description: string
           effective_date: string
           id: string
+          is_system: boolean
           owner: string
+          policy_key: string | null
           review_date: string
           status: string
           title: string
           updated_at: string | null
+          validity_months: number | null
+          vendor_declaration_text: string | null
+          vendor_document_description: string | null
+          vendor_requirement_mandatory: boolean
+          vendor_requirement_type: string
           version: string
         }
         Insert: {
@@ -602,11 +609,18 @@ export type Database = {
           description: string
           effective_date: string
           id?: string
+          is_system?: boolean
           owner: string
+          policy_key?: string | null
           review_date: string
           status?: string
           title: string
           updated_at?: string | null
+          validity_months?: number | null
+          vendor_declaration_text?: string | null
+          vendor_document_description?: string | null
+          vendor_requirement_mandatory?: boolean
+          vendor_requirement_type?: string
           version?: string
         }
         Update: {
@@ -618,11 +632,18 @@ export type Database = {
           description?: string
           effective_date?: string
           id?: string
+          is_system?: boolean
           owner?: string
+          policy_key?: string | null
           review_date?: string
           status?: string
           title?: string
           updated_at?: string | null
+          validity_months?: number | null
+          vendor_declaration_text?: string | null
+          vendor_document_description?: string | null
+          vendor_requirement_mandatory?: boolean
+          vendor_requirement_type?: string
           version?: string
         }
         Relationships: []
@@ -1164,6 +1185,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "purchase_orders"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goods_received_notes_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_compliance_overview"
+            referencedColumns: ["vendor_id"]
           },
           {
             foreignKeyName: "goods_received_notes_vendor_id_fkey"
@@ -1967,6 +1995,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_compliance_overview"
+            referencedColumns: ["vendor_id"]
           },
           {
             foreignKeyName: "invoices_vendor_id_fkey"
@@ -3188,6 +3223,13 @@ export type Database = {
             foreignKeyName: "purchase_orders_vendor_id_fkey"
             columns: ["vendor_id"]
             isOneToOne: false
+            referencedRelation: "vendor_compliance_overview"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
             referencedRelation: "vendor_registrations"
             referencedColumns: ["id"]
           },
@@ -3690,6 +3732,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "rfps"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rfp_responses_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_compliance_overview"
+            referencedColumns: ["vendor_id"]
           },
           {
             foreignKeyName: "rfp_responses_vendor_id_fkey"
@@ -4873,6 +4922,13 @@ export type Database = {
             foreignKeyName: "vendor_communications_vendor_id_fkey"
             columns: ["vendor_id"]
             isOneToOne: false
+            referencedRelation: "vendor_compliance_overview"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "vendor_communications_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
             referencedRelation: "vendor_registrations"
             referencedColumns: ["id"]
           },
@@ -4926,6 +4982,102 @@ export type Database = {
             foreignKeyName: "vendor_documents_vendor_id_fkey"
             columns: ["vendor_id"]
             isOneToOne: false
+            referencedRelation: "vendor_compliance_overview"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "vendor_documents_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_registrations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vendor_policy_submissions: {
+        Row: {
+          created_at: string
+          declaration_accepted: boolean | null
+          declaration_accepted_at: string | null
+          declaration_signed_by: string | null
+          document_name: string | null
+          document_size: number | null
+          document_url: string | null
+          expires_at: string | null
+          id: string
+          policy_id: string
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          submitted_at: string | null
+          updated_at: string
+          vendor_id: string
+        }
+        Insert: {
+          created_at?: string
+          declaration_accepted?: boolean | null
+          declaration_accepted_at?: string | null
+          declaration_signed_by?: string | null
+          document_name?: string | null
+          document_size?: number | null
+          document_url?: string | null
+          expires_at?: string | null
+          id?: string
+          policy_id: string
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string
+          vendor_id: string
+        }
+        Update: {
+          created_at?: string
+          declaration_accepted?: boolean | null
+          declaration_accepted_at?: string | null
+          declaration_signed_by?: string | null
+          document_name?: string | null
+          document_size?: number | null
+          document_url?: string | null
+          expires_at?: string | null
+          id?: string
+          policy_id?: string
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_policy_submissions_policy_id_fkey"
+            columns: ["policy_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_policies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_policy_submissions_policy_id_fkey"
+            columns: ["policy_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_compliance_overview"
+            referencedColumns: ["policy_id"]
+          },
+          {
+            foreignKeyName: "vendor_policy_submissions_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_compliance_overview"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "vendor_policy_submissions_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
             referencedRelation: "vendor_registrations"
             referencedColumns: ["id"]
           },
@@ -4957,6 +5109,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "categories"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_product_categories_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_compliance_overview"
+            referencedColumns: ["vendor_id"]
           },
           {
             foreignKeyName: "vendor_product_categories_vendor_id_fkey"
@@ -5005,6 +5164,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_vendor_products_vendor"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_compliance_overview"
+            referencedColumns: ["vendor_id"]
           },
           {
             foreignKeyName: "fk_vendor_products_vendor"
@@ -5478,6 +5644,13 @@ export type Database = {
             foreignKeyName: "purchase_orders_vendor_id_fkey"
             columns: ["vendor_id"]
             isOneToOne: false
+            referencedRelation: "vendor_compliance_overview"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
             referencedRelation: "vendor_registrations"
             referencedColumns: ["id"]
           },
@@ -5555,6 +5728,13 @@ export type Database = {
             foreignKeyName: "invoices_vendor_id_fkey"
             columns: ["vendor_id"]
             isOneToOne: false
+            referencedRelation: "vendor_compliance_overview"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "invoices_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
             referencedRelation: "vendor_registrations"
             referencedColumns: ["id"]
           },
@@ -5585,6 +5765,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      vendor_compliance_overview: {
+        Row: {
+          category: string | null
+          company_name: string | null
+          declaration_accepted: boolean | null
+          document_url: string | null
+          expires_at: string | null
+          policy_id: string | null
+          policy_title: string | null
+          review_notes: string | null
+          reviewed_at: string | null
+          submission_status: string | null
+          submitted_at: string | null
+          validity_months: number | null
+          vendor_id: string | null
+          vendor_requirement_mandatory: boolean | null
+          vendor_requirement_type: string | null
+          vendor_status: Database["public"]["Enums"]["vendor_status"] | null
+        }
+        Relationships: []
       }
     }
     Functions: {
@@ -5824,6 +6025,11 @@ export type Database = {
         }
         Returns: string
       }
+      recalc_all_policy_compliance_rates: { Args: never; Returns: undefined }
+      recalc_policy_compliance_rate: {
+        Args: { _policy_id: string }
+        Returns: undefined
+      }
       record_delivery_and_update_inventory: {
         Args: { p_delivery_details: Json; transaction_id: string }
         Returns: Json
@@ -5851,6 +6057,10 @@ export type Database = {
         Returns: boolean
       }
       validate_password_strength: { Args: { password: string }; Returns: Json }
+      vendor_is_policy_compliant: {
+        Args: { _vendor_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       budget_allocation_status:
