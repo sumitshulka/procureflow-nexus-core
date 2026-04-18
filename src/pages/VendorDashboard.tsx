@@ -57,10 +57,15 @@ const VendorDashboard = () => {
         .eq("vendor_id", vendorProfile!.id);
       if (error) throw error;
       const rows = (data || []) as any[];
-      const isOk = (r: any) =>
-        r.submission_status === "approved" &&
-        (!r.expires_at || new Date(r.expires_at) > new Date());
-      const pendingMandatory = rows.filter((r) => r.vendor_requirement_mandatory && !isOk(r)).length;
+      const isExpired = (r: any) => r.expires_at && new Date(r.expires_at) <= new Date();
+      // "Pending action" = vendor still needs to do something:
+      // not submitted, rejected, or approved-but-expired. "submitted" is with admin for review.
+      const needsAction = (r: any) =>
+        !r.submission_status ||
+        r.submission_status === "pending" ||
+        r.submission_status === "rejected" ||
+        (r.submission_status === "approved" && isExpired(r));
+      const pendingMandatory = rows.filter((r) => r.vendor_requirement_mandatory && needsAction(r)).length;
       const totalMandatory = rows.filter((r) => r.vendor_requirement_mandatory).length;
       return { pendingMandatory, totalMandatory };
     },

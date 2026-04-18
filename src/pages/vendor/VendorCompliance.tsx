@@ -102,15 +102,19 @@ const VendorCompliance: React.FC = () => {
 
   const stats = useMemo(() => {
     const mandatory = policies.filter((p) => p.vendor_requirement_mandatory);
-    const approved = mandatory.filter((p) => {
-      const s = submissions[p.id];
-      return s && s.status === "approved" && (!s.expires_at || new Date(s.expires_at) > new Date());
-    });
+    const isApproved = (s?: Submission) =>
+      !!s && s.status === "approved" && (!s.expires_at || new Date(s.expires_at) > new Date());
+    const isUnderReview = (s?: Submission) => !!s && s.status === "submitted";
+    const approvedAll = policies.filter((p) => isApproved(submissions[p.id]));
+    const underReview = policies.filter((p) => isUnderReview(submissions[p.id]));
+    const approvedMand = mandatory.filter((p) => isApproved(submissions[p.id])).length;
     return {
       total: policies.length,
       mandatory: mandatory.length,
-      approved: approved.length,
-      pending: policies.length - approved.length,
+      approved: approvedAll.length,
+      underReview: underReview.length,
+      pending: policies.length - approvedAll.length - underReview.length,
+      pendingMandatory: mandatory.length - approvedMand - mandatory.filter((p) => isUnderReview(submissions[p.id])).length,
     };
   }, [policies, submissions]);
 
@@ -235,7 +239,7 @@ const VendorCompliance: React.FC = () => {
       </div>
     );
 
-  const incomplete = stats.mandatory - stats.approved;
+  const incomplete = stats.pendingMandatory;
 
   return (
     <div className="page-container space-y-6">
@@ -261,10 +265,11 @@ const VendorCompliance: React.FC = () => {
         </Alert>
       )}
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <Card><CardContent className="p-4"><div className="text-xs text-muted-foreground">Total policies</div><div className="text-2xl font-bold">{stats.total}</div></CardContent></Card>
         <Card><CardContent className="p-4"><div className="text-xs text-muted-foreground">Mandatory</div><div className="text-2xl font-bold">{stats.mandatory}</div></CardContent></Card>
         <Card><CardContent className="p-4"><div className="text-xs text-muted-foreground">Approved</div><div className="text-2xl font-bold text-green-600">{stats.approved}</div></CardContent></Card>
+        <Card><CardContent className="p-4"><div className="text-xs text-muted-foreground">Under review</div><div className="text-2xl font-bold text-amber-600">{stats.underReview}</div></CardContent></Card>
         <Card><CardContent className="p-4"><div className="text-xs text-muted-foreground">Pending action</div><div className="text-2xl font-bold text-destructive">{stats.pending}</div></CardContent></Card>
       </div>
 
