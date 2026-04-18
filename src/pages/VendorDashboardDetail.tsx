@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { VendorRegistration, parseAddress } from '@/types/vendor';
 import { useAuth } from '@/contexts/AuthContext';
 import VendorProductsList from '@/components/vendor/VendorProductsList';
+import VendorComplianceReview from '@/components/vendor/VendorComplianceReview';
 import { 
   ArrowLeft, 
   Building, 
