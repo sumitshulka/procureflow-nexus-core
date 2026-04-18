@@ -26,6 +26,7 @@ import POApprovalStatus from '@/components/purchase-orders/POApprovalStatus';
 import POGRNSection from '@/components/grn/POGRNSection';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { formatCurrency } from '@/utils/currencyUtils';
 
 const PurchaseOrderDetail = () => {
   const { id } = useParams<{ id: string }>();
