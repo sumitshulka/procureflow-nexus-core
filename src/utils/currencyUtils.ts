@@ -143,7 +143,13 @@ export const getCurrencyName = (currencyCode: string): string => {
  */
 export const formatCurrency = (amount: number, currencyCode: string = 'USD'): string => {
   const symbol = getCurrencySymbol(currencyCode);
-  return `${symbol}${amount.toLocaleString()}`;
+  const isIndianStyle = ['INR', 'NPR', 'PKR', 'BDT', 'LKR'].includes(currencyCode);
+  const locale = isIndianStyle ? 'en-IN' : 'en-US';
+  const formatted = (amount || 0).toLocaleString(locale, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  return `${symbol}${formatted}`;
 };
 
 /**

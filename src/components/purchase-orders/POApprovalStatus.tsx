@@ -59,7 +59,6 @@ const POApprovalStatus: React.FC<POApprovalStatusProps> = ({
         .from("po_approval_history")
         .select(`
           *,
-          profiles!po_approval_history_approver_id_fkey(full_name),
           po_approval_levels(level_name, level_number)
         `)
         .eq("purchase_order_id", purchaseOrderId)
@@ -67,9 +66,24 @@ const POApprovalStatus: React.FC<POApprovalStatusProps> = ({
 
       if (error) throw error;
 
+      const approverIds = Array.from(
+        new Set((data || []).map((d: any) => d.approver_id).filter(Boolean))
+      );
+
+      let profilesMap: Record<string, string> = {};
+      if (approverIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("id, full_name")
+          .in("id", approverIds);
+        (profiles || []).forEach((p: any) => {
+          profilesMap[p.id] = p.full_name;
+        });
+      }
+
       const formatted = (data || []).map((item: any) => ({
         ...item,
-        approver_name: item.profiles?.full_name,
+        approver_name: profilesMap[item.approver_id] || "Unknown",
         level_name: item.po_approval_levels?.level_name,
         level_number: item.po_approval_levels?.level_number,
       }));

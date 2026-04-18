@@ -26,6 +26,7 @@ import POApprovalStatus from '@/components/purchase-orders/POApprovalStatus';
 import POGRNSection from '@/components/grn/POGRNSection';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { formatCurrency } from '@/utils/currencyUtils';
 
 const PurchaseOrderDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -259,7 +260,7 @@ const PurchaseOrderDetail = () => {
             </div>
             <div className="sm:text-right">
               <p className="text-sm text-muted-foreground">Total Amount</p>
-              <p className="text-xl md:text-2xl font-bold break-all">{po.currency} {po.final_amount?.toFixed(2)}</p>
+              <p className="text-xl md:text-2xl font-bold break-all">{formatCurrency(po.final_amount || 0, po.currency)}</p>
             </div>
           </div>
         </CardContent>
@@ -361,10 +362,10 @@ const PurchaseOrderDetail = () => {
                       </div>
                     </td>
                     <td className="text-center py-3 px-2 sm:px-4">{item.quantity}</td>
-                    <td className="text-right py-3 px-2 sm:px-4 whitespace-nowrap">{po.currency} {item.unit_price?.toFixed(2)}</td>
-                    <td className="text-right py-3 px-2 sm:px-4 whitespace-nowrap">{po.currency} {item.tax_amount?.toFixed(2)}</td>
+                    <td className="text-right py-3 px-2 sm:px-4 whitespace-nowrap">{formatCurrency(item.unit_price || 0, po.currency)}</td>
+                    <td className="text-right py-3 px-2 sm:px-4 whitespace-nowrap">{formatCurrency(item.tax_amount || 0, po.currency)}</td>
                     <td className="text-right py-3 px-2 sm:px-4 font-medium whitespace-nowrap">
-                      {po.currency} {item.final_amount?.toFixed(2)}
+                      {formatCurrency(item.final_amount || 0, po.currency)}
                     </td>
                   </tr>
                 ))}
@@ -373,21 +374,21 @@ const PurchaseOrderDetail = () => {
                 <tr className="border-t-2">
                   <td colSpan={5} className="text-right py-3 px-2 sm:px-4 font-medium">Subtotal:</td>
                   <td className="text-right py-3 px-2 sm:px-4 font-medium whitespace-nowrap">
-                    {po.currency} {po.total_amount?.toFixed(2)}
+                    {formatCurrency(po.total_amount || 0, po.currency)}
                   </td>
                 </tr>
                 <tr>
                   <td colSpan={5} className="text-right py-3 px-2 sm:px-4">Tax:</td>
-                  <td className="text-right py-3 px-2 sm:px-4 whitespace-nowrap">{po.currency} {po.tax_amount?.toFixed(2)}</td>
+                  <td className="text-right py-3 px-2 sm:px-4 whitespace-nowrap">{formatCurrency(po.tax_amount || 0, po.currency)}</td>
                 </tr>
                 <tr>
                   <td colSpan={5} className="text-right py-3 px-2 sm:px-4">Discount:</td>
-                  <td className="text-right py-3 px-2 sm:px-4 whitespace-nowrap">{po.currency} {po.discount_amount?.toFixed(2)}</td>
+                  <td className="text-right py-3 px-2 sm:px-4 whitespace-nowrap">{formatCurrency(po.discount_amount || 0, po.currency)}</td>
                 </tr>
                 <tr className="border-t-2">
                   <td colSpan={5} className="text-right py-3 px-2 sm:px-4 font-bold text-base md:text-lg">Grand Total:</td>
                   <td className="text-right py-3 px-2 sm:px-4 font-bold text-base md:text-lg whitespace-nowrap">
-                    {po.currency} {po.final_amount?.toFixed(2)}
+                    {formatCurrency(po.final_amount || 0, po.currency)}
                   </td>
                 </tr>
               </tfoot>
