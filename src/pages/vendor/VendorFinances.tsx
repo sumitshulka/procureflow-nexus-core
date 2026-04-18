@@ -173,17 +173,8 @@ const VendorFinancesContent = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Total Revenue</p>
-                  <p className="text-2xl font-bold">${financialData?.totalRevenue?.toLocaleString() || '0'}</p>
-                  <div className="flex items-center gap-1 mt-1">
-                    {growth >= 0 ? (
-                      <TrendingUp className="w-4 h-4 text-green-600" />
-                    ) : (
-                      <TrendingDown className="w-4 h-4 text-red-600" />
-                    )}
-                    <span className={`text-sm ${growth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {Math.abs(growth).toFixed(1)}% from last month
-                    </span>
-                  </div>
+                  <p className="text-2xl font-bold">{formatMulti(financialData?.revenueByCurrency)}</p>
+                  <p className="text-xs text-muted-foreground mt-1">Across all invoices</p>
                 </div>
                 <div className="p-3 rounded-full bg-blue-500">
                   <DollarSign className="w-6 h-6 text-white" />
@@ -197,9 +188,9 @@ const VendorFinancesContent = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Paid Amount</p>
-                  <p className="text-2xl font-bold">${financialData?.paidAmount?.toLocaleString() || '0'}</p>
+                  <p className="text-2xl font-bold">{formatMulti(financialData?.paidByCurrency)}</p>
                   <p className="text-sm text-muted-foreground mt-1">
-                    {financialData?.completedOrders || 0} completed orders
+                    {financialData?.paidInvoices || 0} paid invoices
                   </p>
                 </div>
                 <div className="p-3 rounded-full bg-green-500">
@@ -214,10 +205,8 @@ const VendorFinancesContent = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Outstanding</p>
-                  <p className="text-2xl font-bold">${financialData?.outstandingAmount?.toLocaleString() || '0'}</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Pending payment
-                  </p>
+                  <p className="text-2xl font-bold">{formatMulti(financialData?.outstandingByCurrency)}</p>
+                  <p className="text-sm text-muted-foreground mt-1">Pending payment</p>
                 </div>
                 <div className="p-3 rounded-full bg-orange-500">
                   <Clock className="w-6 h-6 text-white" />
@@ -230,11 +219,9 @@ const VendorFinancesContent = () => {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Total Orders</p>
-                  <p className="text-2xl font-bold">{financialData?.totalOrders || 0}</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Lifetime orders
-                  </p>
+                  <p className="text-sm text-muted-foreground">Total Invoices</p>
+                  <p className="text-2xl font-bold">{financialData?.totalInvoices || 0}</p>
+                  <p className="text-sm text-muted-foreground mt-1">Lifetime invoices</p>
                 </div>
                 <div className="p-3 rounded-full bg-purple-500">
                   <FileText className="w-6 h-6 text-white" />
@@ -269,7 +256,7 @@ const VendorFinancesContent = () => {
                         />
                       </div>
                       <span className="text-sm font-bold min-w-[60px] text-right">
-                        ${month.revenue.toLocaleString()}
+                        {getCurrencySymbol(month.currency)}{month.revenue.toLocaleString()}
                       </span>
                     </div>
                   </div>
@@ -294,21 +281,21 @@ const VendorFinancesContent = () => {
                     <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                     <span className="text-sm font-medium">Paid</span>
                   </div>
-                  <span className="text-sm font-bold">${financialData?.paidAmount?.toLocaleString() || '0'}</span>
+                  <span className="text-sm font-bold">{formatMulti(financialData?.paidByCurrency)}</span>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
                     <span className="text-sm font-medium">Outstanding</span>
                   </div>
-                  <span className="text-sm font-bold">${financialData?.outstandingAmount?.toLocaleString() || '0'}</span>
+                  <span className="text-sm font-bold">{formatMulti(financialData?.outstandingByCurrency)}</span>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
                     <span className="text-sm font-medium">Processing</span>
                   </div>
-                  <span className="text-sm font-bold">${financialData?.pendingAmount?.toLocaleString() || '0'}</span>
+                  <span className="text-sm font-bold">{formatMulti(financialData?.processingByCurrency)}</span>
                 </div>
               </div>
             </CardContent>
@@ -348,18 +335,18 @@ const VendorFinancesContent = () => {
                         <FileText className="w-4 h-4 text-primary" />
                       </div>
                       <div>
-                        <p className="font-medium">{transaction.po_number}</p>
+                        <p className="font-medium">{transaction.invoice_number}</p>
                         <p className="text-sm text-muted-foreground">
-                          {format(new Date(transaction.po_date), 'MMM dd, yyyy')}
+                          {transaction.invoice_date ? format(new Date(transaction.invoice_date), 'MMM dd, yyyy') : '-'}
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
                       <div className="text-right">
-                        <p className="font-bold">${transaction.total_amount?.toLocaleString() || '0'}</p>
+                        <p className="font-bold">{getCurrencySymbol(transaction.currency || 'USD')}{Number(transaction.total_amount || 0).toLocaleString()}</p>
                         <p className="text-sm text-muted-foreground">{transaction.currency || 'USD'}</p>
                       </div>
-                      {getPaymentStatusBadge(transaction.status)}
+                      {getInvoicePaymentBadge(transaction.status)}
                       <Button variant="ghost" size="sm">
                         <Eye className="w-4 h-4" />
                       </Button>
