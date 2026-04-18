@@ -156,7 +156,7 @@ const RfpBasicInfo: React.FC<RfpBasicInfoProps> = ({ data, onUpdate, onNext, tem
             name="estimated_value"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Estimated Value</FormLabel>
+                <FormLabel>Estimated Value *</FormLabel>
                 <FormControl>
                   <Input
                     type="number"
@@ -367,7 +367,7 @@ const RfpBasicInfo: React.FC<RfpBasicInfoProps> = ({ data, onUpdate, onNext, tem
           name="description"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Description</FormLabel>
+              <FormLabel>Description *</FormLabel>
               <FormControl>
                 <Textarea
                   placeholder="Enter detailed description of the RFP"
