@@ -20,7 +20,7 @@ import {
   Clock,
   BarChart3,
 } from 'lucide-react';
-
+import { getCurrencySymbol } from '@/utils/currencyUtils';
 import { useNavigate } from 'react-router-dom';
 
 const VendorDashboard = () => {
@@ -80,7 +80,7 @@ const VendorDashboard = () => {
   const { data: poData, isLoading: poLoading } = useQuery({
     queryKey: ["vendor_purchase_orders", user?.id],
     queryFn: async () => {
-      if (!user?.id) return { total: 0, totalValue: 0, recent: [] };
+      if (!user?.id) return { total: 0, totalsByCurrency: {} as Record<string, number>, recent: [] };
       
       const { data, error } = await supabase
         .from("purchase_orders")
@@ -90,16 +90,53 @@ const VendorDashboard = () => {
       
       if (error) throw error;
       
-      const totalValue = data?.reduce((sum, po) => sum + (po.total_amount || 0), 0) || 0;
+      const totalsByCurrency: Record<string, number> = {};
+      (data || []).forEach((po: any) => {
+        const cur = po.currency || 'USD';
+        totalsByCurrency[cur] = (totalsByCurrency[cur] || 0) + (Number(po.final_amount) || Number(po.total_amount) || 0);
+      });
       
       return {
         total: data?.length || 0,
-        totalValue,
+        totalsByCurrency,
         recent: data?.slice(0, 3) || [],
       };
     },
     enabled: !!user?.id,
   });
+
+  // Fetch vendor invoices for financial summary (totals by currency, paid vs outstanding)
+  const { data: invoiceFinance } = useQuery({
+    queryKey: ["vendor_invoice_finance", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return { revenueByCurrency: {} as Record<string, number>, outstandingByCurrency: {} as Record<string, number> };
+      const { data: vendorReg } = await supabase
+        .from("vendor_registrations").select("id").eq("user_id", user.id).maybeSingle();
+      if (!vendorReg) return { revenueByCurrency: {}, outstandingByCurrency: {} };
+      const { data: invoices } = await supabase
+        .from("invoices")
+        .select("total_amount,currency,status")
+        .eq("vendor_id", vendorReg.id);
+      const revenueByCurrency: Record<string, number> = {};
+      const outstandingByCurrency: Record<string, number> = {};
+      (invoices || []).forEach((inv: any) => {
+        const cur = inv.currency || 'USD';
+        const amt = Number(inv.total_amount) || 0;
+        revenueByCurrency[cur] = (revenueByCurrency[cur] || 0) + amt;
+        if (inv.status !== 'paid' && inv.status !== 'cancelled' && inv.status !== 'rejected') {
+          outstandingByCurrency[cur] = (outstandingByCurrency[cur] || 0) + amt;
+        }
+      });
+      return { revenueByCurrency, outstandingByCurrency };
+    },
+    enabled: !!user?.id,
+  });
+
+  const formatMulti = (totals: Record<string, number>) => {
+    const entries = Object.entries(totals).filter(([, v]) => v > 0);
+    if (entries.length === 0) return '0';
+    return entries.map(([cur, v]) => `${getCurrencySymbol(cur)}${v.toLocaleString()}`).join(' • ');
+  };
 
   // Fetch vendor messages (communications)
   const { data: messageCount } = useQuery({
@@ -133,7 +170,7 @@ const VendorDashboard = () => {
       value: poData?.total?.toString() || '0', 
       icon: ShoppingCart, 
       color: 'bg-green-500',
-      description: `$${poData?.totalValue?.toLocaleString() || '0'} total value`,
+      description: `${formatMulti(poData?.totalsByCurrency || {})} total value`,
       href: '/vendor/purchase-orders'
     },
     { 
@@ -376,15 +413,11 @@ const VendorDashboard = () => {
               <CardContent className="space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">Total Revenue</span>
-                  <span className="font-bold">${poData?.totalValue?.toLocaleString() || '0'}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">This Month</span>
-                  <span className="font-bold text-green-600">+12.5%</span>
+                  <span className="font-bold">{formatMulti(invoiceFinance?.revenueByCurrency || {})}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">Outstanding</span>
-                  <span className="font-bold">$0</span>
+                  <span className="font-bold">{formatMulti(invoiceFinance?.outstandingByCurrency || {})}</span>
                 </div>
                 <Button variant="outline" size="sm" className="w-full" onClick={() => navigate('/vendor/finances')}>
                   <BarChart3 className="w-4 h-4 mr-2" />

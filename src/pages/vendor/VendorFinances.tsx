@@ -21,6 +21,7 @@ import {
   CheckCircle,
   Clock,
 } from 'lucide-react';
+import { getCurrencySymbol } from '@/utils/currencyUtils';
 
 import { 
   Select,
@@ -43,92 +44,101 @@ const VendorFinancesContent = () => {
   const { user } = useAuth();
   const [timeframe, setTimeframe] = useState('12m');
 
-  // Fetch financial data
+  // Fetch financial data based on INVOICES (revenue/paid/outstanding)
   const { data: financialData, isLoading } = useQuery({
     queryKey: ["vendor_finances", user?.id, timeframe],
     queryFn: async () => {
       if (!user?.id) return null;
-      
-      // Get vendor registration
+
       const { data: vendorReg, error: vendorError } = await supabase
         .from("vendor_registrations")
         .select("id")
         .eq("user_id", user.id)
         .single();
-      
+
       if (vendorError) throw vendorError;
       if (!vendorReg) return null;
-      
-      // Get purchase orders with payment information
-      const { data: purchaseOrders, error: poError } = await supabase
-        .from("purchase_orders")
+
+      const { data: invoices, error: invError } = await supabase
+        .from("invoices")
         .select("*")
         .eq("vendor_id", vendorReg.id)
-        .order("po_date", { ascending: false });
-      
-      if (poError) throw poError;
-      
-      // Calculate financial metrics
-      const totalRevenue = purchaseOrders?.reduce((sum, po) => sum + (po.total_amount || 0), 0) || 0;
-      const completedOrders = purchaseOrders?.filter(po => po.status === 'completed') || [];
-      const paidAmount = completedOrders.reduce((sum, po) => sum + (po.total_amount || 0), 0);
-      const pendingAmount = purchaseOrders?.filter(po => ['sent', 'acknowledged', 'in_progress', 'delivered'].includes(po.status))
-        .reduce((sum, po) => sum + (po.total_amount || 0), 0) || 0;
-      
-      // Generate monthly revenue data (mock data for demonstration)
-      const monthlyData = [];
+        .order("invoice_date", { ascending: false });
+
+      if (invError) throw invError;
+
+      const sumByCurrency = (rows: any[]) => {
+        const map: Record<string, number> = {};
+        rows.forEach((r) => {
+          const cur = r.currency || 'USD';
+          map[cur] = (map[cur] || 0) + (Number(r.total_amount) || 0);
+        });
+        return map;
+      };
+
+      const all = invoices || [];
+      const paidRows = all.filter((i: any) => i.status === 'paid');
+      const outstandingRows = all.filter((i: any) => !['paid', 'cancelled', 'rejected', 'draft'].includes(i.status));
+      const processingRows = all.filter((i: any) => ['submitted', 'pending_approval', 'approved'].includes(i.status));
+
+      // Monthly revenue (by invoice_date), keep currency of dominant invoice for label
+      const monthlyData: Array<{ month: string; revenue: number; orders: number; currency: string }> = [];
       for (let i = 11; i >= 0; i--) {
         const date = new Date();
         date.setMonth(date.getMonth() - i);
-        const monthOrders = purchaseOrders?.filter(po => {
-          const poDate = new Date(po.po_date);
-          return poDate.getMonth() === date.getMonth() && poDate.getFullYear() === date.getFullYear();
-        }) || [];
-        
+        const monthInvoices = all.filter((inv: any) => {
+          const d = new Date(inv.invoice_date);
+          return d.getMonth() === date.getMonth() && d.getFullYear() === date.getFullYear();
+        });
+        const totals = sumByCurrency(monthInvoices);
+        const topCur = Object.entries(totals).sort((a, b) => b[1] - a[1])[0];
         monthlyData.push({
           month: format(date, 'MMM'),
-          revenue: monthOrders.reduce((sum, po) => sum + (po.total_amount || 0), 0),
-          orders: monthOrders.length,
+          revenue: topCur ? topCur[1] : 0,
+          orders: monthInvoices.length,
+          currency: topCur ? topCur[0] : 'USD',
         });
       }
-      
+
       return {
-        totalRevenue,
-        paidAmount,
-        pendingAmount,
-        outstandingAmount: totalRevenue - paidAmount,
-        totalOrders: purchaseOrders?.length || 0,
-        completedOrders: completedOrders.length,
+        revenueByCurrency: sumByCurrency(all),
+        paidByCurrency: sumByCurrency(paidRows),
+        outstandingByCurrency: sumByCurrency(outstandingRows),
+        processingByCurrency: sumByCurrency(processingRows),
+        totalInvoices: all.length,
+        paidInvoices: paidRows.length,
         monthlyData,
-        recentTransactions: purchaseOrders?.slice(0, 10) || [],
+        recentTransactions: all.slice(0, 10),
       };
     },
     enabled: !!user?.id,
   });
 
-  const getPaymentStatusBadge = (status: string) => {
+  const formatMulti = (totals: Record<string, number> | undefined) => {
+    if (!totals) return '0';
+    const entries = Object.entries(totals).filter(([, v]) => v > 0);
+    if (entries.length === 0) return '0';
+    return entries.map(([cur, v]) => `${getCurrencySymbol(cur)}${v.toLocaleString()}`).join(' • ');
+  };
+
+  const getInvoicePaymentBadge = (status: string) => {
     switch (status) {
-      case 'completed':
+      case 'paid':
         return <Badge className="bg-green-100 text-green-800"><CheckCircle className="w-3 h-3 mr-1" />Paid</Badge>;
-      case 'delivered':
-        return <Badge className="bg-blue-100 text-blue-800"><Clock className="w-3 h-3 mr-1" />Processing</Badge>;
-      case 'in_progress':
-      case 'acknowledged':
+      case 'approved':
+        return <Badge className="bg-blue-100 text-blue-800"><Clock className="w-3 h-3 mr-1" />Approved</Badge>;
+      case 'submitted':
+      case 'pending_approval':
         return <Badge className="bg-yellow-100 text-yellow-800"><Clock className="w-3 h-3 mr-1" />Pending</Badge>;
+      case 'rejected':
+      case 'cancelled':
+        return <Badge variant="outline" className="bg-red-100 text-red-800"><AlertCircle className="w-3 h-3 mr-1" />{status}</Badge>;
+      case 'draft':
+        return <Badge variant="outline">Draft</Badge>;
       default:
-        return <Badge variant="outline"><AlertCircle className="w-3 h-3 mr-1" />Unpaid</Badge>;
+        return <Badge variant="outline">{status}</Badge>;
     }
   };
-
-  const calculateGrowth = () => {
-    if (!financialData?.monthlyData || financialData.monthlyData.length < 2) return 0;
-    const lastMonth = financialData.monthlyData[financialData.monthlyData.length - 1];
-    const previousMonth = financialData.monthlyData[financialData.monthlyData.length - 2];
-    if (previousMonth.revenue === 0) return 0;
-    return ((lastMonth.revenue - previousMonth.revenue) / previousMonth.revenue * 100);
-  };
-
-  const growth = calculateGrowth();
 
   return (
     <div className="space-y-6">
@@ -163,17 +173,8 @@ const VendorFinancesContent = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Total Revenue</p>
-                  <p className="text-2xl font-bold">${financialData?.totalRevenue?.toLocaleString() || '0'}</p>
-                  <div className="flex items-center gap-1 mt-1">
-                    {growth >= 0 ? (
-                      <TrendingUp className="w-4 h-4 text-green-600" />
-                    ) : (
-                      <TrendingDown className="w-4 h-4 text-red-600" />
-                    )}
-                    <span className={`text-sm ${growth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {Math.abs(growth).toFixed(1)}% from last month
-                    </span>
-                  </div>
+                  <p className="text-2xl font-bold">{formatMulti(financialData?.revenueByCurrency)}</p>
+                  <p className="text-xs text-muted-foreground mt-1">Across all invoices</p>
                 </div>
                 <div className="p-3 rounded-full bg-blue-500">
                   <DollarSign className="w-6 h-6 text-white" />
@@ -187,9 +188,9 @@ const VendorFinancesContent = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Paid Amount</p>
-                  <p className="text-2xl font-bold">${financialData?.paidAmount?.toLocaleString() || '0'}</p>
+                  <p className="text-2xl font-bold">{formatMulti(financialData?.paidByCurrency)}</p>
                   <p className="text-sm text-muted-foreground mt-1">
-                    {financialData?.completedOrders || 0} completed orders
+                    {financialData?.paidInvoices || 0} paid invoices
                   </p>
                 </div>
                 <div className="p-3 rounded-full bg-green-500">
@@ -204,10 +205,8 @@ const VendorFinancesContent = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Outstanding</p>
-                  <p className="text-2xl font-bold">${financialData?.outstandingAmount?.toLocaleString() || '0'}</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Pending payment
-                  </p>
+                  <p className="text-2xl font-bold">{formatMulti(financialData?.outstandingByCurrency)}</p>
+                  <p className="text-sm text-muted-foreground mt-1">Pending payment</p>
                 </div>
                 <div className="p-3 rounded-full bg-orange-500">
                   <Clock className="w-6 h-6 text-white" />
@@ -220,11 +219,9 @@ const VendorFinancesContent = () => {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Total Orders</p>
-                  <p className="text-2xl font-bold">{financialData?.totalOrders || 0}</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Lifetime orders
-                  </p>
+                  <p className="text-sm text-muted-foreground">Total Invoices</p>
+                  <p className="text-2xl font-bold">{financialData?.totalInvoices || 0}</p>
+                  <p className="text-sm text-muted-foreground mt-1">Lifetime invoices</p>
                 </div>
                 <div className="p-3 rounded-full bg-purple-500">
                   <FileText className="w-6 h-6 text-white" />
@@ -259,7 +256,7 @@ const VendorFinancesContent = () => {
                         />
                       </div>
                       <span className="text-sm font-bold min-w-[60px] text-right">
-                        ${month.revenue.toLocaleString()}
+                        {getCurrencySymbol(month.currency)}{month.revenue.toLocaleString()}
                       </span>
                     </div>
                   </div>
@@ -284,21 +281,21 @@ const VendorFinancesContent = () => {
                     <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                     <span className="text-sm font-medium">Paid</span>
                   </div>
-                  <span className="text-sm font-bold">${financialData?.paidAmount?.toLocaleString() || '0'}</span>
+                  <span className="text-sm font-bold">{formatMulti(financialData?.paidByCurrency)}</span>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
                     <span className="text-sm font-medium">Outstanding</span>
                   </div>
-                  <span className="text-sm font-bold">${financialData?.outstandingAmount?.toLocaleString() || '0'}</span>
+                  <span className="text-sm font-bold">{formatMulti(financialData?.outstandingByCurrency)}</span>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
                     <span className="text-sm font-medium">Processing</span>
                   </div>
-                  <span className="text-sm font-bold">${financialData?.pendingAmount?.toLocaleString() || '0'}</span>
+                  <span className="text-sm font-bold">{formatMulti(financialData?.processingByCurrency)}</span>
                 </div>
               </div>
             </CardContent>
@@ -338,18 +335,18 @@ const VendorFinancesContent = () => {
                         <FileText className="w-4 h-4 text-primary" />
                       </div>
                       <div>
-                        <p className="font-medium">{transaction.po_number}</p>
+                        <p className="font-medium">{transaction.invoice_number}</p>
                         <p className="text-sm text-muted-foreground">
-                          {format(new Date(transaction.po_date), 'MMM dd, yyyy')}
+                          {transaction.invoice_date ? format(new Date(transaction.invoice_date), 'MMM dd, yyyy') : '-'}
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
                       <div className="text-right">
-                        <p className="font-bold">${transaction.total_amount?.toLocaleString() || '0'}</p>
+                        <p className="font-bold">{getCurrencySymbol(transaction.currency || 'USD')}{Number(transaction.total_amount || 0).toLocaleString()}</p>
                         <p className="text-sm text-muted-foreground">{transaction.currency || 'USD'}</p>
                       </div>
-                      {getPaymentStatusBadge(transaction.status)}
+                      {getInvoicePaymentBadge(transaction.status)}
                       <Button variant="ghost" size="sm">
                         <Eye className="w-4 h-4" />
                       </Button>
