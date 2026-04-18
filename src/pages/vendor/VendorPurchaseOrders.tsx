@@ -268,7 +268,7 @@ const VendorPurchaseOrdersContent = () => {
                   <div className="flex flex-col items-end gap-2">
                     {getStatusBadge(po.status)}
                     <span className="text-lg font-bold text-green-600">
-                      ${po.total_amount?.toLocaleString() || '0'}
+                      {formatCurrency(po.total_amount || 0, po.currency || 'USD')}
                     </span>
                   </div>
                 </div>
