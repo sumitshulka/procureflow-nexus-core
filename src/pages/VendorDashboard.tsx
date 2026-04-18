@@ -170,7 +170,7 @@ const VendorDashboard = () => {
       value: poData?.total?.toString() || '0', 
       icon: ShoppingCart, 
       color: 'bg-green-500',
-      description: `$${poData?.totalValue?.toLocaleString() || '0'} total value`,
+      description: `${formatMulti(poData?.totalsByCurrency || {})} total value`,
       href: '/vendor/purchase-orders'
     },
     { 
