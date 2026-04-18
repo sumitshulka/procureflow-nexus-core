@@ -124,7 +124,7 @@ const RiskLibraryDialog = ({ open, onOpenChange, categories, existingTitles, onI
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
+      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2"><Library className="h-5 w-5" /> Industry Risk Library</DialogTitle>
           <DialogDescription>
