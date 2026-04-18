@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import PageHeader from "@/components/common/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -52,22 +54,26 @@ type Row = {
   category: string;
   vendor_requirement_type: string;
   vendor_requirement_mandatory: boolean;
-  vendor_declaration_text: string | null;
-  vendor_document_description: string | null;
   submission_status: string;
   submitted_at: string | null;
   expires_at: string | null;
   document_url: string | null;
   document_name: string | null;
+};
+
+type ReviewDetails = {
+  vendor_declaration_text: string | null;
+  vendor_document_description: string | null;
   declaration_accepted: boolean | null;
   declaration_accepted_at: string | null;
   declaration_signed_by: string | null;
   review_notes: string | null;
 };
 
+const SUBMISSIONS_KEY = ["vendor-compliance-submissions"];
+
 const VendorComplianceSubmissions: React.FC = () => {
-  const [rows, setRows] = useState<Row[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [policyFilter, setPolicyFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("submitted");
@@ -76,60 +82,74 @@ const VendorComplianceSubmissions: React.FC = () => {
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    void load();
-  }, []);
+  const { data: rows = [], isLoading: loading } = useQuery<Row[]>({
+    queryKey: SUBMISSIONS_KEY,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const sb: any = supabase;
+      const { data, error } = await sb
+        .from("vendor_policy_submissions")
+        .select(
+          `id, vendor_id, policy_id, status, submitted_at, expires_at, document_url, document_name,
+           vendor_registrations!inner(company_name, signatory_name),
+           compliance_policies!inner(title, category, vendor_requirement_type, vendor_requirement_mandatory, status)`
+        )
+        .order("submitted_at", { ascending: false });
 
-  const load = async () => {
-    setLoading(true);
-    const sb: any = supabase;
-    const { data, error } = await sb
-      .from("vendor_policy_submissions")
-      .select(
-        `id, vendor_id, policy_id, status, submitted_at, expires_at, document_url, document_name,
-         declaration_accepted, declaration_accepted_at, declaration_signed_by, review_notes,
-         vendor_registrations!inner(company_name, signatory_name),
-         compliance_policies!inner(title, category, vendor_requirement_type, vendor_requirement_mandatory, vendor_declaration_text, vendor_document_description, status)`
-      )
-      .order("submitted_at", { ascending: false });
+      if (error) {
+        toast.error("Failed to load submissions", { description: error.message });
+        throw error;
+      }
 
-    if (error) {
-      toast.error("Failed to load submissions", { description: error.message });
-      setRows([]);
-      setLoading(false);
-      return;
-    }
+      return (data || [])
+        .filter((r: any) => r.compliance_policies?.status === "active")
+        .map((r: any) => ({
+          submission_id: r.id,
+          vendor_id: r.vendor_id,
+          vendor_name: r.vendor_registrations?.company_name || "Unknown vendor",
+          vendor_signatory_name: r.vendor_registrations?.signatory_name || null,
+          policy_id: r.policy_id,
+          policy_title: r.compliance_policies?.title || "—",
+          category: r.compliance_policies?.category || "—",
+          vendor_requirement_type:
+            r.compliance_policies?.vendor_requirement_type || "document",
+          vendor_requirement_mandatory:
+            !!r.compliance_policies?.vendor_requirement_mandatory,
+          submission_status: r.status,
+          submitted_at: r.submitted_at,
+          expires_at: r.expires_at,
+          document_url: r.document_url,
+          document_name: r.document_name,
+        }));
+    },
+  });
 
-    const mapped: Row[] = (data || [])
-      .filter((r: any) => r.compliance_policies?.status === "active")
-      .map((r: any) => ({
-        submission_id: r.id,
-        vendor_id: r.vendor_id,
-        vendor_name: r.vendor_registrations?.company_name || "Unknown vendor",
-        vendor_signatory_name: r.vendor_registrations?.signatory_name || null,
-        policy_id: r.policy_id,
-        policy_title: r.compliance_policies?.title || "—",
-        category: r.compliance_policies?.category || "—",
-        vendor_requirement_type:
-          r.compliance_policies?.vendor_requirement_type || "document",
-        vendor_requirement_mandatory:
-          !!r.compliance_policies?.vendor_requirement_mandatory,
-        vendor_declaration_text: r.compliance_policies?.vendor_declaration_text || null,
-        vendor_document_description: r.compliance_policies?.vendor_document_description || null,
-        submission_status: r.status,
-        submitted_at: r.submitted_at,
-        expires_at: r.expires_at,
-        document_url: r.document_url,
-        document_name: r.document_name,
-        declaration_accepted: r.declaration_accepted,
-        declaration_accepted_at: r.declaration_accepted_at,
-        declaration_signed_by: r.declaration_signed_by,
-        review_notes: r.review_notes,
-      }));
-
-    setRows(mapped);
-    setLoading(false);
-  };
+  const { data: reviewDetails, isLoading: detailsLoading } = useQuery<ReviewDetails | null>({
+    queryKey: ["vendor-compliance-review", reviewing?.submission_id],
+    enabled: !!reviewing,
+    staleTime: 60_000,
+    queryFn: async () => {
+      if (!reviewing) return null;
+      const sb: any = supabase;
+      const { data, error } = await sb
+        .from("vendor_policy_submissions")
+        .select(
+          `declaration_accepted, declaration_accepted_at, declaration_signed_by, review_notes,
+           compliance_policies!inner(vendor_declaration_text, vendor_document_description)`
+        )
+        .eq("id", reviewing.submission_id)
+        .maybeSingle();
+      if (error) throw error;
+      return {
+        vendor_declaration_text: data?.compliance_policies?.vendor_declaration_text ?? null,
+        vendor_document_description: data?.compliance_policies?.vendor_document_description ?? null,
+        declaration_accepted: data?.declaration_accepted ?? null,
+        declaration_accepted_at: data?.declaration_accepted_at ?? null,
+        declaration_signed_by: data?.declaration_signed_by ?? null,
+        review_notes: data?.review_notes ?? null,
+      };
+    },
+  });
 
   const policies = useMemo(() => {
     const m = new Map<string, string>();
@@ -197,7 +217,7 @@ const VendorComplianceSubmissions: React.FC = () => {
       toast.success(`Submission ${status}`);
       setReviewing(null);
       setNotes("");
-      void load();
+      void queryClient.invalidateQueries({ queryKey: SUBMISSIONS_KEY });
     } catch (e: any) {
       toast.error("Action failed", { description: e.message });
     } finally {
@@ -331,7 +351,11 @@ const VendorComplianceSubmissions: React.FC = () => {
           </div>
 
           {loading ? (
-            <p className="text-sm text-muted-foreground">Loading…</p>
+            <div className="space-y-2">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full" />
+              ))}
+            </div>
           ) : filtered.length === 0 ? (
             <p className="text-sm text-muted-foreground py-6 text-center">
               No submissions match the current filters.
@@ -432,10 +456,17 @@ const VendorComplianceSubmissions: React.FC = () => {
           </DialogHeader>
 
           <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
-            {reviewing?.vendor_document_description && (
+            {detailsLoading && (
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-1/3" />
+                <Skeleton className="h-16 w-full" />
+              </div>
+            )}
+
+            {reviewDetails?.vendor_document_description && (
               <div className="text-xs text-muted-foreground border-l-2 pl-2">
                 <div className="font-medium text-foreground mb-0.5">Document requirement</div>
-                {reviewing.vendor_document_description}
+                {reviewDetails.vendor_document_description}
               </div>
             )}
 
@@ -455,13 +486,13 @@ const VendorComplianceSubmissions: React.FC = () => {
               </div>
             )}
 
-            {reviewing?.vendor_declaration_text && (
+            {reviewDetails?.vendor_declaration_text && (
               <div className="border rounded p-3 space-y-2">
                 <div className="text-sm font-medium">Declaration text</div>
                 <div className="text-sm whitespace-pre-wrap text-muted-foreground">
-                  {reviewing.vendor_declaration_text}
+                  {reviewDetails.vendor_declaration_text}
                 </div>
-                {reviewing?.declaration_accepted ? (
+                {reviewDetails?.declaration_accepted ? (
                   <div className="text-xs border-t pt-2 space-y-0.5">
                     <div className="font-medium text-green-700">
                       ✓ E-signed and accepted
@@ -469,15 +500,15 @@ const VendorComplianceSubmissions: React.FC = () => {
                     <div className="text-muted-foreground">
                       Signed by:{" "}
                       <span className="text-foreground font-medium">
-                        {reviewing.declaration_signed_by ||
-                          reviewing.vendor_signatory_name ||
+                        {reviewDetails.declaration_signed_by ||
+                          reviewing?.vendor_signatory_name ||
                           "—"}
                       </span>
                     </div>
-                    {reviewing.declaration_accepted_at && (
+                    {reviewDetails.declaration_accepted_at && (
                       <div className="text-muted-foreground">
                         Signed on:{" "}
-                        {format(new Date(reviewing.declaration_accepted_at), "PPpp")}
+                        {format(new Date(reviewDetails.declaration_accepted_at), "PPpp")}
                       </div>
                     )}
                   </div>
