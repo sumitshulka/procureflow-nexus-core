@@ -354,6 +354,7 @@ const VendorDashboardDetail = () => {
           <TabsTrigger value="orders">Purchase Orders</TabsTrigger>
           <TabsTrigger value="rfps">RFPs</TabsTrigger>
           <TabsTrigger value="invoices">Invoices</TabsTrigger>
+          <TabsTrigger value="compliance">Compliance</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
