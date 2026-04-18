@@ -155,21 +155,20 @@ const VendorDashboardDetail = () => {
       }
 
       // Collect entity IDs related to this vendor across modules
-      const [posRes, rfpsRes, invRes, grnRes, subsRes] = await Promise.all([
-        supabase.from('purchase_orders').select('id').eq('vendor_id', vendorId),
-        supabase.from('rfp_vendors').select('rfp_id').eq('vendor_id', vendorId),
-        supabase.from('invoices').select('id').eq('vendor_id', vendorId),
-        supabase.from('goods_received_notes').select('id').eq('vendor_id', vendorId),
-        supabase.from('vendor_policy_submissions').select('id').eq('vendor_id', vendorId),
+      const sb: any = supabase;
+      const [posRes, invRes, grnRes, subsRes] = await Promise.all([
+        sb.from('purchase_orders').select('id').eq('vendor_id', vendorId),
+        sb.from('invoices').select('id').eq('vendor_id', vendorId),
+        sb.from('goods_received_notes').select('id').eq('vendor_id', vendorId),
+        sb.from('vendor_policy_submissions').select('id').eq('vendor_id', vendorId),
       ]);
 
-      const entityIds = [
+      const entityIds: string[] = [
         vendorId,
-        ...(posRes.data?.map((r: any) => r.id) || []),
-        ...(rfpsRes.data?.map((r: any) => r.rfp_id) || []),
-        ...(invRes.data?.map((r: any) => r.id) || []),
-        ...(grnRes.data?.map((r: any) => r.id) || []),
-        ...(subsRes.data?.map((r: any) => r.id) || []),
+        ...((posRes.data || []).map((r: any) => r.id)),
+        ...((invRes.data || []).map((r: any) => r.id)),
+        ...((grnRes.data || []).map((r: any) => r.id)),
+        ...((subsRes.data || []).map((r: any) => r.id)),
       ];
 
       if (entityIds.length === 0) {
