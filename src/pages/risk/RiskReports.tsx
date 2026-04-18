@@ -479,89 +479,30 @@ const RiskReports = () => {
 
         <TabsContent value="detailed" className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <Card className="cursor-pointer hover:shadow-md transition-shadow">
-              <CardContent className="p-6">
-                <FileText className="h-8 w-8 text-blue-500 mb-3" />
-                <h3 className="font-semibold mb-2">Executive Summary</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  High-level overview of risk landscape and key metrics
-                </p>
-                <Button size="sm" onClick={() => handleExportReport("Executive Summary")}>
-                  <Download className="h-3 w-3 mr-1" />
-                  Export
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card className="cursor-pointer hover:shadow-md transition-shadow">
-              <CardContent className="p-6">
-                <FileText className="h-8 w-8 text-green-500 mb-3" />
-                <h3 className="font-semibold mb-2">Risk Register</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Detailed listing of all identified risks and their status
-                </p>
-                <Button size="sm" onClick={() => handleExportReport("Risk Register")}>
-                  <Download className="h-3 w-3 mr-1" />
-                  Export
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card className="cursor-pointer hover:shadow-md transition-shadow">
-              <CardContent className="p-6">
-                <FileText className="h-8 w-8 text-orange-500 mb-3" />
-                <h3 className="font-semibold mb-2">Mitigation Status</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Progress report on risk mitigation activities
-                </p>
-                <Button size="sm" onClick={() => handleExportReport("Mitigation Status")}>
-                  <Download className="h-3 w-3 mr-1" />
-                  Export
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card className="cursor-pointer hover:shadow-md transition-shadow">
-              <CardContent className="p-6">
-                <FileText className="h-8 w-8 text-purple-500 mb-3" />
-                <h3 className="font-semibold mb-2">Trend Analysis</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Historical analysis of risk patterns and trends
-                </p>
-                <Button size="sm" onClick={() => handleExportReport("Trend Analysis")}>
-                  <Download className="h-3 w-3 mr-1" />
-                  Export
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card className="cursor-pointer hover:shadow-md transition-shadow">
-              <CardContent className="p-6">
-                <FileText className="h-8 w-8 text-red-500 mb-3" />
-                <h3 className="font-semibold mb-2">Critical Risks</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Focus report on high and critical risk items
-                </p>
-                <Button size="sm" onClick={() => handleExportReport("Critical Risks")}>
-                  <Download className="h-3 w-3 mr-1" />
-                  Export
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card className="cursor-pointer hover:shadow-md transition-shadow">
-              <CardContent className="p-6">
-                <FileText className="h-8 w-8 text-teal-500 mb-3" />
-                <h3 className="font-semibold mb-2">Compliance Report</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Risk management compliance and audit report
-                </p>
-                <Button size="sm" onClick={() => handleExportReport("Compliance Report")}>
-                  <Download className="h-3 w-3 mr-1" />
-                  Export
-                </Button>
-              </CardContent>
-            </Card>
+            {[
+              { name: "Executive Summary", desc: "High-level overview of risk landscape and key metrics", color: "text-blue-500" },
+              { name: "Risk Register", desc: "Detailed listing of all identified risks and their status", color: "text-green-500" },
+              { name: "Mitigation Status", desc: "Progress report on risk mitigation activities", color: "text-orange-500" },
+              { name: "Trend Analysis", desc: "Historical analysis of risk patterns and trends", color: "text-purple-500" },
+              { name: "Critical Risks", desc: "Focus report on high and critical risk items", color: "text-red-500" },
+              { name: "Compliance Report", desc: "Risk management compliance and audit report", color: "text-teal-500" },
+            ].map(card => (
+              <Card key={card.name} className="hover:shadow-md transition-shadow">
+                <CardContent className="p-6">
+                  <FileText className={`h-8 w-8 ${card.color} mb-3`} />
+                  <h3 className="font-semibold mb-2">{card.name}</h3>
+                  <p className="text-sm text-muted-foreground mb-4">{card.desc}</p>
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={() => handleExportReport(card.name, "pdf")}>
+                      <Download className="h-3 w-3 mr-1" /> PDF
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => handleExportReport(card.name, "csv")}>
+                      <FileSpreadsheet className="h-3 w-3 mr-1" /> CSV
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         </TabsContent>
       </Tabs>
