@@ -141,16 +141,16 @@ const VendorFinancesContent = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full min-w-0">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="min-w-0">
             <h1 className="text-2xl font-bold">Financial Overview</h1>
-            <p className="text-muted-foreground">Track your revenue, payments, and financial performance</p>
+            <p className="text-muted-foreground text-sm sm:text-base">Track your revenue, payments, and financial performance</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Select value={timeframe} onValueChange={setTimeframe}>
-              <SelectTrigger className="w-[150px]">
+              <SelectTrigger className="w-full sm:w-[150px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -167,16 +167,16 @@ const VendorFinancesContent = () => {
         </div>
 
         {/* Financial Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0 flex-1">
                   <p className="text-sm text-muted-foreground">Total Revenue</p>
-                  <p className="text-2xl font-bold">{formatMulti(financialData?.revenueByCurrency)}</p>
+                  <p className="text-xl sm:text-2xl font-bold break-words">{formatMulti(financialData?.revenueByCurrency)}</p>
                   <p className="text-xs text-muted-foreground mt-1">Across all invoices</p>
                 </div>
-                <div className="p-3 rounded-full bg-blue-500">
+                <div className="p-3 rounded-full bg-blue-500 shrink-0">
                   <DollarSign className="w-6 h-6 text-white" />
                 </div>
               </div>
@@ -184,16 +184,16 @@ const VendorFinancesContent = () => {
           </Card>
 
           <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0 flex-1">
                   <p className="text-sm text-muted-foreground">Paid Amount</p>
-                  <p className="text-2xl font-bold">{formatMulti(financialData?.paidByCurrency)}</p>
+                  <p className="text-xl sm:text-2xl font-bold break-words">{formatMulti(financialData?.paidByCurrency)}</p>
                   <p className="text-sm text-muted-foreground mt-1">
                     {financialData?.paidInvoices || 0} paid invoices
                   </p>
                 </div>
-                <div className="p-3 rounded-full bg-green-500">
+                <div className="p-3 rounded-full bg-green-500 shrink-0">
                   <CheckCircle className="w-6 h-6 text-white" />
                 </div>
               </div>
@@ -201,14 +201,14 @@ const VendorFinancesContent = () => {
           </Card>
 
           <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0 flex-1">
                   <p className="text-sm text-muted-foreground">Outstanding</p>
-                  <p className="text-2xl font-bold">{formatMulti(financialData?.outstandingByCurrency)}</p>
+                  <p className="text-xl sm:text-2xl font-bold break-words">{formatMulti(financialData?.outstandingByCurrency)}</p>
                   <p className="text-sm text-muted-foreground mt-1">Pending payment</p>
                 </div>
-                <div className="p-3 rounded-full bg-orange-500">
+                <div className="p-3 rounded-full bg-orange-500 shrink-0">
                   <Clock className="w-6 h-6 text-white" />
                 </div>
               </div>
@@ -216,14 +216,14 @@ const VendorFinancesContent = () => {
           </Card>
 
           <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0 flex-1">
                   <p className="text-sm text-muted-foreground">Total Invoices</p>
-                  <p className="text-2xl font-bold">{financialData?.totalInvoices || 0}</p>
+                  <p className="text-xl sm:text-2xl font-bold">{financialData?.totalInvoices || 0}</p>
                   <p className="text-sm text-muted-foreground mt-1">Lifetime invoices</p>
                 </div>
-                <div className="p-3 rounded-full bg-purple-500">
+                <div className="p-3 rounded-full bg-purple-500 shrink-0">
                   <FileText className="w-6 h-6 text-white" />
                 </div>
               </div>
@@ -329,20 +329,20 @@ const VendorFinancesContent = () => {
             ) : (
               <div className="space-y-3">
                 {financialData?.recentTransactions?.map((transaction: any) => (
-                  <div key={transaction.id} className="flex items-center justify-between p-4 bg-accent rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-primary/10 rounded-full">
+                  <div key={transaction.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 bg-accent rounded-lg">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="p-2 bg-primary/10 rounded-full shrink-0">
                         <FileText className="w-4 h-4 text-primary" />
                       </div>
-                      <div>
-                        <p className="font-medium">{transaction.invoice_number}</p>
+                      <div className="min-w-0">
+                        <p className="font-medium truncate">{transaction.invoice_number}</p>
                         <p className="text-sm text-muted-foreground">
                           {transaction.invoice_date ? format(new Date(transaction.invoice_date), 'MMM dd, yyyy') : '-'}
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <div className="text-right">
+                    <div className="flex items-center justify-between sm:justify-end gap-3 flex-wrap">
+                      <div className="text-left sm:text-right">
                         <p className="font-bold">{getCurrencySymbol(transaction.currency || 'USD')}{Number(transaction.total_amount || 0).toLocaleString()}</p>
                         <p className="text-sm text-muted-foreground">{transaction.currency || 'USD'}</p>
                       </div>
