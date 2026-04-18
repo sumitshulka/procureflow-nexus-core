@@ -380,28 +380,36 @@ const VendorComplianceSubmissions: React.FC = () => {
                           ? format(new Date(r.expires_at), "PP")
                           : "—"}
                       </TableCell>
-                      <TableCell>{statusBadge(r)}</TableCell>
-                      <TableCell className="text-right space-x-1">
-                        {r.document_url && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => downloadDoc(r.document_url!)}
-                          >
-                            <Download className="h-3 w-3 mr-1" /> View
-                          </Button>
-                        )}
-                        {r.submission_status === "submitted" && (
-                          <Button
-                            size="sm"
-                            onClick={() => {
-                              setReviewing(r);
-                              setNotes("");
-                            }}
-                          >
-                            Review
-                          </Button>
-                        )}
+                      <TableCell>
+                        <div className="flex justify-start">{statusBadge(r)}</div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center justify-end gap-2">
+                          {r.document_url && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => downloadDoc(r.document_url!)}
+                            >
+                              <Download className="h-3.5 w-3.5 mr-1.5" /> View
+                            </Button>
+                          )}
+                          {r.submission_status === "submitted" ? (
+                            <Button
+                              size="sm"
+                              onClick={() => {
+                                setReviewing(r);
+                                setNotes("");
+                              }}
+                            >
+                              <ShieldCheck className="h-3.5 w-3.5 mr-1.5" /> Review
+                            </Button>
+                          ) : (
+                            !r.document_url && (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            )
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
