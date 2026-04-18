@@ -329,20 +329,20 @@ const VendorFinancesContent = () => {
             ) : (
               <div className="space-y-3">
                 {financialData?.recentTransactions?.map((transaction: any) => (
-                  <div key={transaction.id} className="flex items-center justify-between p-4 bg-accent rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-primary/10 rounded-full">
+                  <div key={transaction.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 bg-accent rounded-lg">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="p-2 bg-primary/10 rounded-full shrink-0">
                         <FileText className="w-4 h-4 text-primary" />
                       </div>
-                      <div>
-                        <p className="font-medium">{transaction.invoice_number}</p>
+                      <div className="min-w-0">
+                        <p className="font-medium truncate">{transaction.invoice_number}</p>
                         <p className="text-sm text-muted-foreground">
                           {transaction.invoice_date ? format(new Date(transaction.invoice_date), 'MMM dd, yyyy') : '-'}
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <div className="text-right">
+                    <div className="flex items-center justify-between sm:justify-end gap-3 flex-wrap">
+                      <div className="text-left sm:text-right">
                         <p className="font-bold">{getCurrencySymbol(transaction.currency || 'USD')}{Number(transaction.total_amount || 0).toLocaleString()}</p>
                         <p className="text-sm text-muted-foreground">{transaction.currency || 'USD'}</p>
                       </div>
