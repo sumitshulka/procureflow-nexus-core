@@ -55,6 +55,17 @@ const VendorRiskProfile = () => {
   const [search, setSearch] = useState("");
   const [selectedVendor, setSelectedVendor] = useState<VendorProfile | null>(null);
 
+  const { data: orgCurrency = "USD" } = useQuery({
+    queryKey: ["org-base-currency"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("organization_settings")
+        .select("base_currency")
+        .maybeSingle();
+      return (data?.base_currency as string) || "USD";
+    },
+  });
+
   const { data: profiles = [], isLoading } = useQuery({
     queryKey: ["vendor-risk-profiles"],
     queryFn: async () => {
