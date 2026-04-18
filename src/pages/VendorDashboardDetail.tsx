@@ -149,47 +149,65 @@ const VendorDashboardDetail = () => {
 
   const fetchRecentActivities = async () => {
     try {
-      // This is a mock implementation - in a real app, you'd query from multiple tables
-      const mockActivities: RecentActivity[] = [
-        {
-          id: '1',
-          type: 'order',
-          title: 'Purchase Order #PO-2025-0001',
-          description: 'New purchase order received for office supplies',
-          date: '2025-01-10',
-          status: 'pending',
-          amount: 25000
-        },
-        {
-          id: '2',
-          type: 'rfp',
-          title: 'RFP Response Submitted',
-          description: 'Response submitted for IT Equipment RFP',
-          date: '2025-01-08',
-          status: 'submitted'
-        },
-        {
-          id: '3',
-          type: 'product',
-          title: 'Product Registered',
-          description: 'New product "Premium Laptop" added to catalog',
-          date: '2025-01-05',
-          status: 'active'
-        },
-        {
-          id: '4',
-          type: 'invoice',
-          title: 'Invoice Generated',
-          description: 'Invoice #INV-2025-0012 generated',
-          date: '2025-01-03',
-          status: 'paid',
-          amount: 15000
-        }
+      if (!vendorId) {
+        setRecentActivities([]);
+        return;
+      }
+
+      // Collect entity IDs related to this vendor across modules
+      const [posRes, rfpsRes, invRes, grnRes, subsRes] = await Promise.all([
+        supabase.from('purchase_orders').select('id').eq('vendor_id', vendorId),
+        supabase.from('rfp_vendors').select('rfp_id').eq('vendor_id', vendorId),
+        supabase.from('invoices').select('id').eq('vendor_id', vendorId),
+        supabase.from('goods_received_notes').select('id').eq('vendor_id', vendorId),
+        supabase.from('vendor_policy_submissions').select('id').eq('vendor_id', vendorId),
+      ]);
+
+      const entityIds = [
+        vendorId,
+        ...(posRes.data?.map((r: any) => r.id) || []),
+        ...(rfpsRes.data?.map((r: any) => r.rfp_id) || []),
+        ...(invRes.data?.map((r: any) => r.id) || []),
+        ...(grnRes.data?.map((r: any) => r.id) || []),
+        ...(subsRes.data?.map((r: any) => r.id) || []),
       ];
 
-      setRecentActivities(mockActivities);
+      if (entityIds.length === 0) {
+        setRecentActivities([]);
+        return;
+      }
+
+      const { data: logs } = await supabase
+        .from('activity_logs')
+        .select('id, action, entity_type, entity_id, details, created_at')
+        .in('entity_id', entityIds)
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      const mapped: RecentActivity[] = (logs || []).map((l: any) => {
+        const et = (l.entity_type || '').toLowerCase();
+        let type: RecentActivity['type'] = 'product';
+        if (et.includes('purchase_order') || et.includes('po')) type = 'order';
+        else if (et.includes('rfp')) type = 'rfp';
+        else if (et.includes('invoice')) type = 'invoice';
+        else if (et.includes('product')) type = 'product';
+        else if (et.includes('vendor') || et.includes('policy')) type = 'product';
+
+        return {
+          id: l.id,
+          type,
+          title: (l.action || 'Activity').replace(/_/g, ' '),
+          description: `${(l.entity_type || '').replace(/_/g, ' ')} ${l.entity_id ? '#' + String(l.entity_id).slice(0, 8) : ''}`.trim(),
+          date: new Date(l.created_at).toLocaleDateString(),
+          status: (l.details?.status as string) || 'info',
+          amount: typeof l.details?.amount === 'number' ? l.details.amount : undefined,
+        };
+      });
+
+      setRecentActivities(mapped);
     } catch (error: any) {
       console.error('Error fetching recent activities:', error);
+      setRecentActivities([]);
     } finally {
       setIsLoading(false);
     }
