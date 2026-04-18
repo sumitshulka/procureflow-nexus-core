@@ -162,6 +162,7 @@ import VendorFinances from '@/pages/vendor/VendorFinances';
 import VendorMessages from '@/pages/vendor/VendorMessages';
 import VendorAnalytics from '@/pages/vendor/VendorAnalytics';
 import VendorSettings from '@/pages/vendor/VendorSettings';
+import VendorCompliance from '@/pages/vendor/VendorCompliance';
 
 // Settings & Administration
 import Settings from '@/pages/Settings';
@@ -1081,6 +1082,14 @@ function App() {
             element={
               <ProtectedRoute requireVendor={true}>
                 <VendorLayout><VendorSettings /></VendorLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/vendor/compliance"
+            element={
+              <ProtectedRoute requireVendor={true}>
+                <VendorLayout><VendorCompliance /></VendorLayout>
               </ProtectedRoute>
             }
           />

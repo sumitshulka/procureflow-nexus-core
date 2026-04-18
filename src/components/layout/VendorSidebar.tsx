@@ -22,6 +22,7 @@ import {
   MessageSquare,
   BarChart3,
   Receipt,
+  ShieldCheck,
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -110,6 +111,12 @@ const VendorSidebar = () => {
       title: "Analytics",
       icon: BarChart3,
       href: "/vendor/analytics",
+      requiresApproval: true,
+    },
+    {
+      title: "Compliance",
+      icon: ShieldCheck,
+      href: "/vendor/compliance",
       requiresApproval: true,
     },
     {
