@@ -13,7 +13,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { VendorRegistration, VendorDocument, parseAddress } from '@/types/vendor';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
-import { FileText, Building, User, CreditCard, MapPin, Download, CheckCircle, XCircle } from 'lucide-react';
+import { FileText, Building, User, CreditCard, MapPin, Download, CheckCircle, XCircle, ShieldCheck } from 'lucide-react';
+import VendorComplianceReview from './VendorComplianceReview';
 
 interface VendorDetailDialogProps {
   vendor: VendorRegistration;
@@ -94,11 +95,12 @@ const VendorDetailDialog: React.FC<VendorDetailDialogProps> = ({
 
         <div className="flex-1 overflow-y-auto">
           <Tabs defaultValue="company" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="company">Company</TabsTrigger>
               <TabsTrigger value="contacts">Contacts</TabsTrigger>
               <TabsTrigger value="addresses">Addresses</TabsTrigger>
               <TabsTrigger value="documents">Documents</TabsTrigger>
+              <TabsTrigger value="compliance"><ShieldCheck className="h-3 w-3 mr-1" />Compliance</TabsTrigger>
             </TabsList>
 
             <TabsContent value="company" className="space-y-4">
@@ -373,6 +375,13 @@ const VendorDetailDialog: React.FC<VendorDetailDialogProps> = ({
                   )}
                 </CardContent>
               </Card>
+            </TabsContent>
+            <TabsContent value="compliance" className="space-y-4">
+              {vendor.id ? (
+                <VendorComplianceReview vendorId={vendor.id} />
+              ) : (
+                <p className="text-sm text-muted-foreground">Vendor ID not available.</p>
+              )}
             </TabsContent>
           </Tabs>
         </div>
