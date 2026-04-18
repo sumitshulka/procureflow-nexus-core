@@ -173,13 +173,23 @@ const PolicyManagement = () => {
     },
   ];
 
-  const handleEdit = (policy: any) => {
+  const handleEdit = async (policy: any) => {
     setEditingPolicy(policy);
+    // Lazy-load the heavy `content` field only when actually editing
+    let content = policy.content ?? "";
+    if (!content) {
+      const { data } = await supabase
+        .from("compliance_policies")
+        .select("content")
+        .eq("id", policy.id)
+        .maybeSingle();
+      content = data?.content ?? "";
+    }
     form.reset({
       title: policy.title,
       category: policy.category,
       description: policy.description,
-      content: policy.content || "",
+      content,
       version: policy.version,
       effectiveDate: policy.effective_date,
       reviewDate: policy.review_date,
