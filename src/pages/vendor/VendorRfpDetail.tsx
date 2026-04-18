@@ -1,7 +1,7 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, Calendar, DollarSign, Clock, Building, FileText, Send } from 'lucide-react';
+import { ArrowLeft, Calendar, DollarSign, Clock, Building, FileText, Send, Download } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -214,6 +214,44 @@ const VendorRfpDetail = () => {
           </CardHeader>
           <CardContent>
             <p className="whitespace-pre-wrap">{rfp.terms_and_conditions}</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Supporting Documents */}
+      {Array.isArray((rfp as any).attachments) && (rfp as any).attachments.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="w-5 h-5" />
+              Supporting Documents
+            </CardTitle>
+            <CardDescription>
+              Reference documents provided by the buyer for this RFP.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ul className="divide-y rounded-md border">
+              {((rfp as any).attachments as Array<{ name: string; url: string; size?: number }>).map((att, i) => (
+                <li key={i} className="flex items-center justify-between gap-3 p-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <FileText className="h-4 w-4 text-primary shrink-0" />
+                    <span className="text-sm font-medium truncate">{att.name}</span>
+                    {typeof att.size === 'number' && (
+                      <span className="text-xs text-muted-foreground shrink-0">
+                        {att.size < 1024 * 1024 ? `${(att.size / 1024).toFixed(1)} KB` : `${(att.size / (1024 * 1024)).toFixed(2)} MB`}
+                      </span>
+                    )}
+                  </div>
+                  <Button asChild variant="outline" size="sm">
+                    <a href={att.url} target="_blank" rel="noopener noreferrer" download={att.name}>
+                      <Download className="w-4 h-4 mr-2" />
+                      View
+                    </a>
+                  </Button>
+                </li>
+              ))}
+            </ul>
           </CardContent>
         </Card>
       )}

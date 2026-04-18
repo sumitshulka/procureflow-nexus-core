@@ -1,5 +1,4 @@
-
-import React from "react";
+import React, { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -7,6 +6,25 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Upload, FileText, X, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+
+const MAX_TOTAL_BYTES = 2 * 1024 * 1024; // 2 MB combined
+
+interface RfpAttachment {
+  name: string;
+  path: string;
+  url: string;
+  size: number;
+}
+
+const formatBytes = (bytes: number) => {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+};
 
 const termsSchema = z.object({
   terms_and_conditions: z.string().optional(),
@@ -26,6 +44,16 @@ interface RfpTermsProps {
 }
 
 const RfpTerms: React.FC<RfpTermsProps> = ({ data, onUpdate, onNext }) => {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [attachments, setAttachments] = useState<RfpAttachment[]>(
+    Array.isArray(data.terms?.attachments) ? data.terms.attachments : []
+  );
+  const [uploading, setUploading] = useState(false);
+
+  const totalBytes = attachments.reduce((sum, a) => sum + (a.size || 0), 0);
+
   const form = useForm<TermsData>({
     resolver: zodResolver(termsSchema),
     defaultValues: {
@@ -33,8 +61,70 @@ const RfpTerms: React.FC<RfpTermsProps> = ({ data, onUpdate, onNext }) => {
     },
   });
 
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (e.target) e.target.value = "";
+    if (!files.length) return;
+
+    if (!user) {
+      toast({ title: "Not signed in", description: "You must be signed in to upload files.", variant: "destructive" });
+      return;
+    }
+
+    // Validate PDFs only
+    const nonPdf = files.find((f) => f.type !== "application/pdf" && !f.name.toLowerCase().endsWith(".pdf"));
+    if (nonPdf) {
+      toast({ title: "Invalid file type", description: `Only PDF files are allowed. "${nonPdf.name}" was rejected.`, variant: "destructive" });
+      return;
+    }
+
+    const incomingBytes = files.reduce((s, f) => s + f.size, 0);
+    if (totalBytes + incomingBytes > MAX_TOTAL_BYTES) {
+      toast({
+        title: "Size limit exceeded",
+        description: `Combined size cannot exceed 2 MB. Current ${formatBytes(totalBytes)}, adding ${formatBytes(incomingBytes)}.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const uploaded: RfpAttachment[] = [];
+      for (const file of files) {
+        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+        const path = `${user.id}/${Date.now()}_${safeName}`;
+        const { error: upErr } = await supabase.storage
+          .from("rfp-attachments")
+          .upload(path, file, { contentType: "application/pdf", upsert: false });
+        if (upErr) throw upErr;
+        const { data: pub } = supabase.storage.from("rfp-attachments").getPublicUrl(path);
+        uploaded.push({ name: file.name, path, url: pub.publicUrl, size: file.size });
+      }
+      const next = [...attachments, ...uploaded];
+      setAttachments(next);
+      onUpdate({ terms: { ...form.getValues(), attachments: next } });
+      toast({ title: "Files uploaded", description: `${uploaded.length} file(s) added.` });
+    } catch (err: any) {
+      toast({ title: "Upload failed", description: err.message || "Could not upload file(s).", variant: "destructive" });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleRemove = async (att: RfpAttachment) => {
+    try {
+      await supabase.storage.from("rfp-attachments").remove([att.path]);
+    } catch {
+      // best-effort cleanup
+    }
+    const next = attachments.filter((a) => a.path !== att.path);
+    setAttachments(next);
+    onUpdate({ terms: { ...form.getValues(), attachments: next } });
+  };
+
   const onSubmit = (formData: TermsData) => {
-    onUpdate({ terms: formData });
+    onUpdate({ terms: { ...formData, attachments } });
     onNext();
   };
 
@@ -164,6 +254,77 @@ const RfpTerms: React.FC<RfpTermsProps> = ({ data, onUpdate, onNext }) => {
                   </FormItem>
                 )}
               />
+            </CardContent>
+          </Card>
+
+          {/* Supporting Documents (PDF, max 2MB combined) */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center justify-between">
+                <span>Supporting Documents</span>
+                <span className="text-xs font-normal text-muted-foreground">
+                  PDF only · {formatBytes(totalBytes)} / 2 MB
+                </span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Attach supporting PDF documents (specifications, drawings, scope, etc.). These will be visible to vendors viewing this RFP. Combined file size must not exceed 2 MB.
+              </p>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="application/pdf,.pdf"
+                multiple
+                className="hidden"
+                onChange={handleFileSelect}
+              />
+
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading || totalBytes >= MAX_TOTAL_BYTES}
+              >
+                {uploading ? (
+                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Uploading...</>
+                ) : (
+                  <><Upload className="h-4 w-4 mr-2" /> Upload PDF</>
+                )}
+              </Button>
+
+              {attachments.length > 0 && (
+                <ul className="divide-y rounded-md border">
+                  {attachments.map((att) => (
+                    <li key={att.path} className="flex items-center justify-between gap-3 p-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <FileText className="h-4 w-4 text-primary shrink-0" />
+                        <a
+                          href={att.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm font-medium truncate hover:underline"
+                        >
+                          {att.name}
+                        </a>
+                        <span className="text-xs text-muted-foreground shrink-0">
+                          {formatBytes(att.size)}
+                        </span>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemove(att)}
+                        aria-label={`Remove ${att.name}`}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </CardContent>
           </Card>
 

@@ -93,6 +93,7 @@ const RfpReview: React.FC<RfpReviewProps> = ({ data, rfpId, isEditMode }) => {
         payment_terms: data.terms.payment_terms,
         delivery_terms: data.terms.delivery_terms,
         warranty_requirements: data.terms.warranty_requirements,
+        attachments: Array.isArray(data.terms?.attachments) ? data.terms.attachments : [],
         updated_at: new Date().toISOString(),
       };
 
