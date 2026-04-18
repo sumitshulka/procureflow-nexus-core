@@ -155,7 +155,17 @@ const VendorPurchaseOrdersContent = () => {
               <DollarSign className="w-5 h-5 text-green-600" />
               <div>
                 <p className="text-sm text-muted-foreground">Total Value</p>
-                <p className="text-xl font-bold">${stats.totalValue.toLocaleString()}</p>
+                {currencyEntries.length === 0 ? (
+                  <p className="text-xl font-bold">-</p>
+                ) : currencyEntries.length === 1 ? (
+                  <p className="text-xl font-bold">{formatCurrency(currencyEntries[0][1], currencyEntries[0][0])}</p>
+                ) : (
+                  <div className="space-y-0.5">
+                    {currencyEntries.map(([cur, val]) => (
+                      <p key={cur} className="text-sm font-bold">{formatCurrency(val, cur)}</p>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </CardContent>
