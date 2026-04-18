@@ -61,6 +61,8 @@ const VendorRiskProfile = () => {
       const { data } = await supabase
         .from("organization_settings")
         .select("base_currency")
+        .order("created_at", { ascending: false })
+        .limit(1)
         .maybeSingle();
       return (data?.base_currency as string) || "USD";
     },
