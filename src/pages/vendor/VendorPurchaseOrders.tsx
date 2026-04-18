@@ -112,16 +112,21 @@ const VendorPurchaseOrdersContent = () => {
   };
 
   const getTotalStats = () => {
-    const stats = {
+    const totalsByCurrency: Record<string, number> = {};
+    (purchaseOrders || []).forEach((po) => {
+      const cur = po.currency || 'USD';
+      totalsByCurrency[cur] = (totalsByCurrency[cur] || 0) + (po.total_amount || 0);
+    });
+    return {
       total: purchaseOrders?.length || 0,
-      totalValue: purchaseOrders?.reduce((sum, po) => sum + (po.total_amount || 0), 0) || 0,
+      totalsByCurrency,
       active: purchaseOrders?.filter(po => ['sent', 'acknowledged', 'in_progress'].includes(po.status)).length || 0,
       completed: purchaseOrders?.filter(po => po.status === 'completed').length || 0,
     };
-    return stats;
   };
 
   const stats = getTotalStats();
+  const currencyEntries = Object.entries(stats.totalsByCurrency);
 
   return (
     <div className="space-y-6">
