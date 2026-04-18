@@ -102,15 +102,19 @@ const VendorCompliance: React.FC = () => {
 
   const stats = useMemo(() => {
     const mandatory = policies.filter((p) => p.vendor_requirement_mandatory);
-    const approved = mandatory.filter((p) => {
-      const s = submissions[p.id];
-      return s && s.status === "approved" && (!s.expires_at || new Date(s.expires_at) > new Date());
-    });
+    const isApproved = (s?: Submission) =>
+      !!s && s.status === "approved" && (!s.expires_at || new Date(s.expires_at) > new Date());
+    const isUnderReview = (s?: Submission) => !!s && s.status === "submitted";
+    const approvedAll = policies.filter((p) => isApproved(submissions[p.id]));
+    const underReview = policies.filter((p) => isUnderReview(submissions[p.id]));
+    const approvedMand = mandatory.filter((p) => isApproved(submissions[p.id])).length;
     return {
       total: policies.length,
       mandatory: mandatory.length,
-      approved: approved.length,
-      pending: policies.length - approved.length,
+      approved: approvedAll.length,
+      underReview: underReview.length,
+      pending: policies.length - approvedAll.length - underReview.length,
+      pendingMandatory: mandatory.length - approvedMand - mandatory.filter((p) => isUnderReview(submissions[p.id])).length,
     };
   }, [policies, submissions]);
 
