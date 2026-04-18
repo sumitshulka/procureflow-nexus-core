@@ -413,15 +413,11 @@ const VendorDashboard = () => {
               <CardContent className="space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">Total Revenue</span>
-                  <span className="font-bold">${poData?.totalValue?.toLocaleString() || '0'}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">This Month</span>
-                  <span className="font-bold text-green-600">+12.5%</span>
+                  <span className="font-bold">{formatMulti(invoiceFinance?.revenueByCurrency || {})}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">Outstanding</span>
-                  <span className="font-bold">$0</span>
+                  <span className="font-bold">{formatMulti(invoiceFinance?.outstandingByCurrency || {})}</span>
                 </div>
                 <Button variant="outline" size="sm" className="w-full" onClick={() => navigate('/vendor/finances')}>
                   <BarChart3 className="w-4 h-4 mr-2" />
