@@ -463,6 +463,101 @@ const PolicyManagement = () => {
                     )}
                   />
                 </div>
+
+                {/* Vendor compliance requirements section */}
+                <div className="border rounded-md p-4 space-y-4 bg-muted/30">
+                  <div>
+                    <h4 className="font-semibold text-sm">Vendor Compliance Requirement</h4>
+                    <p className="text-xs text-muted-foreground">
+                      Configure what vendors must submit to demonstrate compliance with this policy.
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="vendor_requirement_type"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Requirement Type</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger><SelectValue /></SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="none">None (internal policy)</SelectItem>
+                              <SelectItem value="document">PDF document only</SelectItem>
+                              <SelectItem value="declaration">Signed declaration only</SelectItem>
+                              <SelectItem value="both">Both document & declaration</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="validity_months"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Validity (months)</FormLabel>
+                          <FormControl>
+                            <Input type="number" min="1" placeholder="e.g. 12" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <FormField
+                    control={form.control}
+                    name="vendor_requirement_mandatory"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center gap-2 space-y-0">
+                        <FormControl>
+                          <input
+                            type="checkbox"
+                            checked={field.value}
+                            onChange={(e) => field.onChange(e.target.checked)}
+                            className="h-4 w-4"
+                          />
+                        </FormControl>
+                        <FormLabel className="!mt-0">
+                          Mandatory — vendors who haven't submitted will be blocked from new POs / RFP responses
+                        </FormLabel>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="vendor_document_description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Document Description (shown to vendor)</FormLabel>
+                        <FormControl>
+                          <Textarea placeholder="e.g. Latest ISO 27001 certificate" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="vendor_declaration_text"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Declaration Text (vendor will e-sign)</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="e.g. We declare that our company complies with..."
+                            className="min-h-[80px]"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
                 
                 <div className="flex justify-end space-x-2">
                   <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
