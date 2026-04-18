@@ -167,16 +167,16 @@ const VendorFinancesContent = () => {
         </div>
 
         {/* Financial Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0 flex-1">
                   <p className="text-sm text-muted-foreground">Total Revenue</p>
-                  <p className="text-2xl font-bold">{formatMulti(financialData?.revenueByCurrency)}</p>
+                  <p className="text-xl sm:text-2xl font-bold break-words">{formatMulti(financialData?.revenueByCurrency)}</p>
                   <p className="text-xs text-muted-foreground mt-1">Across all invoices</p>
                 </div>
-                <div className="p-3 rounded-full bg-blue-500">
+                <div className="p-3 rounded-full bg-blue-500 shrink-0">
                   <DollarSign className="w-6 h-6 text-white" />
                 </div>
               </div>
@@ -184,16 +184,16 @@ const VendorFinancesContent = () => {
           </Card>
 
           <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0 flex-1">
                   <p className="text-sm text-muted-foreground">Paid Amount</p>
-                  <p className="text-2xl font-bold">{formatMulti(financialData?.paidByCurrency)}</p>
+                  <p className="text-xl sm:text-2xl font-bold break-words">{formatMulti(financialData?.paidByCurrency)}</p>
                   <p className="text-sm text-muted-foreground mt-1">
                     {financialData?.paidInvoices || 0} paid invoices
                   </p>
                 </div>
-                <div className="p-3 rounded-full bg-green-500">
+                <div className="p-3 rounded-full bg-green-500 shrink-0">
                   <CheckCircle className="w-6 h-6 text-white" />
                 </div>
               </div>
@@ -201,14 +201,14 @@ const VendorFinancesContent = () => {
           </Card>
 
           <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0 flex-1">
                   <p className="text-sm text-muted-foreground">Outstanding</p>
-                  <p className="text-2xl font-bold">{formatMulti(financialData?.outstandingByCurrency)}</p>
+                  <p className="text-xl sm:text-2xl font-bold break-words">{formatMulti(financialData?.outstandingByCurrency)}</p>
                   <p className="text-sm text-muted-foreground mt-1">Pending payment</p>
                 </div>
-                <div className="p-3 rounded-full bg-orange-500">
+                <div className="p-3 rounded-full bg-orange-500 shrink-0">
                   <Clock className="w-6 h-6 text-white" />
                 </div>
               </div>
@@ -216,14 +216,14 @@ const VendorFinancesContent = () => {
           </Card>
 
           <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0 flex-1">
                   <p className="text-sm text-muted-foreground">Total Invoices</p>
-                  <p className="text-2xl font-bold">{financialData?.totalInvoices || 0}</p>
+                  <p className="text-xl sm:text-2xl font-bold">{financialData?.totalInvoices || 0}</p>
                   <p className="text-sm text-muted-foreground mt-1">Lifetime invoices</p>
                 </div>
-                <div className="p-3 rounded-full bg-purple-500">
+                <div className="p-3 rounded-full bg-purple-500 shrink-0">
                   <FileText className="w-6 h-6 text-white" />
                 </div>
               </div>
