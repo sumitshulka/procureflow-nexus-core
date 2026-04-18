@@ -674,6 +674,14 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/compliance/vendor-submissions"
+            element={
+              <ProtectedRoute requiredRole={UserRole.ADMIN}>
+                <Layout><VendorComplianceSubmissions /></Layout>
+              </ProtectedRoute>
+            }
+          />
 
           {/* Risk Management */}
           <Route
