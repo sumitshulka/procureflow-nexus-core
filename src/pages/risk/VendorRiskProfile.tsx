@@ -218,7 +218,7 @@ const VendorRiskProfile = () => {
                       </div>
                     </TableCell>
                     <TableCell className="text-right">{p.po_count}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(p.total_spend)}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(p.total_spend, orgCurrency)}</TableCell>
                     <TableCell className="text-right">{p.spend_concentration_pct}%</TableCell>
                     <TableCell className="text-right">
                       <span className={p.late_delivery_rate > 30 ? "text-destructive font-semibold" : ""}>
