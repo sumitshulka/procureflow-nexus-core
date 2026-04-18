@@ -550,7 +550,7 @@ const RfpTemplates = () => {
           </Card>
 
           {/* Pricing Templates Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 gap-6">
             {filteredPricingTemplates.map((template) => (
               <Card key={template.id} className="relative">
                 <CardHeader>
