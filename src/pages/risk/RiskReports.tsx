@@ -297,9 +297,11 @@ const RiskReports = () => {
               <SelectItem value="last-year">Last Year</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" onClick={() => handleExportReport("Executive Summary")}>
-            <Download className="h-4 w-4 mr-2" />
-            Export
+          <Button variant="outline" onClick={() => handleExportReport("Executive Summary", "pdf")}>
+            <Download className="h-4 w-4 mr-2" /> PDF
+          </Button>
+          <Button variant="outline" onClick={() => handleExportReport("Executive Summary", "csv")}>
+            <FileSpreadsheet className="h-4 w-4 mr-2" /> CSV
           </Button>
         </div>
       </div>
