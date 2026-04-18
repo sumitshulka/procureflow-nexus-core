@@ -5,10 +5,14 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from "recharts";
-import { Download, FileText, TrendingUp, AlertTriangle, Calendar } from "lucide-react";
+import { Download, FileText, TrendingUp, AlertTriangle, Calendar, FileSpreadsheet } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { subMonths, subYears, format } from "date-fns";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+
+type ExportFormat = "pdf" | "csv";
 
 const RiskReports = () => {
   const { toast } = useToast();
@@ -158,11 +162,104 @@ const RiskReports = () => {
     return Object.values(categoryData);
   };
 
-  const handleExportReport = (reportType: string) => {
-    toast({
-      title: "Report Export",
-      description: `${reportType} report will be downloaded shortly`,
+  const buildReportRows = (reportType: string): { columns: string[]; rows: (string | number)[][] } => {
+    switch (reportType) {
+      case "Risk Register":
+        return {
+          columns: ["Title", "Category", "Level", "Score", "Probability", "Impact", "Status", "Due Date"],
+          rows: risks.map(r => [
+            r.title, r.category?.name || "-", r.risk_level, r.risk_score,
+            r.probability, r.impact, r.status,
+            r.due_date ? format(new Date(r.due_date), "yyyy-MM-dd") : "-",
+          ]),
+        };
+      case "Critical Risks":
+        return {
+          columns: ["Title", "Category", "Level", "Score", "Mitigation"],
+          rows: risks.filter(r => r.risk_level === "Critical" || r.risk_level === "High").map(r => [
+            r.title, r.category?.name || "-", r.risk_level, r.risk_score, r.mitigation_strategy || "-",
+          ]),
+        };
+      case "Mitigation Status":
+        return {
+          columns: ["Action", "Status", "Due Date", "Completion Date"],
+          rows: mitigationActions.map(a => [
+            a.action_title || "-", a.status || "-",
+            a.due_date ? format(new Date(a.due_date), "yyyy-MM-dd") : "-",
+            a.completion_date ? format(new Date(a.completion_date), "yyyy-MM-dd") : "-",
+          ]),
+        };
+      case "Trend Analysis": {
+        const trend = getRiskTrendData() as any[];
+        return {
+          columns: ["Month", "Critical", "High", "Medium", "Low"],
+          rows: trend.map(t => [t.month, t.critical, t.high, t.medium, t.low]),
+        };
+      }
+      case "Compliance Report":
+        return {
+          columns: ["Title", "Category", "Level", "Status", "Owner Action"],
+          rows: risks.map(r => [r.title, r.category?.name || "-", r.risk_level, r.status, r.mitigation_strategy ? "Documented" : "Missing"]),
+        };
+      default: // Executive Summary
+        return {
+          columns: ["Metric", "Value"],
+          rows: [
+            ["Total Risks", totalRisks],
+            ["High/Critical Risks", highCriticalRisks],
+            ["Mitigation Rate", `${mitigationRate}%`],
+            ["Completed Actions", `${completedActions} / ${totalActions}`],
+            ["Avg. Resolution Time (days)", avgResolutionTime],
+            ["Reporting Period", selectedPeriod],
+          ],
+        };
+    }
+  };
+
+  const downloadCSV = (filename: string, columns: string[], rows: (string | number)[][]) => {
+    const escape = (v: any) => {
+      const s = String(v ?? "");
+      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const csv = [columns.map(escape).join(","), ...rows.map(r => r.map(escape).join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const downloadPDF = (title: string, columns: string[], rows: (string | number)[][]) => {
+    const doc = new jsPDF({ orientation: columns.length > 5 ? "landscape" : "portrait" });
+    doc.setFontSize(16);
+    doc.text(title, 14, 15);
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(`Period: ${selectedPeriod}  |  Generated: ${format(new Date(), "PPpp")}`, 14, 22);
+    autoTable(doc, {
+      startY: 28,
+      head: [columns],
+      body: rows.map(r => r.map(c => String(c ?? ""))),
+      styles: { fontSize: 9 },
+      headStyles: { fillColor: [30, 41, 59] },
     });
+    doc.save(`${title.replace(/\s+/g, "_")}_${format(new Date(), "yyyyMMdd")}.pdf`);
+  };
+
+  const handleExportReport = (reportType: string, fmt: ExportFormat = "pdf") => {
+    const { columns, rows } = buildReportRows(reportType);
+    if (rows.length === 0) {
+      toast({ title: "No data", description: "Nothing to export for the selected period.", variant: "destructive" });
+      return;
+    }
+    if (fmt === "csv") {
+      downloadCSV(`${reportType.replace(/\s+/g, "_")}_${format(new Date(), "yyyyMMdd")}.csv`, columns, rows);
+    } else {
+      downloadPDF(reportType, columns, rows);
+    }
+    toast({ title: "Export complete", description: `${reportType} (${fmt.toUpperCase()}) downloaded` });
   };
 
   const totalRisks = risks.length;
