@@ -86,9 +86,10 @@ const VendorComplianceSubmissions: React.FC = () => {
     const { data, error } = await sb
       .from("vendor_policy_submissions")
       .select(
-        `id, vendor_id, policy_id, status, submitted_at, expires_at, document_url, declaration_accepted, review_notes,
-         vendor_registrations!inner(company_name),
-         compliance_policies!inner(title, category, vendor_requirement_type, vendor_requirement_mandatory, status)`
+        `id, vendor_id, policy_id, status, submitted_at, expires_at, document_url, document_name,
+         declaration_accepted, declaration_accepted_at, declaration_signed_by, review_notes,
+         vendor_registrations!inner(company_name, signatory_name),
+         compliance_policies!inner(title, category, vendor_requirement_type, vendor_requirement_mandatory, vendor_declaration_text, vendor_document_description, status)`
       )
       .order("submitted_at", { ascending: false });
 
@@ -105,6 +106,7 @@ const VendorComplianceSubmissions: React.FC = () => {
         submission_id: r.id,
         vendor_id: r.vendor_id,
         vendor_name: r.vendor_registrations?.company_name || "Unknown vendor",
+        vendor_signatory_name: r.vendor_registrations?.signatory_name || null,
         policy_id: r.policy_id,
         policy_title: r.compliance_policies?.title || "—",
         category: r.compliance_policies?.category || "—",
@@ -112,11 +114,16 @@ const VendorComplianceSubmissions: React.FC = () => {
           r.compliance_policies?.vendor_requirement_type || "document",
         vendor_requirement_mandatory:
           !!r.compliance_policies?.vendor_requirement_mandatory,
+        vendor_declaration_text: r.compliance_policies?.vendor_declaration_text || null,
+        vendor_document_description: r.compliance_policies?.vendor_document_description || null,
         submission_status: r.status,
         submitted_at: r.submitted_at,
         expires_at: r.expires_at,
         document_url: r.document_url,
+        document_name: r.document_name,
         declaration_accepted: r.declaration_accepted,
+        declaration_accepted_at: r.declaration_accepted_at,
+        declaration_signed_by: r.declaration_signed_by,
         review_notes: r.review_notes,
       }));
 
