@@ -21,15 +21,17 @@ const MasterDataManagement = () => {
       </div>
 
       <Tabs defaultValue="departments" className="w-full">
-        <TabsList className="w-full bg-muted h-11 mb-6">
-          <TabsTrigger value="departments">Departments</TabsTrigger>
-          <TabsTrigger value="categories">Product Categories</TabsTrigger>
-          <TabsTrigger value="classifications">Product Classifications</TabsTrigger>
-          <TabsTrigger value="units">Product Units</TabsTrigger>
-          <TabsTrigger value="user-types">User Types</TabsTrigger>
-          <TabsTrigger value="tax-types">Tax Types</TabsTrigger>
-          <TabsTrigger value="tax-codes">Tax Codes</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto mb-6">
+          <TabsList className="w-max min-w-full bg-muted h-11 flex-nowrap justify-start">
+            <TabsTrigger value="departments" className="whitespace-nowrap shrink-0">Departments</TabsTrigger>
+            <TabsTrigger value="categories" className="whitespace-nowrap shrink-0">Product Categories</TabsTrigger>
+            <TabsTrigger value="classifications" className="whitespace-nowrap shrink-0">Product Classifications</TabsTrigger>
+            <TabsTrigger value="units" className="whitespace-nowrap shrink-0">Product Units</TabsTrigger>
+            <TabsTrigger value="user-types" className="whitespace-nowrap shrink-0">User Types</TabsTrigger>
+            <TabsTrigger value="tax-types" className="whitespace-nowrap shrink-0">Tax Types</TabsTrigger>
+            <TabsTrigger value="tax-codes" className="whitespace-nowrap shrink-0">Tax Codes</TabsTrigger>
+          </TabsList>
+        </div>
         
         <TabsContent value="departments">
           <DepartmentsManager />
