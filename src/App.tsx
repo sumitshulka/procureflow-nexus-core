@@ -84,6 +84,7 @@ import BudgetCycleDashboard from '@/pages/budget/BudgetCycleDashboard';
 import AuditTrail from '@/pages/compliance/AuditTrail';
 import ComplianceReports from '@/pages/compliance/ComplianceReports';
 import PolicyManagement from '@/pages/compliance/PolicyManagement';
+import VendorComplianceSubmissions from '@/pages/compliance/VendorComplianceSubmissions';
 
 // Risk Management Pages
 import RiskAssessment from '@/pages/risk/RiskAssessment';
