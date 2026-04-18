@@ -316,6 +316,9 @@ const Content = () => {
           )}
         </div>
       )}
+
+      {/* Goods Receipts published by the buyer */}
+      <VendorPOGRNList poId={po.id} />
     </div>
   );
 };
