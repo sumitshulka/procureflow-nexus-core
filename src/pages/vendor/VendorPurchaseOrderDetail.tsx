@@ -20,6 +20,7 @@ import {
 import { usePOActions } from '@/hooks/usePOActions';
 import { formatCurrency } from '@/utils/currencyUtils';
 import VendorApprovalGuard from '@/components/vendor/VendorApprovalGuard';
+import VendorPOGRNList from '@/components/vendor/VendorPOGRNList';
 
 const VendorPurchaseOrderDetail = () => (
   <VendorApprovalGuard>
