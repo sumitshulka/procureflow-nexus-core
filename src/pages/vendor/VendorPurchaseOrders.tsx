@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -43,6 +44,7 @@ const VendorPurchaseOrders = () => {
 
 const VendorPurchaseOrdersContent = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const { generatePDF, isGeneratingPDF } = usePOActions();
@@ -326,7 +328,7 @@ const VendorPurchaseOrdersContent = () => {
                 )}
                 
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" onClick={() => navigate(`/vendor/purchase-orders/${po.id}`)}>
                     <Eye className="w-4 h-4 mr-2" />
                     View Details
                   </Button>
