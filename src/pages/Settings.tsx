@@ -53,96 +53,98 @@ const Settings = () => {
           onValueChange={handleTabChange}
           className="w-full"
         >
-          <div className="border-b">
-            <TabsList className="h-12 w-full justify-start rounded-none bg-transparent p-0">
+          <div className="border-b overflow-x-auto">
+            <TabsList className="h-12 w-max min-w-full justify-start rounded-none bg-transparent p-0 flex-nowrap">
               <TabsTrigger 
                 value="master-data" 
-                className="data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none border-b-2 border-transparent px-4 py-3 rounded-none"
+                className="data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none border-b-2 border-transparent px-4 py-3 rounded-none whitespace-nowrap shrink-0"
               >
                 Master Data
               </TabsTrigger>
               <TabsTrigger 
                 value="organization" 
-                className="data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none border-b-2 border-transparent px-4 py-3 rounded-none"
+                className="data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none border-b-2 border-transparent px-4 py-3 rounded-none whitespace-nowrap shrink-0"
               >
                 Organization
               </TabsTrigger>
               <TabsTrigger 
                 value="roles" 
-                className="data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none border-b-2 border-transparent px-4 py-3 rounded-none"
+                className="data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none border-b-2 border-transparent px-4 py-3 rounded-none whitespace-nowrap shrink-0"
               >
                 Roles
               </TabsTrigger>
               <TabsTrigger 
                 value="locations" 
-                className="data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none border-b-2 border-transparent px-4 py-3 rounded-none"
+                className="data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none border-b-2 border-transparent px-4 py-3 rounded-none whitespace-nowrap shrink-0"
               >
                 Locations
               </TabsTrigger>
               <TabsTrigger 
                 value="email" 
-                className="data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none border-b-2 border-transparent px-4 py-3 rounded-none"
+                className="data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none border-b-2 border-transparent px-4 py-3 rounded-none whitespace-nowrap shrink-0"
               >
                 Email
               </TabsTrigger>
               <TabsTrigger 
                 value="integrations" 
-                className="data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none border-b-2 border-transparent px-4 py-3 rounded-none"
+                className="data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none border-b-2 border-transparent px-4 py-3 rounded-none whitespace-nowrap shrink-0"
               >
                 Integrations
               </TabsTrigger>
               <TabsTrigger 
                 value="approvals" 
-                className="data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none border-b-2 border-transparent px-4 py-3 rounded-none"
+                className="data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none border-b-2 border-transparent px-4 py-3 rounded-none whitespace-nowrap shrink-0"
               >
                 Approval Settings
               </TabsTrigger>
               <TabsTrigger 
                 value="purchase-orders" 
-                className="data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none border-b-2 border-transparent px-4 py-3 rounded-none"
+                className="data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none border-b-2 border-transparent px-4 py-3 rounded-none whitespace-nowrap shrink-0"
               >
                 Purchase Orders
               </TabsTrigger>
               <TabsTrigger 
                 value="matching" 
-                className="data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none border-b-2 border-transparent px-4 py-3 rounded-none"
+                className="data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none border-b-2 border-transparent px-4 py-3 rounded-none whitespace-nowrap shrink-0"
               >
                 Matching
               </TabsTrigger>
             </TabsList>
           </div>
 
-          <TabsContent value="master-data" className="p-6">
+          <TabsContent value="master-data" className="p-4 sm:p-6">
             <MasterDataManagement />
           </TabsContent>
           
-          <TabsContent value="organization" className="p-6">
+          <TabsContent value="organization" className="p-4 sm:p-6">
             <OrganizationSettings />
           </TabsContent>
           
-          <TabsContent value="roles" className="p-6">
+          <TabsContent value="roles" className="p-4 sm:p-6">
             <RoleManagement />
           </TabsContent>
           
-          <TabsContent value="locations" className="p-6">
+          <TabsContent value="locations" className="p-4 sm:p-6">
             <LocationsManagement />
           </TabsContent>
           
-          <TabsContent value="email" className="p-6">
+          <TabsContent value="email" className="p-4 sm:p-6">
             <EmailSettings />
           </TabsContent>
           
-          <TabsContent value="integrations" className="p-6">
+          <TabsContent value="integrations" className="p-4 sm:p-6">
             <IntegrationSettings />
           </TabsContent>
           
-          <TabsContent value="approvals" className="p-6">
+          <TabsContent value="approvals" className="p-4 sm:p-6">
             <Tabs defaultValue="procurement-approval" className="space-y-4">
-              <TabsList>
-                <TabsTrigger value="procurement-approval">Procurement Approval Hierarchy</TabsTrigger>
-                <TabsTrigger value="po-approval">PO Approval Matrix</TabsTrigger>
-                <TabsTrigger value="invoice-approval">Invoice Approval Matrix</TabsTrigger>
-              </TabsList>
+              <div className="overflow-x-auto">
+                <TabsList className="w-max min-w-full">
+                  <TabsTrigger value="procurement-approval" className="whitespace-nowrap">Procurement Approval Hierarchy</TabsTrigger>
+                  <TabsTrigger value="po-approval" className="whitespace-nowrap">PO Approval Matrix</TabsTrigger>
+                  <TabsTrigger value="invoice-approval" className="whitespace-nowrap">Invoice Approval Matrix</TabsTrigger>
+                </TabsList>
+              </div>
               <TabsContent value="procurement-approval">
                 <ApprovalHierarchy />
               </TabsContent>
@@ -155,11 +157,11 @@ const Settings = () => {
             </Tabs>
           </TabsContent>
           
-          <TabsContent value="purchase-orders" className="p-6">
+          <TabsContent value="purchase-orders" className="p-4 sm:p-6">
             <POSettings />
           </TabsContent>
           
-          <TabsContent value="matching" className="p-6">
+          <TabsContent value="matching" className="p-4 sm:p-6">
             <MatchingSettings />
           </TabsContent>
         </Tabs>
