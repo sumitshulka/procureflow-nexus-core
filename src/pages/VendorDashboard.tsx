@@ -45,6 +45,27 @@ const VendorDashboard = () => {
     enabled: !!user?.id,
   });
 
+  // Pending vendor compliance items (only relevant once approved)
+  const { data: complianceSummary } = useQuery({
+    queryKey: ["vendor_compliance_summary", vendorProfile?.id],
+    enabled: !!vendorProfile?.id && vendorProfile?.status === "approved",
+    queryFn: async () => {
+      const sb: any = supabase;
+      const { data, error } = await sb
+        .from("vendor_compliance_overview")
+        .select("policy_id, vendor_requirement_mandatory, submission_status, expires_at")
+        .eq("vendor_id", vendorProfile!.id);
+      if (error) throw error;
+      const rows = (data || []) as any[];
+      const isOk = (r: any) =>
+        r.submission_status === "approved" &&
+        (!r.expires_at || new Date(r.expires_at) > new Date());
+      const pendingMandatory = rows.filter((r) => r.vendor_requirement_mandatory && !isOk(r)).length;
+      const totalMandatory = rows.filter((r) => r.vendor_requirement_mandatory).length;
+      return { pendingMandatory, totalMandatory };
+    },
+  });
+
   // Fetch vendor RFPs
   const { data: rfpData, isLoading: rfpLoading } = useQuery({
     queryKey: ["vendor_rfps", user?.id],
