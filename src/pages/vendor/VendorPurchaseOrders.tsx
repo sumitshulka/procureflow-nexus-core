@@ -8,6 +8,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { usePOActions } from '@/hooks/usePOActions';
+import { formatCurrency } from '@/utils/currencyUtils';
 import { 
   ShoppingCart, 
   Search, 
@@ -111,16 +112,21 @@ const VendorPurchaseOrdersContent = () => {
   };
 
   const getTotalStats = () => {
-    const stats = {
+    const totalsByCurrency: Record<string, number> = {};
+    (purchaseOrders || []).forEach((po) => {
+      const cur = po.currency || 'USD';
+      totalsByCurrency[cur] = (totalsByCurrency[cur] || 0) + (po.total_amount || 0);
+    });
+    return {
       total: purchaseOrders?.length || 0,
-      totalValue: purchaseOrders?.reduce((sum, po) => sum + (po.total_amount || 0), 0) || 0,
+      totalsByCurrency,
       active: purchaseOrders?.filter(po => ['sent', 'acknowledged', 'in_progress'].includes(po.status)).length || 0,
       completed: purchaseOrders?.filter(po => po.status === 'completed').length || 0,
     };
-    return stats;
   };
 
   const stats = getTotalStats();
+  const currencyEntries = Object.entries(stats.totalsByCurrency);
 
   return (
     <div className="space-y-6">
@@ -149,7 +155,17 @@ const VendorPurchaseOrdersContent = () => {
               <DollarSign className="w-5 h-5 text-green-600" />
               <div>
                 <p className="text-sm text-muted-foreground">Total Value</p>
-                <p className="text-xl font-bold">${stats.totalValue.toLocaleString()}</p>
+                {currencyEntries.length === 0 ? (
+                  <p className="text-xl font-bold">-</p>
+                ) : currencyEntries.length === 1 ? (
+                  <p className="text-xl font-bold">{formatCurrency(currencyEntries[0][1], currencyEntries[0][0])}</p>
+                ) : (
+                  <div className="space-y-0.5">
+                    {currencyEntries.map(([cur, val]) => (
+                      <p key={cur} className="text-sm font-bold">{formatCurrency(val, cur)}</p>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </CardContent>
@@ -252,7 +268,7 @@ const VendorPurchaseOrdersContent = () => {
                   <div className="flex flex-col items-end gap-2">
                     {getStatusBadge(po.status)}
                     <span className="text-lg font-bold text-green-600">
-                      ${po.total_amount?.toLocaleString() || '0'}
+                      {formatCurrency(po.total_amount || 0, po.currency || 'USD')}
                     </span>
                   </div>
                 </div>
@@ -296,7 +312,7 @@ const VendorPurchaseOrdersContent = () => {
                         <div key={item.id || index} className="flex justify-between items-center py-1">
                           <span className="text-sm">{item.description || 'Item'}</span>
                           <span className="text-sm font-medium">
-                            {item.quantity} × ${item.unit_price?.toLocaleString() || '0'}
+                            {item.quantity} × {formatCurrency(item.unit_price || 0, po.currency || 'USD')}
                           </span>
                         </div>
                       ))}
