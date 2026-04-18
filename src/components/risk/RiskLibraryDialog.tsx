@@ -124,7 +124,7 @@ const RiskLibraryDialog = ({ open, onOpenChange, categories, existingTitles, onI
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
+      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2"><Library className="h-5 w-5" /> Industry Risk Library</DialogTitle>
           <DialogDescription>
@@ -140,7 +140,7 @@ const RiskLibraryDialog = ({ open, onOpenChange, categories, existingTitles, onI
           <Button variant="outline" size="sm" onClick={selectAllVisible}>Select all visible</Button>
         </div>
 
-        <ScrollArea className="flex-1 border rounded-md">
+        <ScrollArea className="flex-1 min-h-0 border rounded-md">
           {loading ? (
             <div className="p-8 text-center text-muted-foreground">Loading library...</div>
           ) : filtered.length === 0 ? (
