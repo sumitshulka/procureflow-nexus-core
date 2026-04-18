@@ -456,10 +456,17 @@ const VendorComplianceSubmissions: React.FC = () => {
           </DialogHeader>
 
           <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
-            {reviewing?.vendor_document_description && (
+            {detailsLoading && (
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-1/3" />
+                <Skeleton className="h-16 w-full" />
+              </div>
+            )}
+
+            {reviewDetails?.vendor_document_description && (
               <div className="text-xs text-muted-foreground border-l-2 pl-2">
                 <div className="font-medium text-foreground mb-0.5">Document requirement</div>
-                {reviewing.vendor_document_description}
+                {reviewDetails.vendor_document_description}
               </div>
             )}
 
@@ -479,13 +486,13 @@ const VendorComplianceSubmissions: React.FC = () => {
               </div>
             )}
 
-            {reviewing?.vendor_declaration_text && (
+            {reviewDetails?.vendor_declaration_text && (
               <div className="border rounded p-3 space-y-2">
                 <div className="text-sm font-medium">Declaration text</div>
                 <div className="text-sm whitespace-pre-wrap text-muted-foreground">
-                  {reviewing.vendor_declaration_text}
+                  {reviewDetails.vendor_declaration_text}
                 </div>
-                {reviewing?.declaration_accepted ? (
+                {reviewDetails?.declaration_accepted ? (
                   <div className="text-xs border-t pt-2 space-y-0.5">
                     <div className="font-medium text-green-700">
                       ✓ E-signed and accepted
@@ -493,15 +500,15 @@ const VendorComplianceSubmissions: React.FC = () => {
                     <div className="text-muted-foreground">
                       Signed by:{" "}
                       <span className="text-foreground font-medium">
-                        {reviewing.declaration_signed_by ||
-                          reviewing.vendor_signatory_name ||
+                        {reviewDetails.declaration_signed_by ||
+                          reviewing?.vendor_signatory_name ||
                           "—"}
                       </span>
                     </div>
-                    {reviewing.declaration_accepted_at && (
+                    {reviewDetails.declaration_accepted_at && (
                       <div className="text-muted-foreground">
                         Signed on:{" "}
-                        {format(new Date(reviewing.declaration_accepted_at), "PPpp")}
+                        {format(new Date(reviewDetails.declaration_accepted_at), "PPpp")}
                       </div>
                     )}
                   </div>
