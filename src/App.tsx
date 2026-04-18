@@ -90,6 +90,7 @@ import VendorComplianceSubmissions from '@/pages/compliance/VendorComplianceSubm
 import RiskAssessment from '@/pages/risk/RiskAssessment';
 import RiskMonitoring from '@/pages/risk/RiskMonitoring';
 import RiskReports from '@/pages/risk/RiskReports';
+import VendorRiskProfile from '@/pages/risk/VendorRiskProfile';
 
 // Analytics Pages
 import PerformanceAnalytics from '@/pages/analytics/PerformanceAnalytics';
@@ -689,6 +690,14 @@ function App() {
             element={
               <ProtectedRoute requiredRole={UserRole.ADMIN}>
                 <Layout><RiskAssessment /></Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/risk/vendor-profile"
+            element={
+              <ProtectedRoute requiredRole={UserRole.ADMIN}>
+                <Layout><VendorRiskProfile /></Layout>
               </ProtectedRoute>
             }
           />

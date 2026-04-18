@@ -1,0 +1,1 @@
+ALTER VIEW public.vendor_risk_profile SET (security_invoker = true);

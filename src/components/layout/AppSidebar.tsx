@@ -121,6 +121,7 @@ const AppSidebar = () => {
       moduleRoute: "/risk",
       subItems: [
         { title: "Risk Assessment", href: "/risk/assessment" },
+        { title: "Vendor Risk Profile", href: "/risk/vendor-profile" },
         { title: "Risk Monitoring", href: "/risk/monitoring" },
         { title: "Risk Reports", href: "/risk/reports" },
       ],
