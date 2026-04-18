@@ -1,5 +1,6 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import DataTable from "@/components/common/DataTable";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -38,11 +40,12 @@ const policySchema = z.object({
 
 type PolicyForm = z.infer<typeof policySchema>;
 
+const POLICIES_KEY = ["compliance-policies-list"];
+
 const PolicyManagement = () => {
+  const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingPolicy, setEditingPolicy] = useState<any>(null);
-  const [policies, setPolicies] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
 
   const form = useForm<PolicyForm>({
     resolver: zodResolver(policySchema),
@@ -64,29 +67,27 @@ const PolicyManagement = () => {
     },
   });
 
-  useEffect(() => {
-    fetchPolicies();
-  }, []);
-
-  const fetchPolicies = async () => {
-    try {
-      setLoading(true);
+  const { data: policies = [], isLoading: loading } = useQuery<any[]>({
+    queryKey: POLICIES_KEY,
+    staleTime: 60_000,
+    queryFn: async () => {
       const { data, error } = await supabase
         .from("compliance_policies")
-        .select("*")
+        .select(
+          "id, title, category, description, version, effective_date, review_date, owner, status, compliance_rate, is_system, vendor_requirement_type, vendor_requirement_mandatory, vendor_document_description, vendor_declaration_text, validity_months, updated_at, created_at"
+        )
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
-      
-      setPolicies(data || []);
-    } catch (error: any) {
-      toast.error("Failed to fetch policies", {
-        description: error.message,
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+      if (error) {
+        toast.error("Failed to fetch policies", { description: error.message });
+        throw error;
+      }
+      return data || [];
+    },
+  });
+
+  const refetchPolicies = () =>
+    queryClient.invalidateQueries({ queryKey: POLICIES_KEY });
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
