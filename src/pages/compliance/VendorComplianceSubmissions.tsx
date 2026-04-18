@@ -46,16 +46,22 @@ type Row = {
   submission_id: string;
   vendor_id: string;
   vendor_name: string;
+  vendor_signatory_name: string | null;
   policy_id: string;
   policy_title: string;
   category: string;
   vendor_requirement_type: string;
   vendor_requirement_mandatory: boolean;
+  vendor_declaration_text: string | null;
+  vendor_document_description: string | null;
   submission_status: string;
   submitted_at: string | null;
   expires_at: string | null;
   document_url: string | null;
+  document_name: string | null;
   declaration_accepted: boolean | null;
+  declaration_accepted_at: string | null;
+  declaration_signed_by: string | null;
   review_notes: string | null;
 };
 
