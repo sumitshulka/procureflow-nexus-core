@@ -46,16 +46,22 @@ type Row = {
   submission_id: string;
   vendor_id: string;
   vendor_name: string;
+  vendor_signatory_name: string | null;
   policy_id: string;
   policy_title: string;
   category: string;
   vendor_requirement_type: string;
   vendor_requirement_mandatory: boolean;
+  vendor_declaration_text: string | null;
+  vendor_document_description: string | null;
   submission_status: string;
   submitted_at: string | null;
   expires_at: string | null;
   document_url: string | null;
+  document_name: string | null;
   declaration_accepted: boolean | null;
+  declaration_accepted_at: string | null;
+  declaration_signed_by: string | null;
   review_notes: string | null;
 };
 
@@ -80,9 +86,10 @@ const VendorComplianceSubmissions: React.FC = () => {
     const { data, error } = await sb
       .from("vendor_policy_submissions")
       .select(
-        `id, vendor_id, policy_id, status, submitted_at, expires_at, document_url, declaration_accepted, review_notes,
-         vendor_registrations!inner(company_name),
-         compliance_policies!inner(title, category, vendor_requirement_type, vendor_requirement_mandatory, status)`
+        `id, vendor_id, policy_id, status, submitted_at, expires_at, document_url, document_name,
+         declaration_accepted, declaration_accepted_at, declaration_signed_by, review_notes,
+         vendor_registrations!inner(company_name, signatory_name),
+         compliance_policies!inner(title, category, vendor_requirement_type, vendor_requirement_mandatory, vendor_declaration_text, vendor_document_description, status)`
       )
       .order("submitted_at", { ascending: false });
 
@@ -99,6 +106,7 @@ const VendorComplianceSubmissions: React.FC = () => {
         submission_id: r.id,
         vendor_id: r.vendor_id,
         vendor_name: r.vendor_registrations?.company_name || "Unknown vendor",
+        vendor_signatory_name: r.vendor_registrations?.signatory_name || null,
         policy_id: r.policy_id,
         policy_title: r.compliance_policies?.title || "—",
         category: r.compliance_policies?.category || "—",
@@ -106,11 +114,16 @@ const VendorComplianceSubmissions: React.FC = () => {
           r.compliance_policies?.vendor_requirement_type || "document",
         vendor_requirement_mandatory:
           !!r.compliance_policies?.vendor_requirement_mandatory,
+        vendor_declaration_text: r.compliance_policies?.vendor_declaration_text || null,
+        vendor_document_description: r.compliance_policies?.vendor_document_description || null,
         submission_status: r.status,
         submitted_at: r.submitted_at,
         expires_at: r.expires_at,
         document_url: r.document_url,
+        document_name: r.document_name,
         declaration_accepted: r.declaration_accepted,
+        declaration_accepted_at: r.declaration_accepted_at,
+        declaration_signed_by: r.declaration_signed_by,
         review_notes: r.review_notes,
       }));
 
@@ -400,7 +413,7 @@ const VendorComplianceSubmissions: React.FC = () => {
       </Card>
 
       <Dialog open={!!reviewing} onOpenChange={(o) => !o && setReviewing(null)}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>
               Review: {reviewing?.policy_title}
@@ -409,25 +422,72 @@ const VendorComplianceSubmissions: React.FC = () => {
               </div>
             </DialogTitle>
           </DialogHeader>
-          {reviewing?.declaration_accepted && (
-            <div className="text-sm border rounded p-2 bg-muted">
-              Vendor has e-signed the declaration for this policy.
-            </div>
-          )}
-          {reviewing?.document_url && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => downloadDoc(reviewing.document_url!)}
-            >
-              <Download className="h-3 w-3 mr-1" /> Open uploaded document
-            </Button>
-          )}
-          <Textarea
-            placeholder="Reviewer notes (optional, shown to vendor on rejection)"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-          />
+
+          <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
+            {reviewing?.vendor_document_description && (
+              <div className="text-xs text-muted-foreground border-l-2 pl-2">
+                <div className="font-medium text-foreground mb-0.5">Document requirement</div>
+                {reviewing.vendor_document_description}
+              </div>
+            )}
+
+            {reviewing?.document_url && (
+              <div className="border rounded p-3 space-y-2 bg-muted/30">
+                <div className="text-sm font-medium">Uploaded document</div>
+                <div className="text-xs text-muted-foreground break-all">
+                  {reviewing.document_name || reviewing.document_url}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => downloadDoc(reviewing.document_url!)}
+                >
+                  <Download className="h-3 w-3 mr-1" /> Open document
+                </Button>
+              </div>
+            )}
+
+            {reviewing?.vendor_declaration_text && (
+              <div className="border rounded p-3 space-y-2">
+                <div className="text-sm font-medium">Declaration text</div>
+                <div className="text-sm whitespace-pre-wrap text-muted-foreground">
+                  {reviewing.vendor_declaration_text}
+                </div>
+                {reviewing?.declaration_accepted ? (
+                  <div className="text-xs border-t pt-2 space-y-0.5">
+                    <div className="font-medium text-green-700">
+                      ✓ E-signed and accepted
+                    </div>
+                    <div className="text-muted-foreground">
+                      Signed by:{" "}
+                      <span className="text-foreground font-medium">
+                        {reviewing.declaration_signed_by ||
+                          reviewing.vendor_signatory_name ||
+                          "—"}
+                      </span>
+                    </div>
+                    {reviewing.declaration_accepted_at && (
+                      <div className="text-muted-foreground">
+                        Signed on:{" "}
+                        {format(new Date(reviewing.declaration_accepted_at), "PPpp")}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-xs text-muted-foreground border-t pt-2">
+                    Vendor has not yet accepted this declaration.
+                  </div>
+                )}
+              </div>
+            )}
+
+            <Textarea
+              placeholder="Reviewer notes (optional, shown to vendor on rejection)"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+            />
+          </div>
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setReviewing(null)}>
               Cancel
