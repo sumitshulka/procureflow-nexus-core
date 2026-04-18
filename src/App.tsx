@@ -168,6 +168,7 @@ import UserManagement from '@/pages/UserManagement';
 import NotificationsList from '@/pages/NotificationsList';
 import FeatureDocumentation from '@/pages/FeatureDocumentation';
 import NotFound from '@/pages/NotFound';
+import Bootstrap from '@/pages/Bootstrap';
 
 function App() {
   return (
