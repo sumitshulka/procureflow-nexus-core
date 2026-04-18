@@ -1,6 +1,5 @@
-
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -13,16 +12,54 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/components/ui/use-toast";
 
 const UpdatePasswordPage = () => {
   const { updatePassword, isLoading } = useAuth();
-  
+  const navigate = useNavigate();
+
   const [passwords, setPasswords] = useState({
     password: "",
     confirmPassword: "",
   });
-  
   const [passwordError, setPasswordError] = useState("");
+  const [isRecoverySession, setIsRecoverySession] = useState<boolean | null>(null);
+
+  // Detect recovery flow: Supabase puts a recovery token in the URL hash and
+  // emits a PASSWORD_RECOVERY event. We accept either signal, plus an existing
+  // authenticated session (e.g. user already logged in changing password).
+  useEffect(() => {
+    let resolved = false;
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") {
+        resolved = true;
+        setIsRecoverySession(true);
+      }
+    });
+
+    const checkSession = async () => {
+      const hash = window.location.hash || "";
+      const hasRecoveryHash = hash.includes("type=recovery") || hash.includes("access_token");
+
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (resolved) return;
+
+      if (session || hasRecoveryHash) {
+        setIsRecoverySession(true);
+      } else {
+        setIsRecoverySession(false);
+      }
+    };
+
+    checkSession();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -35,21 +72,29 @@ const UpdatePasswordPage = () => {
       setPasswordError("Passwords do not match");
       return false;
     }
-    
-    if (passwords.password.length < 6) {
-      setPasswordError("Password must be at least 6 characters");
+    if (passwords.password.length < 8) {
+      setPasswordError("Password must be at least 8 characters");
       return false;
     }
-    
     return true;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!validatePasswords()) return;
-    
-    await updatePassword(passwords.password);
+
+    try {
+      await updatePassword(passwords.password);
+      // Sign out so the user must log in with the new password
+      await supabase.auth.signOut();
+      navigate("/login", { replace: true });
+    } catch (err: any) {
+      toast({
+        title: "Could not update password",
+        description: err?.message || "Please request a new reset link and try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -59,56 +104,76 @@ const UpdatePasswordPage = () => {
           <h1 className="text-3xl font-bold">
             <span className="text-procurement-600">Procurement</span> Management
           </h1>
-          <p className="text-muted-foreground mt-2">
-            Set your new password
-          </p>
+          <p className="text-muted-foreground mt-2">Set your new password</p>
         </div>
 
         <Card>
           <CardHeader>
             <CardTitle>Update Password</CardTitle>
             <CardDescription>
-              Enter a new password for your account
+              {isRecoverySession === false
+                ? "This link is invalid or has expired."
+                : "Enter a new password for your account"}
             </CardDescription>
           </CardHeader>
-          <form onSubmit={handleSubmit}>
+
+          {isRecoverySession === false ? (
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="password">New Password</Label>
-                <Input
-                  id="password"
-                  name="password"
-                  type="password"
-                  value={passwords.password}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                <Input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type="password"
-                  value={passwords.confirmPassword}
-                  onChange={handleChange}
-                  required
-                />
-                {passwordError && (
-                  <p className="text-sm text-destructive">{passwordError}</p>
-                )}
-              </div>
-            </CardContent>
-            <CardFooter>
+              <p className="text-sm text-muted-foreground">
+                Password reset links are single-use and expire after a short time.
+                Please request a new one.
+              </p>
               <Button
-                type="submit"
+                asChild
                 className="w-full bg-procurement-600 hover:bg-procurement-700"
-                disabled={isLoading}
               >
-                {isLoading ? "Updating..." : "Update Password"}
+                <Link to="/forgot-password">Request a new link</Link>
               </Button>
-            </CardFooter>
-          </form>
+            </CardContent>
+          ) : (
+            <form onSubmit={handleSubmit}>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="password">New Password</Label>
+                  <Input
+                    id="password"
+                    name="password"
+                    type="password"
+                    autoComplete="new-password"
+                    value={passwords.password}
+                    onChange={handleChange}
+                    required
+                    minLength={8}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                  <Input
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    type="password"
+                    autoComplete="new-password"
+                    value={passwords.confirmPassword}
+                    onChange={handleChange}
+                    required
+                    minLength={8}
+                  />
+                  {passwordError && (
+                    <p className="text-sm text-destructive">{passwordError}</p>
+                  )}
+                </div>
+              </CardContent>
+              <CardFooter>
+                <Button
+                  type="submit"
+                  className="w-full bg-procurement-600 hover:bg-procurement-700"
+                  disabled={isLoading || isRecoverySession === null}
+                >
+                  {isLoading ? "Updating..." : "Update Password"}
+                </Button>
+              </CardFooter>
+            </form>
+          )}
         </Card>
 
         <div className="text-center mt-6">
