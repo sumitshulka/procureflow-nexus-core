@@ -15,6 +15,7 @@ import {
   Calendar,
   MessageSquare,
   ChevronRight,
+  HelpCircle,
 } from "lucide-react";
 import { format } from "date-fns";
 
