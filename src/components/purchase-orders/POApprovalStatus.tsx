@@ -196,23 +196,27 @@ const POApprovalStatus: React.FC<POApprovalStatusProps> = ({
         return <CheckCircle2 className="h-5 w-5 text-green-600" />;
       case "rejected":
         return <XCircle className="h-5 w-5 text-red-600" />;
+      case "info_requested":
+        return <HelpCircle className="h-5 w-5 text-blue-600" />;
       default:
         return <Clock className="h-5 w-5 text-yellow-600" />;
     }
   };
 
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, "default" | "secondary" | "destructive"> = {
+    const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
       pending: "secondary",
       approved: "default",
       rejected: "destructive",
+      info_requested: "outline",
     };
 
-    return (
-      <Badge variant={variants[status] || "default"}>
-        {status.charAt(0).toUpperCase() + status.slice(1)}
-      </Badge>
-    );
+    const label =
+      status === "info_requested"
+        ? "Info Requested"
+        : status.charAt(0).toUpperCase() + status.slice(1);
+
+    return <Badge variant={variants[status] || "default"}>{label}</Badge>;
   };
 
   const userCanApprove = approvalHistory.some(
