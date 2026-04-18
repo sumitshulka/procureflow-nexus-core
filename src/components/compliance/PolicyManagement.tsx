@@ -155,17 +155,15 @@ const PolicyManagement = () => {
       header: "Actions",
       cell: (row: any) => (
         <div className="flex space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handleEdit(row)}
-          >
+          <Button variant="outline" size="sm" onClick={() => handleEdit(row)}>
             <Edit className="h-4 w-4" />
           </Button>
           <Button
             variant="outline"
             size="sm"
-            onClick={() => handleDelete(row.id)}
+            onClick={() => handleDelete(row.id, row.is_system)}
+            disabled={row.is_system}
+            title={row.is_system ? "System policies cannot be deleted" : "Delete"}
           >
             <Trash2 className="h-4 w-4" />
           </Button>
@@ -186,28 +184,29 @@ const PolicyManagement = () => {
       reviewDate: policy.review_date,
       owner: policy.owner,
       status: policy.status,
+      vendor_requirement_type: policy.vendor_requirement_type ?? "none",
+      vendor_requirement_mandatory: !!policy.vendor_requirement_mandatory,
+      vendor_document_description: policy.vendor_document_description ?? "",
+      vendor_declaration_text: policy.vendor_declaration_text ?? "",
+      validity_months: policy.validity_months ? String(policy.validity_months) : "",
     });
     setIsDialogOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: string, isSystem?: boolean) => {
+    if (isSystem) {
+      toast.error("System policies cannot be deleted. You may set their status to Archived instead.");
+      return;
+    }
     try {
       const user = await checkAuthentication();
       if (!user) return;
-
-      const { error } = await supabase
-        .from("compliance_policies")
-        .delete()
-        .eq("id", id);
-
+      const { error } = await supabase.from("compliance_policies").delete().eq("id", id);
       if (error) throw error;
-
       toast.success("Policy deleted successfully");
       fetchPolicies();
     } catch (error: any) {
-      toast.error("Failed to delete policy", {
-        description: error.message,
-      });
+      toast.error("Failed to delete policy", { description: error.message });
     }
   };
 
@@ -216,7 +215,7 @@ const PolicyManagement = () => {
       const user = await checkAuthentication();
       if (!user) return;
 
-      const policyData = {
+      const policyData: any = {
         title: data.title,
         category: data.category,
         description: data.description,
@@ -226,7 +225,11 @@ const PolicyManagement = () => {
         review_date: data.reviewDate,
         owner: data.owner,
         status: data.status,
-        created_by: user.id,
+        vendor_requirement_type: data.vendor_requirement_type,
+        vendor_requirement_mandatory: data.vendor_requirement_mandatory,
+        vendor_document_description: data.vendor_document_description || null,
+        vendor_declaration_text: data.vendor_declaration_text || null,
+        validity_months: data.validity_months ? Number(data.validity_months) : null,
       };
 
       if (editingPolicy) {
@@ -234,14 +237,11 @@ const PolicyManagement = () => {
           .from("compliance_policies")
           .update(policyData)
           .eq("id", editingPolicy.id);
-
         if (error) throw error;
         toast.success("Policy updated successfully");
       } else {
-        const { error } = await supabase
-          .from("compliance_policies")
-          .insert([policyData]);
-
+        policyData.created_by = user.id;
+        const { error } = await supabase.from("compliance_policies").insert([policyData]);
         if (error) throw error;
         toast.success("Policy created successfully");
       }
