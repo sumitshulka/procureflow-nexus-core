@@ -111,6 +111,7 @@ const AppSidebar = () => {
         { title: "Audit Trail", href: "/compliance/audit-trail" },
         { title: "Compliance Reports", href: "/compliance/reports" },
         { title: "Policy Management", href: "/compliance/policies" },
+        { title: "Vendor Compliance Submissions", href: "/compliance/vendor-submissions" },
       ],
     },
     {
