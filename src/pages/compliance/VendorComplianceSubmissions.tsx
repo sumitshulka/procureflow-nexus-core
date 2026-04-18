@@ -224,7 +224,7 @@ const VendorComplianceSubmissions: React.FC = () => {
   return (
     <div className="page-container space-y-4">
       <PageHeader
-        title="Vendor Compliance Submissions"
+        title="Vendor Compliances"
         description="Cross-vendor review queue for policy documents and declarations"
       />
 
