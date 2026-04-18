@@ -4170,6 +4170,42 @@ export type Database = {
         }
         Relationships: []
       }
+      risk_library: {
+        Row: {
+          category_name: string
+          created_at: string
+          default_impact: number
+          default_probability: number
+          description: string
+          id: string
+          is_active: boolean
+          mitigation_strategy: string | null
+          title: string
+        }
+        Insert: {
+          category_name: string
+          created_at?: string
+          default_impact?: number
+          default_probability?: number
+          description: string
+          id?: string
+          is_active?: boolean
+          mitigation_strategy?: string | null
+          title: string
+        }
+        Update: {
+          category_name?: string
+          created_at?: string
+          default_impact?: number
+          default_probability?: number
+          description?: string
+          id?: string
+          is_active?: boolean
+          mitigation_strategy?: string | null
+          title?: string
+        }
+        Relationships: []
+      }
       risk_metrics: {
         Row: {
           created_at: string | null
