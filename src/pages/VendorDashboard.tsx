@@ -20,7 +20,7 @@ import {
   Clock,
   BarChart3,
 } from 'lucide-react';
-
+import { getCurrencySymbol } from '@/utils/currencyUtils';
 import { useNavigate } from 'react-router-dom';
 
 const VendorDashboard = () => {
