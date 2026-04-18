@@ -53,59 +53,59 @@ const Settings = () => {
           onValueChange={handleTabChange}
           className="w-full"
         >
-          <div className="border-b">
-            <TabsList className="h-12 w-full justify-start rounded-none bg-transparent p-0">
+          <div className="border-b overflow-x-auto">
+            <TabsList className="h-12 w-max min-w-full justify-start rounded-none bg-transparent p-0 flex-nowrap">
               <TabsTrigger 
                 value="master-data" 
-                className="data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none border-b-2 border-transparent px-4 py-3 rounded-none"
+                className="data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none border-b-2 border-transparent px-4 py-3 rounded-none whitespace-nowrap shrink-0"
               >
                 Master Data
               </TabsTrigger>
               <TabsTrigger 
                 value="organization" 
-                className="data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none border-b-2 border-transparent px-4 py-3 rounded-none"
+                className="data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none border-b-2 border-transparent px-4 py-3 rounded-none whitespace-nowrap shrink-0"
               >
                 Organization
               </TabsTrigger>
               <TabsTrigger 
                 value="roles" 
-                className="data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none border-b-2 border-transparent px-4 py-3 rounded-none"
+                className="data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none border-b-2 border-transparent px-4 py-3 rounded-none whitespace-nowrap shrink-0"
               >
                 Roles
               </TabsTrigger>
               <TabsTrigger 
                 value="locations" 
-                className="data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none border-b-2 border-transparent px-4 py-3 rounded-none"
+                className="data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none border-b-2 border-transparent px-4 py-3 rounded-none whitespace-nowrap shrink-0"
               >
                 Locations
               </TabsTrigger>
               <TabsTrigger 
                 value="email" 
-                className="data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none border-b-2 border-transparent px-4 py-3 rounded-none"
+                className="data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none border-b-2 border-transparent px-4 py-3 rounded-none whitespace-nowrap shrink-0"
               >
                 Email
               </TabsTrigger>
               <TabsTrigger 
                 value="integrations" 
-                className="data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none border-b-2 border-transparent px-4 py-3 rounded-none"
+                className="data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none border-b-2 border-transparent px-4 py-3 rounded-none whitespace-nowrap shrink-0"
               >
                 Integrations
               </TabsTrigger>
               <TabsTrigger 
                 value="approvals" 
-                className="data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none border-b-2 border-transparent px-4 py-3 rounded-none"
+                className="data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none border-b-2 border-transparent px-4 py-3 rounded-none whitespace-nowrap shrink-0"
               >
                 Approval Settings
               </TabsTrigger>
               <TabsTrigger 
                 value="purchase-orders" 
-                className="data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none border-b-2 border-transparent px-4 py-3 rounded-none"
+                className="data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none border-b-2 border-transparent px-4 py-3 rounded-none whitespace-nowrap shrink-0"
               >
                 Purchase Orders
               </TabsTrigger>
               <TabsTrigger 
                 value="matching" 
-                className="data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none border-b-2 border-transparent px-4 py-3 rounded-none"
+                className="data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none border-b-2 border-transparent px-4 py-3 rounded-none whitespace-nowrap shrink-0"
               >
                 Matching
               </TabsTrigger>
