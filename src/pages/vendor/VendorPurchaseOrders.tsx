@@ -44,6 +44,7 @@ const VendorPurchaseOrders = () => {
 
 const VendorPurchaseOrdersContent = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const { generatePDF, isGeneratingPDF } = usePOActions();
