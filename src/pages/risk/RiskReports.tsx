@@ -242,7 +242,6 @@ const RiskReports = () => {
       startY: 28,
       head: [columns],
       body: rows.map(r => r.map(c => String(c ?? ""))),
-      styles: { fontSize: 9 },
       headStyles: { fillColor: [30, 41, 59] },
     });
     doc.save(`${title.replace(/\s+/g, "_")}_${format(new Date(), "yyyyMMdd")}.pdf`);
