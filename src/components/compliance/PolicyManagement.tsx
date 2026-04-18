@@ -485,40 +485,67 @@ const PolicyManagement = () => {
         </TabsContent>
 
         <TabsContent value="compliance">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Active Policies</CardTitle>
-                <FileText className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">12</div>
-                <p className="text-xs text-muted-foreground">Currently in effect</p>
-              </CardContent>
-            </Card>
+          {(() => {
+            const today = new Date();
+            const activePolicies = policies.filter((p) => p.status === "active");
+            const ratedPolicies = policies.filter(
+              (p) => p.compliance_rate !== null && p.compliance_rate !== undefined
+            );
+            const avgCompliance = ratedPolicies.length
+              ? ratedPolicies.reduce((s, p) => s + Number(p.compliance_rate || 0), 0) /
+                ratedPolicies.length
+              : null;
+            const overdueReviews = policies.filter(
+              (p) => p.review_date && new Date(p.review_date) < today && p.status !== "archived"
+            );
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Average Compliance</CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">91.5%</div>
-                <p className="text-xs text-muted-foreground">Across all policies</p>
-              </CardContent>
-            </Card>
+            return (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Active Policies</CardTitle>
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{activePolicies.length}</div>
+                    <p className="text-xs text-muted-foreground">
+                      Currently in effect (status = "active")
+                    </p>
+                  </CardContent>
+                </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Overdue Reviews</CardTitle>
-                <AlertTriangle className="h-4 w-4 text-red-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-red-600">3</div>
-                <p className="text-xs text-muted-foreground">Require immediate attention</p>
-              </CardContent>
-            </Card>
-          </div>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Average Compliance</CardTitle>
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {avgCompliance !== null ? `${avgCompliance.toFixed(1)}%` : "N/A"}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {ratedPolicies.length} of {policies.length} policies rated
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Overdue Reviews</CardTitle>
+                    <AlertTriangle className="h-4 w-4 text-destructive" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-destructive">
+                      {overdueReviews.length}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Review date passed and not archived
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+            );
+          })()}
         </TabsContent>
 
         <TabsContent value="reviews">
@@ -530,30 +557,45 @@ const PolicyManagement = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {policies
-                  .filter(policy => new Date(policy.reviewDate) < new Date())
-                  .map((policy) => (
-                    <div key={policy.id} className="border rounded-lg p-4">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h4 className="font-semibold">{policy.title}</h4>
-                          <p className="text-sm text-muted-foreground">{policy.description}</p>
-                          <div className="flex items-center space-x-4 mt-2 text-xs text-muted-foreground">
-                            <span>Version: {policy.version}</span>
-                            <span>Owner: {policy.owner}</span>
-                            <span className="text-red-600">
-                              Review Due: {format(new Date(policy.reviewDate), "MMM dd, yyyy")}
-                            </span>
+              {(() => {
+                const pending = policies.filter(
+                  (p) => p.review_date && new Date(p.review_date) < new Date() && p.status !== "archived"
+                );
+                if (loading) {
+                  return <p className="text-sm text-muted-foreground">Loading...</p>;
+                }
+                if (pending.length === 0) {
+                  return (
+                    <p className="text-sm text-muted-foreground">
+                      No policies are currently overdue for review.
+                    </p>
+                  );
+                }
+                return (
+                  <div className="space-y-4">
+                    {pending.map((policy) => (
+                      <div key={policy.id} className="border rounded-lg p-4">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h4 className="font-semibold">{policy.title}</h4>
+                            <p className="text-sm text-muted-foreground">{policy.description}</p>
+                            <div className="flex items-center space-x-4 mt-2 text-xs text-muted-foreground">
+                              <span>Version: {policy.version}</span>
+                              <span>Owner: {policy.owner}</span>
+                              <span className="text-destructive">
+                                Review Due: {format(new Date(policy.review_date), "MMM dd, yyyy")}
+                              </span>
+                            </div>
                           </div>
+                          <Button size="sm" variant="outline" onClick={() => handleEdit(policy)}>
+                            Schedule Review
+                          </Button>
                         </div>
-                        <Button size="sm" variant="outline">
-                          Schedule Review
-                        </Button>
                       </div>
-                    </div>
-                  ))}
-              </div>
+                    ))}
+                  </div>
+                );
+              })()}
             </CardContent>
           </Card>
         </TabsContent>
