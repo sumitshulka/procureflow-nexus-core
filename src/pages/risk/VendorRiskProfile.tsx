@@ -149,16 +149,16 @@ const VendorRiskProfile = () => {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">High Rating</CardTitle>
-            <TrendingUp className="h-4 w-4 text-orange-500" />
+            <TrendingUp className="h-4 w-4 text-warning" />
           </CardHeader>
-          <CardContent><div className="text-2xl font-bold text-orange-500">{summary.high}</div></CardContent>
+          <CardContent><div className="text-2xl font-bold text-warning">{summary.high}</div></CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Auto-Detected</CardTitle>
-            <Sparkles className="h-4 w-4 text-blue-500" />
+            <Sparkles className="h-4 w-4 text-primary" />
           </CardHeader>
-          <CardContent><div className="text-2xl font-bold text-blue-500">{summary.autoDetected}</div></CardContent>
+          <CardContent><div className="text-2xl font-bold text-primary">{summary.autoDetected}</div></CardContent>
         </Card>
       </div>
 
