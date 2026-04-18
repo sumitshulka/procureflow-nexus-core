@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { VendorRegistration, parseAddress } from '@/types/vendor';
 import { useAuth } from '@/contexts/AuthContext';
 import VendorProductsList from '@/components/vendor/VendorProductsList';
+import VendorComplianceReview from '@/components/vendor/VendorComplianceReview';
 import { 
   ArrowLeft, 
   Building, 
@@ -354,6 +355,7 @@ const VendorDashboardDetail = () => {
           <TabsTrigger value="orders">Purchase Orders</TabsTrigger>
           <TabsTrigger value="rfps">RFPs</TabsTrigger>
           <TabsTrigger value="invoices">Invoices</TabsTrigger>
+          <TabsTrigger value="compliance">Compliance</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
@@ -703,13 +705,16 @@ const VendorDashboardDetail = () => {
         <TabsContent value="invoices">
           <Card>
             <CardHeader>
-              <CardTitle>Invoices</CardTitle>
-              <CardDescription>Invoice history and payment status</CardDescription>
+              <CardTitle>Vendor Invoices</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-gray-500">Invoice management will be implemented here.</p>
+              <p className="text-muted-foreground">Invoice management for this vendor</p>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="compliance">
+          <VendorComplianceReview vendorId={vendorId!} />
         </TabsContent>
       </Tabs>
     </div>
