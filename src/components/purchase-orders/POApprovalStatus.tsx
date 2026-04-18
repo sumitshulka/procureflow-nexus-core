@@ -15,6 +15,7 @@ import {
   Calendar,
   MessageSquare,
   ChevronRight,
+  HelpCircle,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -81,8 +82,17 @@ const POApprovalStatus: React.FC<POApprovalStatusProps> = ({
     }
   };
 
-  const handleApprovalAction = async (action: "approved" | "rejected") => {
+  const handleApprovalAction = async (action: "approved" | "rejected" | "info_requested") => {
     if (!user) return;
+
+    if (action === "info_requested" && !comments.trim()) {
+      toast({
+        title: "Comments required",
+        description: "Please describe what additional information you need.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     const pendingApproval = approvalHistory.find(
       (item) => item.approver_id === user.id && item.status === "pending"
@@ -106,7 +116,7 @@ const POApprovalStatus: React.FC<POApprovalStatusProps> = ({
 
       if (action === "approved") {
         updateData.approved_at = new Date().toISOString();
-      } else {
+      } else if (action === "rejected") {
         updateData.rejected_at = new Date().toISOString();
       }
 
@@ -123,9 +133,9 @@ const POApprovalStatus: React.FC<POApprovalStatusProps> = ({
       );
 
       const allApproved = levelApprovals.every(
-        (item) => 
-          item.id === pendingApproval.id 
-            ? action === "approved" 
+        (item) =>
+          item.id === pendingApproval.id
+            ? action === "approved"
             : item.status === "approved"
       );
 
@@ -136,6 +146,9 @@ const POApprovalStatus: React.FC<POApprovalStatusProps> = ({
       if (action === "rejected") {
         poStatus = "draft";
         poApprovalStatus = "rejected";
+      } else if (action === "info_requested") {
+        poStatus = "draft";
+        poApprovalStatus = "info_requested";
       } else if (allApproved) {
         poStatus = "approved";
         poApprovalStatus = "approved";
@@ -151,9 +164,16 @@ const POApprovalStatus: React.FC<POApprovalStatusProps> = ({
 
       if (poError) throw poError;
 
+      const actionLabel =
+        action === "approved"
+          ? "approved"
+          : action === "rejected"
+          ? "rejected"
+          : "sent back for more information";
+
       toast({
         title: "Success",
-        description: `Purchase order ${action === "approved" ? "approved" : "rejected"} successfully`,
+        description: `Purchase order ${actionLabel} successfully`,
       });
 
       setComments("");
@@ -176,23 +196,27 @@ const POApprovalStatus: React.FC<POApprovalStatusProps> = ({
         return <CheckCircle2 className="h-5 w-5 text-green-600" />;
       case "rejected":
         return <XCircle className="h-5 w-5 text-red-600" />;
+      case "info_requested":
+        return <HelpCircle className="h-5 w-5 text-blue-600" />;
       default:
         return <Clock className="h-5 w-5 text-yellow-600" />;
     }
   };
 
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, "default" | "secondary" | "destructive"> = {
+    const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
       pending: "secondary",
       approved: "default",
       rejected: "destructive",
+      info_requested: "outline",
     };
 
-    return (
-      <Badge variant={variants[status] || "default"}>
-        {status.charAt(0).toUpperCase() + status.slice(1)}
-      </Badge>
-    );
+    const label =
+      status === "info_requested"
+        ? "Info Requested"
+        : status.charAt(0).toUpperCase() + status.slice(1);
+
+    return <Badge variant={variants[status] || "default"}>{label}</Badge>;
   };
 
   const userCanApprove = approvalHistory.some(
@@ -285,7 +309,7 @@ const POApprovalStatus: React.FC<POApprovalStatusProps> = ({
                     rows={3}
                   />
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <Button
                     onClick={() => handleApprovalAction("approved")}
                     disabled={isProcessing}
@@ -293,6 +317,15 @@ const POApprovalStatus: React.FC<POApprovalStatusProps> = ({
                   >
                     <CheckCircle2 className="h-4 w-4 mr-2" />
                     Approve
+                  </Button>
+                  <Button
+                    onClick={() => handleApprovalAction("info_requested")}
+                    disabled={isProcessing}
+                    variant="outline"
+                    className="flex-1"
+                  >
+                    <HelpCircle className="h-4 w-4 mr-2" />
+                    Need More Info
                   </Button>
                   <Button
                     onClick={() => handleApprovalAction("rejected")}
