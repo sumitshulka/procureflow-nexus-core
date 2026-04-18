@@ -29,6 +29,11 @@ const policySchema = z.object({
   reviewDate: z.string().min(1, "Review date is required"),
   owner: z.string().min(1, "Owner is required"),
   status: z.string().min(1, "Status is required"),
+  vendor_requirement_type: z.enum(["none", "document", "declaration", "both"]),
+  vendor_requirement_mandatory: z.boolean(),
+  vendor_document_description: z.string().optional(),
+  vendor_declaration_text: z.string().optional(),
+  validity_months: z.string().optional(),
 });
 
 type PolicyForm = z.infer<typeof policySchema>;
@@ -51,6 +56,11 @@ const PolicyManagement = () => {
       reviewDate: "",
       owner: "",
       status: "draft",
+      vendor_requirement_type: "none",
+      vendor_requirement_mandatory: false,
+      vendor_document_description: "",
+      vendor_declaration_text: "",
+      validity_months: "",
     },
   });
 
@@ -94,7 +104,13 @@ const PolicyManagement = () => {
       header: "Policy Title",
       cell: (row: any) => (
         <div>
-          <div className="font-medium">{row.title}</div>
+          <div className="font-medium flex items-center gap-2">
+            {row.title}
+            {row.is_system && <Badge variant="outline" className="text-[10px]">System</Badge>}
+            {row.vendor_requirement_mandatory && (
+              <Badge variant="secondary" className="text-[10px]">Vendor-Mandatory</Badge>
+            )}
+          </div>
           <div className="text-sm text-muted-foreground">v{row.version}</div>
         </div>
       ),
@@ -139,17 +155,15 @@ const PolicyManagement = () => {
       header: "Actions",
       cell: (row: any) => (
         <div className="flex space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handleEdit(row)}
-          >
+          <Button variant="outline" size="sm" onClick={() => handleEdit(row)}>
             <Edit className="h-4 w-4" />
           </Button>
           <Button
             variant="outline"
             size="sm"
-            onClick={() => handleDelete(row.id)}
+            onClick={() => handleDelete(row.id, row.is_system)}
+            disabled={row.is_system}
+            title={row.is_system ? "System policies cannot be deleted" : "Delete"}
           >
             <Trash2 className="h-4 w-4" />
           </Button>
@@ -170,28 +184,29 @@ const PolicyManagement = () => {
       reviewDate: policy.review_date,
       owner: policy.owner,
       status: policy.status,
+      vendor_requirement_type: policy.vendor_requirement_type ?? "none",
+      vendor_requirement_mandatory: !!policy.vendor_requirement_mandatory,
+      vendor_document_description: policy.vendor_document_description ?? "",
+      vendor_declaration_text: policy.vendor_declaration_text ?? "",
+      validity_months: policy.validity_months ? String(policy.validity_months) : "",
     });
     setIsDialogOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: string, isSystem?: boolean) => {
+    if (isSystem) {
+      toast.error("System policies cannot be deleted. You may set their status to Archived instead.");
+      return;
+    }
     try {
       const user = await checkAuthentication();
       if (!user) return;
-
-      const { error } = await supabase
-        .from("compliance_policies")
-        .delete()
-        .eq("id", id);
-
+      const { error } = await supabase.from("compliance_policies").delete().eq("id", id);
       if (error) throw error;
-
       toast.success("Policy deleted successfully");
       fetchPolicies();
     } catch (error: any) {
-      toast.error("Failed to delete policy", {
-        description: error.message,
-      });
+      toast.error("Failed to delete policy", { description: error.message });
     }
   };
 
@@ -200,7 +215,7 @@ const PolicyManagement = () => {
       const user = await checkAuthentication();
       if (!user) return;
 
-      const policyData = {
+      const policyData: any = {
         title: data.title,
         category: data.category,
         description: data.description,
@@ -210,7 +225,11 @@ const PolicyManagement = () => {
         review_date: data.reviewDate,
         owner: data.owner,
         status: data.status,
-        created_by: user.id,
+        vendor_requirement_type: data.vendor_requirement_type,
+        vendor_requirement_mandatory: data.vendor_requirement_mandatory,
+        vendor_document_description: data.vendor_document_description || null,
+        vendor_declaration_text: data.vendor_declaration_text || null,
+        validity_months: data.validity_months ? Number(data.validity_months) : null,
       };
 
       if (editingPolicy) {
@@ -218,14 +237,11 @@ const PolicyManagement = () => {
           .from("compliance_policies")
           .update(policyData)
           .eq("id", editingPolicy.id);
-
         if (error) throw error;
         toast.success("Policy updated successfully");
       } else {
-        const { error } = await supabase
-          .from("compliance_policies")
-          .insert([policyData]);
-
+        policyData.created_by = user.id;
+        const { error } = await supabase.from("compliance_policies").insert([policyData]);
         if (error) throw error;
         toast.success("Policy created successfully");
       }
@@ -442,6 +458,101 @@ const PolicyManagement = () => {
                             <SelectItem value="archived">Archived</SelectItem>
                           </SelectContent>
                         </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                {/* Vendor compliance requirements section */}
+                <div className="border rounded-md p-4 space-y-4 bg-muted/30">
+                  <div>
+                    <h4 className="font-semibold text-sm">Vendor Compliance Requirement</h4>
+                    <p className="text-xs text-muted-foreground">
+                      Configure what vendors must submit to demonstrate compliance with this policy.
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="vendor_requirement_type"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Requirement Type</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger><SelectValue /></SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="none">None (internal policy)</SelectItem>
+                              <SelectItem value="document">PDF document only</SelectItem>
+                              <SelectItem value="declaration">Signed declaration only</SelectItem>
+                              <SelectItem value="both">Both document & declaration</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="validity_months"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Validity (months)</FormLabel>
+                          <FormControl>
+                            <Input type="number" min="1" placeholder="e.g. 12" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <FormField
+                    control={form.control}
+                    name="vendor_requirement_mandatory"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center gap-2 space-y-0">
+                        <FormControl>
+                          <input
+                            type="checkbox"
+                            checked={field.value}
+                            onChange={(e) => field.onChange(e.target.checked)}
+                            className="h-4 w-4"
+                          />
+                        </FormControl>
+                        <FormLabel className="!mt-0">
+                          Mandatory — vendors who haven't submitted will be blocked from new POs / RFP responses
+                        </FormLabel>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="vendor_document_description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Document Description (shown to vendor)</FormLabel>
+                        <FormControl>
+                          <Textarea placeholder="e.g. Latest ISO 27001 certificate" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="vendor_declaration_text"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Declaration Text (vendor will e-sign)</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="e.g. We declare that our company complies with..."
+                            className="min-h-[80px]"
+                            {...field}
+                          />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
