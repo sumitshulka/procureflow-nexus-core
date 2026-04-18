@@ -4078,57 +4078,155 @@ export type Database = {
           },
         ]
       }
+      risk_appetite: {
+        Row: {
+          appetite_level: string
+          category_id: string | null
+          created_at: string
+          created_by: string | null
+          critical_threshold: number
+          escalation_score: number
+          high_threshold: number
+          id: string
+          is_active: boolean
+          low_threshold: number
+          medium_threshold: number
+          tolerance_statement: string | null
+          updated_at: string
+        }
+        Insert: {
+          appetite_level?: string
+          category_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          critical_threshold?: number
+          escalation_score?: number
+          high_threshold?: number
+          id?: string
+          is_active?: boolean
+          low_threshold?: number
+          medium_threshold?: number
+          tolerance_statement?: string | null
+          updated_at?: string
+        }
+        Update: {
+          appetite_level?: string
+          category_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          critical_threshold?: number
+          escalation_score?: number
+          high_threshold?: number
+          id?: string
+          is_active?: boolean
+          low_threshold?: number
+          medium_threshold?: number
+          tolerance_statement?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "risk_appetite_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: true
+            referencedRelation: "risk_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       risk_assessments: {
         Row: {
+          auto_generated: boolean | null
           category_id: string | null
           created_at: string | null
           created_by: string | null
+          department_id: string | null
           description: string | null
           due_date: string | null
+          entity_id: string | null
+          entity_type: string | null
+          escalated_at: string | null
+          escalated_by: string | null
           id: string
           impact: number
           mitigation_strategy: string | null
+          next_review_date: string | null
           owner_id: string | null
           probability: number
+          residual_impact: number | null
+          residual_probability: number | null
+          residual_score: number | null
+          review_frequency_days: number | null
           risk_level: string | null
           risk_score: number | null
+          source_trigger: string | null
           status: string
           title: string
+          treatment_strategy: string | null
           updated_at: string | null
+          vendor_id: string | null
         }
         Insert: {
+          auto_generated?: boolean | null
           category_id?: string | null
           created_at?: string | null
           created_by?: string | null
+          department_id?: string | null
           description?: string | null
           due_date?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          escalated_at?: string | null
+          escalated_by?: string | null
           id?: string
           impact: number
           mitigation_strategy?: string | null
+          next_review_date?: string | null
           owner_id?: string | null
           probability: number
+          residual_impact?: number | null
+          residual_probability?: number | null
+          residual_score?: number | null
+          review_frequency_days?: number | null
           risk_level?: string | null
           risk_score?: number | null
+          source_trigger?: string | null
           status?: string
           title: string
+          treatment_strategy?: string | null
           updated_at?: string | null
+          vendor_id?: string | null
         }
         Update: {
+          auto_generated?: boolean | null
           category_id?: string | null
           created_at?: string | null
           created_by?: string | null
+          department_id?: string | null
           description?: string | null
           due_date?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          escalated_at?: string | null
+          escalated_by?: string | null
           id?: string
           impact?: number
           mitigation_strategy?: string | null
+          next_review_date?: string | null
           owner_id?: string | null
           probability?: number
+          residual_impact?: number | null
+          residual_probability?: number | null
+          residual_score?: number | null
+          review_frequency_days?: number | null
           risk_level?: string | null
           risk_score?: number | null
+          source_trigger?: string | null
           status?: string
           title?: string
+          treatment_strategy?: string | null
           updated_at?: string | null
+          vendor_id?: string | null
         }
         Relationships: [
           {
@@ -4136,6 +4234,27 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "risk_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "risk_assessments_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "risk_assessments_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_compliance_overview"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "risk_assessments_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_registrations"
             referencedColumns: ["id"]
           },
         ]

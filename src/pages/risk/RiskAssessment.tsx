@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { AlertTriangle, Plus, Search, Edit, Trash2, Library, ShieldCheck } from "lucide-react";
+import { AlertTriangle, Plus, Search, Edit, Trash2, Library, ShieldCheck, ShieldAlert } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
@@ -115,6 +115,12 @@ const RiskAssessment = () => {
     status: editing.status,
     mitigation_strategy: editing.mitigation_strategy || "",
     due_date: editing.due_date || "",
+    treatment_strategy: (editing as any).treatment_strategy || "Treat",
+    vendor_id: (editing as any).vendor_id || "",
+    department_id: (editing as any).department_id || "",
+    residual_probability: (editing as any).residual_probability || 0,
+    residual_impact: (editing as any).residual_impact || 0,
+    review_frequency_days: (editing as any).review_frequency_days || 90,
   } : null;
 
   if (isLoading) return <div className="container mx-auto py-6">Loading...</div>;
@@ -128,8 +134,19 @@ const RiskAssessment = () => {
 
   return (
     <div className="container mx-auto py-6">
-      <div className="flex flex-wrap justify-between items-center gap-2 mb-6">
-        <h1 className="text-2xl font-bold">Risk Assessment</h1>
+      <div className="flex flex-wrap justify-between items-start gap-2 mb-6">
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            Risk Assessment
+            <Badge variant="outline" className="text-xs font-semibold">
+              <ShieldAlert className="h-3 w-3 mr-1" />
+              ISO 31000 / COSO ERM Compliant
+            </Badge>
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Enterprise risk register aligned to ISO 31000:2018 and COSO ERM framework
+          </p>
+        </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setLibraryOpen(true)}>
             <Library className="h-4 w-4 mr-2" /> Add from Library
@@ -187,8 +204,10 @@ const RiskAssessment = () => {
                 <SelectItem value="all">All Statuses</SelectItem>
                 <SelectItem value="Open">Open</SelectItem>
                 <SelectItem value="Mitigating">Mitigating</SelectItem>
+                <SelectItem value="Monitoring">Monitoring</SelectItem>
                 <SelectItem value="Closed">Closed</SelectItem>
                 <SelectItem value="Accepted">Accepted</SelectItem>
+                <SelectItem value="Escalated">Escalated</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -219,12 +238,14 @@ const RiskAssessment = () => {
                   </div>
                   <div className="flex items-center gap-2">
                     <Select value={risk.status} onValueChange={v => handleStatusChange(risk.id, v)}>
-                      <SelectTrigger className="w-[130px] h-8"><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="w-[140px] h-8"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="Open">Open</SelectItem>
                         <SelectItem value="Mitigating">Mitigating</SelectItem>
+                        <SelectItem value="Monitoring">Monitoring</SelectItem>
                         <SelectItem value="Closed">Closed</SelectItem>
                         <SelectItem value="Accepted">Accepted</SelectItem>
+                        <SelectItem value="Escalated">Escalated</SelectItem>
                       </SelectContent>
                     </Select>
                     <Button variant="ghost" size="icon" onClick={() => { setEditing(risk); setFormOpen(true); }}>
