@@ -257,6 +257,77 @@ const RfpTerms: React.FC<RfpTermsProps> = ({ data, onUpdate, onNext }) => {
             </CardContent>
           </Card>
 
+          {/* Supporting Documents (PDF, max 2MB combined) */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center justify-between">
+                <span>Supporting Documents</span>
+                <span className="text-xs font-normal text-muted-foreground">
+                  PDF only · {formatBytes(totalBytes)} / 2 MB
+                </span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Attach supporting PDF documents (specifications, drawings, scope, etc.). These will be visible to vendors viewing this RFP. Combined file size must not exceed 2 MB.
+              </p>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="application/pdf,.pdf"
+                multiple
+                className="hidden"
+                onChange={handleFileSelect}
+              />
+
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading || totalBytes >= MAX_TOTAL_BYTES}
+              >
+                {uploading ? (
+                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Uploading...</>
+                ) : (
+                  <><Upload className="h-4 w-4 mr-2" /> Upload PDF</>
+                )}
+              </Button>
+
+              {attachments.length > 0 && (
+                <ul className="divide-y rounded-md border">
+                  {attachments.map((att) => (
+                    <li key={att.path} className="flex items-center justify-between gap-3 p-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <FileText className="h-4 w-4 text-primary shrink-0" />
+                        <a
+                          href={att.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm font-medium truncate hover:underline"
+                        >
+                          {att.name}
+                        </a>
+                        <span className="text-xs text-muted-foreground shrink-0">
+                          {formatBytes(att.size)}
+                        </span>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemove(att)}
+                        aria-label={`Remove ${att.name}`}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Special Instructions</CardTitle>
