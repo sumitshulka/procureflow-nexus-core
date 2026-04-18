@@ -55,6 +55,17 @@ const VendorRiskProfile = () => {
   const [search, setSearch] = useState("");
   const [selectedVendor, setSelectedVendor] = useState<VendorProfile | null>(null);
 
+  const { data: orgCurrency = "USD" } = useQuery({
+    queryKey: ["org-base-currency"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("organization_settings")
+        .select("base_currency")
+        .maybeSingle();
+      return (data?.base_currency as string) || "USD";
+    },
+  });
+
   const { data: profiles = [], isLoading } = useQuery({
     queryKey: ["vendor-risk-profiles"],
     queryFn: async () => {
@@ -207,7 +218,7 @@ const VendorRiskProfile = () => {
                       </div>
                     </TableCell>
                     <TableCell className="text-right">{p.po_count}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(p.total_spend)}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(p.total_spend, orgCurrency)}</TableCell>
                     <TableCell className="text-right">{p.spend_concentration_pct}%</TableCell>
                     <TableCell className="text-right">
                       <span className={p.late_delivery_rate > 30 ? "text-destructive font-semibold" : ""}>
@@ -248,7 +259,7 @@ const VendorRiskProfile = () => {
                 </div>
                 <div className="p-3 bg-muted rounded">
                   <div className="text-xs text-muted-foreground">Spend</div>
-                  <div className="text-sm font-semibold">{formatCurrency(selectedVendor.total_spend)}</div>
+                  <div className="text-sm font-semibold">{formatCurrency(selectedVendor.total_spend, orgCurrency)}</div>
                   <div className="text-xs text-muted-foreground">{selectedVendor.spend_concentration_pct}% concentration</div>
                 </div>
                 <div className="p-3 bg-muted rounded">
