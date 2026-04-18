@@ -29,6 +29,11 @@ const policySchema = z.object({
   reviewDate: z.string().min(1, "Review date is required"),
   owner: z.string().min(1, "Owner is required"),
   status: z.string().min(1, "Status is required"),
+  vendor_requirement_type: z.enum(["none", "document", "declaration", "both"]),
+  vendor_requirement_mandatory: z.boolean(),
+  vendor_document_description: z.string().optional(),
+  vendor_declaration_text: z.string().optional(),
+  validity_months: z.string().optional(),
 });
 
 type PolicyForm = z.infer<typeof policySchema>;
@@ -51,6 +56,11 @@ const PolicyManagement = () => {
       reviewDate: "",
       owner: "",
       status: "draft",
+      vendor_requirement_type: "none",
+      vendor_requirement_mandatory: false,
+      vendor_document_description: "",
+      vendor_declaration_text: "",
+      validity_months: "",
     },
   });
 
@@ -94,7 +104,13 @@ const PolicyManagement = () => {
       header: "Policy Title",
       cell: (row: any) => (
         <div>
-          <div className="font-medium">{row.title}</div>
+          <div className="font-medium flex items-center gap-2">
+            {row.title}
+            {row.is_system && <Badge variant="outline" className="text-[10px]">System</Badge>}
+            {row.vendor_requirement_mandatory && (
+              <Badge variant="secondary" className="text-[10px]">Vendor-Mandatory</Badge>
+            )}
+          </div>
           <div className="text-sm text-muted-foreground">v{row.version}</div>
         </div>
       ),
