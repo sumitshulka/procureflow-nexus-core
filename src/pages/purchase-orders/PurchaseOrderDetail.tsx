@@ -150,19 +150,19 @@ const PurchaseOrderDetail = () => {
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" size="sm" onClick={() => navigate(-1)}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
+    <div className="container mx-auto py-4 md:py-6 space-y-4 md:space-y-6 max-w-full">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div className="flex items-start sm:items-center gap-3 sm:gap-4 min-w-0">
+          <Button variant="outline" size="sm" onClick={() => navigate(-1)} className="shrink-0">
+            <ArrowLeft className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Back</span>
           </Button>
-          <div>
-            <h1 className="text-2xl font-bold">Purchase Order {po.po_number}</h1>
-            <p className="text-muted-foreground">Created on {format(new Date(po.created_at), 'PPP')}</p>
+          <div className="min-w-0">
+            <h1 className="text-xl md:text-2xl font-bold truncate">Purchase Order {po.po_number}</h1>
+            <p className="text-sm text-muted-foreground truncate">Created on {format(new Date(po.created_at), 'PPP')}</p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {po.status === 'draft' && (
             <>
               {!hasApprovalLevels ? (
