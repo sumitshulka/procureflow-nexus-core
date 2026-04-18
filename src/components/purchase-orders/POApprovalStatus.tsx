@@ -82,8 +82,17 @@ const POApprovalStatus: React.FC<POApprovalStatusProps> = ({
     }
   };
 
-  const handleApprovalAction = async (action: "approved" | "rejected") => {
+  const handleApprovalAction = async (action: "approved" | "rejected" | "info_requested") => {
     if (!user) return;
+
+    if (action === "info_requested" && !comments.trim()) {
+      toast({
+        title: "Comments required",
+        description: "Please describe what additional information you need.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     const pendingApproval = approvalHistory.find(
       (item) => item.approver_id === user.id && item.status === "pending"
@@ -107,7 +116,7 @@ const POApprovalStatus: React.FC<POApprovalStatusProps> = ({
 
       if (action === "approved") {
         updateData.approved_at = new Date().toISOString();
-      } else {
+      } else if (action === "rejected") {
         updateData.rejected_at = new Date().toISOString();
       }
 
@@ -124,9 +133,9 @@ const POApprovalStatus: React.FC<POApprovalStatusProps> = ({
       );
 
       const allApproved = levelApprovals.every(
-        (item) => 
-          item.id === pendingApproval.id 
-            ? action === "approved" 
+        (item) =>
+          item.id === pendingApproval.id
+            ? action === "approved"
             : item.status === "approved"
       );
 
@@ -137,6 +146,9 @@ const POApprovalStatus: React.FC<POApprovalStatusProps> = ({
       if (action === "rejected") {
         poStatus = "draft";
         poApprovalStatus = "rejected";
+      } else if (action === "info_requested") {
+        poStatus = "draft";
+        poApprovalStatus = "info_requested";
       } else if (allApproved) {
         poStatus = "approved";
         poApprovalStatus = "approved";
@@ -152,9 +164,16 @@ const POApprovalStatus: React.FC<POApprovalStatusProps> = ({
 
       if (poError) throw poError;
 
+      const actionLabel =
+        action === "approved"
+          ? "approved"
+          : action === "rejected"
+          ? "rejected"
+          : "sent back for more information";
+
       toast({
         title: "Success",
-        description: `Purchase order ${action === "approved" ? "approved" : "rejected"} successfully`,
+        description: `Purchase order ${actionLabel} successfully`,
       });
 
       setComments("");
