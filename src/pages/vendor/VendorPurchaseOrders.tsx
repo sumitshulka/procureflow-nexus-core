@@ -312,7 +312,7 @@ const VendorPurchaseOrdersContent = () => {
                         <div key={item.id || index} className="flex justify-between items-center py-1">
                           <span className="text-sm">{item.description || 'Item'}</span>
                           <span className="text-sm font-medium">
-                            {item.quantity} × ${item.unit_price?.toLocaleString() || '0'}
+                            {item.quantity} × {formatCurrency(item.unit_price || 0, po.currency || 'USD')}
                           </span>
                         </div>
                       ))}
