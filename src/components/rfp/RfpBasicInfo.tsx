@@ -18,19 +18,25 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
 const basicInfoSchema = z.object({
-  title: z.string().min(1, "Title is required"),
-  description: z.string().optional(),
+  title: z.string().trim().min(3, "Title must be at least 3 characters").max(200, "Title must be under 200 characters"),
+  description: z.string().trim().min(10, "Description is required (min 10 characters)").max(5000),
   procurement_request_id: z.string().optional(),
   submission_deadline: z.date({ required_error: "Submission deadline is required" }),
   technical_opening_date: z.date().optional(),
   commercial_opening_date: z.date().optional(),
   technical_evaluation_deadline: z.date().optional(),
   commercial_evaluation_deadline: z.date().optional(),
-  estimated_value: z.number().min(0).optional(),
-  currency: z.string().default("USD"),
+  estimated_value: z
+    .number({ required_error: "Estimated value is required", invalid_type_error: "Estimated value must be a number" })
+    .positive("Estimated value must be greater than 0"),
+  currency: z.string().min(1, "Currency is required").default("USD"),
   pre_bid_meeting_date: z.date().optional(),
   pre_bid_meeting_venue: z.string().optional(),
-  bid_validity_period: z.number().default(30),
+  bid_validity_period: z
+    .number({ required_error: "Bid validity period is required", invalid_type_error: "Bid validity must be a number" })
+    .int("Bid validity must be a whole number")
+    .positive("Bid validity must be greater than 0")
+    .default(30),
   enable_technical_scoring: z.boolean().default(false),
   minimum_technical_score: z.number().min(0).optional(),
 });
@@ -150,7 +156,7 @@ const RfpBasicInfo: React.FC<RfpBasicInfoProps> = ({ data, onUpdate, onNext, tem
             name="estimated_value"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Estimated Value</FormLabel>
+                <FormLabel>Estimated Value *</FormLabel>
                 <FormControl>
                   <Input
                     type="number"
@@ -361,7 +367,7 @@ const RfpBasicInfo: React.FC<RfpBasicInfoProps> = ({ data, onUpdate, onNext, tem
           name="description"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Description</FormLabel>
+              <FormLabel>Description *</FormLabel>
               <FormControl>
                 <Textarea
                   placeholder="Enter detailed description of the RFP"
