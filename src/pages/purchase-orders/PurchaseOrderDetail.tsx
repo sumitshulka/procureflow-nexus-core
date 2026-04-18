@@ -150,19 +150,19 @@ const PurchaseOrderDetail = () => {
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" size="sm" onClick={() => navigate(-1)}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
+    <div className="container mx-auto py-4 md:py-6 space-y-4 md:space-y-6 max-w-full">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div className="flex items-start sm:items-center gap-3 sm:gap-4 min-w-0">
+          <Button variant="outline" size="sm" onClick={() => navigate(-1)} className="shrink-0">
+            <ArrowLeft className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Back</span>
           </Button>
-          <div>
-            <h1 className="text-2xl font-bold">Purchase Order {po.po_number}</h1>
-            <p className="text-muted-foreground">Created on {format(new Date(po.created_at), 'PPP')}</p>
+          <div className="min-w-0">
+            <h1 className="text-xl md:text-2xl font-bold truncate">Purchase Order {po.po_number}</h1>
+            <p className="text-sm text-muted-foreground truncate">Created on {format(new Date(po.created_at), 'PPP')}</p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {po.status === 'draft' && (
             <>
               {!hasApprovalLevels ? (
@@ -251,15 +251,15 @@ const PurchaseOrderDetail = () => {
 
       {/* Status */}
       <Card>
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between">
+        <CardContent className="p-4 md:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
               <p className="text-sm text-muted-foreground">Status</p>
               <div className="mt-1">{getStatusBadge(po.status)}</div>
             </div>
-            <div className="text-right">
+            <div className="sm:text-right">
               <p className="text-sm text-muted-foreground">Total Amount</p>
-              <p className="text-2xl font-bold">{po.currency} {po.final_amount?.toFixed(2)}</p>
+              <p className="text-xl md:text-2xl font-bold break-all">{po.currency} {po.final_amount?.toFixed(2)}</p>
             </div>
           </div>
         </CardContent>
@@ -335,35 +335,35 @@ const PurchaseOrderDetail = () => {
             Order Items
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full">
+        <CardContent className="p-2 sm:p-6">
+          <div className="overflow-x-auto -mx-2 sm:mx-0">
+            <table className="w-full min-w-[640px] text-sm">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left py-3 px-4">#</th>
-                  <th className="text-left py-3 px-4">Description</th>
-                  <th className="text-center py-3 px-4">Quantity</th>
-                  <th className="text-right py-3 px-4">Unit Price</th>
-                  <th className="text-right py-3 px-4">Tax</th>
-                  <th className="text-right py-3 px-4">Total</th>
+                  <th className="text-left py-3 px-2 sm:px-4">#</th>
+                  <th className="text-left py-3 px-2 sm:px-4">Description</th>
+                  <th className="text-center py-3 px-2 sm:px-4">Qty</th>
+                  <th className="text-right py-3 px-2 sm:px-4">Unit Price</th>
+                  <th className="text-right py-3 px-2 sm:px-4">Tax</th>
+                  <th className="text-right py-3 px-2 sm:px-4">Total</th>
                 </tr>
               </thead>
               <tbody>
                 {po.items?.map((item: any, index: number) => (
                   <tr key={item.id} className="border-b">
-                    <td className="py-3 px-4">{index + 1}</td>
-                    <td className="py-3 px-4">
+                    <td className="py-3 px-2 sm:px-4">{index + 1}</td>
+                    <td className="py-3 px-2 sm:px-4">
                       <div>
                         <p className="font-medium">{item.description}</p>
                         {item.specifications && (
-                          <p className="text-sm text-muted-foreground">{item.specifications}</p>
+                          <p className="text-xs text-muted-foreground">{item.specifications}</p>
                         )}
                       </div>
                     </td>
-                    <td className="text-center py-3 px-4">{item.quantity}</td>
-                    <td className="text-right py-3 px-4">{po.currency} {item.unit_price?.toFixed(2)}</td>
-                    <td className="text-right py-3 px-4">{po.currency} {item.tax_amount?.toFixed(2)}</td>
-                    <td className="text-right py-3 px-4 font-medium">
+                    <td className="text-center py-3 px-2 sm:px-4">{item.quantity}</td>
+                    <td className="text-right py-3 px-2 sm:px-4 whitespace-nowrap">{po.currency} {item.unit_price?.toFixed(2)}</td>
+                    <td className="text-right py-3 px-2 sm:px-4 whitespace-nowrap">{po.currency} {item.tax_amount?.toFixed(2)}</td>
+                    <td className="text-right py-3 px-2 sm:px-4 font-medium whitespace-nowrap">
                       {po.currency} {item.final_amount?.toFixed(2)}
                     </td>
                   </tr>
@@ -371,22 +371,22 @@ const PurchaseOrderDetail = () => {
               </tbody>
               <tfoot>
                 <tr className="border-t-2">
-                  <td colSpan={5} className="text-right py-3 px-4 font-medium">Subtotal:</td>
-                  <td className="text-right py-3 px-4 font-medium">
+                  <td colSpan={5} className="text-right py-3 px-2 sm:px-4 font-medium">Subtotal:</td>
+                  <td className="text-right py-3 px-2 sm:px-4 font-medium whitespace-nowrap">
                     {po.currency} {po.total_amount?.toFixed(2)}
                   </td>
                 </tr>
                 <tr>
-                  <td colSpan={5} className="text-right py-3 px-4">Tax:</td>
-                  <td className="text-right py-3 px-4">{po.currency} {po.tax_amount?.toFixed(2)}</td>
+                  <td colSpan={5} className="text-right py-3 px-2 sm:px-4">Tax:</td>
+                  <td className="text-right py-3 px-2 sm:px-4 whitespace-nowrap">{po.currency} {po.tax_amount?.toFixed(2)}</td>
                 </tr>
                 <tr>
-                  <td colSpan={5} className="text-right py-3 px-4">Discount:</td>
-                  <td className="text-right py-3 px-4">{po.currency} {po.discount_amount?.toFixed(2)}</td>
+                  <td colSpan={5} className="text-right py-3 px-2 sm:px-4">Discount:</td>
+                  <td className="text-right py-3 px-2 sm:px-4 whitespace-nowrap">{po.currency} {po.discount_amount?.toFixed(2)}</td>
                 </tr>
                 <tr className="border-t-2">
-                  <td colSpan={5} className="text-right py-3 px-4 font-bold text-lg">Grand Total:</td>
-                  <td className="text-right py-3 px-4 font-bold text-lg">
+                  <td colSpan={5} className="text-right py-3 px-2 sm:px-4 font-bold text-base md:text-lg">Grand Total:</td>
+                  <td className="text-right py-3 px-2 sm:px-4 font-bold text-base md:text-lg whitespace-nowrap">
                     {po.currency} {po.final_amount?.toFixed(2)}
                   </td>
                 </tr>
