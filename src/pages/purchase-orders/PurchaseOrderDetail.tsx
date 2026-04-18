@@ -335,35 +335,35 @@ const PurchaseOrderDetail = () => {
             Order Items
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full">
+        <CardContent className="p-2 sm:p-6">
+          <div className="overflow-x-auto -mx-2 sm:mx-0">
+            <table className="w-full min-w-[640px] text-sm">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left py-3 px-4">#</th>
-                  <th className="text-left py-3 px-4">Description</th>
-                  <th className="text-center py-3 px-4">Quantity</th>
-                  <th className="text-right py-3 px-4">Unit Price</th>
-                  <th className="text-right py-3 px-4">Tax</th>
-                  <th className="text-right py-3 px-4">Total</th>
+                  <th className="text-left py-3 px-2 sm:px-4">#</th>
+                  <th className="text-left py-3 px-2 sm:px-4">Description</th>
+                  <th className="text-center py-3 px-2 sm:px-4">Qty</th>
+                  <th className="text-right py-3 px-2 sm:px-4">Unit Price</th>
+                  <th className="text-right py-3 px-2 sm:px-4">Tax</th>
+                  <th className="text-right py-3 px-2 sm:px-4">Total</th>
                 </tr>
               </thead>
               <tbody>
                 {po.items?.map((item: any, index: number) => (
                   <tr key={item.id} className="border-b">
-                    <td className="py-3 px-4">{index + 1}</td>
-                    <td className="py-3 px-4">
+                    <td className="py-3 px-2 sm:px-4">{index + 1}</td>
+                    <td className="py-3 px-2 sm:px-4">
                       <div>
                         <p className="font-medium">{item.description}</p>
                         {item.specifications && (
-                          <p className="text-sm text-muted-foreground">{item.specifications}</p>
+                          <p className="text-xs text-muted-foreground">{item.specifications}</p>
                         )}
                       </div>
                     </td>
-                    <td className="text-center py-3 px-4">{item.quantity}</td>
-                    <td className="text-right py-3 px-4">{po.currency} {item.unit_price?.toFixed(2)}</td>
-                    <td className="text-right py-3 px-4">{po.currency} {item.tax_amount?.toFixed(2)}</td>
-                    <td className="text-right py-3 px-4 font-medium">
+                    <td className="text-center py-3 px-2 sm:px-4">{item.quantity}</td>
+                    <td className="text-right py-3 px-2 sm:px-4 whitespace-nowrap">{po.currency} {item.unit_price?.toFixed(2)}</td>
+                    <td className="text-right py-3 px-2 sm:px-4 whitespace-nowrap">{po.currency} {item.tax_amount?.toFixed(2)}</td>
+                    <td className="text-right py-3 px-2 sm:px-4 font-medium whitespace-nowrap">
                       {po.currency} {item.final_amount?.toFixed(2)}
                     </td>
                   </tr>
@@ -371,22 +371,22 @@ const PurchaseOrderDetail = () => {
               </tbody>
               <tfoot>
                 <tr className="border-t-2">
-                  <td colSpan={5} className="text-right py-3 px-4 font-medium">Subtotal:</td>
-                  <td className="text-right py-3 px-4 font-medium">
+                  <td colSpan={5} className="text-right py-3 px-2 sm:px-4 font-medium">Subtotal:</td>
+                  <td className="text-right py-3 px-2 sm:px-4 font-medium whitespace-nowrap">
                     {po.currency} {po.total_amount?.toFixed(2)}
                   </td>
                 </tr>
                 <tr>
-                  <td colSpan={5} className="text-right py-3 px-4">Tax:</td>
-                  <td className="text-right py-3 px-4">{po.currency} {po.tax_amount?.toFixed(2)}</td>
+                  <td colSpan={5} className="text-right py-3 px-2 sm:px-4">Tax:</td>
+                  <td className="text-right py-3 px-2 sm:px-4 whitespace-nowrap">{po.currency} {po.tax_amount?.toFixed(2)}</td>
                 </tr>
                 <tr>
-                  <td colSpan={5} className="text-right py-3 px-4">Discount:</td>
-                  <td className="text-right py-3 px-4">{po.currency} {po.discount_amount?.toFixed(2)}</td>
+                  <td colSpan={5} className="text-right py-3 px-2 sm:px-4">Discount:</td>
+                  <td className="text-right py-3 px-2 sm:px-4 whitespace-nowrap">{po.currency} {po.discount_amount?.toFixed(2)}</td>
                 </tr>
                 <tr className="border-t-2">
-                  <td colSpan={5} className="text-right py-3 px-4 font-bold text-lg">Grand Total:</td>
-                  <td className="text-right py-3 px-4 font-bold text-lg">
+                  <td colSpan={5} className="text-right py-3 px-2 sm:px-4 font-bold text-base md:text-lg">Grand Total:</td>
+                  <td className="text-right py-3 px-2 sm:px-4 font-bold text-base md:text-lg whitespace-nowrap">
                     {po.currency} {po.final_amount?.toFixed(2)}
                   </td>
                 </tr>
