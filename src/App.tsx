@@ -168,6 +168,7 @@ import UserManagement from '@/pages/UserManagement';
 import NotificationsList from '@/pages/NotificationsList';
 import FeatureDocumentation from '@/pages/FeatureDocumentation';
 import NotFound from '@/pages/NotFound';
+import Bootstrap from '@/pages/Bootstrap';
 
 function App() {
   return (
@@ -177,6 +178,7 @@ function App() {
           {/* Public Routes */}
           <Route path="/" element={<Index />} />
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/bootstrap" element={<Bootstrap />} />
           <Route path="/signup" element={<SignupPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/update-password" element={<UpdatePasswordPage />} />
