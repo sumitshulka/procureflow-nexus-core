@@ -259,7 +259,7 @@ const VendorRiskProfile = () => {
                 </div>
                 <div className="p-3 bg-muted rounded">
                   <div className="text-xs text-muted-foreground">Spend</div>
-                  <div className="text-sm font-semibold">{formatCurrency(selectedVendor.total_spend)}</div>
+                  <div className="text-sm font-semibold">{formatCurrency(selectedVendor.total_spend, orgCurrency)}</div>
                   <div className="text-xs text-muted-foreground">{selectedVendor.spend_concentration_pct}% concentration</div>
                 </div>
                 <div className="p-3 bg-muted rounded">
