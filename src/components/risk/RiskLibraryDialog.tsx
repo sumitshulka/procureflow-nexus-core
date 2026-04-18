@@ -5,7 +5,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Search, Library } from "lucide-react";
 
@@ -140,7 +139,7 @@ const RiskLibraryDialog = ({ open, onOpenChange, categories, existingTitles, onI
           <Button variant="outline" size="sm" onClick={selectAllVisible}>Select all visible</Button>
         </div>
 
-        <ScrollArea className="flex-1 min-h-0 border rounded-md">
+        <div className="min-h-0 flex-1 overflow-y-auto rounded-md border">
           {loading ? (
             <div className="p-8 text-center text-muted-foreground">Loading library...</div>
           ) : filtered.length === 0 ? (
@@ -170,7 +169,7 @@ const RiskLibraryDialog = ({ open, onOpenChange, categories, existingTitles, onI
               })}
             </div>
           )}
-        </ScrollArea>
+        </div>
 
         <div className="flex justify-between items-center">
           <span className="text-sm text-muted-foreground">{selected.size} selected</span>
