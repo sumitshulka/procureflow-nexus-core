@@ -321,6 +321,35 @@ const VendorDashboard = () => {
           </Card>
         )}
 
+        {vendorProfile?.status === 'approved' && (complianceSummary?.pendingMandatory ?? 0) > 0 && (
+          <Card className="border-amber-200 bg-amber-50">
+            <CardContent className="p-4">
+              <div className="flex items-start gap-4">
+                <div className="p-2 rounded-full bg-amber-100">
+                  <AlertCircle className="w-5 h-5 text-amber-600" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-amber-800">
+                    Action required: complete policy compliance
+                  </h3>
+                  <p className="text-sm text-amber-700 mt-1">
+                    You have {complianceSummary?.pendingMandatory} of {complianceSummary?.totalMandatory} mandatory compliance {complianceSummary?.pendingMandatory === 1 ? 'item' : 'items'} pending. Submit the required documents and declarations to remain eligible for RFPs and Purchase Orders.
+                  </p>
+                  <div className="mt-3">
+                    <Button
+                      size="sm"
+                      onClick={() => navigate('/vendor/compliance')}
+                      className="bg-amber-600 hover:bg-amber-700"
+                    >
+                      Complete Compliance
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Vendor Status Card */}
         <Card>
           <CardHeader>
