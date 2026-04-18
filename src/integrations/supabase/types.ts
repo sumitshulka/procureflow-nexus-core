@@ -1201,6 +1201,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "goods_received_notes_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_risk_profile"
+            referencedColumns: ["vendor_id"]
+          },
+          {
             foreignKeyName: "goods_received_notes_warehouse_id_fkey"
             columns: ["warehouse_id"]
             isOneToOne: false
@@ -2009,6 +2016,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vendor_registrations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_risk_profile"
+            referencedColumns: ["vendor_id"]
           },
         ]
       }
@@ -3233,6 +3247,13 @@ export type Database = {
             referencedRelation: "vendor_registrations"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "purchase_orders_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_risk_profile"
+            referencedColumns: ["vendor_id"]
+          },
         ]
       }
       rfp_activities: {
@@ -3747,6 +3768,13 @@ export type Database = {
             referencedRelation: "vendor_registrations"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "rfp_responses_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_risk_profile"
+            referencedColumns: ["vendor_id"]
+          },
         ]
       }
       rfp_scoring_criteria: {
@@ -4256,6 +4284,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vendor_registrations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "risk_assessments_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_risk_profile"
+            referencedColumns: ["vendor_id"]
           },
         ]
       }
@@ -5087,6 +5122,13 @@ export type Database = {
             referencedRelation: "vendor_registrations"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "vendor_communications_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_risk_profile"
+            referencedColumns: ["vendor_id"]
+          },
         ]
       }
       vendor_documents: {
@@ -5146,6 +5188,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vendor_registrations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_documents_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_risk_profile"
+            referencedColumns: ["vendor_id"]
           },
         ]
       }
@@ -5236,6 +5285,13 @@ export type Database = {
             referencedRelation: "vendor_registrations"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "vendor_policy_submissions_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_risk_profile"
+            referencedColumns: ["vendor_id"]
+          },
         ]
       }
       vendor_product_categories: {
@@ -5278,6 +5334,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vendor_registrations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_product_categories_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_risk_profile"
+            referencedColumns: ["vendor_id"]
           },
         ]
       }
@@ -5333,6 +5396,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vendor_registrations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_vendor_products_vendor"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_risk_profile"
+            referencedColumns: ["vendor_id"]
           },
         ]
       }
@@ -5809,6 +5879,13 @@ export type Database = {
             referencedRelation: "vendor_registrations"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "purchase_orders_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_risk_profile"
+            referencedColumns: ["vendor_id"]
+          },
         ]
       }
       po_item_receipt_status: {
@@ -5893,6 +5970,13 @@ export type Database = {
             referencedRelation: "vendor_registrations"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "invoices_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_risk_profile"
+            referencedColumns: ["vendor_id"]
+          },
         ]
       }
       user_department_history: {
@@ -5938,6 +6022,27 @@ export type Database = {
           vendor_id: string | null
           vendor_requirement_mandatory: boolean | null
           vendor_requirement_type: string | null
+          vendor_status: Database["public"]["Enums"]["vendor_status"] | null
+        }
+        Relationships: []
+      }
+      vendor_risk_profile: {
+        Row: {
+          active_risks: number | null
+          auto_detected_risks: number | null
+          avg_risk_score: number | null
+          company_name: string | null
+          critical_risks: number | null
+          escalated_risks: number | null
+          late_deliveries: number | null
+          late_delivery_rate: number | null
+          max_risk_score: number | null
+          overall_risk_rating: string | null
+          po_count: number | null
+          spend_concentration_pct: number | null
+          total_risks: number | null
+          total_spend: number | null
+          vendor_id: string | null
           vendor_status: Database["public"]["Enums"]["vendor_status"] | null
         }
         Relationships: []
@@ -6005,6 +6110,14 @@ export type Database = {
       delete_procurement_request: {
         Args: { p_request_id: string }
         Returns: Json
+      }
+      detect_and_create_risks: {
+        Args: never
+        Returns: {
+          action: string
+          risk_title: string
+          vendor_id: string
+        }[]
       }
       generate_grn_number: { Args: never; Returns: string }
       generate_vendor_number: { Args: never; Returns: string }
