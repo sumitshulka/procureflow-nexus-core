@@ -83,6 +83,9 @@ const VendorRiskProfile = () => {
   const { data: vendorRisks = [] } = useQuery({
     queryKey: ["vendor-risks", selectedVendor?.vendor_id],
     enabled: !!selectedVendor,
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("risk_assessments")
