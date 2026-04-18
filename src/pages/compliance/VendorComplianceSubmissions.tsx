@@ -218,6 +218,8 @@ const VendorComplianceSubmissions: React.FC = () => {
       setReviewing(null);
       setNotes("");
       void queryClient.invalidateQueries({ queryKey: SUBMISSIONS_KEY });
+      void queryClient.invalidateQueries({ queryKey: ["compliance-policies-list"] });
+      void queryClient.invalidateQueries({ queryKey: ["vendor-compliance-overview"] });
     } catch (e: any) {
       toast.error("Action failed", { description: e.message });
     } finally {
