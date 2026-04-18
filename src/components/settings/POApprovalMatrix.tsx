@@ -263,12 +263,32 @@ const POApprovalMatrix = () => {
           .map(m => m.sequence_order)
       );
 
+      // Normalize sentinel values ("any", "") to null so they don't get cast as UUID
+      const normalizedDept =
+        !matrixItem.department_id || matrixItem.department_id === "any"
+          ? null
+          : matrixItem.department_id;
+      const normalizedUser =
+        !matrixItem.approver_user_id || matrixItem.approver_user_id === "any"
+          ? null
+          : matrixItem.approver_user_id;
+
+      if (!normalizedUser) {
+        toast({
+          title: "Validation Error",
+          description: "Please select a specific approver",
+          variant: "destructive",
+        });
+        setIsSaving(false);
+        return;
+      }
+
       const { error } = await supabase
         .from("po_approval_matrix")
         .insert([{
           approval_level_id: levelId,
-          department_id: matrixItem.department_id || null,
-          approver_user_id: matrixItem.approver_user_id,
+          department_id: normalizedDept,
+          approver_user_id: normalizedUser,
           sequence_order: maxSequence + 1,
         }]);
 
