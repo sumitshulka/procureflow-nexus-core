@@ -251,15 +251,15 @@ const PurchaseOrderDetail = () => {
 
       {/* Status */}
       <Card>
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between">
+        <CardContent className="p-4 md:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
               <p className="text-sm text-muted-foreground">Status</p>
               <div className="mt-1">{getStatusBadge(po.status)}</div>
             </div>
-            <div className="text-right">
+            <div className="sm:text-right">
               <p className="text-sm text-muted-foreground">Total Amount</p>
-              <p className="text-2xl font-bold">{po.currency} {po.final_amount?.toFixed(2)}</p>
+              <p className="text-xl md:text-2xl font-bold break-all">{po.currency} {po.final_amount?.toFixed(2)}</p>
             </div>
           </div>
         </CardContent>
