@@ -1,31 +1,40 @@
 import React, { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2 } from "lucide-react";
+import { Loader2, Trash2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 
-const NONE = "_none";
+type ApproverType = "role" | "user";
+
+interface LevelConfig {
+  approverType: ApproverType;
+  approverRole: string;          // custom_roles.id
+  approverDepartmentId: string;  // "" = any dept; else departments.id (only for role type)
+  approverUserId: string;        // profiles.id (only for user type)
+}
+
+const emptyLevel = (): LevelConfig => ({
+  approverType: "role",
+  approverRole: "",
+  approverDepartmentId: "",
+  approverUserId: "",
+});
 
 const ApprovalHierarchy = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [departmentId, setDepartmentId] = useState<string>("");
-  const [level1, setLevel1] = useState<string>(NONE);
-  const [level2, setLevel2] = useState<string>(NONE);
-  const [level3, setLevel3] = useState<string>(NONE);
+  const [requesterDeptId, setRequesterDeptId] = useState<string>("");
+  const [levels, setLevels] = useState<LevelConfig[]>([emptyLevel(), emptyLevel(), emptyLevel()]);
 
   const { data: departments = [], isPending: deptLoading } = useQuery({
     queryKey: ["departments_active"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("departments")
-        .select("id, name")
-        .eq("is_active", true)
-        .order("name");
+        .from("departments").select("id, name").eq("is_active", true).order("name");
       if (error) throw error;
       return data || [];
     },
@@ -35,22 +44,33 @@ const ApprovalHierarchy = () => {
     queryKey: ["roles_for_approval"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("custom_roles")
-        .select("id, name")
-        .order("name");
+        .from("custom_roles").select("id, name").order("name");
       if (error) throw error;
       return data || [];
     },
   });
 
-  const { data: hierarchies = [], isPending: hLoading } = useQuery({
-    queryKey: ["approval_hierarchies", departmentId],
-    enabled: !!departmentId,
+  const { data: usersList = [], isPending: usersLoading } = useQuery({
+    queryKey: ["profiles_for_approval"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, full_name, department_id")
+        .eq("is_vendor", false)
+        .order("full_name");
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const { data: existing = [], isPending: existingLoading } = useQuery({
+    queryKey: ["approval_hierarchies", requesterDeptId],
+    enabled: !!requesterDeptId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("approval_hierarchies")
         .select("*")
-        .eq("department_id", departmentId)
+        .eq("department_id", requesterDeptId)
         .order("approver_level", { ascending: true });
       if (error) throw error;
       return data || [];
@@ -58,66 +78,97 @@ const ApprovalHierarchy = () => {
   });
 
   useEffect(() => {
-    const l1 = hierarchies.find((h: any) => h.approver_level === 1)?.approver_role || NONE;
-    const l2 = hierarchies.find((h: any) => h.approver_level === 2)?.approver_role || NONE;
-    const l3 = hierarchies.find((h: any) => h.approver_level === 3)?.approver_role || NONE;
-    setLevel1(l1);
-    setLevel2(l2);
-    setLevel3(l3);
-  }, [hierarchies, departmentId]);
+    const next: LevelConfig[] = [emptyLevel(), emptyLevel(), emptyLevel()];
+    existing.forEach((row: any) => {
+      const idx = (row.approver_level || 0) - 1;
+      if (idx < 0 || idx > 2) return;
+      if (row.approver_user_id) {
+        next[idx] = {
+          approverType: "user",
+          approverRole: "",
+          approverDepartmentId: "",
+          approverUserId: row.approver_user_id,
+        };
+      } else if (row.approver_role) {
+        next[idx] = {
+          approverType: "role",
+          approverRole: row.approver_role,
+          approverDepartmentId: row.approver_department_id || "",
+          approverUserId: "",
+        };
+      }
+    });
+    setLevels(next);
+  }, [existing, requesterDeptId]);
+
+  const updateLevel = (i: number, patch: Partial<LevelConfig>) => {
+    setLevels((prev) => prev.map((l, idx) => (idx === i ? { ...l, ...patch } : l)));
+  };
+
+  const clearLevel = (i: number) => updateLevel(i, emptyLevel());
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      if (!departmentId) throw new Error("Please select a department first");
+      if (!requesterDeptId) throw new Error("Select the requester department first");
 
-      // Replace existing rows for this department
+      // Validate
+      levels.forEach((l, i) => {
+        const filled =
+          (l.approverType === "role" && l.approverRole) ||
+          (l.approverType === "user" && l.approverUserId);
+        const partial =
+          (l.approverType === "role" && (l.approverDepartmentId)) ||
+          (l.approverType === "user" && false);
+        if (!filled && partial) {
+          throw new Error(`Level ${i + 1} is incomplete — select a role or user.`);
+        }
+      });
+
       const { error: delErr } = await supabase
         .from("approval_hierarchies")
         .delete()
-        .eq("department_id", departmentId);
+        .eq("department_id", requesterDeptId);
       if (delErr) throw delErr;
 
-      const rows: any[] = [];
-      if (level1 && level1 !== NONE) rows.push({ department_id: departmentId, approver_level: 1, approver_role: level1 });
-      if (level2 && level2 !== NONE) rows.push({ department_id: departmentId, approver_level: 2, approver_role: level2 });
-      if (level3 && level3 !== NONE) rows.push({ department_id: departmentId, approver_level: 3, approver_role: level3 });
+      const rows = levels
+        .map((l, i) => {
+          if (l.approverType === "role" && l.approverRole) {
+            return {
+              department_id: requesterDeptId,
+              approver_level: i + 1,
+              approver_role: l.approverRole,
+              approver_user_id: null,
+              approver_department_id: l.approverDepartmentId || null,
+            };
+          }
+          if (l.approverType === "user" && l.approverUserId) {
+            return {
+              department_id: requesterDeptId,
+              approver_level: i + 1,
+              approver_role: null,
+              approver_user_id: l.approverUserId,
+              approver_department_id: null,
+            };
+          }
+          return null;
+        })
+        .filter(Boolean);
 
       if (rows.length > 0) {
-        const { error: insErr } = await supabase.from("approval_hierarchies").insert(rows);
+        const { error: insErr } = await supabase.from("approval_hierarchies").insert(rows as any);
         if (insErr) throw insErr;
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["approval_hierarchies", departmentId] });
-      toast({ title: "Saved", description: "Approval hierarchy updated for this department." });
+      queryClient.invalidateQueries({ queryKey: ["approval_hierarchies", requesterDeptId] });
+      toast({ title: "Saved", description: "Approval hierarchy updated." });
     },
     onError: (err: any) => {
-      toast({
-        title: "Error saving settings",
-        description: err.message || "There was a problem updating the approval hierarchy.",
-        variant: "destructive",
-      });
+      toast({ title: "Error saving settings", description: err.message, variant: "destructive" });
     },
   });
 
-  const renderRoleSelect = (value: string, onChange: (v: string) => void, label: string) => (
-    <div className="space-y-2">
-      <Label>{label}</Label>
-      <Select value={value} onValueChange={onChange} disabled={!departmentId}>
-        <SelectTrigger>
-          <SelectValue placeholder="Select a role" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value={NONE}>None (Skip this level)</SelectItem>
-          {roles.map((r: any) => (
-            <SelectItem key={r.id} value={r.id}>{r.name || "Unnamed Role"}</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
-  );
-
-  if (deptLoading || rolesLoading) {
+  if (deptLoading || rolesLoading || usersLoading) {
     return (
       <Card>
         <CardContent className="pt-6 flex justify-center">
@@ -127,21 +178,108 @@ const ApprovalHierarchy = () => {
     );
   }
 
+  const renderLevelCard = (idx: number, title: string) => {
+    const l = levels[idx];
+    return (
+      <div className="border rounded-lg p-4 space-y-3 bg-muted/20">
+        <div className="flex items-center justify-between">
+          <h4 className="font-semibold">{title}</h4>
+          <Button variant="ghost" size="sm" onClick={() => clearLevel(idx)} className="text-destructive hover:text-destructive">
+            <Trash2 className="h-4 w-4 mr-1" /> Clear
+          </Button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="space-y-2">
+            <Label>Approver Type</Label>
+            <Select
+              value={l.approverType}
+              onValueChange={(v: ApproverType) =>
+                updateLevel(idx, { approverType: v, approverRole: "", approverDepartmentId: "", approverUserId: "" })
+              }
+              disabled={!requesterDeptId}
+            >
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="role">By Role</SelectItem>
+                <SelectItem value="user">Specific User</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {l.approverType === "role" ? (
+            <>
+              <div className="space-y-2">
+                <Label>Role</Label>
+                <Select
+                  value={l.approverRole}
+                  onValueChange={(v) => updateLevel(idx, { approverRole: v })}
+                  disabled={!requesterDeptId}
+                >
+                  <SelectTrigger><SelectValue placeholder="Select a role" /></SelectTrigger>
+                  <SelectContent>
+                    {roles.map((r: any) => (
+                      <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Department Scope</Label>
+                <Select
+                  value={l.approverDepartmentId || "__any__"}
+                  onValueChange={(v) =>
+                    updateLevel(idx, { approverDepartmentId: v === "__any__" ? "" : v })
+                  }
+                  disabled={!requesterDeptId}
+                >
+                  <SelectTrigger><SelectValue placeholder="Any department" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__any__">Same as requester (any)</SelectItem>
+                    {departments.map((d: any) => (
+                      <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </>
+          ) : (
+            <div className="space-y-2 md:col-span-2">
+              <Label>User</Label>
+              <Select
+                value={l.approverUserId}
+                onValueChange={(v) => updateLevel(idx, { approverUserId: v })}
+                disabled={!requesterDeptId}
+              >
+                <SelectTrigger><SelectValue placeholder="Select a user" /></SelectTrigger>
+                <SelectContent>
+                  {usersList.map((u: any) => (
+                    <SelectItem key={u.id} value={u.id}>{u.full_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Procurement Approval Hierarchy</CardTitle>
         <CardDescription>
-          Configure up to 3 approval levels per department for procurement requests.
+          Configure up to 3 approval levels for procurement requests raised by a department.
+          Each level can be a role (optionally scoped to a specific department) or a specific user.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="space-y-2">
-          <Label>Department *</Label>
-          <Select value={departmentId} onValueChange={setDepartmentId}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select a department" />
-            </SelectTrigger>
+        <div className="space-y-2 max-w-md">
+          <Label>Requester's Department *</Label>
+          <Select value={requesterDeptId} onValueChange={setRequesterDeptId}>
+            <SelectTrigger><SelectValue placeholder="Select the requester department" /></SelectTrigger>
             <SelectContent>
               {departments.map((d: any) => (
                 <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
@@ -150,23 +288,20 @@ const ApprovalHierarchy = () => {
           </Select>
         </div>
 
-        {departmentId && hLoading ? (
+        {requesterDeptId && existingLoading ? (
           <div className="flex justify-center py-4">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         ) : (
           <div className="space-y-4">
-            {renderRoleSelect(level1, setLevel1, "Level 1 Approver")}
-            {renderRoleSelect(level2, setLevel2, "Level 2 Approver")}
-            {renderRoleSelect(level3, setLevel3, "Level 3 Approver (Final)")}
+            {renderLevelCard(0, "Level 1 Approver")}
+            {renderLevelCard(1, "Level 2 Approver")}
+            {renderLevelCard(2, "Level 3 Approver (Final)")}
           </div>
         )}
 
         <div className="flex justify-end">
-          <Button
-            onClick={() => saveMutation.mutate()}
-            disabled={!departmentId || saveMutation.isPending}
-          >
+          <Button onClick={() => saveMutation.mutate()} disabled={!requesterDeptId || saveMutation.isPending}>
             {saveMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Save Configuration
           </Button>
