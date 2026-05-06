@@ -1,176 +1,123 @@
-
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/hooks/use-toast";
 
-// Schema for approval hierarchy settings
-const approvalSchema = z.object({
-  roleLevel1: z.string().optional(),
-  roleLevel2: z.string().optional(),
-  roleLevel3: z.string().optional(),
-});
-
-type FormValues = z.infer<typeof approvalSchema>;
-
-// Define interface for the settings data structure
-interface ApprovalHierarchySettings {
-  id?: string;
-  level1_role?: string | null;
-  level2_role?: string | null;
-  level3_role?: string | null;
-}
+const NONE = "_none";
 
 const ApprovalHierarchy = () => {
-  console.info("Rendering ApprovalHierarchy component");
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [departmentId, setDepartmentId] = useState<string>("");
+  const [level1, setLevel1] = useState<string>(NONE);
+  const [level2, setLevel2] = useState<string>(NONE);
+  const [level3, setLevel3] = useState<string>(NONE);
 
-  // Fetch roles for the dropdown
-  const { data: roles = [], isLoading } = useQuery({
-    queryKey: ["roles_for_approval"],
+  const { data: departments = [], isPending: deptLoading } = useQuery({
+    queryKey: ["departments_active"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("custom_roles")
-        .select("id, name");
-        
+        .from("departments")
+        .select("id, name")
+        .eq("is_active", true)
+        .order("name");
       if (error) throw error;
-      console.info("Roles fetched:", data);
       return data || [];
     },
   });
 
-  // Fetch existing approval hierarchy settings
-  const { data: hierarchySettings, isLoading: isLoadingSettings } = useQuery({
-    queryKey: ["approval_hierarchy"],
+  const { data: roles = [], isPending: rolesLoading } = useQuery({
+    queryKey: ["roles_for_approval"],
     queryFn: async () => {
-      // Using a custom table or view for approval hierarchy settings
+      const { data, error } = await supabase
+        .from("custom_roles")
+        .select("id, name")
+        .order("name");
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const { data: hierarchies = [], isPending: hLoading } = useQuery({
+    queryKey: ["approval_hierarchies", departmentId],
+    enabled: !!departmentId,
+    queryFn: async () => {
       const { data, error } = await supabase
         .from("approval_hierarchies")
         .select("*")
-        .order('approver_level', { ascending: true });
-        
+        .eq("department_id", departmentId)
+        .order("approver_level", { ascending: true });
       if (error) throw error;
-      console.info("Raw approval hierarchies:", data);
-      
-      // Transform data to expected structure
-      const settings: ApprovalHierarchySettings = {};
-      
-      // Map the data from approval_hierarchies to our expected structure
-      if (data && data.length > 0) {
-        data.forEach(entry => {
-          if (entry.approver_level === 1) settings.level1_role = entry.approver_role;
-          if (entry.approver_level === 2) settings.level2_role = entry.approver_role;
-          if (entry.approver_level === 3) settings.level3_role = entry.approver_role;
-        });
-      }
-      
-      return settings;
+      return data || [];
     },
   });
 
-  // Set up form with existing values
-  const form = useForm<FormValues>({
-    resolver: zodResolver(approvalSchema),
-    defaultValues: {
-      roleLevel1: hierarchySettings?.level1_role || "",
-      roleLevel2: hierarchySettings?.level2_role || "",
-      roleLevel3: hierarchySettings?.level3_role || "",
-    },
-  });
+  useEffect(() => {
+    const l1 = hierarchies.find((h: any) => h.approver_level === 1)?.approver_role || NONE;
+    const l2 = hierarchies.find((h: any) => h.approver_level === 2)?.approver_role || NONE;
+    const l3 = hierarchies.find((h: any) => h.approver_level === 3)?.approver_role || NONE;
+    setLevel1(l1);
+    setLevel2(l2);
+    setLevel3(l3);
+  }, [hierarchies, departmentId]);
 
-  // Update form values when settings are loaded
-  React.useEffect(() => {
-    if (hierarchySettings) {
-      form.reset({
-        roleLevel1: hierarchySettings.level1_role || "",
-        roleLevel2: hierarchySettings.level2_role || "",
-        roleLevel3: hierarchySettings.level3_role || "",
-      });
-    }
-  }, [hierarchySettings, form]);
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      if (!departmentId) throw new Error("Please select a department first");
 
-  // Save settings mutation
-  const saveSettingsMutation = useMutation({
-    mutationFn: async (values: FormValues) => {
-      console.log("Saving approval hierarchy:", values);
-      
-      // First, delete existing settings (simple approach for now)
-      const { error: deleteError } = await supabase
+      // Replace existing rows for this department
+      const { error: delErr } = await supabase
         .from("approval_hierarchies")
         .delete()
-        .not('id', 'is', null);
-      
-      if (deleteError) throw deleteError;
-      
-      // Insert new settings
-      const hierarchiesToInsert = [];
-      
-      if (values.roleLevel1 && values.roleLevel1 !== "_none") {
-        hierarchiesToInsert.push({
-          approver_level: 1,
-          approver_role: values.roleLevel1,
-          department_id: '00000000-0000-0000-0000-000000000000' // Placeholder - should be updated to use proper department
-        });
+        .eq("department_id", departmentId);
+      if (delErr) throw delErr;
+
+      const rows: any[] = [];
+      if (level1 && level1 !== NONE) rows.push({ department_id: departmentId, approver_level: 1, approver_role: level1 });
+      if (level2 && level2 !== NONE) rows.push({ department_id: departmentId, approver_level: 2, approver_role: level2 });
+      if (level3 && level3 !== NONE) rows.push({ department_id: departmentId, approver_level: 3, approver_role: level3 });
+
+      if (rows.length > 0) {
+        const { error: insErr } = await supabase.from("approval_hierarchies").insert(rows);
+        if (insErr) throw insErr;
       }
-      
-      if (values.roleLevel2 && values.roleLevel2 !== "_none") {
-        hierarchiesToInsert.push({
-          approver_level: 2,
-          approver_role: values.roleLevel2,
-          department_id: '00000000-0000-0000-0000-000000000000' // Placeholder - should be updated to use proper department
-        });
-      }
-      
-      if (values.roleLevel3 && values.roleLevel3 !== "_none") {
-        hierarchiesToInsert.push({
-          approver_level: 3,
-          approver_role: values.roleLevel3,
-          department_id: '00000000-0000-0000-0000-000000000000' // Placeholder - should be updated to use proper department
-        });
-      }
-      
-      if (hierarchiesToInsert.length > 0) {
-        const { error: insertError } = await supabase
-          .from("approval_hierarchies")
-          .insert(hierarchiesToInsert);
-        
-        if (insertError) throw insertError;
-      }
-      
-      return values;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["approval_hierarchy"] });
-      toast({
-        title: "Settings saved",
-        description: "Approval hierarchy has been updated successfully.",
-      });
+      queryClient.invalidateQueries({ queryKey: ["approval_hierarchies", departmentId] });
+      toast({ title: "Saved", description: "Approval hierarchy updated for this department." });
     },
-    onError: (error) => {
-      console.error("Error saving approval hierarchy:", error);
+    onError: (err: any) => {
       toast({
         title: "Error saving settings",
-        description: "There was a problem updating the approval hierarchy.",
+        description: err.message || "There was a problem updating the approval hierarchy.",
         variant: "destructive",
       });
     },
   });
-  
-  // Save settings
-  const onSubmit = (values: FormValues) => {
-    saveSettingsMutation.mutate(values);
-  };
 
-  if (isLoading || isLoadingSettings) {
+  const renderRoleSelect = (value: string, onChange: (v: string) => void, label: string) => (
+    <div className="space-y-2">
+      <Label>{label}</Label>
+      <Select value={value} onValueChange={onChange} disabled={!departmentId}>
+        <SelectTrigger>
+          <SelectValue placeholder="Select a role" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={NONE}>None (Skip this level)</SelectItem>
+          {roles.map((r: any) => (
+            <SelectItem key={r.id} value={r.id}>{r.name || "Unnamed Role"}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+
+  if (deptLoading || rolesLoading) {
     return (
       <Card>
         <CardContent className="pt-6 flex justify-center">
@@ -183,122 +130,47 @@ const ApprovalHierarchy = () => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Approval Hierarchy</CardTitle>
+        <CardTitle>Procurement Approval Hierarchy</CardTitle>
         <CardDescription>
-          Configure the approval levels for procurement requests
+          Configure up to 3 approval levels per department for procurement requests.
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <div className="space-y-4">
-              <FormField
-                control={form.control}
-                name="roleLevel1"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Level 1 Approver</FormLabel>
-                    <FormControl>
-                      <Select 
-                        value={field.value || ""}
-                        onValueChange={field.onChange}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a role" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="_none">None (Skip this level)</SelectItem>
-                          {roles.map((role) => (
-                            <SelectItem 
-                              key={role.id} 
-                              value={role.id || "_default_id"} // Ensure empty value is never provided
-                            >
-                              {role.name || "Unnamed Role"}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
+      <CardContent className="space-y-6">
+        <div className="space-y-2">
+          <Label>Department *</Label>
+          <Select value={departmentId} onValueChange={setDepartmentId}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select a department" />
+            </SelectTrigger>
+            <SelectContent>
+              {departments.map((d: any) => (
+                <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-              <FormField
-                control={form.control}
-                name="roleLevel2"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Level 2 Approver</FormLabel>
-                    <FormControl>
-                      <Select 
-                        value={field.value || ""}
-                        onValueChange={field.onChange}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a role" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="_none">None (Skip this level)</SelectItem>
-                          {roles.map((role) => (
-                            <SelectItem 
-                              key={role.id} 
-                              value={role.id || "_default_id"}
-                            >
-                              {role.name || "Unnamed Role"}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
+        {departmentId && hLoading ? (
+          <div className="flex justify-center py-4">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {renderRoleSelect(level1, setLevel1, "Level 1 Approver")}
+            {renderRoleSelect(level2, setLevel2, "Level 2 Approver")}
+            {renderRoleSelect(level3, setLevel3, "Level 3 Approver (Final)")}
+          </div>
+        )}
 
-              <FormField
-                control={form.control}
-                name="roleLevel3"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Level 3 Approver (Final)</FormLabel>
-                    <FormControl>
-                      <Select 
-                        value={field.value || ""}
-                        onValueChange={field.onChange}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a role" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="_none">None (Skip this level)</SelectItem>
-                          {roles.map((role) => (
-                            <SelectItem 
-                              key={role.id} 
-                              value={role.id || "_default_id"}
-                            >
-                              {role.name || "Unnamed Role"}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <div className="flex justify-end">
-              <Button 
-                type="submit"
-                disabled={saveSettingsMutation.isPending}
-              >
-                {saveSettingsMutation.isPending && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                )}
-                Save Configuration
-              </Button>
-            </div>
-          </form>
-        </Form>
+        <div className="flex justify-end">
+          <Button
+            onClick={() => saveMutation.mutate()}
+            disabled={!departmentId || saveMutation.isPending}
+          >
+            {saveMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Save Configuration
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
