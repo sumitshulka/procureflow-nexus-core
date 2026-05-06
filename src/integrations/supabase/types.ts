@@ -81,24 +81,30 @@ export type Database = {
       }
       approval_hierarchies: {
         Row: {
+          approver_department_id: string | null
           approver_level: number
-          approver_role: string
+          approver_role: string | null
+          approver_user_id: string | null
           created_at: string
           department_id: string
           id: string
           updated_at: string
         }
         Insert: {
+          approver_department_id?: string | null
           approver_level: number
-          approver_role: string
+          approver_role?: string | null
+          approver_user_id?: string | null
           created_at?: string
           department_id: string
           id?: string
           updated_at?: string
         }
         Update: {
+          approver_department_id?: string | null
           approver_level?: number
-          approver_role?: string
+          approver_role?: string | null
+          approver_user_id?: string | null
           created_at?: string
           department_id?: string
           id?: string
@@ -106,10 +112,24 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "approval_hierarchies_approver_department_id_fkey"
+            columns: ["approver_department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "approval_hierarchies_approver_role_fkey"
             columns: ["approver_role"]
             isOneToOne: false
             referencedRelation: "custom_roles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "approval_hierarchies_approver_user_id_fkey"
+            columns: ["approver_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
