@@ -13,7 +13,7 @@ type ApproverType = "role" | "user";
 interface LevelConfig {
   approverType: ApproverType;
   approverRole: string;          // custom_roles.id
-  approverDepartmentId: string;  // "" = any dept; else departments.id (only for role type)
+  approverDepartmentId: string;  // "" = same as requester; else departments.id (only for role type)
   approverUserId: string;        // profiles.id (only for user type)
 }
 
@@ -27,7 +27,6 @@ const emptyLevel = (): LevelConfig => ({
 const ApprovalHierarchy = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [requesterDeptId, setRequesterDeptId] = useState<string>("");
   const [levels, setLevels] = useState<LevelConfig[]>([emptyLevel(), emptyLevel(), emptyLevel()]);
 
   const { data: departments = [], isPending: deptLoading } = useQuery({
@@ -64,13 +63,12 @@ const ApprovalHierarchy = () => {
   });
 
   const { data: existing = [], isPending: existingLoading } = useQuery({
-    queryKey: ["approval_hierarchies", requesterDeptId],
-    enabled: !!requesterDeptId,
+    queryKey: ["approval_hierarchies_global"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("approval_hierarchies")
         .select("*")
-        .eq("department_id", requesterDeptId)
+        .is("department_id", null)
         .order("approver_level", { ascending: true });
       if (error) throw error;
       return data || [];
@@ -99,7 +97,7 @@ const ApprovalHierarchy = () => {
       }
     });
     setLevels(next);
-  }, [existing, requesterDeptId]);
+  }, [existing]);
 
   const updateLevel = (i: number, patch: Partial<LevelConfig>) => {
     setLevels((prev) => prev.map((l, idx) => (idx === i ? { ...l, ...patch } : l)));
@@ -109,32 +107,18 @@ const ApprovalHierarchy = () => {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      if (!requesterDeptId) throw new Error("Select the requester department first");
-
-      // Validate
-      levels.forEach((l, i) => {
-        const filled =
-          (l.approverType === "role" && l.approverRole) ||
-          (l.approverType === "user" && l.approverUserId);
-        const partial =
-          (l.approverType === "role" && (l.approverDepartmentId)) ||
-          (l.approverType === "user" && false);
-        if (!filled && partial) {
-          throw new Error(`Level ${i + 1} is incomplete — select a role or user.`);
-        }
-      });
-
+      // Replace global rules
       const { error: delErr } = await supabase
         .from("approval_hierarchies")
         .delete()
-        .eq("department_id", requesterDeptId);
+        .is("department_id", null);
       if (delErr) throw delErr;
 
       const rows = levels
         .map((l, i) => {
           if (l.approverType === "role" && l.approverRole) {
             return {
-              department_id: requesterDeptId,
+              department_id: null,
               approver_level: i + 1,
               approver_role: l.approverRole,
               approver_user_id: null,
@@ -143,7 +127,7 @@ const ApprovalHierarchy = () => {
           }
           if (l.approverType === "user" && l.approverUserId) {
             return {
-              department_id: requesterDeptId,
+              department_id: null,
               approver_level: i + 1,
               approver_role: null,
               approver_user_id: l.approverUserId,
@@ -160,7 +144,7 @@ const ApprovalHierarchy = () => {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["approval_hierarchies", requesterDeptId] });
+      queryClient.invalidateQueries({ queryKey: ["approval_hierarchies_global"] });
       toast({ title: "Saved", description: "Approval hierarchy updated." });
     },
     onError: (err: any) => {
@@ -168,7 +152,7 @@ const ApprovalHierarchy = () => {
     },
   });
 
-  if (deptLoading || rolesLoading || usersLoading) {
+  if (deptLoading || rolesLoading || usersLoading || existingLoading) {
     return (
       <Card>
         <CardContent className="pt-6 flex justify-center">
@@ -197,7 +181,6 @@ const ApprovalHierarchy = () => {
               onValueChange={(v: ApproverType) =>
                 updateLevel(idx, { approverType: v, approverRole: "", approverDepartmentId: "", approverUserId: "" })
               }
-              disabled={!requesterDeptId}
             >
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -214,7 +197,6 @@ const ApprovalHierarchy = () => {
                 <Select
                   value={l.approverRole}
                   onValueChange={(v) => updateLevel(idx, { approverRole: v })}
-                  disabled={!requesterDeptId}
                 >
                   <SelectTrigger><SelectValue placeholder="Select a role" /></SelectTrigger>
                   <SelectContent>
@@ -232,11 +214,10 @@ const ApprovalHierarchy = () => {
                   onValueChange={(v) =>
                     updateLevel(idx, { approverDepartmentId: v === "__any__" ? "" : v })
                   }
-                  disabled={!requesterDeptId}
                 >
-                  <SelectTrigger><SelectValue placeholder="Any department" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="Same as requester" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="__any__">Same as requester (any)</SelectItem>
+                    <SelectItem value="__any__">Same as requester</SelectItem>
                     {departments.map((d: any) => (
                       <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
                     ))}
@@ -250,7 +231,6 @@ const ApprovalHierarchy = () => {
               <Select
                 value={l.approverUserId}
                 onValueChange={(v) => updateLevel(idx, { approverUserId: v })}
-                disabled={!requesterDeptId}
               >
                 <SelectTrigger><SelectValue placeholder="Select a user" /></SelectTrigger>
                 <SelectContent>
@@ -271,37 +251,20 @@ const ApprovalHierarchy = () => {
       <CardHeader>
         <CardTitle>Procurement Approval Hierarchy</CardTitle>
         <CardDescription>
-          Configure up to 3 approval levels for procurement requests raised by a department.
-          Each level can be a role (optionally scoped to a specific department) or a specific user.
+          Configure up to 3 approval levels that apply to procurement requests from any department.
+          For each level, pick a specific user, or a role — optionally scoped to a specific department
+          (e.g. L1: Same Dept Manager, L2: Procurement Manager, L3: Finance Head).
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="space-y-2 max-w-md">
-          <Label>Requester's Department *</Label>
-          <Select value={requesterDeptId} onValueChange={setRequesterDeptId}>
-            <SelectTrigger><SelectValue placeholder="Select the requester department" /></SelectTrigger>
-            <SelectContent>
-              {departments.map((d: any) => (
-                <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="space-y-4">
+          {renderLevelCard(0, "Level 1 Approver")}
+          {renderLevelCard(1, "Level 2 Approver")}
+          {renderLevelCard(2, "Level 3 Approver (Final)")}
         </div>
 
-        {requesterDeptId && existingLoading ? (
-          <div className="flex justify-center py-4">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {renderLevelCard(0, "Level 1 Approver")}
-            {renderLevelCard(1, "Level 2 Approver")}
-            {renderLevelCard(2, "Level 3 Approver (Final)")}
-          </div>
-        )}
-
         <div className="flex justify-end">
-          <Button onClick={() => saveMutation.mutate()} disabled={!requesterDeptId || saveMutation.isPending}>
+          <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
             {saveMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Save Configuration
           </Button>
