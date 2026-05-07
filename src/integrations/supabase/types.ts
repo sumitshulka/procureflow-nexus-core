@@ -86,7 +86,7 @@ export type Database = {
           approver_role: string | null
           approver_user_id: string | null
           created_at: string
-          department_id: string
+          department_id: string | null
           id: string
           updated_at: string
         }
@@ -96,7 +96,7 @@ export type Database = {
           approver_role?: string | null
           approver_user_id?: string | null
           created_at?: string
-          department_id: string
+          department_id?: string | null
           id?: string
           updated_at?: string
         }
@@ -106,7 +106,7 @@ export type Database = {
           approver_role?: string | null
           approver_user_id?: string | null
           created_at?: string
-          department_id?: string
+          department_id?: string | null
           id?: string
           updated_at?: string
         }
