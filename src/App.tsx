@@ -171,6 +171,8 @@ import Settings from '@/pages/Settings';
 import UserManagement from '@/pages/UserManagement';
 import NotificationsList from '@/pages/NotificationsList';
 import FeatureDocumentation from '@/pages/FeatureDocumentation';
+import Profile from '@/pages/Profile';
+import ActivityLog from '@/pages/ActivityLog';
 import NotFound from '@/pages/NotFound';
 import Bootstrap from '@/pages/Bootstrap';
 
@@ -1134,6 +1136,23 @@ function App() {
             element={
               <ProtectedRoute requiredRole={UserRole.ADMIN}>
                 <Layout><NotificationsList /></Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <Layout><Profile /></Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/activity-log"
+            element={
+              <ProtectedRoute>
+                <Layout><ActivityLog /></Layout>
               </ProtectedRoute>
             }
           />
