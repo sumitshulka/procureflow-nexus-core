@@ -105,8 +105,8 @@ const AppHeader: React.FC = () => {
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>{userData?.fullName || "My Account"}</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>Profile</DropdownMenuItem>
-            <DropdownMenuItem>Activity Log</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate('/profile')} className="cursor-pointer">Profile</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate('/activity-log')} className="cursor-pointer">Activity Log</DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={logout} className="cursor-pointer text-destructive">
               <LogOut className="mr-2 h-4 w-4" />
