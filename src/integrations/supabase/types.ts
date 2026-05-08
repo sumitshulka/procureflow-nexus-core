@@ -2895,6 +2895,8 @@ export type Database = {
           tracking_type: string
           unit_id: string
           updated_at: string | null
+          warranty_covered: boolean
+          warranty_period_months: number | null
         }
         Insert: {
           category_id: string
@@ -2914,6 +2916,8 @@ export type Database = {
           tracking_type?: string
           unit_id: string
           updated_at?: string | null
+          warranty_covered?: boolean
+          warranty_period_months?: number | null
         }
         Update: {
           category_id?: string
@@ -2933,6 +2937,8 @@ export type Database = {
           tracking_type?: string
           unit_id?: string
           updated_at?: string | null
+          warranty_covered?: boolean
+          warranty_period_months?: number | null
         }
         Relationships: [
           {
