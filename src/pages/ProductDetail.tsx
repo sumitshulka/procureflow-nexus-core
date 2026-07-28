@@ -25,6 +25,8 @@ interface Product {
   tags: string[];
   tracking_type?: string;
   requires_serial_tracking?: boolean;
+  warranty_covered?: boolean;
+  warranty_period_months?: number | null;
   category_id: string;
   category: { name: string };
   unit: { name: string; abbreviation: string };
