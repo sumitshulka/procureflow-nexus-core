@@ -491,6 +491,7 @@ const CheckInItemsTable: React.FC<CheckInItemsTableProps> = ({
   if (isPOBased) colCount += 3; // Ordered, Received, Pending
   if (!isPOBased) colCount += 1; // Unit Price
   if (hasSerialItems) colCount += 1; // Serial Numbers
+  if (hasWarrantyItems) colCount += 1; // Warranty Start
 
   return (
     <div className="space-y-4">
