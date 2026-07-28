@@ -50,6 +50,8 @@ interface Product {
   unit_id: string;
   tracking_type?: string;
   requires_serial_tracking?: boolean;
+  warranty_covered?: boolean;
+  warranty_period_months?: number | null;
 }
 
 interface EditProductFormProps {
