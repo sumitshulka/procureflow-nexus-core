@@ -34,6 +34,9 @@ const productSchema = z.object({
   requiresSerialTracking: z.boolean().default(false),
   warrantyCovered: z.boolean().default(false),
   warrantyPeriodMonths: z.number().int().positive().optional(),
+}).refine((d) => !d.warrantyCovered || !!d.warrantyPeriodMonths, {
+  message: "Warranty period is required when the product is covered under warranty",
+  path: ["warrantyPeriodMonths"],
 });
 
 type ProductFormData = z.infer<typeof productSchema>;
