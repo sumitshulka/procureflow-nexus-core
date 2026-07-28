@@ -110,6 +110,8 @@ const AddProduct = () => {
       tags: [],
       trackingType: "none",
       requiresSerialTracking: false,
+      warrantyCovered: false,
+      warrantyPeriodMonths: undefined,
     },
   });
 
