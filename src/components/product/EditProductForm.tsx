@@ -78,10 +78,13 @@ const EditProductForm = ({ product }: EditProductFormProps) => {
       tags: product.tags || [],
       trackingType: product.tracking_type || "none",
       requiresSerialTracking: product.requires_serial_tracking || false,
+      warrantyCovered: product.warranty_covered || false,
+      warrantyPeriodMonths: product.warranty_period_months ?? undefined,
     },
   });
 
   const watchTrackingType = form.watch("trackingType");
+  const watchWarrantyCovered = form.watch("warrantyCovered");
 
   const { data: categories } = useQuery({
     queryKey: ["categories"],
