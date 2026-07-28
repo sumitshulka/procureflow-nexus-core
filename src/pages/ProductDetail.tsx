@@ -219,6 +219,21 @@ const ProductDetail = () => {
                       </div>
                     </div>
                   </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Warranty</label>
+                    <div className="mt-1 flex items-center gap-2">
+                      {product.warranty_covered ? (
+                        <>
+                          <Badge className="bg-emerald-600 text-primary-foreground hover:bg-emerald-600">Covered under warranty</Badge>
+                          {product.warranty_period_months ? (
+                            <Badge variant="outline" className="text-xs">{product.warranty_period_months} months</Badge>
+                          ) : null}
+                        </>
+                      ) : (
+                        <Badge variant="outline" className="text-xs">Not covered</Badge>
+                      )}
+                    </div>
+                  </div>
                   {product.tax_code && (
                     <div>
                       <label className="text-sm font-medium text-muted-foreground">Tax Code</label>
