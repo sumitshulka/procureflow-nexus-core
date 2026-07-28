@@ -222,6 +222,7 @@ const CheckOutForm = ({ productId, onSuccess, onCancel }: CheckOutFormProps) => 
           delivery_details,
           product_id,
           sku_id,
+          warranty_end_date,
           product:product_id(id, name),
           sku:sku_id(sku_code, name)
         `
