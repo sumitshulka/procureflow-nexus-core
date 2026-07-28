@@ -17,7 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import CreateRfpForProduct from "@/components/product/CreateRfpForProduct";
-import { X, ArrowLeft, Package, DollarSign, Barcode, Hash, Tags, Box, AlertCircle } from "lucide-react";
+import { X, ArrowLeft, Package, DollarSign, Barcode, Hash, Tags, Box, AlertCircle, ShieldCheck } from "lucide-react";
 
 const productSchema = z.object({
   name: z.string().min(1, "Product name is required"),
@@ -32,6 +32,11 @@ const productSchema = z.object({
   tags: z.array(z.string()).optional(),
   trackingType: z.string().default("none"),
   requiresSerialTracking: z.boolean().default(false),
+  warrantyCovered: z.boolean().default(false),
+  warrantyPeriodMonths: z.number().int().positive().optional(),
+}).refine((d) => !d.warrantyCovered || !!d.warrantyPeriodMonths, {
+  message: "Warranty period is required when the product is covered under warranty",
+  path: ["warrantyPeriodMonths"],
 });
 
 type ProductFormData = z.infer<typeof productSchema>;
@@ -108,6 +113,8 @@ const AddProduct = () => {
       tags: [],
       trackingType: "none",
       requiresSerialTracking: false,
+      warrantyCovered: false,
+      warrantyPeriodMonths: undefined,
     },
   });
 
@@ -118,6 +125,7 @@ const AddProduct = () => {
   }, [orgSettings, form]);
 
   const watchTrackingType = form.watch("trackingType");
+  const watchWarrantyCovered = form.watch("warrantyCovered");
 
   const handleAddTag = () => {
     if (newTag.trim()) {
@@ -152,6 +160,8 @@ const AddProduct = () => {
           tags: data.tags || [],
           tracking_type: data.trackingType,
           requires_serial_tracking: data.requiresSerialTracking,
+          warranty_covered: data.warrantyCovered,
+          warranty_period_months: data.warrantyCovered ? (data.warrantyPeriodMonths ?? null) : null,
         })
         .select()
         .single();
@@ -501,6 +511,64 @@ const AddProduct = () => {
               )}
             </CardContent>
           </Card>
+
+          {/* Section 4: Warranty Coverage */}
+          <Card>
+            <CardHeader className="pb-4">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="h-5 w-5 text-primary" />
+                <div>
+                  <CardTitle className="text-base">Warranty Coverage</CardTitle>
+                  <CardDescription>Mark whether units of this product are covered under warranty during check-in / check-out</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              <FormField
+                control={form.control}
+                name="warrantyCovered"
+                render={({ field }) => (
+                  <FormItem className="flex items-center justify-between rounded-md border border-border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-sm font-medium">Covered Under Warranty</FormLabel>
+                      <FormDescription className="text-xs">
+                        When enabled, check-in will capture a warranty start date and check-out will display remaining coverage
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch checked={field.value} onCheckedChange={field.onChange} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              {watchWarrantyCovered && (
+                <FormField
+                  control={form.control}
+                  name="warrantyPeriodMonths"
+                  render={({ field }) => (
+                    <FormItem className="max-w-xs">
+                      <FormLabel>Warranty Period (months) <span className="text-destructive">*</span></FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min={1}
+                          step={1}
+                          placeholder="e.g. 12"
+                          value={field.value ?? ""}
+                          onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value, 10) : undefined)}
+                        />
+                      </FormControl>
+                      <FormDescription className="text-xs">Warranty expiry is auto-computed from the check-in warranty start date</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+            </CardContent>
+          </Card>
+
+
 
           {/* Section 4: Tags */}
           <Card>

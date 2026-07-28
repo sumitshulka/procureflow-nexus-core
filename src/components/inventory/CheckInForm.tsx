@@ -334,6 +334,14 @@ const CheckInForm: React.FC<CheckInFormProps> = ({ onSuccess }) => {
         }
       }
 
+      // Validate warranty start date for warranty-covered products
+      for (const item of validItems) {
+        if (item.warranty_covered && !item.warranty_start_date) {
+          throw new Error(`Warranty start date is required for "${item.product_name}" as it is covered under warranty`);
+        }
+      }
+
+
       // Validate quantities for PO-based
       if (values.checkin_type === "po_based") {
         for (const item of validItems) {
@@ -364,6 +372,20 @@ const CheckInForm: React.FC<CheckInFormProps> = ({ onSuccess }) => {
 
       // Process each item
       for (const item of validItems) {
+        // Compute warranty window for products marked as warranty covered
+        let warrantyStart: string | null = null;
+        let warrantyEnd: string | null = null;
+        if (item.warranty_covered && item.warranty_start_date) {
+          warrantyStart = item.warranty_start_date;
+          if (item.warranty_period_months) {
+            const d = new Date(item.warranty_start_date);
+            if (!isNaN(d.getTime())) {
+              d.setMonth(d.getMonth() + item.warranty_period_months);
+              warrantyEnd = d.toISOString().split("T")[0];
+            }
+          }
+        }
+
         // Create inventory transaction with batch/expiry in delivery_details
         const transaction = {
           type: "check_in",
@@ -376,6 +398,8 @@ const CheckInForm: React.FC<CheckInFormProps> = ({ onSuccess }) => {
           user_id: userData.id,
           unit_price: item.unit_price || null,
           currency: values.currency || orgSettings?.base_currency || "USD",
+          warranty_start_date: warrantyStart,
+          warranty_end_date: warrantyEnd,
           delivery_details: {
             batch_number: item.batch_number || null,
             expiry_date: item.expiry_date || null,
@@ -385,6 +409,8 @@ const CheckInForm: React.FC<CheckInFormProps> = ({ onSuccess }) => {
             sku_id: item.sku_id || null,
             sku_code: item.sku_code || null,
             tracking_type: item.tracking_type || "none",
+            warranty_covered: !!item.warranty_covered,
+            warranty_period_months: item.warranty_period_months || null,
             serial_numbers: item.serial_numbers
               ? item.serial_numbers.split(",").map((s) => s.trim()).filter(Boolean)
               : null,

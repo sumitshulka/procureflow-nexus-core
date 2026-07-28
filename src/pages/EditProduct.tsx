@@ -35,6 +35,7 @@ const EditProduct = () => {
         current_price: data.current_price, currency: data.currency, tax_code_id: data.tax_code_id,
         tags: data.tags || [], category_id: data.category_id, unit_id: data.unit_id,
         tracking_type: (data as any).tracking_type, requires_serial_tracking: (data as any).requires_serial_tracking,
+        warranty_covered: (data as any).warranty_covered, warranty_period_months: (data as any).warranty_period_months,
         category: data.category, unit: data.unit, created_at: data.created_at,
       };
     },

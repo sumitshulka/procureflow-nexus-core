@@ -25,6 +25,8 @@ interface Product {
   tags: string[];
   tracking_type?: string;
   requires_serial_tracking?: boolean;
+  warranty_covered?: boolean;
+  warranty_period_months?: number | null;
   category_id: string;
   category: { name: string };
   unit: { name: string; abbreviation: string };
@@ -94,6 +96,7 @@ const ProductDetail = () => {
         id: data.id, name: data.name, description: data.description, classification: data.classification,
         current_price: data.current_price, currency: data.currency, tags: data.tags || [],
         tracking_type: (data as any).tracking_type, requires_serial_tracking: (data as any).requires_serial_tracking,
+        warranty_covered: (data as any).warranty_covered, warranty_period_months: (data as any).warranty_period_months,
         category_id: data.category_id, category: data.category, unit: data.unit, tax_code: taxCode, created_by: createdBy, created_at: data.created_at,
       } as Product;
     },
@@ -214,6 +217,21 @@ const ProductDetail = () => {
                           <Badge variant="outline" className="text-xs">Serial Required</Badge>
                         )}
                       </div>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Warranty</label>
+                    <div className="mt-1 flex items-center gap-2">
+                      {product.warranty_covered ? (
+                        <>
+                          <Badge className="bg-emerald-600 text-primary-foreground hover:bg-emerald-600">Covered under warranty</Badge>
+                          {product.warranty_period_months ? (
+                            <Badge variant="outline" className="text-xs">{product.warranty_period_months} months</Badge>
+                          ) : null}
+                        </>
+                      ) : (
+                        <Badge variant="outline" className="text-xs">Not covered</Badge>
+                      )}
                     </div>
                   </div>
                   {product.tax_code && (

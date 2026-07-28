@@ -1527,6 +1527,8 @@ export type Database = {
           unit_price: number | null
           updated_at: string | null
           user_id: string
+          warranty_end_date: string | null
+          warranty_start_date: string | null
         }
         Insert: {
           approval_status?: string | null
@@ -1549,6 +1551,8 @@ export type Database = {
           unit_price?: number | null
           updated_at?: string | null
           user_id: string
+          warranty_end_date?: string | null
+          warranty_start_date?: string | null
         }
         Update: {
           approval_status?: string | null
@@ -1571,6 +1575,8 @@ export type Database = {
           unit_price?: number | null
           updated_at?: string | null
           user_id?: string
+          warranty_end_date?: string | null
+          warranty_start_date?: string | null
         }
         Relationships: [
           {

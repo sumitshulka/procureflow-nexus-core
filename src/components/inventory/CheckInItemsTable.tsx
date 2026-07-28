@@ -18,7 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Trash2, Plus, Barcode, Calendar, Hash } from "lucide-react";
+import { Trash2, Plus, Barcode, Calendar, Hash, ShieldCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Tooltip,
@@ -45,6 +45,9 @@ export interface CheckInItem {
   is_from_po?: boolean;
   tracking_type?: string;
   requires_serial_tracking?: boolean;
+  warranty_covered?: boolean;
+  warranty_period_months?: number | null;
+  warranty_start_date?: string;
 }
 
 interface ProductSku {
@@ -59,6 +62,8 @@ interface ProductWithTracking {
   name: string;
   tracking_type: string;
   requires_serial_tracking: boolean;
+  warranty_covered: boolean;
+  warranty_period_months: number | null;
 }
 
 interface Product {
@@ -131,7 +136,7 @@ const useProductTracking = (productId: string) => {
       if (!productId) return null;
       const { data, error } = await supabase
         .from("products")
-        .select("id, name, tracking_type, requires_serial_tracking")
+        .select("id, name, tracking_type, requires_serial_tracking, warranty_covered, warranty_period_months")
         .eq("id", productId)
         .maybeSingle();
       if (error) throw error;
@@ -168,26 +173,37 @@ const CheckInItemRow: React.FC<{
   item: CheckInItem;
   index: number;
   isPOBased: boolean;
+  showWarrantyColumn: boolean;
   products: Product[];
   onUpdateItem: (index: number, field: keyof CheckInItem, value: any) => void;
   onSelectProduct: (index: number, productId: string) => void;
   onUpdateSku: (index: number, skuId: string, skuCode: string) => void;
   onRemoveItem: (index: number) => void;
-  onTrackingLoaded: (index: number, trackingType: string, requiresSerial: boolean) => void;
-}> = ({ item, index, isPOBased, products, onUpdateItem, onSelectProduct, onUpdateSku, onRemoveItem, onTrackingLoaded }) => {
+  onTrackingLoaded: (index: number, product: ProductWithTracking) => void;
+}> = ({ item, index, isPOBased, showWarrantyColumn, products, onUpdateItem, onSelectProduct, onUpdateSku, onRemoveItem, onTrackingLoaded }) => {
   const { data: productTracking } = useProductTracking(item.product_id);
-  
+
   const trackingType = item.tracking_type || productTracking?.tracking_type || "none";
   const requiresSerial = item.requires_serial_tracking || productTracking?.requires_serial_tracking || false;
-  
+  const warrantyCovered = item.warranty_covered ?? productTracking?.warranty_covered ?? false;
+  const warrantyMonths = item.warranty_period_months ?? productTracking?.warranty_period_months ?? null;
+
   const showBatch = trackingType === "batch" || trackingType === "both";
   const showSerial = trackingType === "serial" || trackingType === "both" || requiresSerial;
   const showExpiry = showBatch; // Expiry is relevant for batch-tracked items
 
+  const warrantyEnd = React.useMemo(() => {
+    if (!warrantyCovered || !warrantyMonths || !item.warranty_start_date) return null;
+    const d = new Date(item.warranty_start_date);
+    if (isNaN(d.getTime())) return null;
+    d.setMonth(d.getMonth() + warrantyMonths);
+    return d.toISOString().split("T")[0];
+  }, [warrantyCovered, warrantyMonths, item.warranty_start_date]);
+
   // Propagate tracking info to parent
   useEffect(() => {
     if (productTracking && (!item.tracking_type || item.tracking_type !== productTracking.tracking_type)) {
-      onTrackingLoaded(index, productTracking.tracking_type, productTracking.requires_serial_tracking);
+      onTrackingLoaded(index, productTracking);
     }
   }, [productTracking, index, item.tracking_type, onTrackingLoaded]);
 
@@ -199,6 +215,11 @@ const CheckInItemRow: React.FC<{
             <span className="font-medium text-sm">{item.product_name}</span>
             <Badge variant="secondary" className="ml-2 text-xs">From PO</Badge>
             <TrackingBadge trackingType={trackingType} requiresSerial={requiresSerial} />
+            {warrantyCovered && (
+              <Badge className="mt-0.5 bg-emerald-600 text-primary-foreground hover:bg-emerald-600 text-[10px] px-1 py-0">
+                <ShieldCheck className="h-3 w-3 mr-0.5" />Warranty{warrantyMonths ? ` ${warrantyMonths}m` : ""}
+              </Badge>
+            )}
           </div>
           ) : (
           <div>
@@ -303,6 +324,29 @@ const CheckInItemRow: React.FC<{
         )}
       </TableCell>
 
+      {/* Warranty start date - shown when any item is warranty covered */}
+      {showWarrantyColumn && (
+        <TableCell>
+          {warrantyCovered ? (
+            <div className="space-y-0.5">
+              <Input
+                type="date"
+                value={item.warranty_start_date || ""}
+                onChange={(e) => onUpdateItem(index, "warranty_start_date", e.target.value)}
+                className="h-8 text-sm"
+              />
+              {warrantyEnd && (
+                <span className="text-[10px] text-muted-foreground">Expires {warrantyEnd}</span>
+              )}
+            </div>
+          ) : (
+            <span className="text-xs text-muted-foreground">N/A</span>
+          )}
+        </TableCell>
+      )}
+
+
+
       {/* Serial Numbers - shown for serial/both tracking */}
       {showSerial && (
         <TableCell>
@@ -367,6 +411,9 @@ const CheckInItemsTable: React.FC<CheckInItemsTableProps> = ({
     (item) => item.tracking_type === "serial" || item.tracking_type === "both" || item.requires_serial_tracking
   );
 
+  // Check if any item's product is covered under warranty
+  const hasWarrantyItems = items.some((item) => item.warranty_covered);
+
   const updateItem = (index: number, field: keyof CheckInItem, value: any) => {
     const updatedItems = [...items];
     updatedItems[index] = { ...updatedItems[index], [field]: value };
@@ -384,6 +431,9 @@ const CheckInItemsTable: React.FC<CheckInItemsTableProps> = ({
       sku_code: undefined,
       tracking_type: undefined,
       requires_serial_tracking: undefined,
+      warranty_covered: undefined,
+      warranty_period_months: undefined,
+      warranty_start_date: "",
       batch_number: "",
       expiry_date: "",
       serial_numbers: "",
@@ -416,12 +466,14 @@ const CheckInItemsTable: React.FC<CheckInItemsTableProps> = ({
     onItemsChange([...items, newItem]);
   };
 
-  const handleTrackingLoaded = (index: number, trackingType: string, requiresSerial: boolean) => {
+  const handleTrackingLoaded = (index: number, product: ProductWithTracking) => {
     const updatedItems = [...items];
     updatedItems[index] = {
       ...updatedItems[index],
-      tracking_type: trackingType,
-      requires_serial_tracking: requiresSerial,
+      tracking_type: product.tracking_type,
+      requires_serial_tracking: product.requires_serial_tracking,
+      warranty_covered: product.warranty_covered,
+      warranty_period_months: product.warranty_period_months,
     };
     onItemsChange(updatedItems);
   };
@@ -439,6 +491,7 @@ const CheckInItemsTable: React.FC<CheckInItemsTableProps> = ({
   if (isPOBased) colCount += 3; // Ordered, Received, Pending
   if (!isPOBased) colCount += 1; // Unit Price
   if (hasSerialItems) colCount += 1; // Serial Numbers
+  if (hasWarrantyItems) colCount += 1; // Warranty Start
 
   return (
     <div className="space-y-4">
@@ -468,6 +521,14 @@ const CheckInItemsTable: React.FC<CheckInItemsTableProps> = ({
                   Expiry Date
                 </div>
               </TableHead>
+              {hasWarrantyItems && (
+                <TableHead className="w-[140px]">
+                  <div className="flex items-center gap-1">
+                    <ShieldCheck className="h-3 w-3" />
+                    Warranty Start
+                  </div>
+                </TableHead>
+              )}
               {hasSerialItems && (
                 <TableHead className="w-[160px]">
                   <div className="flex items-center gap-1">
@@ -499,6 +560,7 @@ const CheckInItemsTable: React.FC<CheckInItemsTableProps> = ({
                   item={item}
                   index={index}
                   isPOBased={isPOBased}
+                  showWarrantyColumn={hasWarrantyItems}
                   products={products}
                   onUpdateItem={updateItem}
                   onSelectProduct={selectProduct}

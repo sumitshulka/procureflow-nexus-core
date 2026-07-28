@@ -118,6 +118,8 @@ interface BatchInfo {
   quantity: number;
   expiry_date: string | null;
   unit_price: number | null;
+  warranty_covered: boolean;
+  warranty_end_date: string | null;
 }
 
 interface CheckOutFormProps {
@@ -220,6 +222,7 @@ const CheckOutForm = ({ productId, onSuccess, onCancel }: CheckOutFormProps) => 
           delivery_details,
           product_id,
           sku_id,
+          warranty_end_date,
           product:product_id(id, name),
           sku:sku_id(sku_code, name)
         `
@@ -253,6 +256,8 @@ const CheckOutForm = ({ productId, onSuccess, onCancel }: CheckOutFormProps) => 
             quantity: tx.quantity,
             expiry_date: details.expiry_date || null,
             unit_price: tx.unit_price,
+            warranty_covered: !!details.warranty_covered,
+            warranty_end_date: tx.warranty_end_date || null,
           });
         }
       });
@@ -700,7 +705,23 @@ const CheckOutForm = ({ productId, onSuccess, onCancel }: CheckOutFormProps) => 
                         return (
                           <TableRow key={`${batch.batch_number}_${batch.product_id}_${idx}`}>
                             <TableCell className="font-medium">
-                              {batch.product_name}
+                              <div className="flex flex-col gap-1">
+                                <span>{batch.product_name}</span>
+                                {batch.warranty_covered && (() => {
+                                  const active = batch.warranty_end_date
+                                    ? new Date(batch.warranty_end_date) >= new Date()
+                                    : true;
+                                  return (
+                                    <Badge
+                                      variant={active ? "default" : "outline"}
+                                      className={`w-fit text-[10px] px-1 py-0 ${active ? "bg-emerald-600 text-primary-foreground hover:bg-emerald-600" : "text-muted-foreground"}`}
+                                    >
+                                      {active ? "Under warranty" : "Warranty expired"}
+                                      {batch.warranty_end_date ? ` · ${format(new Date(batch.warranty_end_date), "MMM dd, yyyy")}` : ""}
+                                    </Badge>
+                                  );
+                                })()}
+                              </div>
                             </TableCell>
                             <TableCell className="font-mono text-xs">
                               {batch.sku_code || "—"}
