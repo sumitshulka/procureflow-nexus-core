@@ -118,6 +118,8 @@ interface BatchInfo {
   quantity: number;
   expiry_date: string | null;
   unit_price: number | null;
+  warranty_covered: boolean;
+  warranty_end_date: string | null;
 }
 
 interface CheckOutFormProps {
