@@ -215,6 +215,11 @@ const CheckInItemRow: React.FC<{
             <span className="font-medium text-sm">{item.product_name}</span>
             <Badge variant="secondary" className="ml-2 text-xs">From PO</Badge>
             <TrackingBadge trackingType={trackingType} requiresSerial={requiresSerial} />
+            {warrantyCovered && (
+              <Badge className="mt-0.5 bg-emerald-600 text-primary-foreground hover:bg-emerald-600 text-[10px] px-1 py-0">
+                <ShieldCheck className="h-3 w-3 mr-0.5" />Warranty{warrantyMonths ? ` ${warrantyMonths}m` : ""}
+              </Badge>
+            )}
           </div>
           ) : (
           <div>
