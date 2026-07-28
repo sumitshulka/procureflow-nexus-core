@@ -411,6 +411,9 @@ const CheckInItemsTable: React.FC<CheckInItemsTableProps> = ({
     (item) => item.tracking_type === "serial" || item.tracking_type === "both" || item.requires_serial_tracking
   );
 
+  // Check if any item's product is covered under warranty
+  const hasWarrantyItems = items.some((item) => item.warranty_covered);
+
   const updateItem = (index: number, field: keyof CheckInItem, value: any) => {
     const updatedItems = [...items];
     updatedItems[index] = { ...updatedItems[index], [field]: value };
