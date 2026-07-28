@@ -324,6 +324,29 @@ const CheckInItemRow: React.FC<{
         )}
       </TableCell>
 
+      {/* Warranty start date - shown when any item is warranty covered */}
+      {showWarrantyColumn && (
+        <TableCell>
+          {warrantyCovered ? (
+            <div className="space-y-0.5">
+              <Input
+                type="date"
+                value={item.warranty_start_date || ""}
+                onChange={(e) => onUpdateItem(index, "warranty_start_date", e.target.value)}
+                className="h-8 text-sm"
+              />
+              {warrantyEnd && (
+                <span className="text-[10px] text-muted-foreground">Expires {warrantyEnd}</span>
+              )}
+            </div>
+          ) : (
+            <span className="text-xs text-muted-foreground">N/A</span>
+          )}
+        </TableCell>
+      )}
+
+
+
       {/* Serial Numbers - shown for serial/both tracking */}
       {showSerial && (
         <TableCell>
