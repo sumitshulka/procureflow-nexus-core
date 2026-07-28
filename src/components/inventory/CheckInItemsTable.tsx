@@ -136,7 +136,7 @@ const useProductTracking = (productId: string) => {
       if (!productId) return null;
       const { data, error } = await supabase
         .from("products")
-        .select("id, name, tracking_type, requires_serial_tracking")
+        .select("id, name, tracking_type, requires_serial_tracking, warranty_covered, warranty_period_months")
         .eq("id", productId)
         .maybeSingle();
       if (error) throw error;
