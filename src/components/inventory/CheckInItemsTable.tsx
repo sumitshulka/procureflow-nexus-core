@@ -560,6 +560,7 @@ const CheckInItemsTable: React.FC<CheckInItemsTableProps> = ({
                   item={item}
                   index={index}
                   isPOBased={isPOBased}
+                  showWarrantyColumn={hasWarrantyItems}
                   products={products}
                   onUpdateItem={updateItem}
                   onSelectProduct={selectProduct}
