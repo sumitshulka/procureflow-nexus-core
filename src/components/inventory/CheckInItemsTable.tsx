@@ -173,26 +173,37 @@ const CheckInItemRow: React.FC<{
   item: CheckInItem;
   index: number;
   isPOBased: boolean;
+  showWarrantyColumn: boolean;
   products: Product[];
   onUpdateItem: (index: number, field: keyof CheckInItem, value: any) => void;
   onSelectProduct: (index: number, productId: string) => void;
   onUpdateSku: (index: number, skuId: string, skuCode: string) => void;
   onRemoveItem: (index: number) => void;
-  onTrackingLoaded: (index: number, trackingType: string, requiresSerial: boolean) => void;
-}> = ({ item, index, isPOBased, products, onUpdateItem, onSelectProduct, onUpdateSku, onRemoveItem, onTrackingLoaded }) => {
+  onTrackingLoaded: (index: number, product: ProductWithTracking) => void;
+}> = ({ item, index, isPOBased, showWarrantyColumn, products, onUpdateItem, onSelectProduct, onUpdateSku, onRemoveItem, onTrackingLoaded }) => {
   const { data: productTracking } = useProductTracking(item.product_id);
-  
+
   const trackingType = item.tracking_type || productTracking?.tracking_type || "none";
   const requiresSerial = item.requires_serial_tracking || productTracking?.requires_serial_tracking || false;
-  
+  const warrantyCovered = item.warranty_covered ?? productTracking?.warranty_covered ?? false;
+  const warrantyMonths = item.warranty_period_months ?? productTracking?.warranty_period_months ?? null;
+
   const showBatch = trackingType === "batch" || trackingType === "both";
   const showSerial = trackingType === "serial" || trackingType === "both" || requiresSerial;
   const showExpiry = showBatch; // Expiry is relevant for batch-tracked items
 
+  const warrantyEnd = React.useMemo(() => {
+    if (!warrantyCovered || !warrantyMonths || !item.warranty_start_date) return null;
+    const d = new Date(item.warranty_start_date);
+    if (isNaN(d.getTime())) return null;
+    d.setMonth(d.getMonth() + warrantyMonths);
+    return d.toISOString().split("T")[0];
+  }, [warrantyCovered, warrantyMonths, item.warranty_start_date]);
+
   // Propagate tracking info to parent
   useEffect(() => {
     if (productTracking && (!item.tracking_type || item.tracking_type !== productTracking.tracking_type)) {
-      onTrackingLoaded(index, productTracking.tracking_type, productTracking.requires_serial_tracking);
+      onTrackingLoaded(index, productTracking);
     }
   }, [productTracking, index, item.tracking_type, onTrackingLoaded]);
 
