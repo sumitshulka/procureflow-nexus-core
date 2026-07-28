@@ -163,6 +163,8 @@ const EditProductForm = ({ product }: EditProductFormProps) => {
         tags: values.tags || [],
         tracking_type: values.trackingType,
         requires_serial_tracking: values.requiresSerialTracking,
+        warranty_covered: values.warrantyCovered,
+        warranty_period_months: values.warrantyCovered ? (values.warrantyPeriodMonths ?? null) : null,
         updated_at: new Date().toISOString(),
       };
 
