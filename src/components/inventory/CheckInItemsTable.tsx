@@ -45,6 +45,9 @@ export interface CheckInItem {
   is_from_po?: boolean;
   tracking_type?: string;
   requires_serial_tracking?: boolean;
+  warranty_covered?: boolean;
+  warranty_period_months?: number | null;
+  warranty_start_date?: string;
 }
 
 interface ProductSku {
@@ -59,6 +62,8 @@ interface ProductWithTracking {
   name: string;
   tracking_type: string;
   requires_serial_tracking: boolean;
+  warranty_covered: boolean;
+  warranty_period_months: number | null;
 }
 
 interface Product {
