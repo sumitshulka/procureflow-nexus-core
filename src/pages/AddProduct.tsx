@@ -122,6 +122,7 @@ const AddProduct = () => {
   }, [orgSettings, form]);
 
   const watchTrackingType = form.watch("trackingType");
+  const watchWarrantyCovered = form.watch("warrantyCovered");
 
   const handleAddTag = () => {
     if (newTag.trim()) {
