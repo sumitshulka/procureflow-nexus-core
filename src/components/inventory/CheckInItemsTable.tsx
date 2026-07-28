@@ -18,7 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Trash2, Plus, Barcode, Calendar, Hash } from "lucide-react";
+import { Trash2, Plus, Barcode, Calendar, Hash, ShieldCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Tooltip,
