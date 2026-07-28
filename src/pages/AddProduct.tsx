@@ -157,6 +157,8 @@ const AddProduct = () => {
           tags: data.tags || [],
           tracking_type: data.trackingType,
           requires_serial_tracking: data.requiresSerialTracking,
+          warranty_covered: data.warrantyCovered,
+          warranty_period_months: data.warrantyCovered ? (data.warrantyPeriodMonths ?? null) : null,
         })
         .select()
         .single();
