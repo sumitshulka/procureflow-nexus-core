@@ -16,7 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { checkAuthentication, logDatabaseError } from "@/utils/supabaseHelpers";
-import { Package, DollarSign, Box, Tags, AlertCircle, X } from "lucide-react";
+import { Package, DollarSign, Box, Tags, AlertCircle, X, ShieldCheck } from "lucide-react";
 
 const formSchema = z.object({
   name: z.string().min(1, "Product name is required"),
