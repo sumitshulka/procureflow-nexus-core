@@ -334,6 +334,14 @@ const CheckInForm: React.FC<CheckInFormProps> = ({ onSuccess }) => {
         }
       }
 
+      // Validate warranty start date for warranty-covered products
+      for (const item of validItems) {
+        if (item.warranty_covered && !item.warranty_start_date) {
+          throw new Error(`Warranty start date is required for "${item.product_name}" as it is covered under warranty`);
+        }
+      }
+
+
       // Validate quantities for PO-based
       if (values.checkin_type === "po_based") {
         for (const item of validItems) {
