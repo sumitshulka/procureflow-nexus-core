@@ -463,12 +463,14 @@ const CheckInItemsTable: React.FC<CheckInItemsTableProps> = ({
     onItemsChange([...items, newItem]);
   };
 
-  const handleTrackingLoaded = (index: number, trackingType: string, requiresSerial: boolean) => {
+  const handleTrackingLoaded = (index: number, product: ProductWithTracking) => {
     const updatedItems = [...items];
     updatedItems[index] = {
       ...updatedItems[index],
-      tracking_type: trackingType,
-      requires_serial_tracking: requiresSerial,
+      tracking_type: product.tracking_type,
+      requires_serial_tracking: product.requires_serial_tracking,
+      warranty_covered: product.warranty_covered,
+      warranty_period_months: product.warranty_period_months,
     };
     onItemsChange(updatedItems);
   };
