@@ -17,7 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import CreateRfpForProduct from "@/components/product/CreateRfpForProduct";
-import { X, ArrowLeft, Package, DollarSign, Barcode, Hash, Tags, Box, AlertCircle } from "lucide-react";
+import { X, ArrowLeft, Package, DollarSign, Barcode, Hash, Tags, Box, AlertCircle, ShieldCheck } from "lucide-react";
 
 const productSchema = z.object({
   name: z.string().min(1, "Product name is required"),
