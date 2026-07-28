@@ -30,6 +30,11 @@ const formSchema = z.object({
   tags: z.array(z.string()).optional(),
   trackingType: z.string().default("none"),
   requiresSerialTracking: z.boolean().default(false),
+  warrantyCovered: z.boolean().default(false),
+  warrantyPeriodMonths: z.number().int().positive().optional(),
+}).refine((d) => !d.warrantyCovered || !!d.warrantyPeriodMonths, {
+  message: "Warranty period is required when the product is covered under warranty",
+  path: ["warrantyPeriodMonths"],
 });
 
 interface Product {
