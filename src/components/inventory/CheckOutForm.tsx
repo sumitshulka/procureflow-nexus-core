@@ -256,6 +256,8 @@ const CheckOutForm = ({ productId, onSuccess, onCancel }: CheckOutFormProps) => 
             quantity: tx.quantity,
             expiry_date: details.expiry_date || null,
             unit_price: tx.unit_price,
+            warranty_covered: !!details.warranty_covered,
+            warranty_end_date: tx.warranty_end_date || null,
           });
         }
       });
