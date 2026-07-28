@@ -32,6 +32,8 @@ const productSchema = z.object({
   tags: z.array(z.string()).optional(),
   trackingType: z.string().default("none"),
   requiresSerialTracking: z.boolean().default(false),
+  warrantyCovered: z.boolean().default(false),
+  warrantyPeriodMonths: z.number().int().positive().optional(),
 });
 
 type ProductFormData = z.infer<typeof productSchema>;
