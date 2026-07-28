@@ -521,6 +521,14 @@ const CheckInItemsTable: React.FC<CheckInItemsTableProps> = ({
                   Expiry Date
                 </div>
               </TableHead>
+              {hasWarrantyItems && (
+                <TableHead className="w-[140px]">
+                  <div className="flex items-center gap-1">
+                    <ShieldCheck className="h-3 w-3" />
+                    Warranty Start
+                  </div>
+                </TableHead>
+              )}
               {hasSerialItems && (
                 <TableHead className="w-[160px]">
                   <div className="flex items-center gap-1">
